@@ -1,6 +1,6 @@
 # liwan - Lightweight Analytics
 
-> ![CAUTION]
+> [!WARNING]  
 > This project is still in the early stages of development and not ready to be used.
 
 - Lightweight and privacy-friendly
