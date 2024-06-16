@@ -106,7 +106,8 @@ static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
 impl Config {
     pub fn from_file(file: impl AsRef<Path>) -> Result<Self> {
         if std::fs::metadata(file.as_ref()).is_err() {
-            std::fs::write("liwan.config.toml", DEFAULT_CONFIG).wrap_err("Failed to write default config file")?;
+            std::fs::write("liwan.config.toml", DEFAULT_CONFIG)
+                .wrap_err("Failed to write default config file")?;
 
             println!("Config file not found, default config written to {}", file.as_ref().display());
         }

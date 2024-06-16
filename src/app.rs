@@ -1,24 +1,25 @@
 use crate::config::{Config, Entity};
 use crate::utils::hash::generate_salt;
-use crossbeam_channel::Receiver;
+use crossbeam::channel::Receiver;
+use crossbeam::sync::ShardedLock;
 use duckdb::{params, DuckdbConnectionManager};
 use eyre::{bail, Result};
 use std::collections::VecDeque;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+pub type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
 
 #[derive(Clone)]
 pub struct App {
     pub conn: r2d2::Pool<DuckdbConnectionManager>,
     pub config: Arc<Config>,
-    daily_salt: Arc<RwLock<Salt>>,
+    daily_salt: Arc<ShardedLock<Salt>>,
 }
 
 struct Salt {
     salt: String,
     updated_at: chrono::NaiveDateTime,
 }
-
-type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
 
 static LAST_MIGRATION: &str = "2024-06-01-initial";
 static MIGRATIONS: &[&str] = &[LAST_MIGRATION];
@@ -80,7 +81,11 @@ impl App {
             })?
         };
 
-        Ok(Self { conn, config: Arc::new(config), daily_salt: Arc::new(RwLock::new(Salt { salt, updated_at })) })
+        Ok(Self {
+            conn,
+            config: Arc::new(config),
+            daily_salt: Arc::new(ShardedLock::new(Salt { salt, updated_at })),
+        })
     }
 
     pub fn resolve_entity(&self, id: &str) -> Option<Entity> {
@@ -95,7 +100,9 @@ impl App {
             println!("Received event: {:?}", event);
             queue.push_back(event);
 
-            if queue.len() >= BATCH_SIZE || chrono::Utc::now() - last_flush > chrono::Duration::seconds(FLUSH_TIMEOUT) {
+            if queue.len() >= BATCH_SIZE
+                || chrono::Utc::now() - last_flush > chrono::Duration::seconds(FLUSH_TIMEOUT)
+            {
                 println!("Flushing {} events", queue.len());
                 self.append_events(queue.drain(..))?;
                 last_flush = chrono::Utc::now();
@@ -128,7 +135,7 @@ impl App {
         Ok(())
     }
 
-    fn conn(&self) -> Result<Conn> {
+    pub fn conn(&self) -> Result<Conn> {
         Ok(self.conn.get()?)
     }
 }

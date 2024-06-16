@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::app::{App, Event};
 use crate::utils::hash::random_visitor_id;
 use crate::utils::{hash::hash_ip, ua};
-use crossbeam_channel::Sender;
+use crossbeam::channel::Sender;
 use eyre::{Context, Result};
 use poem::endpoint::EmbeddedFilesEndpoint;
 use poem::error::NotFoundError;
@@ -68,8 +68,8 @@ async fn event_handler(
     }
 
     let entity = state.app.resolve_entity(&event.entity_id).ok_or(NotFoundError)?;
-    let url =
-        Uri::from_str(&event.url).map_err(|_| poem::Error::from_string("invalid url", StatusCode::BAD_REQUEST))?;
+    let url = Uri::from_str(&event.url)
+        .map_err(|_| poem::Error::from_string("invalid url", StatusCode::BAD_REQUEST))?;
     let host = url.host().unwrap_or_default();
 
     let daily_salt = state.app.get_salt().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

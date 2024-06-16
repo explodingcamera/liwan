@@ -14,7 +14,7 @@ serde={version="1.0", features=["derive"]}
 lazy_static={version="1.4"}
 
 # api 
-tokio={version="1.0", default-features=false, features=["rt-multi-thread", "io-util"]}
+tokio={version="1.0", default-features=false, features=["rt-multi-thread"]}
 poem={version="3.0", features=["embed"]}
 uaparser="0.6"
 rust-embed="8.4"
@@ -22,9 +22,10 @@ rust-embed="8.4"
 duckdb={version="0.10", features=["chrono", "bundled", "r2d2"]}
 r2d2="0.8"
 argon2={version="0.5"}
-crossbeam-channel="0.5"
+crossbeam="0.8"
 sha3={version="0.10"}
 maxminddb={version="0.24", optional=true}
+cached="0.51"
 
 [features]
 default=["geoip"]

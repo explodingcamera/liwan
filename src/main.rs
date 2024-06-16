@@ -1,6 +1,7 @@
 mod api;
 mod app;
 mod config;
+mod reports;
 mod utils;
 
 use app::{App, Event};
@@ -47,7 +48,7 @@ async fn main() -> Result<()> {
     let config_path = args.config.as_deref().unwrap_or("liwan.config.toml");
     let config = Config::from_file(std::path::Path::new(config_path))?;
 
-    let (s, r) = crossbeam_channel::unbounded::<Event>();
+    let (s, r) = crossbeam::channel::unbounded::<Event>();
     let app = App::new(config)?;
 
     tokio::select! {
