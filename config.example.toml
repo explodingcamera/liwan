@@ -1,0 +1,54 @@
+#:schema ./liwan.schema.json
+
+# URL where the Liwan instance can be accessed, e.g. "https://events.example.com"
+# Setting this will redirect users to this URL when they access it from a different URL
+url=""
+
+# path to the DuckDB database
+db_path="./liwan.db"
+
+# Authentication method to use, currently only "internal" is supported
+auth="internal"
+
+# The port to listen on (http)
+port=8080
+
+# Uncomment the following to enable GeoIP lookups
+# [geoip]
+# # if only a path is provided, no download will be attempted
+# maxmind_db_path="./GeoLite2-City.mmdb"
+# maxmind_account_id="MY_ACCOUNT_ID"
+# maxmind_license_key="MY_LICENSE_KEY"
+# maxmind_edition="GeoLite2-City"
+
+# Users can be added here
+[[user]]
+username="admin"
+# Password hash, this can can be generated with `liwan hash-password <password>`
+password_hash="$argon2id$v=19$m=16,t=2,p=1$YXNkZmFzZGZhc2Rm$JlD8sZ1mJvySNUj3b12gpg" 
+# Whether this user is an admin
+admin=true
+# Groups this user has access to (admin implies access to all groups)
+groups=["personal"]
+
+# Entities are the things you want to track, e.g. websites, apps, etc.
+[[entity]]
+id="website"
+display_name="My Website"
+
+[[entity]]
+id="blog"
+display_name="My Blog"
+
+# Groups are collections of entities, these will be displayed in the UI
+[[group]]
+id="personal"
+display_name="Personal Websites"
+entities=["website", "blog"]
+password="password" # make this publicly accessible but require a password
+
+[[group]]
+id="blog"
+display_name="Public Analytics for My Blog"
+entities=["blog"]
+public=true # make this publicly accessible

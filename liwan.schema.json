@@ -1,0 +1,73 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+
+	"title": "liwan Config Schema",
+	"type": "object",
+	"properties": {
+		"db_path": {
+			"type": ["string"],
+			"description": "Path to the DuckDB database file."
+		},
+		"geoip": {
+			"type": "object",
+			"properties": {
+				"maxmind_db_path": {
+					"type": ["string"],
+					"description": "Path to the MMDB database file."
+				},
+				"maxmind_account_id": {
+					"type": ["string"],
+					"description": "MaxMind account ID."
+				},
+				"maxmind_license_key": {
+					"type": ["string"],
+					"description": "MaxMind license key."
+				},
+				"maxmind_edition": {
+					"type": ["string"],
+					"description": "MaxMind database edition. (e.g. 'GeoLite2-City')"
+				}
+			}
+		},
+		"group": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"display_name": {
+						"type": "string"
+					},
+					"entities": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"public": {
+						"type": "boolean"
+					}
+				},
+				"required": ["id", "entities"]
+			}
+		},
+		"entity": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"display_name": {
+						"type": "string"
+					}
+				},
+				"required": ["id", "display_name"]
+			}
+		}
+	},
+	"required": []
+}

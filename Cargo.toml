@@ -1,0 +1,38 @@
+[package]
+name="liwan"
+version="0.1.0"
+edition="2021"
+
+[dependencies]
+argh={version="0.1"}
+eyre={version="0.6"}
+rand={version="0.8"}
+chrono={version="0.4"}
+toml={version="0.8"}
+serde_json={version="1.0"}
+serde={version="1.0", features=["derive"]}
+lazy_static={version="1.4"}
+
+# api 
+tokio={version="1.0", default-features=false, features=["rt-multi-thread"]}
+axum={version="0.7", default-features=false, features=["macros", "json"]}
+axum-client-ip="0.6"
+axum-extra={version="0.9", default-features=false, features=["typed-header"]}
+uaparser="0.6"
+
+duckdb={version="0.10", features=["chrono", "bundled", "r2d2"]}
+r2d2="0.8"
+argon2={version="0.5"}
+crossbeam-channel="0.5"
+sha3={version="0.10"}
+maxminddb={version="0.24", optional=true}
+
+[features]
+default=["geoip"]
+geoip=["dep:maxminddb"]
+
+[profile.release]
+codegen-units=1
+lto=true
+strip=true
+panic="abort"

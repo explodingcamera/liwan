@@ -1,0 +1,8 @@
+{
+	"$schema": "https://biomejs.dev/schemas/1.8.1/schema.json",
+	"formatter": {
+		"indentStyle": "tab",
+		"indentWidth": 2,
+		"lineWidth": 120
+	}
+}

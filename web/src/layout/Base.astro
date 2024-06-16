@@ -1,0 +1,19 @@
+---
+import "@explodingcamera/css/all.css";
+import "@picocss/pico/css/pico.fluid.classless.blue.min.css";
+
+type Props = { title: string };
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>{Astro.props.title}</title>
+	</head>
+	<body>
+        <main>
+            <slot />
+        </main>
+	</body>
+</html>
