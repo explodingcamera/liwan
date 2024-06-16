@@ -49,7 +49,6 @@ async fn main() -> Result<()> {
 
     let (s, r) = crossbeam_channel::unbounded::<Event>();
     let app = App::new(config)?;
-    app.create_tables()?;
 
     tokio::select! {
         res = api::start_webserver(app.clone(), s) => res,

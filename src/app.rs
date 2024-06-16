@@ -1,16 +1,24 @@
 use crate::config::{Config, Entity};
+use crate::utils::hash::generate_salt;
 use crossbeam_channel::Receiver;
 use duckdb::{params, DuckdbConnectionManager};
 use eyre::{bail, Result};
-use r2d2::PooledConnection;
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[derive(Clone)]
 pub struct App {
     pub conn: r2d2::Pool<DuckdbConnectionManager>,
     pub config: Arc<Config>,
+    daily_salt: Arc<RwLock<Salt>>,
 }
+
+struct Salt {
+    salt: String,
+    updated_at: chrono::NaiveDateTime,
+}
+
+type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
 
 static LAST_MIGRATION: &str = "2024-06-01-initial";
 static MIGRATIONS: &[&str] = &[LAST_MIGRATION];
@@ -36,10 +44,43 @@ const BATCH_SIZE: usize = 100;
 const FLUSH_TIMEOUT: i64 = 5;
 
 impl App {
+    pub async fn get_salt(&self) -> Result<String> {
+        let (salt, updated_at) = {
+            let salt = self.daily_salt.read().map_err(|_| eyre::eyre!("Failed to acquire read lock"))?;
+            (salt.salt.clone(), salt.updated_at)
+        };
+
+        // if the salt is older than 24 hours, replace it with a new one (utils::generate_salt)
+        if chrono::Utc::now().naive_utc() - updated_at > chrono::Duration::hours(24) {
+            let new_salt = generate_salt();
+            let now = chrono::Utc::now().naive_utc();
+            let conn = self.conn()?;
+            conn.execute("UPDATE salts SET salt = ?, updated_at = ? WHERE id = 1", params![&new_salt, now])?;
+
+            {
+                if let Ok(mut daily_salt) = self.daily_salt.try_write() {
+                    daily_salt.salt.clone_from(&new_salt);
+                    daily_salt.updated_at = now;
+                    return Ok(new_salt);
+                }
+            }
+        }
+
+        Ok(salt)
+    }
+
     pub fn new(config: Config) -> Result<Self> {
         let pool = DuckdbConnectionManager::file(&config.db_path)?;
         let conn = r2d2::Pool::new(pool)?;
-        Ok(Self { conn, config: Arc::new(config) })
+        init_db(&conn.get()?)?;
+
+        let (salt, updated_at): (String, chrono::NaiveDateTime) = {
+            conn.get()?.query_row("SELECT salt, updated_at FROM salts WHERE id = 1", [], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?
+        };
+
+        Ok(Self { conn, config: Arc::new(config), daily_salt: Arc::new(RwLock::new(Salt { salt, updated_at })) })
     }
 
     pub fn resolve_entity(&self, id: &str) -> Option<Entity> {
@@ -87,35 +128,33 @@ impl App {
         Ok(())
     }
 
-    fn conn(&self) -> Result<PooledConnection<DuckdbConnectionManager>> {
+    fn conn(&self) -> Result<Conn> {
         Ok(self.conn.get()?)
     }
+}
 
-    pub fn apply_migrations(&self, last_migration: &str) -> Result<()> {
-        let _last_migration_index = MIGRATIONS
-            .iter()
-            .position(|&migration| migration == last_migration)
-            .ok_or_else(|| eyre::eyre!("Unknown migration: {}", last_migration))?;
+fn init_db(conn: &Conn) -> Result<()> {
+    //  get the last entry in the migrations table
+    let last_migration_exists: Option<String> =
+        conn.query_row("SELECT name FROM migrations ORDER BY id DESC LIMIT 1", [], |row| row.get(0)).ok();
 
-        bail!("Migrations not implemented");
-    }
-
-    pub fn create_tables(&self) -> Result<()> {
-        let conn = self.conn()?;
-
-        //  get the last entry in the migrations table
-        let last_migration_exists: Option<String> =
-            conn.query_row("SELECT name FROM migrations ORDER BY id DESC LIMIT 1", [], |row| row.get(0)).ok();
-
-        if let Some(last_migration) = last_migration_exists {
-            if last_migration == LAST_MIGRATION {
-                return Ok(());
-            }
-            return self.apply_migrations(&last_migration);
+    if let Some(last_migration) = last_migration_exists {
+        if last_migration == LAST_MIGRATION {
+            return Ok(());
         }
-
-        // apply the latest schema
-        conn.execute_batch(CURRENT_SCHEMA)?;
-        Ok(())
+        return apply_migrations(conn, &last_migration);
     }
+
+    // apply the latest schema
+    conn.execute_batch(CURRENT_SCHEMA)?;
+    Ok(())
+}
+
+fn apply_migrations(_conn: &Conn, last_migration: &str) -> Result<()> {
+    let _last_migration_index = MIGRATIONS
+        .iter()
+        .position(|&migration| migration == last_migration)
+        .ok_or_else(|| eyre::eyre!("Unknown migration: {}", last_migration))?;
+
+    bail!("Migrations not implemented");
 }

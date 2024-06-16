@@ -36,6 +36,13 @@ CREATE TABLE migrations (
     name TEXT NOT NULL
 );
 
+CREATE TABLE salts (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    salt TEXT NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+ 
 INSERT INTO migrations (name) VALUES ('2024-06-01-initial');
+INSERT INTO salts (salt, updated_at) VALUES ('', '1970-01-01 00:00:00');
 CREATE INDEX sessions_token_idx ON sessions (token);
 CREATE INDEX events_entity_id_idx ON events (entity_id);

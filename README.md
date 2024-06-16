@@ -38,7 +38,7 @@ $ ./liwan hash-password <password>
 
 - The URL of the page that the tracker is embedded in (excluding query parameters and fragments)
 - The Referrer URL if available (the page that the user came from)
-- Browser, OS, mobile or desktop, and locale (e.g. Chrome, Windows, Desktop, en-US)
+- Browser, OS (e.g. Chrome, Windows, Desktop)
 - Anonymized visitor ID (generated with `sha3-256(ip, user_agent, daily_salt, entity_id)[0:16]`)
 - The time the event occurred
 - Country or City (optional)
@@ -52,4 +52,4 @@ Licensed under either of [Apache License, Version 2.0](./LICENSE-APACHE) or [MIT
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in TinyWasm by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
-The data contained in `src/regexes.yaml` is Copyright 2009 Google Inc. and available under the Apache License, Version 2.0.
+The data contained in `src/utils/ua_regexes.yaml` is Copyright 2009 Google Inc. and available under the Apache License, Version 2.0.

@@ -1,16 +1,24 @@
-use std::net::SocketAddr;
 use std::str::FromStr;
 
 use crate::app::{App, Event};
+use crate::utils::hash::random_visitor_id;
 use crate::utils::{hash::hash_ip, ua};
-use axum::extract::State;
-use axum::http::Uri;
-use axum::{http::StatusCode, response::IntoResponse, routing::*, Json, Router};
-use axum_client_ip::InsecureClientIp;
-use axum_extra::{headers::UserAgent, TypedHeader};
 use crossbeam_channel::Sender;
 use eyre::{Context, Result};
+use poem::endpoint::EmbeddedFilesEndpoint;
+use poem::error::NotFoundError;
 use serde_json::json;
+
+use poem::http::{StatusCode, Uri};
+use poem::middleware::AddData;
+use poem::web::{headers, Data, Json, RealIp, TypedHeader};
+use poem::{handler, listener::TcpListener, IntoResponse, Route, Server};
+use poem::{post, EndpointExt};
+use rust_embed::RustEmbed;
+
+#[derive(RustEmbed, Clone)]
+#[folder = "./web/dist"]
+struct Files;
 
 #[derive(serde::Deserialize)]
 struct EventRequest {
@@ -26,43 +34,49 @@ struct AppState {
     events: Sender<Event>,
 }
 
+async fn catch_error(err: poem::Error) -> impl IntoResponse {
+    Json(json!({ "status": "error", "message": err.to_string() })).with_status(err.status())
+}
+
 pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     println!("Starting webserver...");
 
     let state = AppState { app, events };
-    let router = Router::new()
-        .route("/api/event", post(event_handler))
-        .fallback(|| async { (StatusCode::NOT_FOUND, "Not found") })
-        .with_state(state.clone());
+    let router = Route::new()
+        .at("/api/event", post(event_handler))
+        .nest("/", EmbeddedFilesEndpoint::<Files>::new())
+        .catch_all_error(catch_error)
+        .with(AddData::new(state.clone()));
 
     let port = state.app.config.port;
-    let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
-        .await
-        .wrap_err_with(|| format!("failed to bind to port {}", port))?;
+    let listener = TcpListener::bind(("0.0.0.0", port));
+    println!("Listening on http://0.0.0.0:{}", port);
 
-    println!("Listening on http://{}/", listener.local_addr()?);
-    axum::serve(listener, router.into_make_service_with_connect_info::<SocketAddr>())
-        .await
-        .wrap_err("server exected unecpectedly")
+    Server::new(listener).run(router).await.wrap_err("server exected unecpectedly")
 }
 
+#[handler]
 async fn event_handler(
-    TypedHeader(user_agent): TypedHeader<UserAgent>,
-    InsecureClientIp(ip): InsecureClientIp,
-    State(state): State<AppState>,
+    RealIp(ip): RealIp,
+    Data(state): Data<&AppState>,
     Json(event): Json<EventRequest>,
-) -> impl IntoResponse {
-    let daily_salt = "daily_salt";
-    let url = Uri::from_str(&event.url).unwrap();
-    let host = url.host().unwrap_or_default();
-    let entity = state.app.resolve_entity(&event.entity_id);
-
+    TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
+) -> poem::Result<impl IntoResponse> {
     let client = ua::parse(user_agent.as_str());
     if ua::is_bot(&client) {
-        return Json(json!({ "status": "ok" })).into_response();
+        return Ok(Json(json!({ "status": "ok" })));
     }
 
-    let visitor_id = hash_ip(&ip, user_agent.as_str(), daily_salt, &event.entity_id);
+    let entity = state.app.resolve_entity(&event.entity_id).ok_or(NotFoundError)?;
+    let url =
+        Uri::from_str(&event.url).map_err(|_| poem::Error::from_string("invalid url", StatusCode::BAD_REQUEST))?;
+    let host = url.host().unwrap_or_default();
+
+    let daily_salt = state.app.get_salt().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let visitor_id = match ip {
+        Some(ip) => hash_ip(&ip, user_agent.as_str(), &daily_salt, &entity.id),
+        None => random_visitor_id(),
+    };
 
     let event = Event {
         browser: client.user_agent.family.to_string().into(),
@@ -80,5 +94,5 @@ async fn event_handler(
     };
 
     let _ = state.events.try_send(event);
-    Json(json!({ "status": "ok" })).into_response()
+    Ok(Json(json!({ "status": "ok" })))
 }

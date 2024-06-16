@@ -14,11 +14,10 @@ serde={version="1.0", features=["derive"]}
 lazy_static={version="1.4"}
 
 # api 
-tokio={version="1.0", default-features=false, features=["rt-multi-thread"]}
-axum={version="0.7", default-features=false, features=["macros", "json"]}
-axum-client-ip="0.6"
-axum-extra={version="0.9", default-features=false, features=["typed-header"]}
+tokio={version="1.0", default-features=false, features=["rt-multi-thread", "io-util"]}
+poem={version="3.0", features=["embed"]}
 uaparser="0.6"
+rust-embed="8.4"
 
 duckdb={version="0.10", features=["chrono", "bundled", "r2d2"]}
 r2d2="0.8"

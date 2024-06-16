@@ -4,6 +4,7 @@ use argon2::{password_hash::SaltString, Argon2};
 
 use eyre::Result;
 use rand::rngs::OsRng;
+use rand::Rng;
 use sha3::Digest;
 use std::net::IpAddr;
 
@@ -33,4 +34,12 @@ pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id: &str)
     hasher.update(entity_id);
     let hash = hasher.finalize();
     format!("{:02x}", hash)[..32].to_string()
+}
+
+pub fn random_visitor_id() -> String {
+    // random 32 byte hex string
+    let mut rng = OsRng;
+    let mut bytes = [0u8; 32];
+    rng.fill(&mut bytes);
+    bytes.iter().fold(String::new(), |acc, byte| acc + &format!("{:02x}", byte))
 }
