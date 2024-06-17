@@ -1,5 +1,3 @@
-CREATE SEQUENCE sessions_id_seq;
-CREATE SEQUENCE migrations_id_seq;
 
 CREATE TABLE events (
     entity_id TEXT NOT NULL,
@@ -20,13 +18,12 @@ CREATE TABLE events (
 );
 
 CREATE TABLE sessions (
-    id INTEGER PRIMARY KEY DEFAULT nextval('sessions_id_seq'),
-    token TEXT NOT NULL,
-    user_id INTEGER NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMP NOT NULL
+    id  TEXT PRIMARY KEY NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    data TEXT NOT NULL,
 );
 
+CREATE SEQUENCE migrations_id_seq;
 CREATE TABLE migrations (
     id INTEGER PRIMARY KEY DEFAULT nextval('migrations_id_seq'), 
     name TEXT NOT NULL
@@ -40,7 +37,6 @@ CREATE TABLE salts (
 
 INSERT INTO migrations (name) VALUES ('2024-06-01-initial');
 INSERT INTO salts (salt, updated_at) VALUES ('', '1970-01-01 00:00:00');
-CREATE INDEX sessions_token_idx ON sessions (token);
 
 CREATE INDEX events_event_idx ON events (event);
 CREATE INDEX events_entity_id_idx ON events (entity_id);

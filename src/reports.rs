@@ -11,9 +11,8 @@ const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
 
 #[derive(Debug)]
 pub struct DateRange {
-    start: chrono::NaiveDateTime,
-    end: chrono::NaiveDateTime,
-    points: u32,
+    start: chrono::DateTime<chrono::Utc>,
+    end: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug)]
@@ -83,6 +82,7 @@ pub fn overall_report(
     entities: &[&str],
     event: &str,
     range: DateRange,
+    data_points: u32,
     filters: &[DimensionFilter],
     metric: Metric,
 ) -> Result<ReportGraph> {
