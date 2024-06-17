@@ -3,7 +3,7 @@ use uaparser::{Client, Parser, UserAgentParser};
 
 lazy_static! {
     static ref PARSER: UserAgentParser = UserAgentParser::builder()
-        .build_from_bytes(include_bytes!("./ua_regexes.yaml"))
+        .build_from_bytes(include_bytes!("../../data/ua_regexes.yaml"))
         .expect("Parser creation failed");
 }
 

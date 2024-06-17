@@ -1,0 +1,41 @@
+---
+import Layout from "../layout/Layout.astro";
+---
+
+<Layout title="Home">
+	<section>
+		<h1>Sign in</h1>
+		<form>
+			<input
+				type="text"
+				name="Username"
+				placeholder="Username"
+				aria-label="Username"
+				autocomplete="username"
+				required
+			/>
+			<input
+				type="password"
+				name="password"
+				placeholder="Password"
+				aria-label="Password"
+				autocomplete="current-password"
+				required
+			/>
+			<button type="submit">
+			Login
+			</button>
+		</form>
+	</section>
+</Layout>
+
+<style>
+	section {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		max-width: 25rem;
+		height: 100%;
+	}
+</style>

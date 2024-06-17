@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use crate::app::{App, Event};
 use crate::utils::hash::random_visitor_id;
+use crate::utils::referer;
 use crate::utils::{hash::hash_ip, ua};
 use crossbeam::channel::Sender;
 use eyre::{Context, Result};
@@ -111,6 +112,13 @@ async fn event_handler(
     let client = ua::parse(user_agent.as_str());
     if ua::is_bot(&client) {
         return Ok(Json(json!({ "status": "ok" })));
+    }
+
+    if let Some(Ok(referer_uri)) = event.referrer.clone().map(|r| Uri::from_str(&r)) {
+        let referer_fqn = referer_uri.host().unwrap_or_default();
+        if referer::is_spammer(referer_fqn) {
+            return Ok(Json(json!({ "status": "ok" })));
+        }
     }
 
     let entity = state.app.resolve_entity(&event.entity_id).ok_or(NotFoundError)?;
