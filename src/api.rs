@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use crate::app::{App, Event};
+use crate::reports::{self, DateRange, Metric};
 use crate::utils::hash::random_visitor_id;
 use crate::utils::referer;
 use crate::utils::{hash::hash_ip, ua};
@@ -15,10 +16,11 @@ use serde_json::json;
 use poem::endpoint::EmbeddedFilesEndpoint;
 use poem::error::NotFoundError;
 use poem::http::{header, StatusCode, Uri};
+use poem::listener::TcpListener;
 use poem::middleware::{AddData, CookieJarManager};
 use poem::session::{CookieConfig, ServerSession, Session};
-use poem::web::{headers, Data, Form, Json, RealIp, TypedHeader};
-use poem::{handler, listener::TcpListener, post, EndpointExt, IntoResponse, Response, Route, Server};
+use poem::web::{headers, Data, Json, RealIp, TypedHeader};
+use poem::{get, handler, post, EndpointExt, IntoResponse, Response, Route, Server};
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -57,6 +59,7 @@ pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
 
     let router = Route::new()
         .at("/api/event", post(event_handler))
+        .at("/api/test", get(test_handler))
         .nest("/api/private", api_router)
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
         .catch_all_error(catch_error)
@@ -67,6 +70,21 @@ pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     println!("Listening on http://0.0.0.0:{}", port);
 
     Server::new(listener).run(router).await.wrap_err("server exected unecpectedly")
+}
+
+#[handler]
+async fn test_handler(Data(state): Data<&AppState>) -> impl IntoResponse {
+    let res = reports::overall_report(
+        &state.app.conn().unwrap(),
+        &["blog"],
+        "pageview",
+        DateRange { start: chrono::Utc::now() - chrono::Duration::days(7), end: chrono::Utc::now() },
+        7,
+        &[],
+        Metric::Sessions,
+    )
+    .unwrap();
+    Json(json!({ "status": "ok", "data": res }))
 }
 
 #[derive(Deserialize)]
@@ -114,12 +132,20 @@ async fn event_handler(
         return Ok(Json(json!({ "status": "ok" })));
     }
 
-    if let Some(Ok(referer_uri)) = event.referrer.clone().map(|r| Uri::from_str(&r)) {
-        let referer_fqn = referer_uri.host().unwrap_or_default();
-        if referer::is_spammer(referer_fqn) {
-            return Ok(Json(json!({ "status": "ok" })));
+    let referer_val = match event.referrer.clone().map(|r| Uri::from_str(&r)) {
+        // valid referer are stripped to the FQDN
+        Some(Ok(referer_uri)) => {
+            let referer_fqn = referer_uri.host().unwrap_or_default();
+            if referer::is_spammer(&referer_fqn) {
+                return Ok(Json(json!({ "status": "ok" })));
+            }
+            Some(referer_fqn.to_owned())
         }
-    }
+
+        // invalid referer are kept as is (e.g. when using custom referer values outside of the browser)
+        Some(Err(_)) => event.referrer.clone(),
+        None => None,
+    };
 
     let entity = state.app.resolve_entity(&event.entity_id).ok_or(NotFoundError)?;
     let url = Uri::from_str(&event.url)
@@ -143,7 +169,7 @@ async fn event_handler(
         mobile: Some(ua::is_mobile(&client)),
         path: url.path().to_string().into(),
         platform: client.os.family.to_string().into(),
-        referrer: event.referrer,
+        referrer: referer_val,
         visitor_id,
     };
 

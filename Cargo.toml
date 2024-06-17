@@ -12,6 +12,7 @@ toml={version="0.8"}
 serde_json={version="1.0"}
 serde={version="1.0", features=["derive"]}
 lazy_static={version="1.4"}
+itertools={version="0.13"}
 
 # api 
 tokio={version="1.0", default-features=false, features=["rt-multi-thread"]}
