@@ -1,4 +1,4 @@
-use super::webutils::*;
+use super::webext::*;
 use crate::app::{App, Event};
 use crate::utils::hash::{hash_ip, random_visitor_id};
 use crate::utils::{referer, ua};

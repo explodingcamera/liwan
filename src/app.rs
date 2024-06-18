@@ -6,7 +6,7 @@ use duckdb::{params, DuckdbConnectionManager};
 use eyre::{bail, Result};
 use poem::http::StatusCode;
 use poem::session::SessionStorage;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 pub type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
@@ -117,6 +117,15 @@ impl App {
 
     pub fn resolve_entity(&self, id: &str) -> Option<Entity> {
         self.config.entities.iter().find(|&entity| entity.id == id).cloned()
+    }
+
+    pub fn resolve_entities(&self, ids: &[String]) -> HashMap<String, String> {
+        self.config
+            .entities
+            .iter()
+            .filter(|entity| ids.contains(&entity.id))
+            .map(|entity| (entity.id.clone(), entity.display_name.clone()))
+            .collect()
     }
 
     pub fn resolve_user(&self, username: &str) -> Option<&User> {

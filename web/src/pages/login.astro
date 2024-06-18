@@ -1,41 +1,99 @@
 ---
-import Layout from "../layout/Layout.astro";
+import ThemeSwitcher from "../components/ThemeSwitcher.astro";
+import Layout from "../layout/Base.astro";
 ---
 
-<Layout title="Home">
-	<section>
-		<h1>Sign in</h1>
-		<form>
-			<input
-				type="text"
-				name="Username"
-				placeholder="Username"
-				aria-label="Username"
-				autocomplete="username"
-				required
-			/>
-			<input
-				type="password"
-				name="password"
-				placeholder="Password"
-				aria-label="Password"
-				autocomplete="current-password"
-				required
-			/>
-			<button type="submit">
-			Login
-			</button>
-		</form>
-	</section>
+<Layout title="Login">
+  <section class="container">
+    <ThemeSwitcher class="asdf" />
+    <h1>Sign in</h1>
+    <form onsubmit="return false;" id="login-form">
+      <input
+        type="text"
+        name="Username"
+        placeholder="Username"
+        aria-label="Username"
+        autocomplete="username"
+        required
+      />
+      <input
+        type="password"
+        name="password"
+        placeholder="Password"
+        aria-label="Password"
+        autocomplete="current-password"
+        required
+      />
+      <button type="submit"> Login </button>
+      <article
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        aria-hidden="true"
+      >
+        Invalid username or password
+      </article>
+    </form>
+  </section>
 </Layout>
 
+<script>
+  import { navigate } from "astro:transitions/client";
+
+  document.addEventListener("astro:page-load", () => {
+    const form = document.getElementById("login-form") as HTMLFormElement;
+    const alert = form?.querySelector("#login-form article") as HTMLElement;
+    if (!form || !alert) return;
+
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      alert.setAttribute("aria-hidden", "true");
+
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+      fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Login failed");
+          navigate("/");
+        })
+        .catch((err) => alert.setAttribute("aria-hidden", "false"));
+    };
+  });
+</script>
+
 <style>
-	section {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		max-width: 25rem;
-		height: 100%;
-	}
+  section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    max-width: 25rem;
+    height: 100%;
+
+    #theme-switcher {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    #login-form {
+      position: relative;
+    }
+
+    article {
+      position: absolute;
+      display: none;
+      color: rgb(255, 85, 85);
+      width: 100%;
+      text-align: center;
+
+      &[aria-hidden="false"] {
+        display: block;
+      }
+    }
+  }
 </style>

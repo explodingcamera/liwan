@@ -1,13 +1,35 @@
 ---
+import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 import Base from "./Base.astro";
 
 type Props = {
-	title: string;
+  title: string;
 };
 
 const { title } = Astro.props;
 ---
 
 <Base {title}>
-	<slot />
+  <header class="container-fluid">
+    <nav>
+      <ul>
+        <li><a href="/" class="contrast"><strong>liwan</strong></a></li>
+      </ul>
+      <ul>
+        <li><a href="/login">Login</a></li>
+        <ThemeSwitcher />
+      </ul>
+    </nav>
+  </header>
+  <main class="container-fluid">
+    <slot />
+  </main>
 </Base>
+
+<style>
+  main,
+  header {
+    max-width: 60rem;
+    padding: 1rem 2rem;
+  }
+</style>

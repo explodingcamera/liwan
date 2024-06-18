@@ -1,24 +1,29 @@
+mod auth;
 mod dashboard;
 mod event;
-mod webutils;
+mod webext;
 
 use crate::app::{App, Event};
 use crate::config::MAX_SESSION_AGE;
-use webutils::*;
+use webext::*;
 
 use crossbeam::channel::Sender;
 use eyre::{Context, Result};
 use rust_embed::RustEmbed;
 
-use poem::endpoint::EmbeddedFilesEndpoint;
+use poem::endpoint::{EmbeddedFileEndpoint, EmbeddedFilesEndpoint};
 use poem::listener::TcpListener;
-use poem::middleware::{AddData, CookieJarManager};
+use poem::middleware::{AddData, Compression, CookieJarManager};
 use poem::session::{CookieConfig, ServerSession};
 use poem::{post, EndpointExt, Route, Server};
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
 struct Files;
+
+#[derive(RustEmbed, Clone)]
+#[folder = "./tracker"]
+struct Script;
 
 pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     println!("Starting webserver...");
@@ -28,20 +33,21 @@ pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
         app.clone(),
     );
 
-    let private_router = Route::new()
-        .at("/login", post(dashboard::login_handler))
-        .at("/logout", post(dashboard::logout_handler))
+    let dashboard_router = Route::new()
+        .nest("/auth", auth::router())
         .at("/groups", post(dashboard::groups_handler))
         .with(sessions);
 
     let router = Route::new()
         .at("/api/event", post(event::event_handler))
-        .nest("/api/private", private_router)
+        .nest("/api/dashboard", dashboard_router)
+        .at("/script.js", EmbeddedFileEndpoint::<Script>::new("script.min.js"))
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
         .catch_all_error(catch_error)
-        .with(CookieJarManager::new())
         .with(AddData::new(app))
-        .with(AddData::new(events));
+        .with(AddData::new(events))
+        .with(CookieJarManager::new())
+        .with(Compression::new());
 
     let listener = TcpListener::bind(("0.0.0.0", port));
     println!("Listening on http://0.0.0.0:{}", port);
