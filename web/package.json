@@ -13,6 +13,7 @@
     "@astrojs/check": "^0.7.0",
     "@astrojs/react": "^3.6.0",
     "@explodingcamera/css": "^0.0.4",
+    "@fontsource-variable/figtree": "^5.0.21",
     "@icons-pack/react-simple-icons": "^9.5.0",
     "@picocss/pico": "^2.0.6",
     "@types/react": "^18.3.3",

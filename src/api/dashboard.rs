@@ -13,7 +13,7 @@ pub(super) async fn test_handler(Data(app): Data<&App>) -> poem::Result<impl Int
         &app.conn().unwrap(),
         &["blog"],
         "pageview",
-        DateRange { start: chrono::Utc::now() - chrono::Duration::days(7), end: chrono::Utc::now() },
+        DateRange { start: (chrono::Utc::now() - chrono::Duration::days(7)), end: (chrono::Utc::now()) },
         Dimension::Path,
         &[],
         Metric::UniqueVisitors,
