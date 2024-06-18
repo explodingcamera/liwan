@@ -1,4 +1,12 @@
-use poem::{http::StatusCode, session::Session, web::Json, IntoResponse};
+use std::marker::PhantomData;
+
+use poem::{
+    endpoint::EmbeddedFileEndpoint,
+    http::{header, Method, StatusCode},
+    web::Json,
+    Endpoint, IntoResponse, Request, Response,
+};
+use rust_embed::RustEmbed;
 use serde_json::json;
 
 pub trait OptionExt<T> {
@@ -7,10 +15,7 @@ pub trait OptionExt<T> {
 
 impl<T> OptionExt<T> for Option<T> {
     fn http_err(self, message: &'static str, status: StatusCode) -> poem::Result<T> {
-        match self {
-            Some(ok) => Ok(ok),
-            None => Err(poem::Error::from_string(message, status)),
-        }
+        self.ok_or_else(|| poem::Error::from_string(message, status))
     }
 }
 
@@ -31,11 +36,6 @@ pub async fn catch_error(err: poem::Error) -> impl IntoResponse {
     Json(json!({ "status": "error", "message": err.to_string() })).with_status(err.status())
 }
 
-pub fn auth<'a>(session: &Session, app: &'a crate::app::App) -> poem::Result<&'a crate::config::User> {
-    let username = session.get::<String>("username").http_err("unauthorized", StatusCode::UNAUTHORIZED)?;
-    app.resolve_user(&username).http_err("user not found", StatusCode::UNAUTHORIZED)
-}
-
 #[macro_export]
 macro_rules! http_bail {
     ($message:expr, $status:expr) => {
@@ -51,6 +51,69 @@ macro_rules! http_res {
     () => {
         Ok(poem::web::Json(serde_json::json!({ "status": "ok" })))
     };
+}
+
+pub struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
+
+impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
+    pub fn new() -> Self {
+        EmbeddedFilesEndpoint(PhantomData)
+    }
+}
+
+impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
+    type Output = Response;
+
+    async fn call(&self, req: Request) -> Result<Self::Output, poem::Error> {
+        let mut path = req.uri().path().trim_start_matches('/').trim_end_matches("/").to_string();
+        if path.is_empty() {
+            path = "index.html".to_string();
+        }
+
+        if req.method() != Method::GET {
+            return Err(StatusCode::METHOD_NOT_ALLOWED.into());
+        }
+
+        let file = match E::get(&path) {
+            Some(content) => Some(content),
+            None => {
+                path = format!("{}/index.html", path);
+                E::get(&path)
+            }
+        };
+
+        let orig_path = req.original_uri().path();
+        if orig_path.ends_with('/') && file.is_some() && orig_path.len() > 1 {
+            let redirect = req.original_uri().path().trim_start_matches('/').trim_end_matches('/');
+            return Ok(Response::builder()
+                .status(StatusCode::MOVED_PERMANENTLY)
+                .header(header::LOCATION, format!("/{}", redirect))
+                .body(vec![]));
+        }
+
+        match file {
+            Some(content) => {
+                let hash = hex::encode(content.metadata.sha256_hash());
+                if req
+                    .headers()
+                    .get(header::IF_NONE_MATCH)
+                    .map(|etag| etag.to_str().unwrap_or("000000").eq(&hash))
+                    .unwrap_or(false)
+                {
+                    return Err(StatusCode::NOT_MODIFIED.into());
+                }
+
+                // otherwise, return 200 with etag hash
+                let body: Vec<u8> = content.data.into();
+                let mime = mime_guess::from_path(path).first_or_octet_stream();
+                Ok(Response::builder()
+                    .header(header::CONTENT_TYPE, mime.as_ref())
+                    .header(header::ETAG, hash)
+                    .body(body))
+            }
+            None => Err(StatusCode::NOT_FOUND.into()),
+        }
+    }
 }
 
 pub use http_bail;

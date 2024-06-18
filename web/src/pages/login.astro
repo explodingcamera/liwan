@@ -60,7 +60,7 @@ import Layout from "../layout/Base.astro";
           if (!res.ok) throw new Error("Login failed");
           navigate("/");
         })
-        .catch((err) => alert.setAttribute("aria-hidden", "false"));
+        .catch((_) => alert.setAttribute("aria-hidden", "false"));
     };
   });
 </script>

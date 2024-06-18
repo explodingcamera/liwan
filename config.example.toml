@@ -25,7 +25,7 @@ port=8080
 [[user]]
 username="admin"
 # Password hash, this can can be generated with `liwan hash-password <password>`
-password_hash="$argon2id$v=19$m=16,t=2,p=1$YXNkZmFzZGZhc2Rm$JlD8sZ1mJvySNUj3b12gpg" 
+password_hash="$argon2id$v=19$m=16,t=2,p=1$YXNkZmFzZGZhc2Rm$JlD8sZ1mJvySNUj3b12gpg"
 # Whether this user is an admin
 admin=true
 # Groups this user has access to (admin implies access to all groups)
@@ -42,13 +42,15 @@ display_name="My Blog"
 
 # Groups are collections of entities, these will be displayed in the UI
 [[group]]
+id="blog"
+display_name="Public Analytics for My Blog"
+entities=["blog"]
+# make this publicly accessible
+# this will apply to all entities in this group as well
+public=true
+
+[[group]]
 id="personal"
 display_name="Personal Websites"
 entities=["website", "blog"]
 password="password" # make this publicly accessible but require a password
-
-[[group]]
-id="blog"
-display_name="Public Analytics for My Blog"
-entities=["blog"]
-public=true # make this publicly accessible

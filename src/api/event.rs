@@ -45,7 +45,7 @@ pub(super) async fn event_handler(
         None => None,
     };
 
-    let entity = app.resolve_entity(&event.entity_id).ok_or(NotFoundError)?;
+    let entity = app.config().resolve_entity(&event.entity_id).ok_or(NotFoundError)?;
     let url = Uri::from_str(&event.url).http_err("invalid url", StatusCode::BAD_REQUEST)?;
     let host = url.host().unwrap_or_default();
     let daily_salt = app.get_salt().await.http_err("internal error", StatusCode::INTERNAL_SERVER_ERROR)?;

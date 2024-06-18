@@ -1,12 +1,12 @@
-use crate::config::{Config, Entity, Group, User};
+use crate::config::{Config};
 use crate::utils::hash::{generate_salt, verify_password};
 use crossbeam::channel::{Receiver, RecvError};
-use crossbeam::sync::ShardedLock;
+use crossbeam::sync::{ShardedLock, ShardedLockReadGuard};
 use duckdb::{params, DuckdbConnectionManager};
 use eyre::{bail, Result};
 use poem::http::StatusCode;
 use poem::session::SessionStorage;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
 use std::sync::Arc;
 
 pub type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
@@ -14,7 +14,7 @@ pub type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
 #[derive(Clone)]
 pub struct App {
     pub conn: r2d2::Pool<DuckdbConnectionManager>,
-    pub config: Arc<Config>,
+    pub config: Arc<ShardedLock<Config>>,
     daily_salt: Arc<ShardedLock<Salt>>,
 }
 
@@ -65,8 +65,13 @@ macro_rules! event_params {
 const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 
 impl App {
+    pub fn config(&self) -> ShardedLockReadGuard<'_, Config> {
+        self.config.read().expect("Failed to acquire read lock")
+    }
+
     pub fn check_login(&self, username: &str, password: &str) -> bool {
-        let Some(user) = self.config.users.iter().find(|user| user.username == username) else {
+        let config = self.config();
+        let Some(user) = config.users.iter().find(|user| user.username == username) else {
             return false;
         };
         verify_password(password, &user.password_hash).is_ok()
@@ -110,33 +115,9 @@ impl App {
 
         Ok(Self {
             conn,
-            config: Arc::new(config),
+            config: Arc::new(ShardedLock::new(config)),
             daily_salt: Arc::new(ShardedLock::new(Salt { salt, updated_at })),
         })
-    }
-
-    pub fn resolve_entity(&self, id: &str) -> Option<Entity> {
-        self.config.entities.iter().find(|&entity| entity.id == id).cloned()
-    }
-
-    pub fn resolve_entities(&self, ids: &[String]) -> HashMap<String, String> {
-        self.config
-            .entities
-            .iter()
-            .filter(|entity| ids.contains(&entity.id))
-            .map(|entity| (entity.id.clone(), entity.display_name.clone()))
-            .collect()
-    }
-
-    pub fn resolve_user(&self, username: &str) -> Option<&User> {
-        self.config.users.iter().find(|&user| user.username == username)
-    }
-
-    pub fn resolve_user_groups(&self, user: &User) -> Option<Vec<&Group>> {
-        if user.role == crate::config::UserRole::Admin {
-            return Some(self.config.groups.iter().collect());
-        }
-        Some(self.config.groups.iter().filter(|group| user.groups.contains(&group.id)).collect())
     }
 
     pub fn process_events(&self, events: Receiver<Event>) -> Result<()> {
@@ -172,9 +153,9 @@ impl SessionStorage for App {
         session_id: &'a str,
     ) -> poem::Result<Option<BTreeMap<String, serde_json::Value>>> {
         println!("Loading session: {}", session_id);
-        let conn = self.conn().map_err(|_| {
-            poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR)
-        })?;
+        let conn = self
+            .conn()
+            .map_err(|_| poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR))?;
 
         let Some((session, expires_at)): Option<(String, chrono::DateTime<chrono::Utc>)> = conn
             .query_row("select data, expires_at from sessions where id = ?", params![session_id], |row| {
@@ -190,9 +171,8 @@ impl SessionStorage for App {
             return Ok(None);
         }
 
-        let session = serde_json::from_str(&session).map_err(|_| {
-            poem::Error::from_string("Failed to parse session data", StatusCode::INTERNAL_SERVER_ERROR)
-        })?;
+        let session = serde_json::from_str(&session)
+            .map_err(|_| poem::Error::from_string("Failed to parse session data", StatusCode::INTERNAL_SERVER_ERROR))?;
 
         Ok(Some(session))
     }
@@ -203,16 +183,15 @@ impl SessionStorage for App {
         entries: &'a std::collections::BTreeMap<String, serde_json::Value>,
         expires: Option<std::time::Duration>,
     ) -> poem::Result<()> {
-        let conn = self.conn().map_err(|_| {
-            poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR)
-        })?;
+        let conn = self
+            .conn()
+            .map_err(|_| poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR))?;
 
         let data = serde_json::to_string(entries).map_err(|_| {
             poem::Error::from_string("Failed to serialize session data", StatusCode::INTERNAL_SERVER_ERROR)
         })?;
 
-        let expires_at =
-            expires.map(|expires| chrono::Utc::now() + chrono::Duration::from_std(expires).unwrap());
+        let expires_at = expires.map(|expires| chrono::Utc::now() + chrono::Duration::from_std(expires).unwrap());
 
         conn.execute(
             "insert into sessions (id, data, expires_at) values (?, ?, ?) on conflict(id) do update set data = ?, expires_at = ?",
@@ -227,13 +206,12 @@ impl SessionStorage for App {
     }
 
     async fn remove_session<'a>(&'a self, session_id: &'a str) -> poem::Result<()> {
-        let conn = self.conn().map_err(|_| {
-            poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR)
-        })?;
+        let conn = self
+            .conn()
+            .map_err(|_| poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR))?;
 
-        conn.execute("delete from sessions where id = ?", params![session_id]).map_err(|_| {
-            poem::Error::from_string("Failed to remove session", StatusCode::INTERNAL_SERVER_ERROR)
-        })?;
+        conn.execute("delete from sessions where id = ?", params![session_id])
+            .map_err(|_| poem::Error::from_string("Failed to remove session", StatusCode::INTERNAL_SERVER_ERROR))?;
 
         Ok(())
     }

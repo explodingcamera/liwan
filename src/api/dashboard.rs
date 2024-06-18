@@ -30,18 +30,24 @@ pub struct GroupResponse {
 }
 
 #[handler]
-pub(super) async fn groups_handler(
-    Data(app): Data<&App>,
-    session: &Session,
-) -> poem::Result<impl IntoResponse> {
-    let user = auth(session, app)?;
-    let groups = app.resolve_user_groups(user).http_err("user not found", StatusCode::NOT_FOUND)?;
-    http_res!(groups
+pub(super) async fn groups_handler(Data(app): Data<&App>, session: &Session) -> poem::Result<impl IntoResponse> {
+    let user = match session.get::<String>("username") {
+        Some(username) => {
+            Some(app.config().resolve_user(&username).http_err("user not found", StatusCode::UNAUTHORIZED)?)
+        }
+        None => None,
+    };
+
+    let resp = app
+        .config()
+        .resolve_user_groups(user.as_ref())
         .iter()
         .map(|g| GroupResponse {
-            id: g.id.clone(),
-            display_name: g.display_name.clone(),
-            entities: app.resolve_entities(&g.entities),
+            id: (g.id.clone()),
+            display_name: (g.display_name.clone()),
+            entities: (app.config().resolve_entities(&g.entities)),
         })
-        .collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    http_res!(resp)
 }
