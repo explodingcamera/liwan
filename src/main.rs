@@ -10,7 +10,7 @@ use config::Config;
 use eyre::Result;
 
 #[derive(FromArgs)]
-/// liwan
+/// liwan - lightweight web analytics
 struct Args {
     #[argh(option)]
     /// path to the configuration file

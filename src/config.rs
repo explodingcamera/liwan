@@ -1,6 +1,8 @@
 use eyre::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::{path::Path, time::Duration};
+
+pub const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MaxMindEdition {
@@ -91,7 +93,7 @@ pub struct User {
     pub groups: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 pub enum UserRole {
     #[serde(rename = "admin")]
     Admin,

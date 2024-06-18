@@ -70,7 +70,7 @@ pub struct DimensionFilter {
     value: String,
 }
 
-fn filter_sql(filters: &[DimensionFilter]) -> Result<String> {
+fn filter_sql(_filters: &[DimensionFilter]) -> Result<String> {
     Ok("".to_string())
 }
 

@@ -1,6 +1,6 @@
-use crate::config::{Config, Entity};
+use crate::config::{Config, Entity, Group, User};
 use crate::utils::hash::{generate_salt, verify_password};
-use crossbeam::channel::{Receiver, RecvError, RecvTimeoutError};
+use crossbeam::channel::{Receiver, RecvError};
 use crossbeam::sync::ShardedLock;
 use duckdb::{params, DuckdbConnectionManager};
 use eyre::{bail, Result};
@@ -117,6 +117,17 @@ impl App {
 
     pub fn resolve_entity(&self, id: &str) -> Option<Entity> {
         self.config.entities.iter().find(|&entity| entity.id == id).cloned()
+    }
+
+    pub fn resolve_user(&self, username: &str) -> Option<&User> {
+        self.config.users.iter().find(|&user| user.username == username)
+    }
+
+    pub fn resolve_user_groups(&self, user: &User) -> Option<Vec<&Group>> {
+        if user.role == crate::config::UserRole::Admin {
+            return Some(self.config.groups.iter().collect());
+        }
+        Some(self.config.groups.iter().filter(|group| user.groups.contains(&group.id)).collect())
     }
 
     pub fn process_events(&self, events: Receiver<Event>) -> Result<()> {
