@@ -57,7 +57,6 @@ pub struct ReportTable(BTreeMap<String, u32>);
 
 #[derive(Clone, Debug)]
 pub struct ReportStats {
-    // avg_duration: u32,          // 3 decimal places
     total_views: u32,
     total_sessions: u32,
     unique_visitors: u32,
@@ -81,7 +80,6 @@ fn metric_sql(metric: &Metric) -> Result<String> {
         Metric::UniqueVisitors => "count(distinct sd.visitor_id)",
         Metric::Sessions => "count(distinct sd.visitor_id || '-' || date_trunc('minute', timestamp 'epoch' + interval '1 second' * cast(floor(extract(epoch from created_at) / 1800) * 1800 as bigint)))",
         Metric::AvgViewsPerVisitor => "count(sd.created_at) / count(distinct sd.visitor_id)",
-        // Metric::AvgDuration => "sum(extract(epoch from sd.session_duration)) / count(sd.created_at)",
     }.to_owned())
 }
 
@@ -219,7 +217,6 @@ pub fn overall_stats(
     let metric_total = metric_sql(&Metric::Views)?;
     let metric_sessions = metric_sql(&Metric::Sessions)?;
     let metric_unique_visitors = metric_sql(&Metric::UniqueVisitors)?;
-    // let metric_avg_duration = metric_sql(&Metric::AvgDuration)?;
     let metric_avg_views_per_visitor = metric_sql(&Metric::AvgViewsPerVisitor)?;
 
     let query = format!("--sql

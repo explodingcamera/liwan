@@ -1,12 +1,12 @@
 use crate::config::{Config, Entity};
 use crate::utils::hash::{generate_salt, verify_password};
-use crossbeam::channel::Receiver;
+use crossbeam::channel::{Receiver, RecvError, RecvTimeoutError};
 use crossbeam::sync::ShardedLock;
 use duckdb::{params, DuckdbConnectionManager};
 use eyre::{bail, Result};
 use poem::http::StatusCode;
 use poem::session::SessionStorage;
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 pub type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
@@ -43,8 +43,26 @@ pub struct Event {
     pub city: Option<String>,
 }
 
-const BATCH_SIZE: usize = 100;
-const FLUSH_TIMEOUT: i64 = 5;
+macro_rules! event_params {
+    ($event:expr) => {
+        params![
+            $event.entity_id,
+            $event.visitor_id,
+            $event.event,
+            $event.created_at,
+            $event.fqdn,
+            $event.path,
+            $event.referrer,
+            $event.platform,
+            $event.browser,
+            $event.mobile,
+            $event.country,
+            $event.city,
+        ]
+    };
+}
+
+const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 
 impl App {
     pub fn check_login(&self, username: &str, password: &str) -> bool {
@@ -102,46 +120,25 @@ impl App {
     }
 
     pub fn process_events(&self, events: Receiver<Event>) -> Result<()> {
-        let mut queue = VecDeque::new();
-        let mut last_flush = chrono::Utc::now();
+        loop {
+            match events.recv() {
+                Ok(event) => {
+                    let conn = self.conn()?;
+                    let mut appender = conn.appender("events")?;
+                    appender.append_row(event_params![event])?;
 
-        for event in events {
-            println!("Received event: {:?}", event);
-            queue.push_back(event);
+                    // Non-blockingly drain the remaining events in the queue if there are any
+                    for event in events.try_iter() {
+                        appender.append_row(event_params![event])?;
+                    }
+                    appender.flush()?;
 
-            if queue.len() >= BATCH_SIZE
-                || chrono::Utc::now() - last_flush > chrono::Duration::seconds(FLUSH_TIMEOUT)
-            {
-                println!("Flushing {} events", queue.len());
-                self.append_events(queue.drain(..))?;
-                last_flush = chrono::Utc::now();
+                    // Sleep to allow more events to be received before the next batch
+                    std::thread::sleep(EVENT_BATCH_INTERVAL);
+                }
+                Err(RecvError) => bail!("event channel closed"),
             }
         }
-
-        bail!("event channel closed")
-    }
-
-    fn append_events(&self, events: impl Iterator<Item = Event>) -> Result<()> {
-        let conn = self.conn()?;
-        let mut appender = conn.appender("events")?;
-        for event in events {
-            appender.append_row(params![
-                event.entity_id,
-                event.visitor_id,
-                event.event,
-                event.created_at,
-                event.fqdn,
-                event.path,
-                event.referrer,
-                event.platform,
-                event.browser,
-                event.mobile,
-                event.country,
-                event.city,
-            ])?;
-        }
-        appender.flush()?;
-        Ok(())
     }
 
     pub fn conn(&self) -> Result<Conn> {
