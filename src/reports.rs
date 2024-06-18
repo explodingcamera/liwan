@@ -4,7 +4,6 @@ use crate::app::Conn;
 use crate::utils::validate;
 use cached::proc_macro::cached;
 use cached::SizedCache;
-use chrono::Duration;
 use duckdb::params;
 use eyre::Result;
 use itertools::Itertools;
@@ -23,15 +22,16 @@ pub struct DateRange {
 #[derive(Debug)]
 pub enum Metric {
     Views,
-    Sessions, // Sessions (30 minutes of inactivity)
+    Sessions,
     UniqueVisitors,
     AvgViewsPerVisitor,
-    AvgDuration,
+    // AvgDuration,
 }
 
 #[derive(Debug)]
 pub enum Dimension {
-    Path, // fqdn + path
+    Path,
+    Fqdn,
     Referrer,
     Platform,
     Browser,
@@ -52,35 +52,59 @@ pub enum FilterType {
 #[derive(Clone, Debug, Serialize)]
 pub struct ReportGraph(Vec<u32>);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ReportTable(BTreeMap<String, u32>);
 
 #[derive(Clone, Debug)]
 pub struct ReportStats {
+    // avg_duration: u32,          // 3 decimal places
     total_views: u32,
     total_sessions: u32,
     unique_visitors: u32,
-    avg_views_per_visitor: f32,
-    avg_duration: u64,
+    avg_views_per_visitor: u32, // 3 decimal places
 }
 
 #[derive(Debug)]
-pub enum DimensionFilter {
-    Path(FilterType, String),
-    Fqdn(FilterType, String),
-    Referrer(FilterType, String),
-    Platform(FilterType, String),
-    Browser(FilterType, String),
-    Mobile(FilterType, bool),
-    Country(FilterType, String),
-    City(FilterType, String),
+pub struct DimensionFilter {
+    dimension: Dimension,
+    filter_type: FilterType,
+    value: String,
 }
 
-fn repeat_vars(count: usize) -> String {
-    assert_ne!(count, 0);
-    let mut s = "?,".repeat(count);
-    s.pop();
-    s
+fn filter_sql(filters: &[DimensionFilter]) -> Result<String> {
+    Ok("".to_string())
+}
+
+fn metric_sql(metric: &Metric) -> Result<String> {
+    Ok(match metric {
+        Metric::Views => "count(sd.created_at)",
+        Metric::UniqueVisitors => "count(distinct sd.visitor_id)",
+        Metric::Sessions => "count(distinct sd.visitor_id || '-' || date_trunc('minute', timestamp 'epoch' + interval '1 second' * cast(floor(extract(epoch from created_at) / 1800) * 1800 as bigint)))",
+        Metric::AvgViewsPerVisitor => "count(sd.created_at) / count(distinct sd.visitor_id)",
+        // Metric::AvgDuration => "sum(extract(epoch from sd.session_duration)) / count(sd.created_at)",
+    }.to_owned())
+}
+
+pub fn online_users(conn: &Conn, entities: &[&str]) -> Result<u32> {
+    // recheck the validity of the entity IDs to be super sure there's no SQL injection
+    if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
+        return Err(eyre::eyre!("Invalid entity ID"));
+    }
+    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+
+    let query = format!(
+        "--sql
+            select count(distinct visitor_id) from events
+            where
+                entity_id in ({entities_list}) and
+                created_at >= now() - interval '5 minutes';
+    "
+    );
+
+    let mut stmt = conn.prepare_cached(&query)?;
+    let rows = stmt.query_map([], |row| row.get(0))?;
+    let online_users = rows.collect::<Result<Vec<u32>, duckdb::Error>>()?;
+    Ok(online_users[0])
 }
 
 #[cached(
@@ -102,61 +126,60 @@ pub fn overall_report(
     if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
         return Err(eyre::eyre!("Invalid entity ID"));
     }
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
-    let filters_clause = "";
 
-    let metric_column = match metric {
-        Metric::Views => "COUNT(created_at)",
-        Metric::UniqueVisitors => "COUNT(DISTINCT visitor_id)",
-        Metric::Sessions => "COUNT(DISTINCT visitor_id || '-' || DATE_TRUNC('minute', TIMESTAMP 'epoch' + INTERVAL '1 second' * CAST(FLOOR(EXTRACT(EPOCH FROM created_at) / 1800) * 1800 AS BIGINT)))",
-        Metric::AvgViewsPerVisitor => "COUNT(created_at) / COUNT(DISTINCT visitor_id)",
-        Metric::AvgDuration => "SUM(EXTRACT(EPOCH FROM session_duration)) / COUNT(created_at)",
-    }.to_string();
+    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+    let filters_clause = filter_sql(filters)?;
+    let metric_column = metric_sql(&metric)?;
 
     let query = format!("--sql
-        WITH
-            params AS (
-                SELECT 
-                    ?::TIMESTAMP AS start_time,
-                    ?::TIMESTAMP AS end_time,
-                    ?::INT AS num_buckets,
+        with
+            params as (
+                select
+                    ?::timestamp as start_time,
+                    ?::timestamp as end_time,
+                    ?::int as num_buckets,
             ),
-            time_bins AS (
-                SELECT
-                    start_time + (i * (end_time - start_time) / num_buckets) AS bin_start,
-                    start_time + ((i + 1) * (end_time - start_time) / num_buckets) AS bin_end
-                FROM params, generate_series(0, ?::BIGINT - 1) AS s(i)
+            time_bins as (
+                select
+                    start_time + (i * (end_time - start_time) / num_buckets) as bin_start,
+                    start_time + ((i + 1) * (end_time - start_time) / num_buckets) as bin_end
+                from params, generate_series(0, ?::bigint - 1) as s(i)
             ),
-            session_data AS (
-                SELECT
+            session_data as (
+                select
                     visitor_id,
                     created_at,
-                    LEAD(created_at) OVER (PARTITION BY visitor_id ORDER BY created_at) AS next_visit,
-                    COALESCE(LEAD(created_at) OVER (PARTITION BY visitor_id ORDER BY created_at) - created_at, INTERVAL '0' SECOND) AS session_duration
-                FROM events, params
-                WHERE
-                    event = ?::TEXT AND
-                    created_at >= params.start_time AND
-                    created_at <= params.end_time AND
-                    entity_id IN ({entities_list})
+                    coalesce(lead(created_at) over (partition by visitor_id order by created_at) - created_at, interval '0' second) as session_duration
+                from events, params
+                where
+                    event = ?::text and
+                    created_at >= params.start_time and
+                    created_at <= params.end_time and
+                    entity_id in ({entities_list})
                     {filters_clause}
             ),
-            event_bins AS (
-                SELECT
+            event_bins as (
+                select
                     bin_start,
-                    {metric_column} AS metric_value
-                FROM time_bins tb
-                LEFT JOIN session_data sd
-                ON sd.created_at >= tb.bin_start AND sd.created_at < COALESCE(tb.bin_end, ?::TIMESTAMP)
-                GROUP BY bin_start
+                    {metric_column} as metric_value
+                from
+                    time_bins tb
+                    left join session_data sd
+                    on sd.created_at >= tb.bin_start and sd.created_at < coalesce(tb.bin_end, ?::timestamp)
+                group by
+                    bin_start
             )
-        SELECT tb.bin_start, COALESCE(eb.metric_value, 0) AS metric_value
-        FROM time_bins tb
-        LEFT JOIN event_bins eb ON tb.bin_start = eb.bin_start
-        ORDER BY tb.bin_start;
+        select
+            tb.bin_start,
+            coalesce(eb.metric_value, 0) as metric_value
+        from
+            time_bins tb
+            left join event_bins eb on tb.bin_start = eb.bin_start
+        order by
+            tb.bin_start;
     ");
 
-    let mut stmt = conn.prepare(&query)?;
+    let mut stmt = conn.prepare_cached(&query)?;
     let params = params![range.start, range.end, data_points, data_points, event, range.end];
 
     match metric {
@@ -165,7 +188,7 @@ pub fn overall_report(
             let report_graph = rows.collect::<Result<Vec<u32>, duckdb::Error>>()?;
             Ok(ReportGraph(report_graph))
         }
-        Metric::AvgViewsPerVisitor | Metric::AvgDuration => {
+        Metric::AvgViewsPerVisitor => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
             let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
             Ok(ReportGraph(report_graph.iter().map(|v| (v * 1000.0).round() as u32).collect()))
@@ -176,7 +199,7 @@ pub fn overall_report(
 #[cached(
     ty = "SizedCache<String, ReportStats>",
     create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_STATS)}",
-    convert = r#"{format!("{:?}:{}:{:?}:{:?}:{:?}", entities, event, range, filters, metric)}"#,
+    convert = r#"{format!("{:?}:{}:{:?}:{:?}", entities, event, range, filters)}"#,
     result = true
 )]
 pub fn overall_stats(
@@ -185,9 +208,63 @@ pub fn overall_stats(
     event: &str,
     range: DateRange,
     filters: &[DimensionFilter],
-    metric: Metric,
 ) -> Result<ReportStats> {
-    todo!()
+    // recheck the validity of the entity IDs to be super sure there's no SQL injection
+    if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
+        return Err(eyre::eyre!("Invalid entity ID"));
+    }
+    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+    let filters_clause = filter_sql(filters)?;
+
+    let metric_total = metric_sql(&Metric::Views)?;
+    let metric_sessions = metric_sql(&Metric::Sessions)?;
+    let metric_unique_visitors = metric_sql(&Metric::UniqueVisitors)?;
+    // let metric_avg_duration = metric_sql(&Metric::AvgDuration)?;
+    let metric_avg_views_per_visitor = metric_sql(&Metric::AvgViewsPerVisitor)?;
+
+    let query = format!("--sql
+        with
+            params as (
+                select
+                    ?::timestamp as start_time,
+                    ?::timestamp as end_time
+            ),
+            session_data as (
+                select
+                    visitor_id,
+                    created_at,
+                    coalesce(lead(created_at) over (partition by visitor_id order by created_at) - created_at, interval '0' second) as session_duration
+                from events, params
+                where
+                    event = ?::text and
+                    created_at >= params.start_time and
+                    created_at <= params.end_time and
+                    entity_id in ({entities_list})
+                    {filters_clause}
+            )
+        select
+            {metric_total} as total_views,
+            {metric_sessions} as total_sessions,
+            {metric_unique_visitors} as unique_visitors,
+            {metric_avg_views_per_visitor} as avg_views_per_visitor,
+        from
+            session_data sd;
+    ");
+
+    let mut stmt = conn.prepare_cached(&query)?;
+    let params = params![range.start, range.end, event];
+
+    let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
+        Ok(ReportStats {
+            total_views: row.get(0)?,
+            total_sessions: row.get(1)?,
+            unique_visitors: row.get(2)?,
+            avg_views_per_visitor: (row.get::<_, f64>(3)? * 1000.0).round() as u32,
+            // avg_duration: (row.get::<_, f64>(4)? * 1000.0).round() as u32,
+        })
+    })?;
+
+    Ok(result)
 }
 
 #[cached(
@@ -205,5 +282,82 @@ pub fn dimension_report(
     filters: &[DimensionFilter],
     metric: Metric,
 ) -> Result<ReportTable> {
-    todo!()
+    // recheck the validity of the entity IDs to be super sure there's no SQL injection
+    if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
+        return Err(eyre::eyre!("Invalid entity ID"));
+    }
+
+    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+    let filters_clause = filter_sql(filters)?;
+    let metric_column = metric_sql(&metric)?;
+    let (dimension_column, group_by_columns) = match dimension {
+        Dimension::Path => ("concat(fqdn, path)", "fqdn, path"),
+        Dimension::Fqdn => ("fqdn", "fqdn"),
+        Dimension::Referrer => ("referrer", "referrer"),
+        Dimension::Platform => ("platform", "platform"),
+        Dimension::Browser => ("browser", "browser"),
+        Dimension::Mobile => ("mobile::text", "mobile"),
+        Dimension::Country => ("country", "country"),
+        Dimension::City => ("city", "city"),
+    };
+
+    let query = format!(
+        "--sql
+        with
+            params as (
+                select
+                    ?::timestamp as start_time,
+                    ?::timestamp as end_time
+            ),
+            session_data as (
+                select
+                    {dimension_column} as dimension_value,
+                    visitor_id,
+                    created_at,
+                    coalesce(lead(created_at) over (partition by visitor_id order by created_at) - created_at, interval '0' second) as session_duration
+                from events sd, params
+                where
+                    sd.event = ?::text and
+                    sd.created_at >= params.start_time and
+                    sd.created_at <= params.end_time and
+                    sd.entity_id in ({entities_list})
+                    {filters_clause}
+                group by
+                    {group_by_columns}, visitor_id, created_at
+            )
+        select
+            dimension_value,
+            {metric_column} as metric_value
+        from
+            session_data sd
+        group by
+            dimension_value
+        order by
+            metric_value desc;
+    "
+    );
+
+    let mut stmt = conn.prepare_cached(&query)?;
+    let params = params![range.start, range.end, event];
+
+    match metric {
+        Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
+                let dimension_value: String = row.get(0)?;
+                let total_metric: u32 = row.get(1)?;
+                Ok((dimension_value, total_metric))
+            })?;
+            let report_table = rows.collect::<Result<BTreeMap<String, u32>, duckdb::Error>>()?;
+            Ok(ReportTable(report_table))
+        }
+        Metric::AvgViewsPerVisitor => {
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
+                let dimension_value: String = row.get(0)?;
+                let total_metric: f64 = row.get(1)?;
+                Ok((dimension_value, (total_metric * 1000.0).round() as u32))
+            })?;
+            let report_table = rows.collect::<Result<BTreeMap<String, u32>, duckdb::Error>>()?;
+            Ok(ReportTable(report_table))
+        }
+    }
 }

@@ -38,9 +38,12 @@ CREATE TABLE salts (
 INSERT INTO migrations (name) VALUES ('2024-06-01-initial');
 INSERT INTO salts (salt, updated_at) VALUES ('', '1970-01-01 00:00:00');
 
+-- TODO: evaluate if these indexes are necessary
 CREATE INDEX events_event_idx ON events (event);
 CREATE INDEX events_entity_id_idx ON events (entity_id);
 CREATE INDEX events_visitor_id_idx ON events (visitor_id);
-
+CREATE INDEX events_created_at_idx ON events (created_at);
+CREATE INDEX events_entity_id_created_at_idx ON events (entity_id, created_at);
+CREATE INDEX events_visitor_id_created_at_idx ON events (visitor_id, created_at);
 
 SET enable_fsst_vectors = true;

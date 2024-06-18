@@ -65,7 +65,7 @@ impl App {
             let new_salt = generate_salt();
             let now = chrono::Utc::now();
             let conn = self.conn()?;
-            conn.execute("UPDATE salts SET salt = ?, updated_at = ? WHERE id = 1", params![&new_salt, now])?;
+            conn.execute("update salts set salt = ?, updated_at = ? where id = 1", params![&new_salt, now])?;
 
             {
                 if let Ok(mut daily_salt) = self.daily_salt.try_write() {
@@ -85,7 +85,7 @@ impl App {
         init_db(&conn.get()?)?;
 
         let (salt, updated_at): (String, chrono::DateTime<chrono::Utc>) = {
-            conn.get()?.query_row("SELECT salt, updated_at FROM salts WHERE id = 1", [], |row| {
+            conn.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
                 Ok((row.get(0)?, row.get(1)?))
             })?
         };
@@ -160,7 +160,7 @@ impl SessionStorage for App {
         })?;
 
         let Some((session, expires_at)): Option<(String, chrono::DateTime<chrono::Utc>)> = conn
-            .query_row("SELECT data, expires_at FROM sessions WHERE id = ?", params![session_id], |row| {
+            .query_row("select data, expires_at from sessions where id = ?", params![session_id], |row| {
                 Ok((row.get(0)?, row.get(1)?))
             })
             .ok()
@@ -198,7 +198,7 @@ impl SessionStorage for App {
             expires.map(|expires| chrono::Utc::now() + chrono::Duration::from_std(expires).unwrap());
 
         conn.execute(
-            "INSERT INTO sessions (id, data, expires_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = ?, expires_at = ?",
+            "insert into sessions (id, data, expires_at) values (?, ?, ?) on conflict(id) do update set data = ?, expires_at = ?",
             params![session_id, data, expires_at, data, expires_at],
         )
         .map_err(|e| {
@@ -214,7 +214,7 @@ impl SessionStorage for App {
             poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR)
         })?;
 
-        conn.execute("DELETE FROM sessions WHERE id = ?", params![session_id]).map_err(|_| {
+        conn.execute("delete from sessions where id = ?", params![session_id]).map_err(|_| {
             poem::Error::from_string("Failed to remove session", StatusCode::INTERNAL_SERVER_ERROR)
         })?;
 
@@ -225,7 +225,7 @@ impl SessionStorage for App {
 fn init_db(conn: &Conn) -> Result<()> {
     //  get the last entry in the migrations table
     let last_migration_exists: Option<String> =
-        conn.query_row("SELECT name FROM migrations ORDER BY id DESC LIMIT 1", [], |row| row.get(0)).ok();
+        conn.query_row("select name from migrations order by id desc limit 1", [], |row| row.get(0)).ok();
 
     if let Some(last_migration) = last_migration_exists {
         if last_migration == LAST_MIGRATION {

@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use crate::app::{App, Event};
-use crate::reports::{self, DateRange, Metric};
+use crate::reports::{self, DateRange, Dimension, Metric};
 use crate::utils::hash::random_visitor_id;
 use crate::utils::referer;
 use crate::utils::{hash::hash_ip, ua};
@@ -74,14 +74,14 @@ pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
 
 #[handler]
 async fn test_handler(Data(state): Data<&AppState>) -> impl IntoResponse {
-    let res = reports::overall_report(
+    let res = reports::dimension_report(
         &state.app.conn().unwrap(),
         &["blog"],
         "pageview",
         DateRange { start: chrono::Utc::now() - chrono::Duration::days(7), end: chrono::Utc::now() },
-        7,
+        Dimension::Path,
         &[],
-        Metric::Sessions,
+        Metric::UniqueVisitors,
     )
     .unwrap();
     Json(json!({ "status": "ok", "data": res }))
