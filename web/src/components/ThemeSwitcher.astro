@@ -23,12 +23,19 @@ import { MoonIcon, SunIcon } from "lucide-react";
     padding: 1rem;
     color: var(--pico-contrast-background);
     transition: color 0.4s;
-    opacity: 0;
-    animation: fadeIn 0.1s 0.1s linear forwards;
   }
 
-  .sun {
+  .moon {
     display: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .sun {
+      display: none;
+    }
+    .moon {
+      display: block;
+    }
   }
 </style>
 

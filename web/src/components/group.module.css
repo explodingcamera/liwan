@@ -1,0 +1,17 @@
+@keyframes loadIn {
+  0% {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.group {
+  animation: loadIn 0.2s linear;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

@@ -2,6 +2,8 @@
 import "@explodingcamera/css/all.css";
 import "@picocss/pico/css/pico.lime.min.css";
 import "@fontsource-variable/figtree";
+import "../global.css";
+
 import { ViewTransitions } from "astro:transitions";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 
@@ -31,12 +33,6 @@ type Props = { title: string };
         </a>
       </small>
       <style>
-        :global(:root) {
-          --pico-font-family: "Figtree Variable", system-ui, "Segoe UI", Roboto,
-            Oxygen, Ubuntu, Cantarell, Helvetica, Arial, "Helvetica Neue",
-            sans-serif, var(--pico-font-family-emoji);
-        }
-
         footer {
           max-width: 60rem;
           padding: 1rem 2rem;

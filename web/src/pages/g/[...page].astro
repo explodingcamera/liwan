@@ -1,0 +1,14 @@
+---
+import type { GetStaticPaths } from "astro";
+import Layout from "../../layout/Layout.astro";
+import { Group } from "../../components/group";
+
+export const getStaticPaths = (() => {
+  if (import.meta.env.DEV) return [{ params: { page: "personal" } }];
+  return [{ params: { page: undefined } }];
+}) satisfies GetStaticPaths;
+---
+
+<Layout title="">
+  <Group client:load />
+</Layout>

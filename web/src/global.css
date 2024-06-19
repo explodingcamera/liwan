@@ -1,0 +1,9 @@
+.full {
+  min-height: 100%;
+}
+
+:global(:root) {
+  --pico-font-family: "Figtree Variable", system-ui, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, Helvetica, Arial, "Helvetica Neue", sans-serif,
+    var(--pico-font-family-emoji);
+}
