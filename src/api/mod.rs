@@ -5,6 +5,7 @@ mod webext;
 
 use crate::app::{App, Event};
 use crate::config::MAX_SESSION_AGE;
+use poem::web::cookie::SameSite;
 use poem::web::CompressionAlgo;
 use webext::*;
 
@@ -16,7 +17,7 @@ use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
 use poem::middleware::{AddData, Compression, CookieJarManager};
 use poem::session::{CookieConfig, ServerSession};
-use poem::{post, EndpointExt, Route, Server};
+use poem::{get, post, EndpointExt, Route, Server};
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -26,23 +27,32 @@ struct Files;
 #[folder = "./tracker"]
 struct Script;
 
+pub fn session_cookie() -> CookieConfig {
+    CookieConfig::default()
+        .max_age(Some(MAX_SESSION_AGE))
+        .name("liwan-session")
+        .same_site(SameSite::Strict)
+        .secure(false)
+        .path("/api/dashboard")
+}
+
 pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     println!("Starting webserver...");
     let port = app.config().port;
-    let sessions = ServerSession::new(
-        CookieConfig::default().max_age(Some(MAX_SESSION_AGE)).name("liwan-session").secure(false),
-        app.clone(),
-    );
+    let sessions = ServerSession::new(session_cookie(), app.clone());
 
     let dashboard_router =
-        Route::new().nest("/auth", auth::router()).at("/groups", post(dashboard::groups_handler)).with(sessions);
+        Route::new().nest("/auth", auth::router()).at("/groups", get(dashboard::groups_handler)).with(sessions);
+
+    let api_router = Route::new()
+        .at("/event", post(event::event_handler))
+        .nest("/dashboard", dashboard_router)
+        .catch_all_error(catch_error);
 
     let router = Route::new()
-        .at("/api/event", post(event::event_handler))
-        .nest("/api/dashboard", dashboard_router)
+        .nest("/api", api_router)
         .at("/script.js", EmbeddedFileEndpoint::<Script>::new("script.min.js"))
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
-        .catch_all_error(catch_error)
         .with(AddData::new(app))
         .with(AddData::new(events))
         .with(CookieJarManager::new())

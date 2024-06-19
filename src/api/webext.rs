@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use poem::{
-    endpoint::EmbeddedFileEndpoint,
     http::{header, Method, StatusCode},
     web::Json,
     Endpoint, IntoResponse, Request, Response,

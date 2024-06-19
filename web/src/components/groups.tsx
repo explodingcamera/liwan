@@ -1,3 +1,5 @@
+import { fetchGroups, useQuery } from "../api";
+
 type Group = {
 	id: string;
 	displayName: string;
@@ -24,6 +26,10 @@ const dummyGroups: Group[] = [
 ];
 
 export const Groups = () => {
+	const { data, isLoading } = useQuery({
+		queryKey: ["groups"],
+		queryFn: fetchGroups,
+	});
 	const groups = dummyGroups;
 
 	return (

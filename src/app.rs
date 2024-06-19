@@ -1,4 +1,4 @@
-use crate::config::{Config};
+use crate::config::Config;
 use crate::utils::hash::{generate_salt, verify_password};
 use crossbeam::channel::{Receiver, RecvError};
 use crossbeam::sync::{ShardedLock, ShardedLockReadGuard};
@@ -6,7 +6,7 @@ use duckdb::{params, DuckdbConnectionManager};
 use eyre::{bail, Result};
 use poem::http::StatusCode;
 use poem::session::SessionStorage;
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 pub type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
@@ -152,7 +152,6 @@ impl SessionStorage for App {
         &'a self,
         session_id: &'a str,
     ) -> poem::Result<Option<BTreeMap<String, serde_json::Value>>> {
-        println!("Loading session: {}", session_id);
         let conn = self
             .conn()
             .map_err(|_| poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR))?;

@@ -2,10 +2,9 @@ import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 const proxy = {
 	"/api": {
-		target: "http://localhost:8008",
+		target: "http://localhost:8080",
 		changeOrigin: true,
-		cookieDomainRewrite: "dawdle.space",
-		ws: true,
+		cookieDomainRewrite: "localhost:4321",
 	},
 };
 
