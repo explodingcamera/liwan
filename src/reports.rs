@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 
 use crate::app::Conn;
 use crate::utils::validate;
@@ -7,28 +8,30 @@ use cached::SizedCache;
 use duckdb::params;
 use eyre::Result;
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 const CACHE_SIZE_OVERALL_STATS: usize = 512;
 const CACHE_SIZE_OVERALL_REPORTS: usize = 512;
 const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DateRange {
     pub start: chrono::DateTime<chrono::Utc>,
     pub end: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Metric {
     Views,
     Sessions,
     UniqueVisitors,
-    AvgViewsPerVisitor,
+    AvgViewsPerSession,
     // AvgDuration,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Dimension {
     Path,
     Fqdn,
@@ -40,7 +43,8 @@ pub enum Dimension {
     City,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FilterType {
     Equal,
     NotEqual,
@@ -49,21 +53,20 @@ pub enum FilterType {
     IsNull,
 }
 
-#[derive(Clone, Debug, Serialize)]
-pub struct ReportGraph(Vec<u32>);
+pub type ReportGraph = Vec<u32>;
+pub type ReportTable = BTreeMap<String, u32>;
 
-#[derive(Clone, Debug, Serialize)]
-pub struct ReportTable(BTreeMap<String, u32>);
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReportStats {
     total_views: u32,
     total_sessions: u32,
     unique_visitors: u32,
-    avg_views_per_visitor: u32, // 3 decimal places
+    avg_views_per_session: u32, // 3 decimal places
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DimensionFilter {
     dimension: Dimension,
     filter_type: FilterType,
@@ -79,7 +82,7 @@ fn metric_sql(metric: &Metric) -> Result<String> {
         Metric::Views => "count(sd.created_at)",
         Metric::UniqueVisitors => "count(distinct sd.visitor_id)",
         Metric::Sessions => "count(distinct sd.visitor_id || '-' || date_trunc('minute', timestamp 'epoch' + interval '1 second' * cast(floor(extract(epoch from created_at) / 1800) * 1800 as bigint)))",
-        Metric::AvgViewsPerVisitor => "count(sd.created_at) / count(distinct sd.visitor_id)",
+        Metric::AvgViewsPerSession => "count(sd.created_at) / count(distinct sd.visitor_id)",
     }.to_owned())
 }
 
@@ -113,21 +116,21 @@ pub fn online_users(conn: &Conn, entities: &[&str]) -> Result<u32> {
 )]
 pub fn overall_report(
     conn: &Conn,
-    entities: &[&str],
+    entities: &[impl AsRef<str> + Debug],
     event: &str,
-    range: DateRange,
+    range: &DateRange,
     data_points: u32,
     filters: &[DimensionFilter],
-    metric: Metric,
+    metric: &Metric,
 ) -> Result<ReportGraph> {
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
-    if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
+    if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
         return Err(eyre::eyre!("Invalid entity ID"));
     }
 
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+    let entities_list = entities.iter().map(|entity| format!("'{}'", entity.as_ref())).join(", ");
     let filters_clause = filter_sql(filters)?;
-    let metric_column = metric_sql(&metric)?;
+    let metric_column = metric_sql(metric)?;
 
     let query = format!("--sql
         with
@@ -184,12 +187,12 @@ pub fn overall_report(
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
             let report_graph = rows.collect::<Result<Vec<u32>, duckdb::Error>>()?;
-            Ok(ReportGraph(report_graph))
+            Ok(report_graph)
         }
-        Metric::AvgViewsPerVisitor => {
+        Metric::AvgViewsPerSession => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
             let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
-            Ok(ReportGraph(report_graph.iter().map(|v| (v * 1000.0).round() as u32).collect()))
+            Ok(report_graph.iter().map(|v| (v * 1000.0).round() as u32).collect())
         }
     }
 }
@@ -202,22 +205,22 @@ pub fn overall_report(
 )]
 pub fn overall_stats(
     conn: &Conn,
-    entities: &[&str],
+    entities: &[impl AsRef<str> + Debug],
     event: &str,
-    range: DateRange,
+    range: &DateRange,
     filters: &[DimensionFilter],
 ) -> Result<ReportStats> {
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
-    if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
+    if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
         return Err(eyre::eyre!("Invalid entity ID"));
     }
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+    let entities_list = entities.iter().map(|entity| format!("'{}'", entity.as_ref())).join(", ");
     let filters_clause = filter_sql(filters)?;
 
     let metric_total = metric_sql(&Metric::Views)?;
     let metric_sessions = metric_sql(&Metric::Sessions)?;
     let metric_unique_visitors = metric_sql(&Metric::UniqueVisitors)?;
-    let metric_avg_views_per_visitor = metric_sql(&Metric::AvgViewsPerVisitor)?;
+    let metric_avg_views_per_visitor = metric_sql(&Metric::AvgViewsPerSession)?;
 
     let query = format!("--sql
         with
@@ -256,8 +259,7 @@ pub fn overall_stats(
             total_views: row.get(0)?,
             total_sessions: row.get(1)?,
             unique_visitors: row.get(2)?,
-            avg_views_per_visitor: (row.get::<_, f64>(3)? * 1000.0).round() as u32,
-            // avg_duration: (row.get::<_, f64>(4)? * 1000.0).round() as u32,
+            avg_views_per_session: (row.get::<_, f64>(3)? * 1000.0).round() as u32,
         })
     })?;
 
@@ -272,7 +274,7 @@ pub fn overall_stats(
 )]
 pub fn dimension_report(
     conn: &Conn,
-    entities: &[&str],
+    entities: &[impl AsRef<str> + Debug],
     event: &str,
     range: DateRange,
     dimension: Dimension,
@@ -280,11 +282,11 @@ pub fn dimension_report(
     metric: Metric,
 ) -> Result<ReportTable> {
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
-    if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
+    if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
         return Err(eyre::eyre!("Invalid entity ID"));
     }
 
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+    let entities_list = entities.iter().map(|entity| format!("'{}'", entity.as_ref())).join(", ");
     let filters_clause = filter_sql(filters)?;
     let metric_column = metric_sql(&metric)?;
     let (dimension_column, group_by_columns) = match dimension {
@@ -345,16 +347,16 @@ pub fn dimension_report(
                 Ok((dimension_value, total_metric))
             })?;
             let report_table = rows.collect::<Result<BTreeMap<String, u32>, duckdb::Error>>()?;
-            Ok(ReportTable(report_table))
+            Ok(report_table)
         }
-        Metric::AvgViewsPerVisitor => {
+        Metric::AvgViewsPerSession => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: f64 = row.get(1)?;
                 Ok((dimension_value, (total_metric * 1000.0).round() as u32))
             })?;
             let report_table = rows.collect::<Result<BTreeMap<String, u32>, duckdb::Error>>()?;
-            Ok(ReportTable(report_table))
+            Ok(report_table)
         }
     }
 }

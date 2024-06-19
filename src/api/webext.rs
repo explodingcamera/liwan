@@ -8,21 +8,54 @@ use poem::{
 use rust_embed::RustEmbed;
 use serde_json::json;
 
-pub trait OptionExt<T> {
-    fn http_err(self, message: &'static str, status: StatusCode) -> poem::Result<T>;
+pub fn get_user(session: &poem::session::Session, app: &crate::app::App) -> poem::Result<Option<crate::config::User>> {
+    Ok(match session.get::<String>("username") {
+        Some(username) => {
+            Some(app.config().resolve_user(&username).http_err("user not found", StatusCode::UNAUTHORIZED)?)
+        }
+        None => None,
+    })
 }
 
-impl<T> OptionExt<T> for Option<T> {
-    fn http_err(self, message: &'static str, status: StatusCode) -> poem::Result<T> {
+pub trait PoemErrExt<T> {
+    fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T>;
+
+    fn http_internal(self, message: &str) -> poem::Result<T>
+    where
+        Self: Sized,
+    {
+        self.http_err(message, StatusCode::INTERNAL_SERVER_ERROR)
+    }
+
+    fn http_bad_request(self, message: &str) -> poem::Result<T>
+    where
+        Self: Sized,
+    {
+        self.http_err(message, StatusCode::BAD_REQUEST)
+    }
+
+    fn http_unauthorized(self, message: &str) -> poem::Result<T>
+    where
+        Self: Sized,
+    {
+        self.http_err(message, StatusCode::UNAUTHORIZED)
+    }
+
+    fn http_not_found(self, message: &str) -> poem::Result<T>
+    where
+        Self: Sized,
+    {
+        self.http_err(message, StatusCode::NOT_FOUND)
+    }
+}
+
+impl<T> PoemErrExt<T> for Option<T> {
+    fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T> {
         self.ok_or_else(|| poem::Error::from_string(message, status))
     }
 }
 
-pub trait ResultExt<T, E> {
-    fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T>;
-}
-
-impl<T, E> ResultExt<T, E> for Result<T, E> {
+impl<T, E> PoemErrExt<T> for Result<T, E> {
     fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T> {
         match self {
             Ok(ok) => Ok(ok),
@@ -37,8 +70,11 @@ pub async fn catch_error(err: poem::Error) -> impl IntoResponse {
 
 #[macro_export]
 macro_rules! http_bail {
-    ($message:expr, $status:expr) => {
+    ($status:expr, $message:expr) => {
         return Err(poem::Error::from_string($message, $status))
+    };
+    ($message:expr) => {
+        return Err(poem::Error::from_string($message, poem::http::StatusCode::INTERNAL_SERVER_ERROR))
     };
 }
 
@@ -64,7 +100,7 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
     type Output = Response;
 
     async fn call(&self, req: Request) -> Result<Self::Output, poem::Error> {
-        let mut path = req.uri().path().trim_start_matches('/').trim_end_matches("/").to_string();
+        let mut path = req.uri().path().trim_start_matches('/').trim_end_matches('/').to_string();
         if path.is_empty() {
             path = "index.html".to_string();
         }

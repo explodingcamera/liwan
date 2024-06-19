@@ -22,24 +22,37 @@ type Props = { title: string };
     <slot />
     <footer class="container-fluid footer">
       <small>
-        Powered by&nbsp;
         <a
           href="https://github.com/explodingcamera/liwan"
           target="_blank"
           class="secondary icon-link"
         >
-          <SiGithub size="1rem" />
-          <span>Liwan</span>
+          <SiGithub size=".8rem" />
+          <span>Liwan - Lightweight Analytics</span>
         </a>
+        &nbsp;| Made by&nbsp;
+        <a class="secondary" target="_blank" href="https://henrygressmann.de"
+          >Henry Gressmann</a
+        >
+        <!-- , available under&nbsp;<a
+          class="secondary"
+          target="_blank"
+          href="https://opensource.org/license/mit">MIT</a
+        > / <a
+          class="secondary"
+          target="_blank"
+          href="https://opensource.org/license/apache-2.0">Apache 2.0</a
+        > -->
       </small>
       <style>
         footer {
           max-width: 60rem;
           padding: 1rem 2rem;
           small {
-            display: flex;
+            display: inline-flex;
+            flex-wrap: wrap;
             align-items: center;
-            gap: 0.2rem;
+            font-size: 14px;
           }
 
           a.icon-link {
@@ -48,7 +61,7 @@ type Props = { title: string };
               text-decoration: underline;
             }
             display: inline-flex;
-            align-items: center;
+            align-items: end;
             justify-content: center;
             gap: 0.2rem;
           }

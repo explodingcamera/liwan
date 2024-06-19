@@ -17,7 +17,7 @@ use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
 use poem::middleware::{AddData, Compression, CookieJarManager};
 use poem::session::{CookieConfig, ServerSession};
-use poem::{get, post, EndpointExt, Route, Server};
+use poem::{post, EndpointExt, Route, Server};
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -41,12 +41,9 @@ pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     let port = app.config().port;
     let sessions = ServerSession::new(session_cookie(), app.clone());
 
-    let dashboard_router =
-        Route::new().nest("/auth", auth::router()).at("/groups", get(dashboard::groups_handler)).with(sessions);
-
     let api_router = Route::new()
         .at("/event", post(event::event_handler))
-        .nest("/dashboard", dashboard_router)
+        .nest("/dashboard", dashboard::router().nest("/auth", auth::router()).with(sessions))
         .catch_all_error(catch_error);
 
     let router = Route::new()

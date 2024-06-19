@@ -1,6 +1,10 @@
 use eyre::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::Path,
+    time::Duration,
+};
 
 use crate::utils::validate;
 
@@ -182,7 +186,7 @@ impl Config {
         self.entities.iter().find(|&entity| entity.id == id).cloned()
     }
 
-    pub fn resolve_entities(&self, ids: &[String]) -> HashMap<String, String> {
+    pub fn resolve_entities(&self, ids: &[String]) -> BTreeMap<String, String> {
         self.entities
             .iter()
             .filter(|entity| ids.contains(&entity.id))
@@ -206,6 +210,10 @@ impl Config {
     pub fn has_access_to_group(&self, user: Option<&User>, group: &Group) -> bool {
         let groups = self.resolve_user_groups(user);
         groups.iter().any(|g| g.id == group.id)
+    }
+
+    pub fn resolve_user_group(&self, id: &str, user: Option<&User>) -> Option<Group> {
+        self.resolve_user_groups(user).iter().find(|&group| group.id == id).cloned()
     }
 
     pub fn resolve_user_groups(&self, user: Option<&User>) -> Vec<Group> {

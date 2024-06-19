@@ -32,14 +32,14 @@ struct LoginParams {
 }
 
 #[handler]
-pub(super) async fn login_handler(
+async fn login_handler(
     Data(app): Data<&App>,
     Json(params): Json<LoginParams>,
     session: &Session,
     cookies: &CookieJar,
 ) -> poem::Result<impl IntoResponse> {
     if !app.check_login(&params.username, &params.password) {
-        http_bail!("invalid username or password", StatusCode::UNAUTHORIZED);
+        http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
     }
 
     let mut public_cookie = PUBLIC_COOKIE.clone();
@@ -51,7 +51,7 @@ pub(super) async fn login_handler(
 }
 
 #[handler]
-pub(super) async fn logout_handler(session: &Session, cookies: &CookieJar) -> poem::Result<impl IntoResponse> {
+async fn logout_handler(session: &Session, cookies: &CookieJar) -> poem::Result<impl IntoResponse> {
     let mut cookie = PUBLIC_COOKIE.clone();
     cookie.make_removal();
     cookies.add(cookie);
