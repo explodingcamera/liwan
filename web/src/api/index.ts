@@ -21,14 +21,14 @@ export type Group = {
 
 export type StatsRequest = { range: DateRange };
 export type GraphRequest = StatsRequest & {
-	dimension: Dimension;
 	metric: Metric;
+	dataPoints: number;
 };
 
 export const fetchGroups = () => req<Record<string, Group>>("GET", "/api/dashboard/groups");
 
 export const fetchGroupStats = (group: string, data: StatsRequest) =>
-	req<ReportStats>("POST", `/api/dashboard/group/${group}/overview`, data);
+	req<ReportStats>("POST", `/api/dashboard/group/${group}/stats`, data);
 
 export const fetchGroupGraph = (group: string, data: GraphRequest) =>
 	req<ReportGraph>("POST", `/api/dashboard/group/${group}/graph`, data);

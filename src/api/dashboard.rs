@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 pub fn router() -> poem::Route {
     poem::Route::new()
         .at("/groups", get(groups_handler))
-        .at("/group/{group_id}/stats", post(group_stats_handler))
-        .at("/group/{group_id}/graph", post(group_graph_handler))
+        .at("/group/:group_id/stats", post(group_stats_handler))
+        .at("/group/:group_id/graph", post(group_graph_handler))
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -26,7 +26,6 @@ pub struct GraphRequest {
     pub range: DateRange,
     pub data_points: u32,
     pub metric: Metric,
-    pub entity: String,
 }
 
 #[handler]
@@ -64,8 +63,13 @@ pub(super) async fn group_stats_handler(
 
     let filters = &[];
 
-    let stats = reports::overall_stats(&conn, &group.entities, "pageview", &req.range, filters)
-        .http_internal("Failed to generate stats")?;
+    let stats = match reports::overall_stats(&conn, &group.entities, "pageview", &req.range, filters) {
+        Ok(stats) => stats,
+        Err(e) => {
+            println!("Failed to generate stats: {}", e);
+            http_bail!(StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate stats")
+        }
+    };
 
     http_res!(stats)
 }

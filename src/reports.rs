@@ -259,7 +259,7 @@ pub fn overall_stats(
             total_views: row.get(0)?,
             total_sessions: row.get(1)?,
             unique_visitors: row.get(2)?,
-            avg_views_per_session: (row.get::<_, f64>(3)? * 1000.0).round() as u32,
+            avg_views_per_session: (row.get::<_, Option<f64>>(3)?.unwrap_or(0.0) * 1000.0).round() as u32,
         })
     })?;
 

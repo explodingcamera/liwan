@@ -14,7 +14,7 @@ auth="internal"
 port=8080
 
 # Uncomment the following to enable GeoIP lookups
-# [geoip]
+# [geoip] 
 # # if only a path is provided, no download will be attempted
 # maxmind_db_path="./GeoLite2-City.mmdb"
 # maxmind_account_id="MY_ACCOUNT_ID"

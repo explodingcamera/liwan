@@ -11,12 +11,8 @@ const proxy = {
 // https://astro.build/config
 export default defineConfig({
 	vite: {
-		server: {
-			proxy,
-		},
-		preview: {
-			proxy,
-		},
+		server: { proxy },
+		preview: { proxy },
 	},
 	integrations: [react()],
 });
