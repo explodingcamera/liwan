@@ -1,10 +1,6 @@
 use eyre::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BTreeMap, HashMap},
-    path::Path,
-    time::Duration,
-};
+use std::{collections::BTreeMap, path::Path, time::Duration};
 
 use crate::utils::validate;
 

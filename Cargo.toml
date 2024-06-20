@@ -12,6 +12,7 @@ toml={version="0.8"}
 serde_json={version="1.0"}
 mime_guess={version="2.0"}
 chrono={version="0.4", features=["serde"]}
+time={version="0.3"} # need both chrono and time for compatibility with dependencies
 serde={version="1.0", features=["derive"]}
 lazy_static={version="1.4"}
 itertools={version="0.13"}
@@ -24,6 +25,8 @@ rust-embed="8.4"
 
 duckdb={version="0.10", features=["chrono", "bundled", "r2d2"]}
 r2d2="0.8"
+refinery="0.8"
+refinery-core="0.8"
 argon2={version="0.5"}
 crossbeam="0.8"
 sha3={version="0.10"}

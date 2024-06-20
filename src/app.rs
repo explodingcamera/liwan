@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::utils::hash::{generate_salt, verify_password};
+use crate::utils::refinery_duckdb::DuckDBConnection;
 use crossbeam::channel::{Receiver, RecvError};
 use crossbeam::sync::{ShardedLock, ShardedLockReadGuard};
 use duckdb::{params, DuckdbConnectionManager};
@@ -23,9 +24,7 @@ struct Salt {
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-static LAST_MIGRATION: &str = "2024-06-01-initial";
-static MIGRATIONS: &[&str] = &[LAST_MIGRATION];
-static CURRENT_SCHEMA: &str = include_str!("./migrations/current.sql");
+refinery::embed_migrations!("src/migrations");
 
 #[derive(Debug, Clone)]
 pub struct Event {
@@ -105,7 +104,13 @@ impl App {
     pub fn new(config: Config) -> Result<Self> {
         let pool = DuckdbConnectionManager::file(&config.db_path)?;
         let conn = r2d2::Pool::new(pool)?;
-        init_db(&conn.get()?)?;
+
+        for migration in migrations::runner().run_iter(&mut DuckDBConnection(conn.get()?)) {
+            match migration?.name() {
+                "initial" => continue,
+                name => println!("Applying Migration: {:?}", name),
+            }
+        }
 
         let (salt, updated_at): (String, chrono::DateTime<chrono::Utc>) = {
             conn.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
@@ -214,30 +219,4 @@ impl SessionStorage for App {
 
         Ok(())
     }
-}
-
-fn init_db(conn: &Conn) -> Result<()> {
-    //  get the last entry in the migrations table
-    let last_migration_exists: Option<String> =
-        conn.query_row("select name from migrations order by id desc limit 1", [], |row| row.get(0)).ok();
-
-    if let Some(last_migration) = last_migration_exists {
-        if last_migration == LAST_MIGRATION {
-            return Ok(());
-        }
-        return apply_migrations(conn, &last_migration);
-    }
-
-    // apply the latest schema
-    conn.execute_batch(CURRENT_SCHEMA)?;
-    Ok(())
-}
-
-fn apply_migrations(_conn: &Conn, last_migration: &str) -> Result<()> {
-    let _last_migration_index = MIGRATIONS
-        .iter()
-        .position(|&migration| migration == last_migration)
-        .ok_or_else(|| eyre::eyre!("Unknown migration: {}", last_migration))?;
-
-    bail!("Migrations not implemented");
 }
