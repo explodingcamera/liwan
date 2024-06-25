@@ -4,10 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "bun run --bun astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "build": "bun run --bun astro build",
+    "preview": "bun run --bun astro preview"
   },
   "dependencies": {
     "@astrojs/react": "^3.6.0",
@@ -18,13 +16,13 @@
     "@nivo/line": "^0.87.0",
     "@picocss/pico": "^2.0.6",
     "@scaleway/use-query-params": "^5.0.2",
-    "@tanstack/react-query": "^5.45.1",
+    "@tanstack/react-query": "^5.47.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "astro": "^4.10.3",
-    "lucide-react": "^0.395.0",
+    "astro": "^4.11.1",
+    "lucide-react": "^0.396.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "typescript": "^5.4.5"
+    "typescript": "^5.5.2"
   }
 }

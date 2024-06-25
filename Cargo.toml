@@ -18,7 +18,7 @@ lazy_static={version="1.4"}
 itertools={version="0.13"}
 
 # api 
-tokio={version="1.0", default-features=false, features=["rt-multi-thread"]}
+tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
 poem={version="3.0", features=["embed", "session", "cookie", "compression"]}
 uaparser="0.6"
 rust-embed="8.4"
