@@ -1,0 +1,53 @@
+.stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+  padding: 0.6rem;
+  border-radius: 0.4rem;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+
+  h1 {
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+  }
+
+  > div {
+    button {
+      margin: 0;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .statsGrid {
+      display: flex;
+      gap: 1rem;
+      @media (max-width: 768px) {
+        flex-direction: column;
+      }
+
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      h3 {
+        font-size: 1.2rem;
+        font-weight: 500;
+        margin-right: 1rem;
+      }
+
+      h2 {
+        font-size: 0.8rem;
+        font-weight: 400;
+      }
+    }
+  }
+}
+
+.graph {
+  height: 10rem;
+  margin-left: -2rem;
+  margin-bottom: 2rem;
+}

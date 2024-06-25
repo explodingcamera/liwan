@@ -1,5 +1,6 @@
-import { ResponsiveLine } from "@nivo/line";
-import { useMemo } from "react";
+import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
+import { useMemo, useState } from "react";
+import styles from "./graph.module.css";
 
 export type DataPoint = {
 	x: Date;
@@ -40,11 +41,24 @@ export const LineGraph = ({
 	range?: DateRange;
 }) => {
 	const max = useMemo(() => Math.max(...data.map((d) => d.y)), [data]);
+	const [currentSlice, setCurrentSlice] = useState(null);
+
+	const Tooltip = (props: SliceTooltipProps) => {
+		const point = props.slice.points[0].data;
+		return (
+			<div data-theme="dark" className={styles.tooltip}>
+				<h2>Visitors</h2>
+				<h3>
+					<span>{formatDate(new Date(point.x), range)}</span> {point.y.toString()}
+				</h3>
+			</div>
+		);
+	};
 
 	return (
 		<ResponsiveLine
-			data={[{ data, id: "data" }]}
-			margin={{ top: 10, right: 30, bottom: 30, left: 50 }}
+			data={[{ data, id: "data", color: "hsl(0, 70%, 50%)" }]}
+			margin={{ top: 10, right: 1, bottom: 30, left: 40 }}
 			xScale={{ type: "time" }}
 			yScale={{
 				type: "linear",
@@ -82,42 +96,55 @@ export const LineGraph = ({
 			pointLabel="data.yFormatted"
 			pointLabelYOffset={-12}
 			enableSlices="x"
-			sliceTooltip={(props) => {
-				const point = props.slice.points[0].data;
-				return (
-					<div
-						style={{
-							backgroundColor: "rgba(0, 0, 0, 0.4)",
-							padding: ".4rem .5rem .6rem .5rem",
-							borderRadius: ".4rem",
-						}}
-					>
-						<h6 style={{ marginBottom: ".3rem" }}>Visitors</h6>
-						<div>
-							<span
-								style={{
-									color: "black",
-									backgroundColor: "rgba(255, 255, 255, 0.8)",
-									padding: ".1rem .2rem",
-									borderRadius: ".2rem",
-								}}
-							>
-								{formatDate(new Date(point.x), range)}:
-							</span>{" "}
-							{point.y.toString()}
-						</div>
-					</div>
-				);
-			}}
+			sliceTooltip={Tooltip}
 			enableTouchCrosshair={true}
+			defs={[
+				{
+					colors: [
+						{
+							color: "inherit",
+							offset: 0,
+						},
+						{
+							color: "inherit",
+							offset: 100,
+							opacity: 0,
+						},
+					],
+					id: "gradientA",
+					type: "linearGradient",
+				},
+			]}
+			fill={[
+				{
+					id: "gradientA",
+					match: "*",
+				},
+			]}
+			colors={{
+				scheme: "paired",
+			}}
 			useMesh={true}
 			theme={{
+				crosshair: { line: { stroke: "var(--pico-color)", strokeWidth: 2 } },
 				axis: {
 					domain: {
-						line: {
-							stroke: "#777777",
-							strokeWidth: 1,
-						},
+						line: { strokeWidth: 0 },
+					},
+					legend: {
+						text: { color: "var(--pico-color)" },
+					},
+
+					// axis label color
+					ticks: {
+						line: { strokeWidth: 0 },
+						text: { fill: "var(--pico-color)" },
+					},
+				},
+				grid: {
+					line: {
+						stroke: "var(--pico-secondary-background)",
+						strokeWidth: 0.3,
 					},
 				},
 			}}

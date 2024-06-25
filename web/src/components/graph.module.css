@@ -1,0 +1,29 @@
+.tooltip {
+  background-color: var(--pico-secondary-background);
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+  min-width: 7rem;
+
+  h2 {
+    margin-bottom: 0.3rem;
+    font-size: 1rem;
+    color: var(--pico-contrast);
+  }
+
+  h3 {
+    font-size: 1rem;
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    color: var(--pico-contrast);
+    font-weight: 800;
+    align-items: center;
+
+    span {
+      color: var(--pico-h3-color);
+      padding: 0.1rem 0.2rem;
+      font-weight: 500;
+      border-radius: 0.2rem;
+    }
+  }
+}

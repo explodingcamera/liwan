@@ -1,6 +1,7 @@
 import { fetchGroupGraph, fetchGroupStats, fetchGroups, useQuery } from "../api";
 import { ranges } from "../api/ranges";
 import { LineGraph, toDataPoints } from "./graph";
+import styles from "./groups.module.css";
 
 export const Groups = () => {
 	const { data, isLoading } = useQuery({
@@ -37,19 +38,40 @@ const Group = ({ id, displayName }: { id: string; displayName: string }) => {
 
 	return (
 		<>
-			<h4>{displayName}</h4>
-			{data && (
-				<>
-					<article>
-						<p>Total Views: {data.totalViews}</p>
-						<p>Total Sessions: {data.totalSessions}</p>
-						<p>Unique Visitors: {data.uniqueVisitors}</p>
-						<p>Avg Views Per Session: {data.avgViewsPerSession / 1000}</p>
-					</article>
-					<div style={{ height: "20rem" }}>
-						<LineGraph data={chartData} />
-					</div>
-				</>
+			<article className={styles.stats}>
+				<div>
+					<h1>{displayName}</h1>
+					{data && (
+						<div className={styles.statsGrid}>
+							<div>
+								<h2>Total Views</h2>
+								<h3>{data.totalViews}</h3>
+							</div>
+							<div>
+								<h2>Total Sessions</h2>
+								<h3>{data.totalSessions}</h3>
+							</div>
+							<div>
+								<h2>Unique Visitors</h2>
+								<h3>{data.uniqueVisitors}</h3>
+							</div>
+							<div>
+								<h2>Avg Views Per Session</h2>
+								<h3>{data.avgViewsPerSession / 1000}</h3>
+							</div>
+						</div>
+					)}
+				</div>
+				<div>
+					<button className="secondary outline" type="button">
+						Details
+					</button>
+				</div>
+			</article>
+			{data2 && (
+				<div className={styles.graph}>
+					<LineGraph data={chartData} />
+				</div>
 			)}
 		</>
 	);

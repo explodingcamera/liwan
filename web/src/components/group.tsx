@@ -3,7 +3,6 @@ import styles from "./group.module.css";
 import type * as api from "../api";
 
 const dummyGroup: api.Group = {
-	id: "personal",
 	displayName: "Personal Websites",
 	entities: {
 		portfolio: "Portfolio",
