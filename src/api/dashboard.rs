@@ -79,6 +79,7 @@ pub(super) async fn group_stats_handler(
 pub struct GroupResponse {
     pub display_name: String,
     pub entities: BTreeMap<String, String>,
+    pub public: bool,
 }
 
 #[handler]
@@ -93,6 +94,7 @@ pub(super) async fn groups_handler(Data(app): Data<&App>, session: &Session) -> 
             GroupResponse {
                 display_name: group.display_name.clone(),
                 entities: app.config().resolve_entities(&group.entities),
+                public: group.public,
             },
         );
     }

@@ -2,17 +2,18 @@ import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
 import { useMemo } from "react";
 import styles from "./graph.module.css";
 import { differenceInSeconds } from "date-fns";
+import type { Metric } from "../api";
 
 export type DataPoint = {
 	x: Date;
 	y: number;
 };
 
-export const toDataPoints = (data: number[], range: { start: Date; end: Date }): DataPoint[] => {
+export const toDataPoints = (data: number[], range: { start: Date; end: Date }, metric: Metric): DataPoint[] => {
 	const step = differenceInSeconds(range.end, range.start) / data.length;
 	return data.map((value, i) => ({
 		x: new Date(range.start.getTime() + i * step * 1000),
-		y: value,
+		y: metric === "avg_views_per_session" ? value / 1000 : value,
 	}));
 };
 
@@ -33,6 +34,7 @@ const formatDate = (date: Date, range: GraphRange = "day") => {
 
 const Tooltip = (props: SliceTooltipProps & { title: string; range: GraphRange }) => {
 	const point = props.slice.points[0].data;
+
 	return (
 		<div data-theme="dark" className={styles.tooltip}>
 			<h2>{props.title}</h2>

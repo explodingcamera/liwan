@@ -12,11 +12,12 @@ export type ReportStats = {
 export type DateRange = { start: Date; end: Date };
 export type Dimension = "path" | "fqdn" | "referrer" | "platform" | "browser" | "mobile" | "country" | "city";
 export type FilterType = "equals" | "not_equals" | "contains" | "not_contains" | "is_null";
-export type Metric = "views" | "sessions" | "uniqueVisitors" | "avgViewsPerSession";
+export type Metric = "views" | "sessions" | "unique_visitors" | "avg_views_per_session";
 
 export type Group = {
 	displayName: string;
 	entities: Record<string, string>;
+	public: boolean;
 };
 
 export type StatsRequest = { range: DateRange };

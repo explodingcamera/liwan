@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from "react";
-import { fetchGroupGraph, fetchGroupStats, fetchGroups, useQuery } from "../api";
+import { fetchGroupGraph, fetchGroupStats, fetchGroups, useQuery, type Metric } from "../api";
 import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
 import { LineGraph, toDataPoints } from "./graph";
 import styles from "./groups.module.css";
 import CountUp from "react-countup";
+import { CircleIcon, LockIcon } from "lucide-react";
 
 export const Groups = () => {
 	const { data } = useQuery({
@@ -13,6 +14,7 @@ export const Groups = () => {
 
 	const detailsRef = useRef<HTMLDetailsElement>(null);
 	const [dateRange, setDateRange] = useState<RangeName>("last7Days");
+	const [metric, setMetric] = useState<Metric>("views");
 
 	const onSelect = (name: RangeName) => () => {
 		if (detailsRef.current) detailsRef.current.open = false;
@@ -39,13 +41,37 @@ export const Groups = () => {
 
 			{data &&
 				Object.entries(data).map(([key, value]) => {
-					return <Group key={key} rangeName={dateRange} id={key} displayName={value.displayName} />;
+					return (
+						<Group
+							key={key}
+							rangeName={dateRange}
+							id={key}
+							displayName={value.displayName}
+							isPublic={value.public}
+							metric={metric}
+							setMetric={setMetric}
+						/>
+					);
 				})}
 		</div>
 	);
 };
 
-const Group = ({ id, displayName, rangeName }: { id: string; displayName: string; rangeName: RangeName }) => {
+const Group = ({
+	id,
+	displayName,
+	rangeName,
+	metric,
+	setMetric,
+	isPublic,
+}: {
+	id: string;
+	displayName: string;
+	rangeName: RangeName;
+	metric: Metric;
+	setMetric: (value: Metric) => void;
+	isPublic: boolean;
+}) => {
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
 
 	const { data } = useQuery({
@@ -55,44 +81,64 @@ const Group = ({ id, displayName, rangeName }: { id: string; displayName: string
 	});
 
 	const { data: data2 } = useQuery({
-		queryKey: ["group_graph", id, range, graphRange, dataPoints],
-		queryFn: () => fetchGroupGraph(id, { range, metric: "views", dataPoints }),
+		queryKey: ["group_graph", id, range, graphRange, metric, dataPoints],
+		queryFn: () => fetchGroupGraph(id, { range, metric, dataPoints }),
 		placeholderData: (prev) => prev,
 	});
 
-	const chartData = data2 ? toDataPoints(data2, range) : [];
+	const chartData = data2 ? toDataPoints(data2, range, metric) : [];
 
 	return (
 		<>
-			<article className={styles.stats}>
+			<div className={styles.stats}>
 				<div>
-					<h1>{displayName}</h1>
+					<h1 className={styles.header}>
+						{isPublic ? null : (
+							<>
+								<LockIcon size={16} />
+								&nbsp;
+							</>
+						)}
+						{displayName}&nbsp;
+						<span>
+							<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
+							<CountUp preserveValue duration={1} end={0} /> Current Visitors
+						</span>
+					</h1>
 					{data && (
 						<div className={styles.statsGrid}>
-							<div>
+							<button type="button" data-active={metric === "views"} onClick={() => setMetric("views")}>
 								<h2>Total Views</h2>
 								<h3>
 									<CountUp preserveValue duration={1} end={data.totalViews} />
 								</h3>
-							</div>
-							<div>
+							</button>
+							<button type="button" data-active={metric === "sessions"} onClick={() => setMetric("sessions")}>
 								<h2>Total Sessions</h2>
 								<h3>
 									<CountUp preserveValue duration={1} end={data.totalSessions} />
 								</h3>
-							</div>
-							<div>
+							</button>
+							<button
+								type="button"
+								data-active={metric === "unique_visitors"}
+								onClick={() => setMetric("unique_visitors")}
+							>
 								<h2>Unique Visitors</h2>
 								<h3>
 									<CountUp preserveValue duration={1} end={data.uniqueVisitors} />
 								</h3>
-							</div>
-							<div>
+							</button>
+							<button
+								type="button"
+								data-active={metric === "avg_views_per_session"}
+								onClick={() => setMetric("avg_views_per_session")}
+							>
 								<h2>Avg Views Per Session</h2>
 								<h3>
 									<CountUp preserveValue decimals={1} duration={1} end={data.avgViewsPerSession / 1000} />
 								</h3>
-							</div>
+							</button>
 						</div>
 					)}
 				</div>
@@ -101,7 +147,7 @@ const Group = ({ id, displayName, rangeName }: { id: string; displayName: string
 						Details
 					</button>
 				</div> */}
-			</article>
+			</div>
 			{data2 && (
 				<div className={styles.graph}>
 					<LineGraph title="Views" data={chartData} range={graphRange} />
