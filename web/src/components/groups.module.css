@@ -1,3 +1,22 @@
+.settings {
+  display: flex;
+  justify-content: end;
+
+  details {
+    width: 10rem;
+  }
+
+  summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  a {
+    cursor: pointer;
+  }
+}
+
 .stats {
   display: flex;
   justify-content: space-between;
@@ -47,7 +66,9 @@
 }
 
 .graph {
-  height: 10rem;
+  height: 12rem;
+  margin-top: -0.5rem;
   margin-left: -2rem;
-  margin-bottom: 2rem;
+  margin-right: -2rem;
+  margin-bottom: 3rem;
 }

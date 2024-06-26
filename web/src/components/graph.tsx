@@ -1,21 +1,24 @@
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import styles from "./graph.module.css";
+import { differenceInSeconds } from "date-fns";
 
 export type DataPoint = {
 	x: Date;
 	y: number;
 };
 
-export const toDataPoints = (data: number[], range: { start: Date; end: Date }): DataPoint[] =>
-	data.map((value, i) => ({
-		x: new Date(range.start.getTime() + i * 1000 * 60 * 60 * 24),
+export const toDataPoints = (data: number[], range: { start: Date; end: Date }): DataPoint[] => {
+	const step = differenceInSeconds(range.end, range.start) / data.length;
+	return data.map((value, i) => ({
+		x: new Date(range.start.getTime() + i * step * 1000),
 		y: value,
 	}));
+};
 
-export type DateRange = "year" | "month" | "day" | "hour";
+export type GraphRange = "year" | "month" | "day" | "hour";
 
-const formatDate = (date: Date, range: DateRange = "day") => {
+const formatDate = (date: Date, range: GraphRange = "day") => {
 	switch (range) {
 		case "year":
 			return Intl.DateTimeFormat("en-US", { year: "numeric" }).format(date);
@@ -28,66 +31,64 @@ const formatDate = (date: Date, range: DateRange = "day") => {
 	}
 };
 
-// make sure parent container have a defined height when using
-// responsive component, otherwise height will be 0 and
-// no chart will be rendered.
-// website examples showcase many properties,
-// you'll often use just a few of them.
+const Tooltip = (props: SliceTooltipProps & { title: string; range: GraphRange }) => {
+	const point = props.slice.points[0].data;
+	return (
+		<div data-theme="dark" className={styles.tooltip}>
+			<h2>{props.title}</h2>
+			<h3>
+				<span>{formatDate(new Date(point.x), props.range)}</span> {point.y.toString()}
+			</h3>
+		</div>
+	);
+};
+
 export const LineGraph = ({
 	data,
+	title,
 	range = "day",
 }: {
 	data: DataPoint[];
-	range?: DateRange;
+	title: string;
+	range?: GraphRange;
 }) => {
 	const max = useMemo(() => Math.max(...data.map((d) => d.y)), [data]);
-	const [currentSlice, setCurrentSlice] = useState(null);
-
-	const Tooltip = (props: SliceTooltipProps) => {
-		const point = props.slice.points[0].data;
-		return (
-			<div data-theme="dark" className={styles.tooltip}>
-				<h2>Visitors</h2>
-				<h3>
-					<span>{formatDate(new Date(point.x), range)}</span> {point.y.toString()}
-				</h3>
-			</div>
-		);
-	};
+	const yCount = 5;
 
 	return (
 		<ResponsiveLine
 			data={[{ data, id: "data", color: "hsl(0, 70%, 50%)" }]}
-			margin={{ top: 10, right: 1, bottom: 30, left: 40 }}
-			xScale={{ type: "time" }}
+			margin={{ top: 10, right: 40, bottom: 30, left: 40 }}
+			xScale={
+				data.length > 14
+					? {
+							type: "time",
+							// useUTC: false,
+						}
+					: {
+							type: "point",
+						}
+			}
 			yScale={{
 				type: "linear",
-				min: 0,
 				nice: true,
-				max: Math.max(Math.ceil(max * 1.1), 10),
+				min: 0,
+				max: Math.max(Math.ceil(max * 1.1), 5),
 			}}
 			enableGridX={false}
+			gridYValues={yCount}
 			enableArea={true}
 			enablePoints={false}
 			curve="monotoneX"
-			yFormat=" >-.2f"
 			axisTop={null}
 			axisRight={null}
 			axisBottom={{
-				tickSize: 5,
-				tickPadding: 5,
-				tickRotation: 0,
-				truncateTickAt: 0,
+				legend: "",
 				format: (value: Date) => formatDate(value, range),
 			}}
 			axisLeft={{
-				tickSize: 5,
-				tickPadding: 5,
-				tickRotation: 0,
 				legend: "",
-				legendOffset: -40,
-				legendPosition: "middle",
-				truncateTickAt: 0,
+				tickValues: yCount,
 			}}
 			pointSize={10}
 			pointColor={{ theme: "background" }}
@@ -96,7 +97,7 @@ export const LineGraph = ({
 			pointLabel="data.yFormatted"
 			pointLabelYOffset={-12}
 			enableSlices="x"
-			sliceTooltip={Tooltip}
+			sliceTooltip={(props) => <Tooltip {...props} title={title} range={range} />}
 			enableTouchCrosshair={true}
 			defs={[
 				{

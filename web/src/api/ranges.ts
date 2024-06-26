@@ -1,4 +1,19 @@
+import {
+	addDays,
+	addHours,
+	differenceInDays,
+	differenceInHours,
+	differenceInMonths,
+	endOfDay,
+	endOfHour,
+	startOfDay,
+	startOfMonth,
+	startOfYear,
+	subDays,
+	subMonths,
+} from "date-fns";
 import type { DateRange } from ".";
+import type { GraphRange } from "../components/graph";
 
 export const rangeNames = {
 	today: "Today",
@@ -9,43 +24,47 @@ export const rangeNames = {
 	monthToDate: "Month to Date",
 	yearToDate: "Year to Date",
 };
+export type RangeName = keyof typeof rangeNames;
 
 const lastXDays = (days: number) => {
-	const end = new Date();
-	const start = new Date(end);
-	start.setDate(start.getDate() - days);
+	const end = addDays(endOfDay(new Date()), 1);
+	const start = subDays(end, days);
 	return { start, end };
 };
 
+export const resolveRange = (name: RangeName) => ranges[name]();
+
 // all rangeNames are keys of the ranges object
-export const ranges: Record<keyof typeof rangeNames, () => DateRange> = {
+export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: number; graphRange: GraphRange }> = {
 	today: () => {
 		const now = new Date();
-		const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-		return { start, end: now };
+		const end = endOfHour(now);
+		const start = startOfDay(now);
+		const hours = differenceInHours(end, start);
+		return { range: { start, end }, dataPoints: hours, graphRange: "hour" };
 	},
 	yesterday: () => {
-		const now = new Date();
-		const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-		const end = new Date(start);
-		end.setDate(end.getDate() + 1);
-		return { start, end };
+		const end = startOfDay(new Date());
+		const start = subDays(end, 1);
+		return { range: { start: start, end: addHours(end, 1) }, dataPoints: 13, graphRange: "hour" };
 	},
-	last7Days: () => lastXDays(7),
-	last30Days: () => lastXDays(30),
+	last7Days: () => ({ range: lastXDays(7), dataPoints: 7, graphRange: "day" }),
+	last30Days: () => ({ range: lastXDays(30), dataPoints: 30, graphRange: "day" }),
 	last12Months: () => {
 		const now = new Date();
-		const start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-		return { start, end: now };
+		const start = subMonths(now, 12);
+		return { range: { start, end: now }, dataPoints: 12, graphRange: "month" };
 	},
 	monthToDate: () => {
 		const now = new Date();
-		const start = new Date(now.getFullYear(), now.getMonth(), 1);
-		return { start, end: now };
+		const start = startOfMonth(now);
+		const days = differenceInDays(now, start);
+		return { range: { start, end: now }, dataPoints: days, graphRange: "day" };
 	},
 	yearToDate: () => {
 		const now = new Date();
-		const start = new Date(now.getFullYear(), 0, 1);
-		return { start, end: now };
+		const start = startOfYear(now);
+		const months = differenceInMonths(now, start);
+		return { range: { start, end: now }, dataPoints: months, graphRange: "month" };
 	},
 };
