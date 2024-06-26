@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { fetchGroupGraph, fetchGroupStats, fetchGroups, useQuery, type Metric } from "../api";
+import { useMemo, useRef } from "react";
+import { fetchGroupGraph, fetchGroupStats, fetchGroups, getMetric, useQuery, type Metric } from "../api";
 import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
 import { LineGraph, toDataPoints } from "./graph";
 import styles from "./groups.module.css";
@@ -151,7 +151,7 @@ const Group = ({
 			</div>
 			{data2 && (
 				<div className={styles.graph}>
-					<LineGraph title="Views" data={chartData} range={graphRange} />
+					<LineGraph title={getMetric(metric)} data={chartData} range={graphRange} />
 				</div>
 			)}
 		</>

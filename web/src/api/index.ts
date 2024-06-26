@@ -13,6 +13,13 @@ export type DateRange = { start: Date; end: Date };
 export type Dimension = "path" | "fqdn" | "referrer" | "platform" | "browser" | "mobile" | "country" | "city";
 export type FilterType = "equals" | "not_equals" | "contains" | "not_contains" | "is_null";
 export type Metric = "views" | "sessions" | "unique_visitors" | "avg_views_per_session";
+export const getMetric = (metric: Metric) =>
+	({
+		views: "Total Views",
+		sessions: "Total Sessions",
+		unique_visitors: "Unique Visitors",
+		avg_views_per_session: "Avg Views Per Session",
+	})[metric];
 
 export type Group = {
 	displayName: string;
