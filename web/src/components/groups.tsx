@@ -5,6 +5,7 @@ import { LineGraph, toDataPoints } from "./graph";
 import styles from "./groups.module.css";
 import CountUp from "react-countup";
 import { CircleIcon, LockIcon } from "lucide-react";
+import { useLocalStorage } from "@uidotdev/usehooks";
 
 export const Groups = () => {
 	const { data } = useQuery({
@@ -13,8 +14,8 @@ export const Groups = () => {
 	});
 
 	const detailsRef = useRef<HTMLDetailsElement>(null);
-	const [dateRange, setDateRange] = useState<RangeName>("last7Days");
-	const [metric, setMetric] = useState<Metric>("views");
+	const [dateRange, setDateRange] = useLocalStorage<RangeName>("date-range", "last7Days");
+	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 
 	const onSelect = (name: RangeName) => () => {
 		if (detailsRef.current) detailsRef.current.open = false;
