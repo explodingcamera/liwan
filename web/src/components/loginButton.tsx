@@ -1,5 +1,5 @@
 import { getUsername } from "../api/utils";
-import { mutateLogout } from "../api";
+import { api } from "../api";
 
 export const LoginButton = () => {
 	const username = getUsername();
@@ -22,7 +22,7 @@ export const LoginButton = () => {
 				<button
 					className="outline secondary"
 					onClick={() => {
-						mutateLogout().then(() => {
+						api["/api/dashboard/auth/logout"].post().then(() => {
 							window.location.href = "/";
 						});
 					}}

@@ -39,7 +39,7 @@ import Layout from "../layout/Base.astro";
 
 <script>
   import { navigate } from "astro:transitions/client";
-  import { mutateLogin } from "../api";
+  import { api } from "../api";
 
   document.addEventListener("astro:page-load", () => {
     const form = document.getElementById("login-form") as HTMLFormElement;
@@ -52,12 +52,13 @@ import Layout from "../layout/Base.astro";
       alert.setAttribute("aria-hidden", "true");
 
       const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries()) as {
+      const { username, password } = Object.fromEntries(formData.entries()) as {
         username: string;
         password: string;
       };
 
-      mutateLogin(data.username, data.password)
+      api["/api/dashboard/auth/login"]
+        .post({ json: { username, password } })
         .then((res) => {
           document.location.href = "/";
         })

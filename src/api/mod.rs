@@ -3,10 +3,14 @@ mod dashboard;
 mod event;
 mod webext;
 
+use std::path::Path;
+
 use crate::app::{App, Event};
 use crate::config::MAX_SESSION_AGE;
+use event::EventApi;
 use poem::web::cookie::SameSite;
 use poem::web::CompressionAlgo;
+use poem_openapi::OpenApiService;
 use webext::*;
 
 use crossbeam::channel::Sender;
@@ -17,7 +21,7 @@ use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
 use poem::middleware::{AddData, Compression, CookieJarManager};
 use poem::session::{CookieConfig, ServerSession};
-use poem::{post, EndpointExt, Route, Server};
+use poem::{EndpointExt, Route, Server};
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -36,14 +40,38 @@ pub fn session_cookie() -> CookieConfig {
         .path("/api/dashboard")
 }
 
+fn event_service() -> OpenApiService<EventApi, ()> {
+    OpenApiService::new(event::EventApi, "event api", "1.0").url_prefix("/api/")
+}
+
+fn dashboard_service() -> OpenApiService<(dashboard::DashboardAPI, auth::AuthApi), ()> {
+    OpenApiService::new((dashboard::DashboardAPI, auth::AuthApi), "dashboard api", "1.0").url_prefix("/api/dashboard")
+}
+
+fn save_spec() -> Result<()> {
+    let path = Path::new("./web/src/api/dashboard.ts");
+    if path.exists() {
+        let spec = serde_json::to_string(&serde_json::from_str::<serde_json::Value>(&dashboard_service().spec())?)?
+            .replace(r#""servers":[],"#, "") // fets doesn't work with an empty servers array
+            .replace("; charset=utf-8", "") // fets doesn't detect the json content type correctly
+            .replace(r#""format":"int64","#, ""); // fets uses bigint for int64
+
+        std::fs::write(path, format!("export default {} as const;\n", spec))?;
+    }
+    Ok(())
+}
+
 pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     println!("Starting webserver...");
     let port = app.config().port;
     let sessions = ServerSession::new(session_cookie(), app.clone());
 
+    #[cfg(debug_assertions)]
+    save_spec()?;
+
     let api_router = Route::new()
-        .at("/event", post(event::event_handler))
-        .nest("/dashboard", dashboard::router().nest("/auth", auth::router()).with(sessions))
+        .nest_no_strip("/event", event_service())
+        .nest("/dashboard", dashboard_service().with(sessions))
         .catch_all_error(catch_error);
 
     let router = Route::new()

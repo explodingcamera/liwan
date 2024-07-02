@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { fetchGroupGraph, fetchGroupStats, fetchGroups, getMetric, useQuery, type Metric } from "../api";
+import { api, metricNames, useQuery, type Metric } from "../api";
 import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
 import { LineGraph, toDataPoints } from "./graph";
 import styles from "./groups.module.css";
@@ -10,7 +10,7 @@ import { useLocalStorage } from "@uidotdev/usehooks";
 export const Groups = () => {
 	const { data } = useQuery({
 		queryKey: ["groups"],
-		queryFn: fetchGroups,
+		queryFn: () => api["/api/dashboard/groups"].get().json(),
 	});
 
 	const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -41,7 +41,7 @@ export const Groups = () => {
 			</div>
 
 			{data &&
-				Object.entries(data).map(([key, value]) => {
+				Object.entries(data.groups).map(([key, value]) => {
 					return (
 						<Group
 							key={key}
@@ -75,19 +75,21 @@ const Group = ({
 }) => {
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
 
-	const { data } = useQuery({
+	const { data: stats } = useQuery({
 		queryKey: ["group_stats", id, range],
-		queryFn: () => fetchGroupStats(id, { range }),
+		queryFn: () =>
+			api["/api/dashboard/group/{group_id}/stats"].post({ json: { range }, params: { group_id: id } }).json(),
 		placeholderData: (prev) => prev,
 	});
 
-	const { data: data2 } = useQuery({
+	const json = { range, metric, dataPoints };
+	const { data: graph } = useQuery({
 		queryKey: ["group_graph", id, range, graphRange, metric, dataPoints],
-		queryFn: () => fetchGroupGraph(id, { range, metric, dataPoints }),
+		queryFn: () => api["/api/dashboard/group/{group_id}/graph"].post({ json, params: { group_id: id } }).json(),
 		placeholderData: (prev) => prev,
 	});
 
-	const chartData = data2 ? toDataPoints(data2, range, metric) : [];
+	const chartData = graph ? toDataPoints(graph.data, range, metric) : [];
 
 	return (
 		<>
@@ -106,18 +108,18 @@ const Group = ({
 							<CountUp preserveValue duration={1} end={0} /> Current Visitors
 						</span>
 					</h1>
-					{data && (
+					{stats && (
 						<div className={styles.statsGrid}>
 							<button type="button" data-active={metric === "views"} onClick={() => setMetric("views")}>
 								<h2>Total Views</h2>
 								<h3>
-									<CountUp preserveValue duration={1} end={data.totalViews} />
+									<CountUp preserveValue duration={1} end={stats.totalViews} />
 								</h3>
 							</button>
 							<button type="button" data-active={metric === "sessions"} onClick={() => setMetric("sessions")}>
 								<h2>Total Sessions</h2>
 								<h3>
-									<CountUp preserveValue duration={1} end={data.totalSessions} />
+									<CountUp preserveValue duration={1} end={stats.totalSessions} />
 								</h3>
 							</button>
 							<button
@@ -127,7 +129,7 @@ const Group = ({
 							>
 								<h2>Unique Visitors</h2>
 								<h3>
-									<CountUp preserveValue duration={1} end={data.uniqueVisitors} />
+									<CountUp preserveValue duration={1} end={stats.uniqueVisitors} />
 								</h3>
 							</button>
 							<button
@@ -137,7 +139,7 @@ const Group = ({
 							>
 								<h2>Avg Views Per Session</h2>
 								<h3>
-									<CountUp preserveValue decimals={1} duration={1} end={data.avgViewsPerSession / 1000} />
+									<CountUp preserveValue decimals={1} duration={1} end={stats.avgViewsPerSession / 1000} />
 								</h3>
 							</button>
 						</div>
@@ -149,9 +151,9 @@ const Group = ({
 					</button>
 				</div> */}
 			</div>
-			{data2 && (
+			{stats && (
 				<div className={styles.graph}>
-					<LineGraph title={getMetric(metric)} data={chartData} range={graphRange} />
+					<LineGraph title={metricNames[metric]} data={chartData} range={graphRange} />
 				</div>
 			)}
 		</>

@@ -1,27 +1,27 @@
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
-use crate::app::Conn;
-use crate::utils::validate;
+use crate::utils::{validate, TimeExt};
+use crate::{app::Conn, utils::Timestamp};
 use cached::proc_macro::cached;
 use cached::SizedCache;
 use duckdb::params;
 use eyre::Result;
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use poem_openapi::{Enum, Object};
 
 const CACHE_SIZE_OVERALL_STATS: usize = 512;
 const CACHE_SIZE_OVERALL_REPORTS: usize = 512;
 const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Object)]
 pub struct DateRange {
-    pub start: chrono::DateTime<chrono::Utc>,
-    pub end: chrono::DateTime<chrono::Utc>,
+    pub start: Timestamp,
+    pub end: Timestamp,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Enum)]
+#[oai(rename_all = "snake_case")]
 pub enum Metric {
     Views,
     Sessions,
@@ -30,8 +30,8 @@ pub enum Metric {
     // AvgDuration,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Enum)]
+#[oai(rename_all = "snake_case")]
 pub enum Dimension {
     Path,
     Fqdn,
@@ -43,8 +43,8 @@ pub enum Dimension {
     City,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Enum, Debug)]
+#[oai(rename_all = "snake_case")]
 pub enum FilterType {
     Equal,
     NotEqual,
@@ -56,8 +56,8 @@ pub enum FilterType {
 pub type ReportGraph = Vec<u32>;
 pub type ReportTable = BTreeMap<String, u32>;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Object, Clone, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct ReportStats {
     total_views: u32,
     total_sessions: u32,
@@ -65,8 +65,8 @@ pub struct ReportStats {
     avg_views_per_session: u32, // 3 decimal places
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Object, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct DimensionFilter {
     dimension: Dimension,
     filter_type: FilterType,
@@ -181,7 +181,8 @@ pub fn overall_report(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start, range.end, data_points, data_points, event, range.end];
+    let params =
+        params![range.start.to_time(), range.end.to_time(), data_points, data_points, event, range.end.to_time()];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
@@ -252,7 +253,7 @@ pub fn overall_stats(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start, range.end, event];
+    let params = params![range.start.to_time(), range.end.to_time(), event];
 
     let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
         Ok(ReportStats {

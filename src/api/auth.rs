@@ -1,13 +1,14 @@
-use super::webext::*;
-use crate::api::session_cookie;
+use super::{session_cookie, webext::*};
 use crate::app::App;
 use crate::config::MAX_SESSION_AGE;
 
 use lazy_static::lazy_static;
 use poem::http::StatusCode;
+use poem::session::Session;
 use poem::web::cookie::{Cookie, CookieJar, SameSite};
-use poem::web::{Data, Json};
-use poem::{handler, post, session::Session, IntoResponse, Route};
+use poem::web::Data;
+use poem_openapi::payload::Json;
+use poem_openapi::{Object, OpenApi};
 use serde::Deserialize;
 
 lazy_static! {
@@ -21,42 +22,42 @@ lazy_static! {
     };
 }
 
-pub fn router() -> Route {
-    Route::new().at("/login", post(login_handler)).at("/logout", post(logout_handler))
-}
-
-#[derive(Deserialize)]
-struct LoginParams {
+#[derive(Deserialize, Object)]
+struct LoginRequest {
     username: String,
     password: String,
 }
 
-#[handler]
-async fn login_handler(
-    Data(app): Data<&App>,
-    Json(params): Json<LoginParams>,
-    session: &Session,
-    cookies: &CookieJar,
-) -> poem::Result<impl IntoResponse> {
-    if !app.check_login(&params.username, &params.password) {
-        http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
+pub struct AuthApi;
+#[OpenApi]
+impl AuthApi {
+    #[oai(path = "/auth/login", method = "post")]
+    async fn login(
+        &self,
+        Data(app): Data<&App>,
+        Json(params): Json<LoginRequest>,
+        session: &Session,
+        cookies: &CookieJar,
+    ) -> APIResult<EmptyResponse> {
+        if !app.check_login(&params.username, &params.password) {
+            http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
+        }
+
+        let mut public_cookie = PUBLIC_COOKIE.clone();
+        public_cookie.set_value_str(params.username.clone());
+
+        cookies.add(public_cookie);
+        session.set("username", params.username);
+        EmptyResponse::ok()
     }
 
-    let mut public_cookie = PUBLIC_COOKIE.clone();
-    public_cookie.set_value_str(params.username.clone());
-
-    cookies.add(public_cookie);
-    session.set("username", params.username);
-    http_res!()
-}
-
-#[handler]
-async fn logout_handler(session: &Session, cookies: &CookieJar) -> poem::Result<impl IntoResponse> {
-    let mut cookie = PUBLIC_COOKIE.clone();
-    cookie.make_removal();
-    cookies.add(cookie);
-    session_cookie().remove_cookie(cookies);
-
-    session.purge();
-    http_res!()
+    #[oai(path = "/auth/logout", method = "post")]
+    async fn logout(&self, session: &Session, cookies: &CookieJar) -> APIResult<EmptyResponse> {
+        let mut cookie = PUBLIC_COOKIE.clone();
+        cookie.make_removal();
+        cookies.add(cookie);
+        session_cookie().remove_cookie(cookies);
+        session.purge();
+        EmptyResponse::ok()
+    }
 }

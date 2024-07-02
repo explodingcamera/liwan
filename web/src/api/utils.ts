@@ -21,28 +21,29 @@ export function useQuery<
 	return _useQuery(options, c || queryClient);
 }
 
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-
-export const req = <T>(method: HttpMethod, url: string, body?: unknown): Promise<T> => {
-	return fetch(url, {
-		method,
-		credentials: "same-origin",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: body ? JSON.stringify(body) : undefined,
-	})
-		.then((response) => {
-			if (!response.ok)
-				return response.json().then((errorData) => Promise.reject(errorData?.message || response.statusText));
-			return response.json();
-		})
-		.then((data) => data?.data as T)
-		.catch((error) => Promise.reject(error));
-};
-
 // get the username cookie or undefined if not set
 export const getUsername = () => {
 	const username = document.cookie.match(/username=(.*?)(;|$)/);
 	return username ? username[1] : undefined;
+};
+
+type StripPrefix<T, P extends string> = {
+	[K in keyof T as K extends `${P}${infer R}` ? R : K]: T[K];
+};
+
+// biome-ignore lint/suspicious/noExplicitAny: any is needed to support arbitrary objects
+export const stripPrefix = <T extends Record<string, any>, P extends string>(obj: T, prefix: P): StripPrefix<T, P> => {
+	// biome-ignore lint/suspicious/noExplicitAny: any is needed to support arbitrary objects
+	const result: any = {};
+
+	for (const key in obj) {
+		if (key.startsWith(prefix)) {
+			const newKey = key.slice(prefix.length);
+			result[newKey] = obj[key];
+		} else {
+			result[key] = obj[key];
+		}
+	}
+
+	return result as StripPrefix<T, P>;
 };

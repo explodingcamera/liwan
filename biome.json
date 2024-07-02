@@ -4,5 +4,8 @@
 		"indentStyle": "tab",
 		"indentWidth": 2,
 		"lineWidth": 120
+	},
+	"files": {
+		"ignore": ["**/node_modules/*"]
 	}
 }

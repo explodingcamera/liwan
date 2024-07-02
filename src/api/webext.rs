@@ -5,7 +5,9 @@ use poem::{
     web::Json,
     Endpoint, IntoResponse, Request, Response,
 };
+use poem_openapi::{ApiResponse, Object};
 use rust_embed::RustEmbed;
+use serde::Serialize;
 use serde_json::json;
 
 pub fn get_user(session: &poem::session::Session, app: &crate::app::App) -> poem::Result<Option<crate::config::User>> {
@@ -78,21 +80,31 @@ macro_rules! http_bail {
     };
 }
 
-#[macro_export]
-macro_rules! http_res {
-    ($data:expr) => {
-        Ok(poem::web::Json(serde_json::json!({ "status": "ok", "data": $data })))
-    };
-    () => {
-        Ok(poem::web::Json(serde_json::json!({ "status": "ok" })))
-    };
-}
-
 pub struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
 
 impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
     pub fn new() -> Self {
         EmbeddedFilesEndpoint(PhantomData)
+    }
+}
+
+pub type APIResult<T> = poem::Result<T, poem::Error>;
+
+#[derive(Object, Serialize)]
+pub struct StatusResponse {
+    status: String,
+    message: Option<String>,
+}
+
+#[derive(ApiResponse)]
+pub enum EmptyResponse {
+    #[oai(status = 200)]
+    Ok(poem_openapi::payload::Json<StatusResponse>),
+}
+
+impl EmptyResponse {
+    pub fn ok() -> APIResult<Self> {
+        Ok(EmptyResponse::Ok(poem_openapi::payload::Json(StatusResponse { status: "ok".to_string(), message: None })))
     }
 }
 
@@ -152,4 +164,3 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
 }
 
 pub use http_bail;
-pub use http_res;

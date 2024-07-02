@@ -9,10 +9,10 @@ export type DataPoint = {
 	y: number;
 };
 
-export const toDataPoints = (data: number[], range: { start: Date; end: Date }, metric: Metric): DataPoint[] => {
+export const toDataPoints = (data: number[], range: { start: number; end: number }, metric: Metric): DataPoint[] => {
 	const step = differenceInSeconds(range.end, range.start) / data.length;
 	return data.map((value, i) => ({
-		x: new Date(range.start.getTime() + i * step * 1000),
+		x: new Date(range.start + i * step * 1000),
 		y: metric === "avg_views_per_session" ? value / 1000 : value,
 	}));
 };
