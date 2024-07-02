@@ -24,14 +24,15 @@ export const Groups = () => {
 
 	return (
 		<div>
-			<div className={styles.settings}>
+			<div className={styles.header}>
+				<h1>Dashboard</h1>
 				<details ref={detailsRef} className="dropdown">
 					<summary>{rangeNames[dateRange]}</summary>
 					<ul>
 						{Object.entries(rangeNames).map(([key, value]) => (
 							<li key={key}>
 								{/* biome-ignore lint/a11y/useValidAnchor: <explanation> */}
-								<a className={key === dateRange ? "selected" : ""} onClick={onSelect(key as RangeName)}>
+								<a className={key === dateRange ? styles.selected : ""} onClick={onSelect(key as RangeName)}>
 									{value}
 								</a>
 							</li>
@@ -75,7 +76,20 @@ const Group = ({
 }) => {
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
 
-	const { data: stats } = useQuery({
+	let refetchInterval = undefined;
+	let staleTime = 1000 * 60 * 10;
+	if (rangeName === "today") {
+		refetchInterval = 1000 * 60;
+		staleTime = 1000 * 60;
+	}
+
+	const {
+		data: stats,
+		isError: isErrorStats,
+		isLoading: isLoadingStats,
+	} = useQuery({
+		refetchInterval,
+		staleTime,
 		queryKey: ["group_stats", id, range],
 		queryFn: () =>
 			api["/api/dashboard/group/{group_id}/stats"].post({ json: { range }, params: { group_id: id } }).json(),
@@ -83,19 +97,26 @@ const Group = ({
 	});
 
 	const json = { range, metric, dataPoints };
-	const { data: graph } = useQuery({
+	const {
+		data: graph,
+		isError: isErrorGraph,
+		isLoading: isLoadingGraph,
+	} = useQuery({
+		refetchInterval,
+		staleTime,
 		queryKey: ["group_graph", id, range, graphRange, metric, dataPoints],
 		queryFn: () => api["/api/dashboard/group/{group_id}/graph"].post({ json, params: { group_id: id } }).json(),
 		placeholderData: (prev) => prev,
 	});
 
-	const chartData = graph ? toDataPoints(graph.data, range, metric) : [];
+	const chartData = graph?.data ? toDataPoints(graph.data, range, metric) : [];
 
 	return (
-		<>
+		<div className={styles.group} data-loading={isLoadingStats || isLoadingGraph || isErrorStats || isErrorGraph}>
+			{(isErrorStats || isErrorGraph) && <h1 className={styles.error}>Failed to load data</h1>}
 			<div className={styles.stats}>
-				<div>
-					<h1 className={styles.header}>
+				<h1>
+					<span>
 						{isPublic ? null : (
 							<>
 								<LockIcon size={16} />
@@ -103,59 +124,47 @@ const Group = ({
 							</>
 						)}
 						{displayName}&nbsp;
-						<span>
-							<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
-							<CountUp preserveValue duration={1} end={0} /> Current Visitors
-						</span>
-					</h1>
-					{stats && (
-						<div className={styles.statsGrid}>
-							<button type="button" data-active={metric === "views"} onClick={() => setMetric("views")}>
-								<h2>Total Views</h2>
-								<h3>
-									<CountUp preserveValue duration={1} end={stats.totalViews} />
-								</h3>
-							</button>
-							<button type="button" data-active={metric === "sessions"} onClick={() => setMetric("sessions")}>
-								<h2>Total Sessions</h2>
-								<h3>
-									<CountUp preserveValue duration={1} end={stats.totalSessions} />
-								</h3>
-							</button>
-							<button
-								type="button"
-								data-active={metric === "unique_visitors"}
-								onClick={() => setMetric("unique_visitors")}
-							>
-								<h2>Unique Visitors</h2>
-								<h3>
-									<CountUp preserveValue duration={1} end={stats.uniqueVisitors} />
-								</h3>
-							</button>
-							<button
-								type="button"
-								data-active={metric === "avg_views_per_session"}
-								onClick={() => setMetric("avg_views_per_session")}
-							>
-								<h2>Avg Views Per Session</h2>
-								<h3>
-									<CountUp preserveValue decimals={1} duration={1} end={stats.avgViewsPerSession / 1000} />
-								</h3>
-							</button>
-						</div>
-					)}
-				</div>
-				{/* <div>
-					<button className="secondary outline" type="button">
-						Details
+					</span>
+					<span className={styles.online}>
+						<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
+						<CountUp preserveValue duration={1} end={0} /> Current Visitors
+					</span>
+				</h1>
+				<div>
+					<button type="button" data-active={metric === "views"} onClick={() => setMetric("views")}>
+						<h2>Total Views</h2>
+						<h3>
+							<CountUp preserveValue duration={1} end={stats?.totalViews || 0} />
+						</h3>
 					</button>
-				</div> */}
-			</div>
-			{stats && (
-				<div className={styles.graph}>
-					<LineGraph title={metricNames[metric]} data={chartData} range={graphRange} />
+					<button type="button" data-active={metric === "sessions"} onClick={() => setMetric("sessions")}>
+						<h2>Total Sessions</h2>
+						<h3>
+							<CountUp preserveValue duration={1} end={stats?.totalSessions || 0} />
+						</h3>
+					</button>
+					<button type="button" data-active={metric === "unique_visitors"} onClick={() => setMetric("unique_visitors")}>
+						<h2>Unique Visitors</h2>
+						<h3>
+							<CountUp preserveValue duration={1} end={stats?.uniqueVisitors || 0} />
+						</h3>
+					</button>
+					<button
+						type="button"
+						data-active={metric === "avg_views_per_session"}
+						onClick={() => setMetric("avg_views_per_session")}
+					>
+						<h2>Avg Views Per Session</h2>
+						<h3>
+							<CountUp preserveValue decimals={1} duration={1} end={(stats?.avgViewsPerSession || 0) / 1000} />
+						</h3>
+					</button>
 				</div>
-			)}
-		</>
+			</div>
+
+			<div className={styles.graph}>
+				<LineGraph title={metricNames[metric]} data={chartData || []} range={graphRange} />
+			</div>
+		</div>
 	);
 };

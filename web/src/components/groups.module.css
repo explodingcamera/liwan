@@ -1,15 +1,54 @@
-.settings {
+.group {
+  position: relative;
+
+  .stats,
+  .graph {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+
+  &[data-loading="true"] {
+    .stats,
+    .graph {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+  }
+
+  .error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+}
+
+.header {
   display: flex;
-  justify-content: end;
+  justify-content: space-between;
 
   details {
     width: 10rem;
+
+    .selected {
+      font-weight: 700;
+      color: var(--pico-h1-color);
+      text-decoration: underline;
+    }
   }
 
   summary {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    --pico-form-element-spacing-vertical: 0.5rem;
+    --pico-form-element-spacing-horizontal: 0.6rem;
   }
 
   a {
@@ -17,72 +56,64 @@
   }
 }
 
-.header {
-  font-size: 1rem;
-  margin-bottom: 0.4rem;
-  align-items: center;
-  display: flex;
-
-  > span {
-    > svg {
-      margin-right: 0.1rem;
-    }
-
-    margin-left: 0.5rem;
-    display: inline-flex;
-    gap: 0.2rem;
-    align-items: center;
-    font-size: 0.8rem;
-    font-weight: 500;
-  }
-}
-
 .stats {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 0;
-  border-radius: 0.4rem;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
+
+  > h1 {
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+    align-items: center;
+    display: flex;
+
+    > span.online {
+      > svg {
+        margin-right: 0.1rem;
+      }
+
+      margin-left: 0.5rem;
+      display: inline-flex;
+      gap: 0.2rem;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+  }
 
   > div {
-    .statsGrid {
-      display: flex;
-      gap: 1rem;
-      padding-bottom: 1rem;
-      @media (max-width: 768px) {
-        flex-direction: column;
-      }
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    @media (max-width: 768px) {
+      flex-direction: column;
+    }
 
-      h3 {
-        margin: 0;
-        font-size: 1.2rem;
-        font-weight: 500;
-        margin-right: 1rem;
-      }
+    h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin-right: 1rem;
+    }
 
-      h2 {
-        margin: 0;
-        font-size: 0.8rem;
-        font-weight: 400;
-      }
+    h2 {
+      margin: 0;
+      font-size: 0.8rem;
+      font-weight: 400;
+    }
 
-      button {
-        all: unset;
-        cursor: pointer;
-        margin: 0;
-        font-size: 0.8rem;
+    button {
+      all: unset;
+      cursor: pointer;
+      margin: 0;
+      font-size: 0.8rem;
 
-        &[data-active="true"] {
-          h2 {
-            text-decoration: underline;
-            font-weight: 500;
-          }
-          h2,
-          h3 {
-            color: var(--pico-h1-color);
-          }
+      &[data-active="true"] {
+        h2 {
+          text-decoration: underline;
+          font-weight: 500;
+        }
+        h2,
+        h3 {
+          color: var(--pico-h1-color);
         }
       }
     }
