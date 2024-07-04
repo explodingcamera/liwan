@@ -41,8 +41,7 @@ export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: num
 		const end = endOfHour(now).getTime();
 		const start = startOfDay(now).getTime();
 		const hours = differenceInHours(end, start);
-		const dataPoints = Math.max(hours, 5);
-		return { range: { start, end }, dataPoints, graphRange: "hour" };
+		return { range: { start, end }, dataPoints: hours, graphRange: "hour" };
 	},
 	yesterday: () => {
 		const end = startOfDay(new Date());

@@ -26,8 +26,8 @@ port=8080
 username="admin"
 # Password hash, this can can be generated with `liwan hash-password <password>`
 password_hash="$argon2id$v=19$m=16,t=2,p=1$YXNkZmFzZGZhc2Rm$JlD8sZ1mJvySNUj3b12gpg"
-# Whether this user is an admin
-admin=true
+# Role of the user, can be "user", "admin", or "readonly"
+role="admin"
 # Groups this user has access to (admin implies access to all groups)
 groups=["personal"]
 

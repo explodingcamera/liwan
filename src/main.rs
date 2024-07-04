@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     let config = Config::from_file(std::path::Path::new(config_path))?;
 
     let (s, r) = crossbeam::channel::unbounded::<Event>();
-    let app = App::new(config)?;
+    let app = App::try_new(config)?;
 
     tokio::select! {
         res = api::start_webserver(app.clone(), s) => res,

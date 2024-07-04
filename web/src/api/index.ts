@@ -1,7 +1,6 @@
 import { createClient, type NormalizeOAS, type OASModel } from "fets";
 export { queryClient, useMutation, useQuery } from "./utils";
 import type dashboardspec from "./dashboard";
-import { stripPrefix } from "./utils";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;

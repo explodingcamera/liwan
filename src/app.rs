@@ -64,6 +64,36 @@ macro_rules! event_params {
 const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 
 impl App {
+    pub fn try_new(config: Config) -> Result<Self> {
+        let pool = DuckdbConnectionManager::memory()?;
+        let conn = r2d2::Pool::new(pool)?;
+
+        conn.get()?.execute_batch(
+            "--sql
+            ATTACH 'liwan-app.db' as app;
+            ATTACH 'liwan-events.db' as event_data;
+            USE event_data;
+            SET enable_fsst_vectors = true;
+        ",
+        )?;
+
+        let mut runner = migrations::runner();
+        runner.set_migration_table_name("app.migrations");
+        runner.run(&mut DuckDBConnection(conn.get()?))?;
+
+        let (salt, updated_at): (String, chrono::DateTime<chrono::Utc>) = {
+            conn.get()?.query_row("select salt, updated_at from app.salts where id = 1", [], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?
+        };
+
+        Ok(Self {
+            conn,
+            config: Arc::new(ShardedLock::new(config)),
+            daily_salt: Arc::new(ShardedLock::new(Salt { salt, updated_at })),
+        })
+    }
+
     pub fn config(&self) -> ShardedLockReadGuard<'_, Config> {
         self.config.read().expect("Failed to acquire read lock")
     }
@@ -89,40 +119,14 @@ impl App {
             let conn = self.conn()?;
             conn.execute("update salts set salt = ?, updated_at = ? where id = 1", params![&new_salt, now])?;
 
-            {
-                if let Ok(mut daily_salt) = self.daily_salt.try_write() {
-                    daily_salt.salt.clone_from(&new_salt);
-                    daily_salt.updated_at = now;
-                    return Ok(new_salt);
-                }
+            if let Ok(mut daily_salt) = self.daily_salt.try_write() {
+                daily_salt.salt.clone_from(&new_salt);
+                daily_salt.updated_at = now;
+                return Ok(new_salt);
             }
         }
 
         Ok(salt)
-    }
-
-    pub fn new(config: Config) -> Result<Self> {
-        let pool = DuckdbConnectionManager::file(&config.db_path)?;
-        let conn = r2d2::Pool::new(pool)?;
-
-        for migration in migrations::runner().run_iter(&mut DuckDBConnection(conn.get()?)) {
-            match migration?.name() {
-                "initial" => continue,
-                name => println!("Applying Migration: {:?}", name),
-            }
-        }
-
-        let (salt, updated_at): (String, chrono::DateTime<chrono::Utc>) = {
-            conn.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
-                Ok((row.get(0)?, row.get(1)?))
-            })?
-        };
-
-        Ok(Self {
-            conn,
-            config: Arc::new(ShardedLock::new(config)),
-            daily_salt: Arc::new(ShardedLock::new(Salt { salt, updated_at })),
-        })
     }
 
     pub fn process_events(&self, events: Receiver<Event>) -> Result<()> {
@@ -162,7 +166,7 @@ impl SessionStorage for App {
             .map_err(|_| poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR))?;
 
         let Some((session, expires_at)): Option<(String, chrono::DateTime<chrono::Utc>)> = conn
-            .query_row("select data, expires_at from sessions where id = ?", params![session_id], |row| {
+            .query_row("select data, expires_at from app.sessions where id = ?", params![session_id], |row| {
                 Ok((row.get(0)?, row.get(1)?))
             })
             .ok()
@@ -198,7 +202,7 @@ impl SessionStorage for App {
         let expires_at = expires.map(|expires| chrono::Utc::now() + chrono::Duration::from_std(expires).unwrap());
 
         conn.execute(
-            "insert into sessions (id, data, expires_at) values (?, ?, ?) on conflict(id) do update set data = ?, expires_at = ?",
+            "insert into app.sessions (id, data, expires_at) values (?, ?, ?) on conflict(id) do update set data = ?, expires_at = ?",
             params![session_id, data, expires_at, data, expires_at],
         )
         .map_err(|e| {
@@ -214,7 +218,7 @@ impl SessionStorage for App {
             .conn()
             .map_err(|_| poem::Error::from_string("Failed to get connection", StatusCode::INTERNAL_SERVER_ERROR))?;
 
-        conn.execute("delete from sessions where id = ?", params![session_id])
+        conn.execute("delete from app.sessions where id = ?", params![session_id])
             .map_err(|_| poem::Error::from_string("Failed to remove session", StatusCode::INTERNAL_SERVER_ERROR))?;
 
         Ok(())

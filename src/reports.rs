@@ -301,8 +301,7 @@ pub fn dimension_report(
         Dimension::City => ("city", "city"),
     };
 
-    let query = format!(
-        "--sql
+    let query = format!("--sql
         with
             params as (
                 select

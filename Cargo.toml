@@ -18,7 +18,6 @@ serde={version="1.0", features=["derive"]}
 lazy_static={version="1.5"}
 itertools={version="0.13"}
 
-# api 
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
 poem={version="3.0", features=["embed", "session", "cookie", "compression"]}
 poem-openapi={version="5.0", features=["chrono"]}
@@ -33,7 +32,7 @@ argon2={version="0.5"}
 crossbeam="0.8"
 sha3={version="0.10"}
 maxminddb={version="0.24", optional=true}
-cached="0.51"
+cached="0.52"
 
 [features]
 default=["geoip"]
@@ -41,6 +40,6 @@ geoip=["dep:maxminddb"]
 
 [profile.release]
 codegen-units=1
-lto=true
+lto="fat"
 strip=true
 panic="abort"

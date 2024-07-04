@@ -1,5 +1,3 @@
-SET enable_fsst_vectors = true;
-
 create table events (
     entity_id text not null,
     visitor_id text not null,
@@ -17,20 +15,6 @@ create table events (
     city text,
     -- currently unsupported by the rust driver: meta map(text, text),
 );
-
-create table sessions (
-    id  text primary key not null,
-    expires_at timestamp not null,
-    data text not null,
-);
-
-create table salts (
-    id integer primary key default 1,
-    salt text not null,
-    updated_at timestamp not null default now()
-);
-
-insert into salts (salt, updated_at) values ('', '1970-01-01 00:00:00');
 
 -- todo: evaluate if these indexes are necessary
 create index events_event_idx on events (event);
