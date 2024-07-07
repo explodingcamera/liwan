@@ -9,7 +9,7 @@
   }
 }
 
-.group {
+.project {
   animation: loadIn 0.2s linear;
   display: flex;
   flex-direction: column;

@@ -2,15 +2,15 @@ import { useMemo, useRef } from "react";
 import { api, metricNames, useQuery, type Metric } from "../api";
 import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
 import { LineGraph, toDataPoints } from "./graph";
-import styles from "./groups.module.css";
+import styles from "./projects.module.css";
 import CountUp from "react-countup";
 import { CircleIcon, LockIcon } from "lucide-react";
 import { useLocalStorage } from "@uidotdev/usehooks";
 
-export const Groups = () => {
+export const Projects = () => {
 	const { data } = useQuery({
-		queryKey: ["groups"],
-		queryFn: () => api["/api/dashboard/groups"].get().json(),
+		queryKey: ["projects"],
+		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
 
 	const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -42,9 +42,9 @@ export const Groups = () => {
 			</div>
 
 			{data &&
-				Object.entries(data.groups).map(([key, value]) => {
+				Object.entries(data.projects).map(([key, value]) => {
 					return (
-						<Group
+						<Project
 							key={key}
 							rangeName={dateRange}
 							id={key}
@@ -59,7 +59,7 @@ export const Groups = () => {
 	);
 };
 
-const Group = ({
+const Project = ({
 	id,
 	displayName,
 	rangeName,
@@ -90,9 +90,9 @@ const Group = ({
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		queryKey: ["group_stats", id, range],
+		queryKey: ["project_stats", id, range],
 		queryFn: () =>
-			api["/api/dashboard/group/{group_id}/stats"].post({ json: { range }, params: { group_id: id } }).json(),
+			api["/api/dashboard/project/{project_id}/stats"].post({ json: { range }, params: { project_id: id } }).json(),
 		placeholderData: (prev) => prev,
 	});
 
@@ -104,15 +104,15 @@ const Group = ({
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		queryKey: ["group_graph", id, range, graphRange, metric, dataPoints],
-		queryFn: () => api["/api/dashboard/group/{group_id}/graph"].post({ json, params: { group_id: id } }).json(),
+		queryKey: ["project_graph", id, range, graphRange, metric, dataPoints],
+		queryFn: () => api["/api/dashboard/project/{project_id}/graph"].post({ json, params: { project_id: id } }).json(),
 		placeholderData: (prev) => prev,
 	});
 
 	const chartData = graph?.data ? toDataPoints(graph.data, range, metric) : [];
 
 	return (
-		<div className={styles.group} data-loading={isLoadingStats || isLoadingGraph || isErrorStats || isErrorGraph}>
+		<div className={styles.project} data-loading={isLoadingStats || isLoadingGraph || isErrorStats || isErrorGraph}>
 			{(isErrorStats || isErrorGraph) && <h1 className={styles.error}>Failed to load data</h1>}
 			<div className={styles.stats}>
 				<h1>

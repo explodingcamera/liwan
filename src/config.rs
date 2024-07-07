@@ -1,10 +1,6 @@
 use eyre::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, path::Path, time::Duration};
-
-use crate::utils::validate;
-
-pub const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
+use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MaxMindEdition {
@@ -51,15 +47,6 @@ pub struct Config {
     pub port: u16,
 
     pub geoip: Option<GeoIpConfig>,
-
-    #[serde(default, rename = "user")]
-    pub users: Vec<User>,
-
-    #[serde(default, rename = "group")]
-    pub groups: Vec<Group>,
-
-    #[serde(default, rename = "entity")]
-    pub entities: Vec<Entity>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,41 +55,6 @@ pub struct GeoIpConfig {
     pub maxmind_account_id: Option<String>,
     pub maxmind_license_key: Option<String>,
     pub maxmind_edition: Option<MaxMindEdition>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Group {
-    pub id: String,
-    pub display_name: String,
-    pub entities: Vec<String>,
-
-    #[serde(default)]
-    pub public: bool,
-    pub password: Option<String>, // enable public access with password protection
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Entity {
-    pub id: String,
-    pub display_name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct User {
-    pub username: String,
-    pub password_hash: String,
-    pub role: UserRole,
-    pub groups: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
-pub enum UserRole {
-    #[serde(rename = "admin")]
-    Admin,
-    #[serde(rename = "user")]
-    User,
-    #[serde(rename = "readonly")]
-    ReadOnly,
 }
 
 static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
@@ -116,109 +68,47 @@ impl Config {
 
         let config = std::fs::read_to_string(file).wrap_err("Failed to read config file")?;
         let cfg: Self = toml::from_str(&config).wrap_err("Failed to parse config file")?;
-        cfg.validate()?;
         Ok(cfg)
     }
 
     pub fn refresh(&mut self) -> Result<()> {
         let config = std::fs::read_to_string("liwan.config.toml").wrap_err("Failed to read config file")?;
         let cfg: Self = toml::from_str(&config).wrap_err("Failed to parse config file")?;
-        cfg.validate()?;
         *self = cfg;
         Ok(())
     }
 
-    fn validate(&self) -> Result<()> {
-        let mut group_ids = std::collections::HashSet::new();
-        let mut user_ids = std::collections::HashSet::new();
-        let mut entity_ids = std::collections::HashSet::new();
+    // pub fn resolve_entity(&self, id: &str) -> Option<Entity> {
+    //     self.entities.iter().find(|&entity| entity.id == id).cloned()
+    // }
 
-        for entity in &self.entities {
-            if !validate::is_valid_id(&entity.id) {
-                bail!("Invalid entity id: {}", entity.id);
-            }
+    // pub fn resolve_entities(&self, ids: &[String]) -> BTreeMap<String, String> {
+    //     self.entities
+    //         .iter()
+    //         .filter(|entity| ids.contains(&entity.id))
+    //         .map(|entity| (entity.id.clone(), entity.display_name.clone()))
+    //         .collect()
+    // }
 
-            if !entity_ids.insert(&entity.id) {
-                bail!("Duplicate entity id: {}", entity.id);
-            }
-        }
+    // pub fn resolve_user(&self, username: &str) -> Option<User> {
+    //     self.users.iter().find(|&user| user.username == username).cloned()
+    // }
 
-        for group in &self.groups {
-            if !validate::is_valid_id(&group.id) {
-                bail!("Invalid group id: {}", group.id);
-            }
+    // pub fn resolve_public_groups(&self) -> Vec<Group> {
+    //     self.groups.iter().filter(|group| group.public && group.password.is_none()).cloned().collect()
+    // }
 
-            if !group_ids.insert(&group.id) {
-                bail!("Duplicate group id: {}", group.id);
-            }
+    // pub fn resolve_user_group(&self, id: &str, user: Option<&User>) -> Option<Group> {
+    //     self.resolve_user_groups(user).iter().find(|&group| group.id == id).cloned()
+    // }
 
-            for entity in &group.entities {
-                if !entity_ids.contains(entity) {
-                    bail!("Group {} has invalid entity: {}", group.id, entity);
-                }
-            }
-        }
-
-        for user in &self.users {
-            if !validate::is_valid_id(&user.username) {
-                bail!("Invalid username: {}", user.username);
-            }
-
-            if !user_ids.insert(&user.username) {
-                bail!("Duplicate username: {}", user.username);
-            }
-
-            for group in &user.groups {
-                if !group_ids.contains(group) {
-                    bail!("User {} has invalid group", user.username);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn resolve_entity(&self, id: &str) -> Option<Entity> {
-        self.entities.iter().find(|&entity| entity.id == id).cloned()
-    }
-
-    pub fn resolve_entities(&self, ids: &[String]) -> BTreeMap<String, String> {
-        self.entities
-            .iter()
-            .filter(|entity| ids.contains(&entity.id))
-            .map(|entity| (entity.id.clone(), entity.display_name.clone()))
-            .collect()
-    }
-
-    pub fn resolve_user(&self, username: &str) -> Option<User> {
-        self.users.iter().find(|&user| user.username == username).cloned()
-    }
-
-    pub fn resolve_public_groups(&self) -> Vec<Group> {
-        self.groups.iter().filter(|group| group.public && group.password.is_none()).cloned().collect()
-    }
-
-    pub fn has_access_to_entity(&self, user: Option<&User>, entity: &Entity) -> bool {
-        let groups = self.resolve_user_groups(user);
-        groups.iter().any(|group| group.entities.contains(&entity.id))
-    }
-
-    pub fn has_access_to_group(&self, user: Option<&User>, group: &Group) -> bool {
-        let groups = self.resolve_user_groups(user);
-        groups.iter().any(|g| g.id == group.id)
-    }
-
-    pub fn resolve_user_group(&self, id: &str, user: Option<&User>) -> Option<Group> {
-        self.resolve_user_groups(user).iter().find(|&group| group.id == id).cloned()
-    }
-
-    pub fn resolve_user_groups(&self, user: Option<&User>) -> Vec<Group> {
-        let Some(user) = user else {
-            return self.resolve_public_groups();
-        };
-        if user.role == crate::config::UserRole::Admin {
-            return self.groups.to_vec();
-        }
-        self.groups.iter().filter(|group| user.groups.contains(&group.id)).cloned().collect()
-    }
+    // pub fn resolve_user_groups(&self, user: Option<&User>) -> Vec<Group> {
+    //     let Some(user) = user else {
+    //         return self.resolve_public_groups();
+    //     };
+    //     if user.role == crate::config::UserRole::Admin {
+    //         return self.groups.to_vec();
+    //     }
+    //     self.groups.iter().filter(|group| user.groups.contains(&group.id)).cloned().collect()
+    // }
 }

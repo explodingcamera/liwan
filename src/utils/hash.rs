@@ -36,10 +36,25 @@ pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id: &str)
     format!("{:02x}", hash)[..32].to_string()
 }
 
-pub fn random_visitor_id() -> String {
+pub fn visitor_id() -> String {
     // random 32 byte hex string
     let mut rng = OsRng;
     let mut bytes = [0u8; 32];
     rng.fill(&mut bytes);
     bytes.iter().fold(String::new(), |acc, byte| acc + &format!("{:02x}", byte))
+}
+
+pub fn session_token() -> String {
+    // random 32 byte hex string
+    let mut rng = OsRng;
+    let mut bytes = [0u8; 32];
+    rng.fill(&mut bytes);
+    bs58::encode(bytes).into_string()
+}
+
+pub fn onboarding_token() -> String {
+    let mut rng = OsRng;
+    let mut bytes = [0u8; 8];
+    rng.fill(&mut bytes);
+    bs58::encode(bytes).into_string()
 }

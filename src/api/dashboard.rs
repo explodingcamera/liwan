@@ -1,10 +1,12 @@
+use super::session::SessionUser;
 use super::webext::*;
+use crate::app::models::{Project, UserRole};
 use crate::app::App;
 use crate::reports::{self, DateRange, Metric, ReportStats};
 use crate::utils::validate;
 
+use poem::http::StatusCode;
 use poem::web::{Data, Path};
-use poem::{http::StatusCode, session::Session};
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
 use std::collections::BTreeMap;
@@ -24,15 +26,15 @@ pub struct GraphRequest {
 
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
-struct Group {
+struct ProjectResponse {
     pub display_name: String,
     pub entities: BTreeMap<String, String>,
     pub public: bool,
 }
 
 #[derive(Object)]
-struct GroupsResponse {
-    groups: BTreeMap<String, Group>,
+struct ProjectsResponse {
+    projects: BTreeMap<String, ProjectResponse>,
 }
 
 #[derive(Object)]
@@ -42,79 +44,81 @@ struct GraphResponse {
 
 pub struct DashboardAPI;
 
+pub fn can_access_project(project: &Project, user: &Option<&SessionUser>) -> bool {
+    project.public || user.map_or(false, |u| u.0.role == UserRole::Admin || u.0.projects.contains(&project.id))
+}
+
 #[OpenApi]
 impl DashboardAPI {
-    #[oai(path = "/groups", method = "get")]
-    async fn groups_handler(&self, Data(app): Data<&App>, session: &Session) -> poem::Result<Json<GroupsResponse>> {
-        let user = get_user(session, app)?;
-        let groups = app.config().resolve_user_groups(user.as_ref());
+    #[oai(path = "/projects", method = "get")]
+    async fn projects_handler(
+        &self,
+        Data(app): Data<&App>,
+        user: Option<SessionUser>,
+    ) -> poem::Result<Json<ProjectsResponse>> {
+        let projects = app.projects().http_internal("Failed to get projects")?;
+        let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, &user.as_ref())).collect();
 
         let mut resp = BTreeMap::new();
-        for group in groups {
+        for project in projects {
             resp.insert(
-                group.id.clone(),
-                Group {
-                    display_name: group.display_name.clone(),
-                    entities: app.config().resolve_entities(&group.entities),
-                    public: group.public,
+                project.id.clone(),
+                ProjectResponse {
+                    display_name: project.display_name.clone(),
+                    entities: app.project_entities(&project.id).http_internal("Failed to get entity names")?,
+                    public: project.public,
                 },
             );
         }
 
-        Ok(Json(GroupsResponse { groups: resp }))
+        Ok(Json(ProjectsResponse { projects: resp }))
     }
 
-    #[oai(path = "/group/:group_id/graph", method = "post")]
-    async fn group_graph_handler(
+    #[oai(path = "/project/:project_id/graph", method = "post")]
+    async fn project_graph_handler(
         &self,
         Json(req): Json<GraphRequest>,
-        Path(group_id): Path<String>,
+        Path(project_id): Path<String>,
         Data(app): Data<&App>,
-        session: &Session,
+        user: Option<SessionUser>,
     ) -> APIResult<Json<GraphResponse>> {
         if req.data_points > validate::MAX_DATAPOINTS {
             http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
         }
 
-        let user = get_user(session, app)?;
         let conn = app.conn().http_internal("Failed to get connection")?;
-        let group = app.config().resolve_user_group(&group_id, user.as_ref()).http_not_found("Group not found")?;
+        let project = app.project(&project_id).http_not_found("Project not found")?;
+        let entities = app.project_entity_ids(&project.id).http_internal("Failed to get entity names")?;
 
-        let filters = &[];
-        let report = reports::overall_report(
-            &conn,
-            &group.entities,
-            "pageview",
-            &req.range,
-            req.data_points,
-            filters,
-            &req.metric,
-        )
-        .http_internal("Failed to generate report")?;
+        if !can_access_project(&project, &user.as_ref()) {
+            http_bail!(StatusCode::NOT_FOUND, "Project not found")
+        }
+
+        let report =
+            reports::overall_report(&conn, &entities, "pageview", &req.range, req.data_points, &[], &req.metric)
+                .http_internal("Failed to generate report")?;
+
         Ok(Json(GraphResponse { data: report }))
     }
 
-    #[oai(path = "/group/:group_id/stats", method = "post")]
-    async fn group_stats_handler(
+    #[oai(path = "/project/:project_id/stats", method = "post")]
+    async fn project_stats_handler(
         &self,
         Json(req): Json<StatsRequest>,
-        Path(group_id): Path<String>,
+        Path(project_id): Path<String>,
         Data(app): Data<&App>,
-        session: &Session,
+        user: Option<SessionUser>,
     ) -> APIResult<Json<ReportStats>> {
-        let user = get_user(session, app)?;
         let conn = app.conn().http_internal("Failed to get connection")?;
-        let group = app.config().resolve_user_group(&group_id, user.as_ref()).http_not_found("Group not found")?;
+        let project = app.project(&project_id).http_not_found("Project not found")?;
+        let entities = app.project_entity_ids(&project.id).http_internal("Failed to get entity names")?;
 
-        let filters = &[];
+        if !can_access_project(&project, &user.as_ref()) {
+            http_bail!(StatusCode::NOT_FOUND, "Project not found")
+        }
 
-        let stats = match reports::overall_stats(&conn, &group.entities, "pageview", &req.range, filters) {
-            Ok(stats) => stats,
-            Err(e) => {
-                println!("Failed to generate stats: {}", e);
-                http_bail!(StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate stats")
-            }
-        };
+        let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &[])
+            .http_internal("Failed to generate stats")?;
 
         Ok(Json(stats))
     }

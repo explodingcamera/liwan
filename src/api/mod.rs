@@ -1,14 +1,14 @@
 mod auth;
 mod dashboard;
 mod event;
+mod session;
 mod webext;
 
 use std::path::Path;
 
-use crate::app::{App, Event};
-use crate::config::MAX_SESSION_AGE;
+use crate::app::models::Event;
+use crate::app::App;
 use event::EventApi;
-use poem::web::cookie::SameSite;
 use poem::web::CompressionAlgo;
 use poem_openapi::OpenApiService;
 use webext::*;
@@ -20,7 +20,6 @@ use rust_embed::RustEmbed;
 use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
 use poem::middleware::{AddData, Compression, CookieJarManager};
-use poem::session::{CookieConfig, ServerSession};
 use poem::{EndpointExt, Route, Server};
 
 #[derive(RustEmbed, Clone)]
@@ -30,15 +29,6 @@ struct Files;
 #[derive(RustEmbed, Clone)]
 #[folder = "./tracker"]
 struct Script;
-
-pub fn session_cookie() -> CookieConfig {
-    CookieConfig::default()
-        .max_age(Some(MAX_SESSION_AGE))
-        .name("liwan-session")
-        .same_site(SameSite::Strict)
-        .secure(false)
-        .path("/api/dashboard")
-}
 
 fn event_service() -> OpenApiService<EventApi, ()> {
     OpenApiService::new(event::EventApi, "event api", "1.0").url_prefix("/api/")
@@ -62,29 +52,35 @@ fn save_spec() -> Result<()> {
 }
 
 pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
-    println!("Starting webserver...");
     let port = app.config().port;
-    let sessions = ServerSession::new(session_cookie(), app.clone());
 
     #[cfg(debug_assertions)]
     save_spec()?;
 
     let api_router = Route::new()
         .nest_no_strip("/event", event_service())
-        .nest("/dashboard", dashboard_service().with(sessions))
+        .nest("/dashboard", dashboard_service().with(CookieJarManager::new()))
         .catch_all_error(catch_error);
 
     let router = Route::new()
         .nest("/api", api_router)
         .at("/script.js", EmbeddedFileEndpoint::<Script>::new("script.min.js"))
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
-        .with(AddData::new(app))
+        .with(AddData::new(app.clone()))
         .with(AddData::new(events))
         .with(CookieJarManager::new())
         .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]));
 
     let listener = TcpListener::bind(("0.0.0.0", port));
-    println!("Listening on http://0.0.0.0:{}", port);
+
+    if let Some(onboarding) = app.onboarding.read().unwrap().as_ref() {
+        println!("It looks like this is your first time running liwan.");
+        println!("To get started, visit http://localhost:{}/setup/{}", port, onboarding);
+        println!("or run `liwan set-user <username> <password>` to create a user.");
+        println!("You can change the port in the newly created liwan.config.toml file.");
+    } else {
+        println!("Listening on http://0.0.0.0:{}", port);
+    }
 
     Server::new(listener).run(router).await.wrap_err("server exected unecpectedly")
 }

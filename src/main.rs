@@ -4,7 +4,7 @@ mod config;
 mod reports;
 mod utils;
 
-use app::{App, Event};
+use app::{models::Event, App};
 use argh::FromArgs;
 use config::Config;
 use eyre::Result;

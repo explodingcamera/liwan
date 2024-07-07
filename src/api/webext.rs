@@ -10,15 +10,6 @@ use rust_embed::RustEmbed;
 use serde::Serialize;
 use serde_json::json;
 
-pub fn get_user(session: &poem::session::Session, app: &crate::app::App) -> poem::Result<Option<crate::config::User>> {
-    Ok(match session.get::<String>("username") {
-        Some(username) => {
-            Some(app.config().resolve_user(&username).http_err("user not found", StatusCode::UNAUTHORIZED)?)
-        }
-        None => None,
-    })
-}
-
 pub trait PoemErrExt<T> {
     fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T>;
 

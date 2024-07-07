@@ -1,15 +1,16 @@
 use super::webext::*;
-use crate::app::{App, Event};
-use crate::utils::hash::{hash_ip, random_visitor_id};
+use crate::app::{models::Event, App};
+use crate::utils::hash::{hash_ip, visitor_id};
 use crate::utils::referer::process_referer;
 use crate::utils::ua;
 
+use cached::{Cached, TimedCache};
 use crossbeam::channel::Sender;
-use poem::error::NotFoundError;
 use poem::http::Uri;
 use poem::web::{headers, Data, RealIp, TypedHeader};
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
+use std::cell::RefCell;
 use std::str::FromStr;
 
 #[derive(Object)]
@@ -18,6 +19,11 @@ struct EventRequest {
     name: String,
     url: String,
     referrer: Option<String>,
+}
+
+thread_local! {
+    // Cache for existing entities to reject invalid ones
+    static EXISTING_ENTITIES: RefCell<TimedCache<String, String>> = TimedCache::with_lifespan(60 * 60).into(); // 1 hour
 }
 
 pub struct EventApi;
@@ -41,12 +47,19 @@ impl EventApi {
             return EmptyResponse::ok();
         };
 
-        let entity = app.config().resolve_entity(&event.entity_id).ok_or(NotFoundError)?;
+        if !EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_get(&event.entity_id).is_some()) {
+            if !app.entity_exists(&event.entity_id).http_internal("internal error")? {
+                return EmptyResponse::ok();
+            }
+            EXISTING_ENTITIES
+                .with(|cache| cache.borrow_mut().cache_set(event.entity_id.clone(), event.entity_id.clone()));
+        }
+
         let url = Uri::from_str(&event.url).http_bad_request("invalid url")?;
         let daily_salt = app.get_salt().await.http_internal("internal error")?;
         let visitor_id = match ip {
-            Some(ip) => hash_ip(&ip, user_agent.as_str(), &daily_salt, &entity.id),
-            None => random_visitor_id(),
+            Some(ip) => hash_ip(&ip, user_agent.as_str(), &daily_salt, &event.entity_id),
+            None => visitor_id(),
         };
 
         let event = Event {

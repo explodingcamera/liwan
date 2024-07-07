@@ -17,6 +17,7 @@ time={version="0.3"} # need both chrono and time for compatibility with dependen
 serde={version="1.0", features=["derive"]}
 lazy_static={version="1.5"}
 itertools={version="0.13"}
+bs58="0.5.1"
 
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
 poem={version="3.0", features=["embed", "session", "cookie", "compression"]}
