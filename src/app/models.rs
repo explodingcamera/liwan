@@ -33,23 +33,17 @@ pub struct Entity {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub username: String,
-    pub password_hash: String,
     pub role: UserRole,
     pub projects: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
 pub enum UserRole {
     #[serde(rename = "admin")]
     Admin,
     #[serde(rename = "user")]
+    #[default]
     User,
-}
-
-impl Default for UserRole {
-    fn default() -> Self {
-        UserRole::User
-    }
 }
 
 impl TryFrom<String> for UserRole {
@@ -60,6 +54,16 @@ impl TryFrom<String> for UserRole {
             "admin" => Ok(UserRole::Admin),
             "user" => Ok(UserRole::User),
             _ => Err(format!("invalid role: {}", value)),
+        }
+    }
+}
+
+impl UserRole {
+    #[allow(clippy::inherent_to_string)]
+    pub fn to_string(self) -> String {
+        match self {
+            UserRole::Admin => "admin".to_string(),
+            UserRole::User => "user".to_string(),
         }
     }
 }

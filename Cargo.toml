@@ -18,10 +18,13 @@ serde={version="1.0", features=["derive"]}
 lazy_static={version="1.5"}
 itertools={version="0.13"}
 bs58="0.5.1"
+colored={version="2.1"}
+figment={version="0.10", features=["toml", "env"]}
 
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
-poem={version="3.0", features=["embed", "session", "cookie", "compression"]}
+poem={version="3.0", features=["embed", "session", "cookie", "compression", "tower-compat"]}
 poem-openapi={version="5.0", features=["chrono"]}
+tower={version="0.4.8", default-features=false, features=["limit"]}
 uaparser="0.6"
 rust-embed="8.4"
 

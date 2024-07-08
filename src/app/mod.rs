@@ -1,23 +1,27 @@
 use crate::config::Config;
-use crate::utils::hash::{generate_salt, onboarding_token, verify_password};
+use crate::utils::hash::{generate_salt, hash_password, onboarding_token, verify_password};
 use crate::utils::refinery_duckdb::DuckDBConnection;
+use crate::utils::validate::is_valid_username;
+
 use crossbeam::channel::{Receiver, RecvError};
-use crossbeam::sync::{ShardedLock, ShardedLockReadGuard};
+use crossbeam::sync::ShardedLock;
 use duckdb::{params, DuckdbConnectionManager};
-use eyre::{bail, Result};
-use models::{event_params, Event, Project, User};
+use eyre::{bail, ContextCompat, Result};
+use models::{event_params, Event, Project, User, UserRole};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+
 pub mod models;
+pub mod reports;
 pub type Conn = r2d2::PooledConnection<DuckdbConnectionManager>;
 
 #[derive(Clone)]
 pub struct App {
     pub conn: r2d2::Pool<DuckdbConnectionManager>,
-    pub config: Arc<ShardedLock<Config>>,
+    pub config: Arc<Config>,
     pub onboarding: Arc<ShardedLock<Option<String>>>,
     daily_salt: Arc<ShardedLock<(String, chrono::DateTime<chrono::Utc>)>>,
-} 
+}
 
 refinery::embed_migrations!("src/migrations");
 
@@ -25,19 +29,26 @@ const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs
 
 impl App {
     pub fn try_new(config: Config) -> Result<Self> {
-        let pool = DuckdbConnectionManager::memory()?;
+        let folder = std::path::Path::new(&config.db_dir);
+        if !folder.exists() {
+            std::fs::create_dir_all(folder)?;
+        }
+
+        let app_db = folder.join("liwan-app.db");
+        let app_db = app_db.to_str().wrap_err("invalid db path")?;
+        let event_db = folder.join("liwan-events.db");
+        let event_db = event_db.to_str().wrap_err("invalid db path")?;
+
+        let pool = DuckdbConnectionManager::file(event_db)?;
         let conn = r2d2::Pool::new(pool)?;
 
-        conn.get()?.execute_batch(
+        conn.get()?.execute_batch(&format!(
             "--sql
-            ATTACH 'liwan-app.db' as app;
-            ATTACH 'liwan-events.db' as event_data;
-            USE event_data;
             SET enable_fsst_vectors = true;
-        ",
-        )?;
+            ATTACH '{app_db}' as app;
+        "
+        ))?;
 
- 
         let mut runner = migrations::runner();
         runner.set_migration_table_name("app.migrations");
         runner.run(&mut DuckDBConnection(conn.get()?))?;
@@ -49,24 +60,21 @@ impl App {
             ShardedLock::new(match stmt.exists([])? {
                 true => None,
                 false => Some(onboarding_token()),
-            }).into()
+            })
+            .into()
         };
-        
+
         let daily_salt: (String, chrono::DateTime<chrono::Utc>) = {
             conn.get()?.query_row("select salt, updated_at from app.salts where id = 1", [], |row| {
                 Ok((row.get(0)?, row.get(1)?))
             })?
         };
 
-        Ok(Self { conn, onboarding, config: ShardedLock::new(config).into(), daily_salt: ShardedLock::new(daily_salt).into() })
-    } 
+        Ok(Self { conn, onboarding, config: config.into(), daily_salt: ShardedLock::new(daily_salt).into() })
+    }
 
     pub fn conn(&self) -> Result<Conn> {
         Ok(self.conn.get()?)
-    }
-
-    pub fn config(&self) -> ShardedLockReadGuard<'_, Config> {
-        self.config.read().expect("Failed to acquire read lock")
     }
 
     pub async fn get_salt(&self) -> Result<String> {
@@ -103,19 +111,19 @@ impl App {
 
     pub fn project_entities(&self, project_id: &str) -> Result<BTreeMap<String, String>> {
         let conn = self.conn()?;
-        let mut stmt = conn.prepare_cached( 
+        let mut stmt = conn.prepare_cached(
             "select e.id, e.display_name from app.entities e join app.project_entities pe on e.id = pe.entity_id where pe.project_id = ?",
         )?;
         let entities = stmt.query_map(params![project_id], |row| Ok((row.get("id")?, row.get("display_name")?)))?;
         Ok(entities.collect::<Result<BTreeMap<String, String>, duckdb::Error>>()?)
     }
- 
+
     pub fn project_entity_ids(&self, project_id: &str) -> Result<Vec<String>> {
         let conn = self.conn()?;
         let mut stmt = conn.prepare_cached("select entity_id from app.project_entities where project_id = ?")?;
-        let entities = stmt.query_map(params![project_id], |row| Ok(row.get("entity_id")?))?;
+        let entities = stmt.query_map(params![project_id], |row| row.get("entity_id"))?;
         Ok(entities.collect::<Result<Vec<String>, duckdb::Error>>()?)
-    } 
+    }
 
     pub fn user(&self, username: &str) -> Result<User> {
         let conn = self.conn()?;
@@ -124,12 +132,46 @@ impl App {
         let user = stmt.query_row(params![username], |row| {
             Ok(User {
                 username: row.get("username")?,
-                password_hash: row.get("password_hash")?,
                 role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
                 projects: row.get::<_, String>("projects")?.split(',').map(str::to_string).collect(),
             })
         });
         user.map_err(|_| eyre::eyre!("user not found"))
+    }
+
+    /// Get all users
+    pub fn users(&self) -> Result<Vec<User>> {
+        let conn = self.conn()?;
+        let mut stmt = conn.prepare("select username, password_hash, role, projects from app.users")?;
+        let users = stmt.query_map([], |row| {
+            Ok(User {
+                username: row.get("username")?,
+                role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
+                projects: row.get::<_, String>("projects")?.split(',').map(str::to_string).collect(),
+            })
+        })?;
+
+        Ok(users.collect::<Result<Vec<User>, duckdb::Error>>()?)
+    }
+
+    pub fn user_update_password(&self, username: &str, password: &str) -> Result<()> {
+        let conn = self.conn()?;
+        let password_hash = hash_password(password)?;
+        let mut stmt = conn.prepare_cached("update app.users set password_hash = ? where username = ?")?;
+        stmt.execute(params![password_hash, username])?;
+        Ok(())
+    }
+
+    pub fn user_create(&self, username: &str, password: &str, role: UserRole, projects: Vec<String>) -> Result<()> {
+        if !is_valid_username(username) {
+            bail!("invalid username");
+        }
+        let password_hash = hash_password(password)?;
+        let conn = self.conn()?;
+        let mut stmt =
+            conn.prepare_cached("insert into app.users (username, password_hash, role, projects) values (?, ?, ?, ?)")?;
+        stmt.execute(params![username, password_hash, role.to_string(), projects.join(",")])?;
+        Ok(())
     }
 
     pub fn project(&self, id: &str) -> Result<Project> {
@@ -149,7 +191,7 @@ impl App {
 
     pub fn projects(&self) -> Result<Vec<Project>> {
         let conn = self.conn()?;
-        let mut stmt = conn.prepare("select id, display_name, public, password from app.projects")?;
+        let mut stmt = conn.prepare("select id, display_name, public, secret from app.projects")?;
         let projects = stmt.query_map([], |row| {
             Ok(Project {
                 id: row.get("id")?,
@@ -158,7 +200,7 @@ impl App {
                 secret: row.get("secret")?,
             })
         })?;
- 
+
         Ok(projects.collect::<Result<Vec<Project>, duckdb::Error>>()?)
     }
 

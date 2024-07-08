@@ -1,9 +1,7 @@
-CREATE TYPE app.user_role AS ENUM ('admin', 'user');
-
 create table app.users (
     username text primary key not null,
     password_hash text not null,
-    role user_role not null,
+    role text not null,
     projects text not null, -- comma separated list of project ids, replace with list once that's supported by duckdb.rs
 );
 

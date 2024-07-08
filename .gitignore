@@ -1,5 +1,3 @@
 /target
-config.toml
-*.db
-*.db.wal
 liwan.config.toml
+/liwan-db

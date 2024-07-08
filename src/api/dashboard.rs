@@ -1,8 +1,8 @@
 use super::session::SessionUser;
 use super::webext::*;
 use crate::app::models::{Project, UserRole};
+use crate::app::reports::{self, DateRange, Metric, ReportStats};
 use crate::app::App;
-use crate::reports::{self, DateRange, Metric, ReportStats};
 use crate::utils::validate;
 
 use poem::http::StatusCode;
@@ -56,7 +56,13 @@ impl DashboardAPI {
         Data(app): Data<&App>,
         user: Option<SessionUser>,
     ) -> poem::Result<Json<ProjectsResponse>> {
-        let projects = app.projects().http_internal("Failed to get projects")?;
+        let projects = app
+            .projects()
+            .map_err(|e| {
+                println!("Failed to get projects: {}", e);
+                e
+            })
+            .http_internal("Failed to get projects")?;
         let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, &user.as_ref())).collect();
 
         let mut resp = BTreeMap::new();

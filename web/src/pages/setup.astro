@@ -3,35 +3,45 @@ import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 import Layout from "../layout/Base.astro";
 ---
 
-<Layout title="Login">
+<Layout title="Setup" hideFooter>
   <section class="container">
     <ThemeSwitcher class="asdf" />
-    <h1>Sign in</h1>
+    <h1>Let's get started</h1>
+    <p>
+      Enter a new username and password to create your administrator account.
+    </p>
     <form onsubmit="return false;" id="login-form">
-      <input
-        type="text"
-        name="username"
-        placeholder="Username"
-        aria-label="Username"
-        autocomplete="username"
-        required
-      />
-      <input
-        type="password"
-        name="password"
-        placeholder="Password"
-        aria-label="Password"
-        autocomplete="current-password"
-        required
-      />
-      <button type="submit">Login</button>
+      <label>
+        Username
+        <input
+          type="text"
+          name="username"
+          value="admin"
+          aria-label="Username"
+          autocomplete="username"
+          pattern="[a-zA-Z0-9]{3,}"
+          required
+        />
+      </label>
+      <label>
+        Password
+        <input
+          type="password"
+          name="password"
+          minlength="8"
+          aria-label="Password"
+          autocomplete="current-password"
+          required
+        />
+      </label>
+      <button type="submit">Finish Setup</button>
       <article
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
         aria-hidden="true"
       >
-        Invalid username or password
+        Invalid setup token. Did you already set up your account?
       </article>
     </form>
   </section>
@@ -39,12 +49,14 @@ import Layout from "../layout/Base.astro";
 
 <script>
   import { api } from "../api";
+  import { navigate } from "astro:transitions/client";
 
   document.addEventListener("astro:page-load", () => {
     const form = document.getElementById("login-form") as HTMLFormElement;
     const alert = form?.querySelector("#login-form article") as HTMLElement;
     if (!form || !alert) return;
 
+    const token = new URLSearchParams(document.location.search).get("t") || "";
     form.onsubmit = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -56,17 +68,15 @@ import Layout from "../layout/Base.astro";
         password: string;
       };
 
-      api["/api/dashboard/auth/login"]
-        .post({ json: { username, password } })
+      api["/api/dashboard/auth/setup"]
+        .post({ json: { username, password, token } })
         .then((res) => {
           if (!res.ok)
-            return Promise.reject(new Error("Invalid username or password"));
+            return Promise.reject(new Error("Invalid token or username"));
 
-          document.location.href = "/";
+          navigate("/login");
         })
-        .catch((_) => {
-          alert.setAttribute("aria-hidden", "false");
-        });
+        .catch((_) => alert.setAttribute("aria-hidden", "false"));
 
       return false;
     };

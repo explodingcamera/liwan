@@ -4,13 +4,11 @@ mod event;
 mod session;
 mod webext;
 
-use std::path::Path;
-
 use crate::app::models::Event;
 use crate::app::App;
+use colored::Colorize;
 use event::EventApi;
-use poem::web::CompressionAlgo;
-use poem_openapi::OpenApiService;
+use std::path::Path;
 use webext::*;
 
 use crossbeam::channel::Sender;
@@ -20,7 +18,9 @@ use rust_embed::RustEmbed;
 use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
 use poem::middleware::{AddData, Compression, CookieJarManager};
+use poem::web::CompressionAlgo;
 use poem::{EndpointExt, Route, Server};
+use poem_openapi::OpenApiService;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -52,8 +52,6 @@ fn save_spec() -> Result<()> {
 }
 
 pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
-    let port = app.config().port;
-
     #[cfg(debug_assertions)]
     save_spec()?;
 
@@ -71,15 +69,20 @@ pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
         .with(CookieJarManager::new())
         .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]));
 
-    let listener = TcpListener::bind(("0.0.0.0", port));
+    let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
     if let Some(onboarding) = app.onboarding.read().unwrap().as_ref() {
-        println!("It looks like this is your first time running liwan.");
-        println!("To get started, visit http://localhost:{}/setup/{}", port, onboarding);
-        println!("or run `liwan set-user <username> <password>` to create a user.");
-        println!("You can change the port in the newly created liwan.config.toml file.");
+        println!("{}", "Welcome to Liwan!".bold().white());
+        println!(
+            "You can get started by visiting: {}",
+            format!("http://localhost:{}/setup?t={}", app.config.port, onboarding).underline().white()
+        );
+        println!("{}", "To see all available commands, run `liwan --help`".bold().white());
     } else {
-        println!("Listening on http://0.0.0.0:{}", port);
+        println!(
+            "{}",
+            format!("Liwan is running at: {}", app.config.base_url.to_string().underline().white()).bold().white()
+        );
     }
 
     Server::new(listener).run(router).await.wrap_err("server exected unecpectedly")

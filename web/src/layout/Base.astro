@@ -7,43 +7,47 @@ import "../global.css";
 import { ViewTransitions } from "astro:transitions";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 
-type Props = { title: string };
+type Props = { title: string; hideFooter?: boolean };
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <ViewTransitions />
     <title>{Astro.props.title}</title>
   </head>
   <body>
     <slot />
-    <footer class="container-fluid footer">
-      <small>
-        <a
-          href="https://github.com/explodingcamera/liwan"
-          target="_blank"
-          class="secondary icon-link"
-        >
-          <SiGithub size=".8rem" />
-          <span>Liwan - Lightweight Analytics</span>
-        </a>
-        &nbsp;| Made by&nbsp;
-        <a class="secondary" target="_blank" href="https://henrygressmann.de"
-          >Henry Gressmann</a
-        >
-        <!-- , available under&nbsp;<a
-          class="secondary"
-          target="_blank"
-          href="https://opensource.org/license/mit">MIT</a
-        > / <a
-          class="secondary"
-          target="_blank"
-          href="https://opensource.org/license/apache-2.0">Apache 2.0</a
-        > -->
-      </small>
+      {!Astro.props.hideFooter && (
+        <footer class="container-fluid footer">
+          <small>
+            <a
+              href="https://github.com/explodingcamera/liwan"
+              target="_blank"
+              class="secondary icon-link"
+            >
+              <SiGithub size=".8rem" />
+              <span>Liwan - Lightweight Analytics</span>
+            </a>
+            &nbsp;| Made by&nbsp;
+            <a class="secondary" target="_blank" href="https://henrygressmann.de"
+              >Henry Gressmann</a
+            >
+            <!-- , available under&nbsp;<a
+              class="secondary"
+              target="_blank"
+              href="https://opensource.org/license/mit">MIT</a
+            > / <a
+              class="secondary"
+              target="_blank"
+              href="https://opensource.org/license/apache-2.0">Apache 2.0</a
+            > -->
+          </small>
+        </footer>
+      )}
       <style>
         footer {
           max-width: 60rem;
@@ -67,6 +71,5 @@ type Props = { title: string };
           }
         }
       </style>
-    </footer>
   </body>
 </html>

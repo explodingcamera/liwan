@@ -1,14 +1,17 @@
 use super::session::{SessionId, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE};
 use super::webext::*;
+use crate::app::models::UserRole;
 use crate::app::App;
 use crate::utils::hash::session_token;
 
 use poem::http::StatusCode;
-use poem::web::cookie::CookieJar;
-use poem::web::Data;
+use poem::middleware::TowerLayerCompatExt;
+use poem::web::{cookie::CookieJar, Data};
+use poem::{Endpoint, EndpointExt};
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
 use serde::Deserialize;
+use tower::limit::RateLimitLayer;
 
 #[derive(Deserialize, Object)]
 struct LoginRequest {
@@ -16,10 +19,33 @@ struct LoginRequest {
     password: String,
 }
 
+#[derive(Deserialize, Object)]
+struct SetupRequest {
+    token: String,
+    username: String,
+    password: String,
+}
+
+fn login_rate_limit(ep: impl Endpoint + 'static) -> impl Endpoint {
+    ep.with(RateLimitLayer::new(10, std::time::Duration::from_secs(10)).compat())
+}
+
 pub struct AuthApi;
 #[OpenApi]
 impl AuthApi {
-    #[oai(path = "/auth/login", method = "post")]
+    #[oai(path = "/auth/setup", method = "post", transform = "login_rate_limit")]
+    async fn setup(&self, Data(app): Data<&App>, Json(params): Json<SetupRequest>) -> APIResult<EmptyResponse> {
+        let token = app.onboarding.read().http_internal("internal error")?.clone();
+        if token != Some(params.token) {
+            http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
+        }
+
+        app.user_create(&params.username, &params.password, UserRole::Admin, vec![]).http_internal("internal error")?;
+        *app.onboarding.write().http_internal("internal error")? = None;
+        EmptyResponse::ok()
+    }
+
+    #[oai(path = "/auth/login", method = "post", transform = "login_rate_limit")]
     async fn login(
         &self,
         Data(app): Data<&App>,
