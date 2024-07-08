@@ -1,0 +1,75 @@
+---
+import { ArrowLeft } from "lucide-react";
+import Layout from "./Layout.astro";
+
+type Props = {
+  title: string;
+};
+
+const path = Astro.url.pathname;
+const { title } = Astro.props;
+---
+
+<Layout {title}>
+  <div class="settings">
+    <ul class="sidebar">
+      <li>
+        <a
+          data-active={path.startsWith("/settings/projects") ? "true" : "false"}
+          class="secondary"
+          href="/settings/projects">Projects</a
+        >
+      </li>
+      <li>
+        <a
+          data-active={path.startsWith("/settings/entities") ? "true" : "false"}
+          class="secondary"
+          href="/settings/entities">Entities</a
+        >
+      </li>
+      <li>
+        <a
+          data-active={path.startsWith("/settings/users") ? "true" : "false"}
+          class="secondary"
+          href="/settings/users">Users</a
+        >
+      </li>
+    </ul>
+    <div class="content">
+      <slot />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .settings {
+    display: flex;
+  }
+
+  .sidebar {
+    margin: 0;
+    padding: 0;
+    padding-right: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.32rem;
+
+    li {
+      list-style: none;
+    }
+
+    a {
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    a[data-active="true"] {
+      text-decoration: underline;
+      color: var(--pico-h1-color);
+    }
+  }
+
+  main {
+    padding: 20px;
+  }
+</style>

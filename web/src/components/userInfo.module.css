@@ -1,0 +1,25 @@
+details.user {
+  summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    --pico-form-element-spacing-vertical: 0.5rem;
+    --pico-form-element-spacing-horizontal: 0.6rem;
+    border: none;
+
+    svg {
+      margin-right: 0.5rem;
+    }
+  }
+
+  summary + ul {
+    margin-top: 0.3rem;
+    margin-left: -0.1rem;
+
+    li a {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+  }
+}

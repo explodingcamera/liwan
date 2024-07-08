@@ -6,6 +6,9 @@ import styles from "./projects.module.css";
 import CountUp from "react-countup";
 import { CircleIcon, LockIcon } from "lucide-react";
 import { useLocalStorage } from "@uidotdev/usehooks";
+import { getUsername } from "../api/utils";
+
+const signedIn = getUsername();
 
 export const Projects = () => {
 	const { data } = useQuery({
@@ -21,9 +24,33 @@ export const Projects = () => {
 		if (detailsRef.current) detailsRef.current.open = false;
 		setDateRange(name);
 	};
+	const projects = Object.entries(data?.projects || {});
+
+	if (projects.length === 0 && signedIn)
+		return (
+			<div className={styles.info}>
+				<h3>
+					You do not have any projects yet.
+					<br />
+					<a href="/settings/projects">Create a new project</a>
+					&nbsp;to get started.
+				</h3>
+			</div>
+		);
+
+	if (projects.length === 0 && !signedIn)
+		return (
+			<div className={styles.info}>
+				<h3>
+					There are no public projects available.
+					<br />
+					<a href="/login">Sign in</a> to view all projects.
+				</h3>
+			</div>
+		);
 
 	return (
-		<div>
+		<div className={styles.projects}>
 			<div className={styles.header}>
 				<h1>Dashboard</h1>
 				<details ref={detailsRef} className="dropdown">
@@ -41,20 +68,19 @@ export const Projects = () => {
 				</details>
 			</div>
 
-			{data &&
-				Object.entries(data.projects).map(([key, value]) => {
-					return (
-						<Project
-							key={key}
-							rangeName={dateRange}
-							id={key}
-							displayName={value.displayName}
-							isPublic={value.public}
-							metric={metric}
-							setMetric={setMetric}
-						/>
-					);
-				})}
+			{projects.map(([key, value]) => {
+				return (
+					<Project
+						key={key}
+						rangeName={dateRange}
+						id={key}
+						displayName={value.displayName}
+						isPublic={value.public}
+						metric={metric}
+						setMetric={setMetric}
+					/>
+				);
+			})}
 		</div>
 	);
 };

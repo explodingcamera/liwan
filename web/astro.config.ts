@@ -15,4 +15,7 @@ export default defineConfig({
 		preview: { proxy },
 	},
 	integrations: [react()],
+	redirects: {
+		"/settings": "/settings/projects",
+	},
 });
