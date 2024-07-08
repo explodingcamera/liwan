@@ -17,7 +17,7 @@ use rust_embed::RustEmbed;
 
 use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
-use poem::middleware::{AddData, Compression, CookieJarManager};
+use poem::middleware::{AddData, Compression, CookieJarManager, Cors, SetHeader};
 use poem::web::CompressionAlgo;
 use poem::{EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
@@ -56,18 +56,35 @@ pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     save_spec()?;
 
     let api_router = Route::new()
-        .nest_no_strip("/event", event_service())
+        .nest_no_strip(
+            "/event",
+            event_service().with(Cors::new().allow_origin("*").allow_method("POST").allow_credentials(false)),
+        )
         .nest("/dashboard", dashboard_service().with(CookieJarManager::new()))
         .catch_all_error(catch_error);
 
     let router = Route::new()
         .nest("/api", api_router)
-        .at("/script.js", EmbeddedFileEndpoint::<Script>::new("script.min.js"))
+        .at(
+            "/script.js",
+            EmbeddedFileEndpoint::<Script>::new("script.min.js")
+                .with(Cors::new().allow_origin("*").allow_method("GET").allow_credentials(false)),
+        )
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
         .with(AddData::new(app.clone()))
         .with(AddData::new(events))
         .with(CookieJarManager::new())
-        .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]));
+        .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]))
+        .with(
+            SetHeader::new()
+                .appending("X-Frame-Options", "DENY")
+                .appending("X-Content-Type-Options", "nosniff")
+                .appending("X-XSS-Protection", "1; mode=block")
+                .appending("Content-Security-Policy", "default-src 'self' data: 'unsafe-inline'")
+                .appending("Referrer-Policy", "same-origin")
+                .appending("Feature-Policy", "geolocation 'none'; microphone 'none'; camera 'none'")
+                .appending("Permissions-Policy", "geolocation=(), microphone=(), camera=(), interest-cohort=()"),
+        );
 
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 

@@ -62,7 +62,9 @@ impl AuthApi {
 
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
+        public_cookie.set_secure(app.config.secure());
         public_cookie.set_value_str(params.username.clone());
+        session_cookie.set_secure(app.config.secure());
         session_cookie.set_value_str(session_id);
         cookies.add(public_cookie);
         cookies.add(session_cookie);
@@ -79,7 +81,9 @@ impl AuthApi {
         app.session_delete(&session_id).http_internal("internal error")?;
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
+        public_cookie.set_secure(app.config.secure());
         public_cookie.make_removal();
+        session_cookie.set_secure(app.config.secure());
         session_cookie.make_removal();
         cookies.add(public_cookie);
         cookies.add(session_cookie);
