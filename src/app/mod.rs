@@ -101,6 +101,7 @@ impl App {
     }
 
     pub fn check_login(&self, username: &str, password: &str) -> Result<bool> {
+        let username = username.to_lowercase();
         let hash: String = self.conn()?.query_row(
             "select password_hash from app.users where username = ?",
             params![username],
@@ -126,6 +127,7 @@ impl App {
     }
 
     pub fn user(&self, username: &str) -> Result<User> {
+        let username = username.to_lowercase();
         let conn = self.conn()?;
         let mut stmt =
             conn.prepare("select username, password_hash, role, projects from app.users where username = ?")?;
@@ -166,6 +168,7 @@ impl App {
         if !is_valid_username(username) {
             bail!("invalid username");
         }
+        let username = username.to_lowercase();
         let password_hash = hash_password(password)?;
         let conn = self.conn()?;
         let mut stmt =

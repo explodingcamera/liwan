@@ -1,7 +1,11 @@
 ---
+import { CreateEntity } from "../../components/modals";
 import Settings from "../../layouts/Settings.astro";
 ---
 
 <Settings title="Entities">
-  <h1>Entities</h1>
+  <nav>
+    <h1>Entities</h1>
+    <CreateEntity client:load />
+  </nav>
 </Settings>

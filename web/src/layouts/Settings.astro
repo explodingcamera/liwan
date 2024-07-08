@@ -44,6 +44,17 @@ const { title } = Astro.props;
 <style>
   .settings {
     display: flex;
+    margin-top: 1rem;
+  }
+
+  .content {
+    width: 100%;
+
+    > :global(nav) {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   }
 
   .sidebar {

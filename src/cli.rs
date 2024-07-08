@@ -77,14 +77,15 @@ pub fn handle_command(app: App, cmd: Command) -> Result<()> {
             println!("Password updated for user {}", update.username);
         }
         Command::Users(_) => {
-            if app.users()?.is_empty() {
+            let users = app.users()?;
+            if users.is_empty() {
                 println!("{}", "No users found".bold());
                 println!("Use `liwan add-user` to create a new user");
                 return Ok(());
             }
 
             println!("{}", "Users:".bold());
-            for user in app.users()? {
+            for user in users {
                 println!(" - {} ({:?})", user.username.underline(), user.role);
             }
         }

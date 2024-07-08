@@ -1,7 +1,11 @@
 ---
+import { CreateUser } from "../../components/modals";
 import Settings from "../../layouts/Settings.astro";
 ---
 
 <Settings title="Users">
-  <h1>Users</h1>
+  <nav>
+    <h1>Users</h1>
+    <CreateUser client:load />
+  </nav>
 </Settings>

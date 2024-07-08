@@ -12,3 +12,14 @@ h6 {
     Ubuntu, Cantarell, Helvetica, Arial, "Helvetica Neue", sans-serif,
     var(--pico-font-family-emoji);
 }
+
+:root {
+  --pico-border-radius: 0.7rem;
+  --pico-spacing: 0.5rem;
+  --pico-form-element-spacing-vertical: 0.5rem;
+  --pico-form-element-spacing-horizontal: 0.6rem;
+}
+
+article {
+  border-radius: 1rem;
+}

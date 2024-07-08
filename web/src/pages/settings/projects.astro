@@ -1,7 +1,11 @@
 ---
+import { CreateProject } from "../../components/modals";
 import Settings from "../../layouts/Settings.astro";
 ---
 
 <Settings title="Projects">
-  <h1>Projects</h1>
+  <nav>
+    <h1>Projects</h1>
+    <CreateProject client:load />
+  </nav>
 </Settings>

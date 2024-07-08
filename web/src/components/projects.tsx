@@ -7,11 +7,12 @@ import CountUp from "react-countup";
 import { CircleIcon, LockIcon } from "lucide-react";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { getUsername } from "../api/utils";
+import { Dialog } from "./dialog";
 
 const signedIn = getUsername();
 
 export const Projects = () => {
-	const { data } = useQuery({
+	const { data, isLoading } = useQuery({
 		queryKey: ["projects"],
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
@@ -25,6 +26,8 @@ export const Projects = () => {
 		setDateRange(name);
 	};
 	const projects = Object.entries(data?.projects || {});
+
+	if (isLoading) return null;
 
 	if (projects.length === 0 && signedIn)
 		return (
