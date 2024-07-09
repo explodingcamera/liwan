@@ -1,44 +1,43 @@
 #[derive(Debug, Clone)]
-pub struct Event {
-    pub entity_id: String,
-    pub visitor_id: String,
-    pub event: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub fqdn: Option<String>,
-    pub path: Option<String>,
-    pub referrer: Option<String>,
-    pub platform: Option<String>,
-    pub browser: Option<String>,
-    pub mobile: Option<bool>,
-    pub country: Option<String>,
-    pub city: Option<String>,
+pub(crate) struct Event {
+    pub(crate) entity_id: String,
+    pub(crate) visitor_id: String,
+    pub(crate) event: String,
+    pub(crate) created_at: chrono::DateTime<chrono::Utc>,
+    pub(crate) fqdn: Option<String>,
+    pub(crate) path: Option<String>,
+    pub(crate) referrer: Option<String>,
+    pub(crate) platform: Option<String>,
+    pub(crate) browser: Option<String>,
+    pub(crate) mobile: Option<bool>,
+    pub(crate) country: Option<String>,
+    pub(crate) city: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Project {
-    pub id: String,
-    pub display_name: String,
-
-    #[serde(default)]
-    pub public: bool,
-    pub secret: Option<String>, // enable public access with password protection
+#[derive(Debug, Object, Serialize, Deserialize, Clone)]
+pub(crate) struct Project {
+    pub(crate) id: String,
+    pub(crate) display_name: String,
+    pub(crate) public: bool,
+    pub(crate) secret: Option<String>, // enable public access with password protection
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Entity {
-    pub id: String,
-    pub display_name: String,
+#[derive(Clone, Object, Debug, Serialize, Deserialize)]
+pub(crate) struct Entity {
+    pub(crate) id: String,
+    pub(crate) display_name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct User {
-    pub username: String,
-    pub role: UserRole,
-    pub projects: Vec<String>,
+#[derive(Debug, Object, Serialize, Deserialize, Clone)]
+pub(crate) struct User {
+    pub(crate) username: String,
+    pub(crate) role: UserRole,
+    pub(crate) projects: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
-pub enum UserRole {
+#[derive(Debug, Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
+#[oai(rename_all = "lowercase")]
+pub(crate) enum UserRole {
     #[serde(rename = "admin")]
     Admin,
     #[serde(rename = "user")]
@@ -60,7 +59,7 @@ impl TryFrom<String> for UserRole {
 
 impl UserRole {
     #[allow(clippy::inherent_to_string)]
-    pub fn to_string(self) -> String {
+    pub(crate) fn to_string(self) -> String {
         match self {
             UserRole::Admin => "admin".to_string(),
             UserRole::User => "user".to_string(),
@@ -88,4 +87,5 @@ macro_rules! event_params {
 }
 
 pub(crate) use event_params;
+use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};

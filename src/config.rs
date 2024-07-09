@@ -21,31 +21,31 @@ fn default_db_dir() -> String {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub(crate) struct Config {
     #[serde(default = "default_base")]
-    pub base_url: String,
+    pub(crate) base_url: String,
 
     #[serde(default = "default_port")]
-    pub port: u16,
+    pub(crate) port: u16,
 
     #[serde(default = "default_db_dir")]
-    pub db_dir: String,
+    pub(crate) db_dir: String,
 
-    pub geoip: Option<GeoIpConfig>,
+    pub(crate) geoip: Option<GeoIpConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GeoIpConfig {
-    pub maxmind_db_path: Option<String>,
-    pub maxmind_account_id: Option<String>,
-    pub maxmind_license_key: Option<String>,
-    pub maxmind_edition: Option<String>,
+pub(crate) struct GeoIpConfig {
+    pub(crate) maxmind_db_path: Option<String>,
+    pub(crate) maxmind_account_id: Option<String>,
+    pub(crate) maxmind_license_key: Option<String>,
+    pub(crate) maxmind_edition: Option<String>,
 }
 
-pub static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
+pub(crate) static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
 
 impl Config {
-    pub fn load(path: Option<String>) -> Result<Self> {
+    pub(crate) fn load(path: Option<String>) -> Result<Self> {
         let config: Config = Figment::new()
             .merge(Toml::file(path.unwrap_or("liwan.config.toml".to_string())))
             .merge(Env::prefixed("LIWAN_"))
@@ -60,7 +60,7 @@ impl Config {
         Ok(config)
     }
 
-    pub fn secure(&self) -> bool {
+    pub(crate) fn secure(&self) -> bool {
         self.base_url.starts_with("https")
     }
 }

@@ -1,16 +1,16 @@
 use chrono::{DateTime, Utc};
 
-pub mod hash;
-pub mod referer;
-pub mod refinery_duckdb;
-pub mod ua;
-pub mod validate;
+pub(crate) mod hash;
+pub(crate) mod referer;
+pub(crate) mod refinery_duckdb;
+pub(crate) mod ua;
+pub(crate) mod validate;
 
-pub trait TimeExt {
+pub(crate) trait TimeExt {
     fn to_time(&self) -> DateTime<Utc>;
 }
 
-pub type Timestamp = i64;
+pub(crate) type Timestamp = i64;
 
 impl TimeExt for Timestamp {
     fn to_time(&self) -> DateTime<Utc> {

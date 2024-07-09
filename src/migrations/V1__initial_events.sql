@@ -13,7 +13,6 @@ create table events (
     mobile boolean,
     country text,
     city text,
-    -- currently unsupported by the rust driver: meta map(text, text),
 );
 
 -- todo: evaluate if these indexes are necessary

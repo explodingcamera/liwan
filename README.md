@@ -7,10 +7,10 @@
 - Easy to deploy and host on your own server
 - Doesn't collect IP addresses or other personal information
 - Single, statically linked binary with no external dependencies (powered by DuckDB)
-- Extremely permissive license (Apache-2.0 OR MIT)
+- Permissive license (Apache-2.0 OR MIT)
 - No tracking across multiple sites
 - No Cookies/LocalStorage/...
-- Tracking script is less than 0.5 KB
+- Tracking script is less than 1 KB
 
 ## Usage
 
@@ -18,18 +18,9 @@ Run the binary and point your browser to `http://localhost:8080`.
 
 ```sh
 $ curl -JLO <url>
+$ tar -xzf liwan-*.tar.xz
 $ chmod +x liwan
 $ ./liwan
-```
-
-## Configuration
-
-Users and sites are configured in the liwan.config.toml file (The web UI is read-only). When you first run the binary, a config file will be created with all the information you need to get started.
-
-To generate a password hash for a new user, run the following command:
-
-```sh
-$ ./liwan hash-password <password>
 ```
 
 ## Privacy

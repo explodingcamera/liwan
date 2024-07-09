@@ -7,15 +7,15 @@ lazy_static! {
         .expect("Parser creation failed");
 }
 
-pub fn parse(header: &str) -> Client {
+pub(crate) fn parse(header: &str) -> Client {
     PARSER.parse(header)
 }
 
-pub fn is_bot(client: &Client) -> bool {
+pub(crate) fn is_bot(client: &Client) -> bool {
     client.device.family == "Spider"
 }
 
 static MOBILE_OS: [&str; 2] = ["iOS", "Android"]; // good enough for 99% of cases
-pub fn is_mobile(client: &Client) -> bool {
+pub(crate) fn is_mobile(client: &Client) -> bool {
     MOBILE_OS.contains(&&*client.os.family)
 }

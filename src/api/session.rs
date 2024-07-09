@@ -9,10 +9,10 @@ use poem::{
 use crate::app::models::User;
 
 use super::PoemErrExt;
-pub const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
+pub(crate) const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 
 lazy_static! {
-    pub static ref PUBLIC_COOKIE: Cookie = {
+    pub(crate) static ref PUBLIC_COOKIE: Cookie = {
         let mut public_cookie = Cookie::named("liwan-username");
         public_cookie.set_max_age(MAX_SESSION_AGE);
         public_cookie.set_http_only(false);
@@ -20,7 +20,7 @@ lazy_static! {
         public_cookie.set_same_site(SameSite::Strict);
         public_cookie
     };
-    pub static ref SESSION_COOKIE: Cookie = {
+    pub(crate) static ref SESSION_COOKIE: Cookie = {
         let mut session_cookie = Cookie::named("liwan-session");
         session_cookie.set_max_age(MAX_SESSION_AGE);
         session_cookie.set_http_only(true);
@@ -30,8 +30,8 @@ lazy_static! {
     };
 }
 
-pub struct SessionId(pub String);
-pub struct SessionUser(pub User);
+pub(crate) struct SessionId(pub(crate) String);
+pub(crate) struct SessionUser(pub(crate) User);
 
 impl<'a> FromRequest<'a> for SessionId {
     async fn from_request(req: &'a poem::Request, _body: &mut poem::RequestBody) -> poem::Result<Self> {

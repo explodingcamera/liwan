@@ -17,15 +17,15 @@ lazy_static! {
     static ref SPAMMERS: HashSet<&'static str> = include_str!("../../data/spammers.txt").lines().collect();
 }
 
-pub fn get_referer_name(fqdn: &str) -> Option<&'static str> {
+pub(crate) fn get_referer_name(fqdn: &str) -> Option<&'static str> {
     REFERERS.get(fqdn).copied()
 }
 
-pub fn is_spammer(fqdn: &str) -> bool {
+pub(crate) fn is_spammer(fqdn: &str) -> bool {
     SPAMMERS.contains(fqdn)
 }
 
-pub fn process_referer(referer: Option<&str>) -> Result<Option<String>, ()> {
+pub(crate) fn process_referer(referer: Option<&str>) -> Result<Option<String>, ()> {
     let res = match referer.map(poem::http::Uri::from_str) {
         // valid referer are stripped to the FQDN
         Some(Ok(referer_uri)) => {

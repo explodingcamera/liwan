@@ -26,7 +26,7 @@ thread_local! {
     static EXISTING_ENTITIES: RefCell<TimedCache<String, String>> = TimedCache::with_lifespan(60 * 60).into(); // 1 hour
 }
 
-pub struct EventApi;
+pub(crate) struct EventApi;
 #[OpenApi]
 impl EventApi {
     #[oai(path = "/event", method = "post")]

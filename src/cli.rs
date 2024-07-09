@@ -8,22 +8,22 @@ use eyre::Result;
 
 #[derive(FromArgs)]
 /// liwan - lightweight web analytics
-pub struct Args {
+pub(crate) struct Args {
     #[argh(option)]
     /// path to the configuration file
-    pub config: Option<String>,
+    pub(crate) config: Option<String>,
 
     #[argh(subcommand)]
-    pub cmd: Option<Command>,
+    pub(crate) cmd: Option<Command>,
 }
 
-pub fn args() -> Args {
+pub(crate) fn args() -> Args {
     argh::from_env()
 }
 
 #[derive(FromArgs)]
 #[argh(subcommand)]
-pub enum Command {
+pub(crate) enum Command {
     GenerateConfig(GenConfig),
     UpdatePassword(UpdatePassword),
     AddUser(AddUser),
@@ -33,12 +33,12 @@ pub enum Command {
 #[derive(FromArgs)]
 #[argh(subcommand, name = "generate-config")]
 /// Save a default configuration file to `liwan.config.toml`
-pub struct GenConfig {}
+pub(crate) struct GenConfig {}
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "update-password")]
 /// Update a user's password
-pub struct UpdatePassword {
+pub(crate) struct UpdatePassword {
     #[argh(positional)]
     /// the username of the user to update
     username: String,
@@ -51,12 +51,12 @@ pub struct UpdatePassword {
 #[derive(FromArgs)]
 #[argh(subcommand, name = "users")]
 /// List all registered users
-pub struct ListUsers {}
+pub(crate) struct ListUsers {}
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "add-user")]
 /// Create a new user
-pub struct AddUser {
+pub(crate) struct AddUser {
     #[argh(positional)]
     /// the username of the new user
     username: String,
@@ -70,7 +70,7 @@ pub struct AddUser {
     admin: bool,
 }
 
-pub fn handle_command(app: App, cmd: Command) -> Result<()> {
+pub(crate) fn handle_command(app: App, cmd: Command) -> Result<()> {
     match cmd {
         Command::UpdatePassword(update) => {
             app.user_update_password(&update.username, &update.password)?;

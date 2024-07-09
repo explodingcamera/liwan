@@ -30,7 +30,7 @@ fn login_rate_limit(ep: impl Endpoint + 'static) -> impl Endpoint {
     ep.with(RateLimitLayer::new(10, std::time::Duration::from_secs(10)).compat())
 }
 
-pub struct AuthApi;
+pub(crate) struct AuthApi;
 #[OpenApi]
 impl AuthApi {
     #[oai(path = "/auth/setup", method = "post", transform = "login_rate_limit")]

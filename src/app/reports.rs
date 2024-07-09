@@ -15,14 +15,14 @@ const CACHE_SIZE_OVERALL_REPORTS: usize = 512;
 const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
 
 #[derive(Debug, Object)]
-pub struct DateRange {
-    pub start: Timestamp,
-    pub end: Timestamp,
+pub(crate) struct DateRange {
+    pub(crate) start: Timestamp,
+    pub(crate) end: Timestamp,
 }
 
 #[derive(Debug, Enum)]
 #[oai(rename_all = "snake_case")]
-pub enum Metric {
+pub(crate) enum Metric {
     Views,
     Sessions,
     UniqueVisitors,
@@ -32,7 +32,7 @@ pub enum Metric {
 
 #[derive(Debug, Enum)]
 #[oai(rename_all = "snake_case")]
-pub enum Dimension {
+pub(crate) enum Dimension {
     Path,
     Fqdn,
     Referrer,
@@ -45,7 +45,7 @@ pub enum Dimension {
 
 #[derive(Enum, Debug)]
 #[oai(rename_all = "snake_case")]
-pub enum FilterType {
+pub(crate) enum FilterType {
     Equal,
     NotEqual,
     Contains,
@@ -53,12 +53,12 @@ pub enum FilterType {
     IsNull,
 }
 
-pub type ReportGraph = Vec<u32>;
-pub type ReportTable = BTreeMap<String, u32>;
+pub(crate) type ReportGraph = Vec<u32>;
+pub(crate) type ReportTable = BTreeMap<String, u32>;
 
 #[derive(Object, Clone, Debug)]
 #[oai(rename_all = "camelCase")]
-pub struct ReportStats {
+pub(crate) struct ReportStats {
     total_views: u32,
     total_sessions: u32,
     unique_visitors: u32,
@@ -67,7 +67,7 @@ pub struct ReportStats {
 
 #[derive(Object, Debug)]
 #[oai(rename_all = "camelCase")]
-pub struct DimensionFilter {
+pub(crate) struct DimensionFilter {
     dimension: Dimension,
     filter_type: FilterType,
     value: String,
@@ -86,7 +86,7 @@ fn metric_sql(metric: &Metric) -> Result<String> {
     }.to_owned())
 }
 
-pub fn online_users(conn: &Conn, entities: &[&str]) -> Result<u32> {
+pub(crate) fn online_users(conn: &Conn, entities: &[&str]) -> Result<u32> {
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
     if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
         return Err(eyre::eyre!("Invalid entity ID"));
@@ -114,7 +114,7 @@ pub fn online_users(conn: &Conn, entities: &[&str]) -> Result<u32> {
     convert = r#"{format!("{:?}:{}:{:?}:{:?}:{:?}", entities, event, range, filters, metric)}"#,
     result = true
 )]
-pub fn overall_report(
+pub(crate) fn overall_report(
     conn: &Conn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
@@ -204,7 +204,7 @@ pub fn overall_report(
     convert = r#"{format!("{:?}:{}:{:?}:{:?}", entities, event, range, filters)}"#,
     result = true
 )]
-pub fn overall_stats(
+pub(crate) fn overall_stats(
     conn: &Conn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
@@ -273,7 +273,7 @@ pub fn overall_stats(
     convert = r#"{format!("{:?}:{}:{:?}:{:?}:{:?}:{:?}", entities, event, range, dimension, filters, metric)}"#,
     result = true
 )]
-pub fn dimension_report(
+pub(crate) fn dimension_report(
     conn: &Conn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,

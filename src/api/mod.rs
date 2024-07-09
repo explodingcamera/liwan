@@ -51,7 +51,7 @@ fn save_spec() -> Result<()> {
     Ok(())
 }
 
-pub async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
+pub(crate) async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
     #[cfg(debug_assertions)]
     save_spec()?;
 
