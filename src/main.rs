@@ -13,6 +13,7 @@ async fn main() -> Result<()> {
     let args = cli::args();
     let config = Config::load(args.config)?;
     let (s, r) = crossbeam::channel::unbounded::<Event>();
+
     let app = App::try_new(config)?;
 
     if let Some(cmd) = args.cmd {

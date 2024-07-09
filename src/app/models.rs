@@ -69,7 +69,7 @@ impl UserRole {
 
 macro_rules! event_params {
     ($event:expr) => {
-        params![
+        duckdb::params![
             $event.entity_id,
             $event.visitor_id,
             $event.event,

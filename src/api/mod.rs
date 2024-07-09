@@ -89,7 +89,7 @@ pub(crate) async fn start_webserver(app: App, events: Sender<Event>) -> Result<(
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
     if let Some(onboarding) = app.onboarding.read().unwrap().as_ref() {
-        println!("{}", "Welcome to Liwan!".bold().white());
+        println!("{}", "Welcome to App!".bold().white());
         println!(
             "You can get started by visiting: {}",
             format!("http://localhost:{}/setup?t={}", app.config.port, onboarding).underline().white()
@@ -98,7 +98,7 @@ pub(crate) async fn start_webserver(app: App, events: Sender<Event>) -> Result<(
     } else {
         println!(
             "{}",
-            format!("Liwan is running at: {}", app.config.base_url.to_string().underline().white()).bold().white()
+            format!("App is running at: {}", app.config.base_url.to_string().underline().white()).bold().white()
         );
     }
 

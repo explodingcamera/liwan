@@ -5,36 +5,43 @@ edition="2021"
 rust-version="1.79"
 
 [dependencies]
+# encoding
 hex={version="0.4"}
+bs58="0.5.1"
+toml={version="0.8"}
+serde={version="1.0", features=["derive"]}
+serde_json={version="1.0"}
+
+# utils
 argh={version="0.1"}
 eyre={version="0.6"}
 rand={version="0.8"}
-toml={version="0.8"}
-serde_json={version="1.0"}
-mime_guess={version="2.0"}
 chrono={version="0.4", features=["serde"]}
 time={version="0.3"} # need both chrono and time for compatibility with dependencies
-serde={version="1.0", features=["derive"]}
 lazy_static={version="1.5"}
 itertools={version="0.13"}
-bs58="0.5.1"
 colored={version="2.1"}
 figment={version="0.10", features=["toml", "env"]}
+sha3={version="0.10"}
+argon2={version="0.5"}
 
+# web
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
 poem={version="3.0", features=["embed", "session", "cookie", "compression", "tower-compat"]}
 poem-openapi={version="5.0", features=["chrono"]}
 tower={version="0.4.8", default-features=false, features=["limit"]}
 uaparser="0.6"
+mime_guess={version="2.0"}
 rust-embed="8.4"
 
+# database
+rusqlite={version="0.31.0", features=["bundled", "chrono"]}
 duckdb={version="0.10", features=["chrono", "bundled", "r2d2"]}
 r2d2="0.8"
-refinery="0.8"
+r2d2_sqlite="0.24.0"
+refinery={version="0.8", features=["rusqlite"]}
 refinery-core="0.8"
-argon2={version="0.5"}
 crossbeam="0.8"
-sha3={version="0.10"}
 maxminddb={version="0.24", optional=true}
 cached="0.52"
 
@@ -43,7 +50,5 @@ default=["geoip"]
 geoip=["dep:maxminddb"]
 
 [profile.release]
-codegen-units=1
-lto="fat"
+lto="thin"
 strip=true
-panic="abort"

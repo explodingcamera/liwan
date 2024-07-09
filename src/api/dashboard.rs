@@ -292,7 +292,7 @@ impl DashboardAPI {
             http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
         }
 
-        let conn = app.conn().http_internal("Failed to get connection")?;
+        let conn = app.conn_events().http_internal("Failed to get connection")?;
         let project = app.project(&project_id).http_not_found("Project not found")?;
         let entities = app.project_entity_ids(&project.id).http_internal("Failed to get entity names")?;
 
@@ -315,7 +315,7 @@ impl DashboardAPI {
         Data(app): Data<&App>,
         user: Option<SessionUser>,
     ) -> APIResult<Json<ReportStats>> {
-        let conn = app.conn().http_internal("Failed to get connection")?;
+        let conn = app.conn_events().http_internal("Failed to get connection")?;
         let project = app.project(&project_id).http_not_found("Project not found")?;
         let entities = app.project_entity_ids(&project.id).http_internal("Failed to get entity names")?;
 

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 use crate::utils::{validate, TimeExt};
-use crate::{app::Conn, utils::Timestamp};
+use crate::{app::DuckDBConn, utils::Timestamp};
 use cached::proc_macro::cached;
 use cached::SizedCache;
 use duckdb::params;
@@ -86,7 +86,7 @@ fn metric_sql(metric: &Metric) -> Result<String> {
     }.to_owned())
 }
 
-pub(crate) fn online_users(conn: &Conn, entities: &[&str]) -> Result<u32> {
+pub(crate) fn online_users(conn: &DuckDBConn, entities: &[&str]) -> Result<u32> {
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
     if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
         return Err(eyre::eyre!("Invalid entity ID"));
@@ -115,7 +115,7 @@ pub(crate) fn online_users(conn: &Conn, entities: &[&str]) -> Result<u32> {
     result = true
 )]
 pub(crate) fn overall_report(
-    conn: &Conn,
+    conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
     range: &DateRange,
@@ -205,7 +205,7 @@ pub(crate) fn overall_report(
     result = true
 )]
 pub(crate) fn overall_stats(
-    conn: &Conn,
+    conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
     range: &DateRange,
@@ -274,7 +274,7 @@ pub(crate) fn overall_stats(
     result = true
 )]
 pub(crate) fn dimension_report(
-    conn: &Conn,
+    conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
     range: DateRange,
