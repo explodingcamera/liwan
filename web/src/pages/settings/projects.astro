@@ -1,5 +1,6 @@
 ---
-import { CreateProject } from "../../components/modals";
+import { CreateProject } from "../../components/settings/dialogs";
+import { ProjectsTable } from "../../components/settings/tables";
 import Settings from "../../layouts/Settings.astro";
 ---
 
@@ -8,4 +9,5 @@ import Settings from "../../layouts/Settings.astro";
     <h1>Projects</h1>
     <CreateProject client:load />
   </nav>
+  <ProjectsTable client:load />
 </Settings>

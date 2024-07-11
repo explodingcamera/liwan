@@ -41,7 +41,7 @@ pub(crate) fn visitor_id() -> String {
     let mut rng = OsRng;
     let mut bytes = [0u8; 32];
     rng.fill(&mut bytes);
-    bytes.iter().fold(String::new(), |acc, byte| acc + &format!("{:02x}", byte))
+    bs58::encode(bytes).into_string()
 }
 
 pub(crate) fn session_token() -> String {

@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Dialog } from "./dialog";
+import { Dialog } from "../dialog";
 
 export const CreateProject = () => {
 	const closeRef = useRef<HTMLButtonElement>(null);
@@ -93,51 +93,51 @@ export const CreateEntity = () => {
 };
 
 export const CreateUser = () => {
-    const closeRef = useRef<HTMLButtonElement>(null);
+	const closeRef = useRef<HTMLButtonElement>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const form = e.target as HTMLFormElement;
-        const { email, password } = Object.fromEntries(new FormData(form)) as { email: string; password: string };
-    };
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const form = e.target as HTMLFormElement;
+		const { email, password } = Object.fromEntries(new FormData(form)) as { email: string; password: string };
+	};
 
-    return (
-        <Dialog
-            title="Create a new user"
-            trigger={
-                <button type="button" className="contrast">
-                    New
-                </button>
-            }
-        >
-            <form onSubmit={handleSubmit}>
-                <label>
-                    Username <small>(This cannot be changed later)</small>
-                    <input required pattern="^[A-Za-z0-9_\-]{1,15}$" name="username" type="text" placeholder="MyUsername" />
-                </label>
-                <label>
-                    Password
-                    <input required name="password" type="password" />
-                </label>
+	return (
+		<Dialog
+			title="Create a new user"
+			trigger={
+				<button type="button" className="contrast">
+					New
+				</button>
+			}
+		>
+			<form onSubmit={handleSubmit}>
+				<label>
+					Username <small>(This cannot be changed later)</small>
+					<input required pattern="^[A-Za-z0-9_\-]{1,15}$" name="username" type="text" placeholder="MyUsername" />
+				</label>
+				<label>
+					Password
+					<input required name="password" type="password" />
+				</label>
 
-                <label>
-                    <input name="publish" type="checkbox" role="switch" />
-                    Enable Administrator Access
-                    <br />
-                    <small>Administators can edit and create projects, entities, and users.</small>
-                </label>
-                <br />
-                <div className="grid">
-                    <Dialog.Close asChild>
-                        <button className="secondary outline" type="button" ref={closeRef}>
-                            Cancel
-                        </button>
-                    </Dialog.Close>
-                    <button type="submit">Create User</button>
-                </div>
-            </form>
-        </Dialog>
-    );
-}
-
+				<label>
+					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
+					<input name="publish" type="checkbox" role="switch" />
+					Enable Administrator Access
+					<br />
+					<small>Administators can edit and create projects, entities, and users.</small>
+				</label>
+				<br />
+				<div className="grid">
+					<Dialog.Close asChild>
+						<button className="secondary outline" type="button" ref={closeRef}>
+							Cancel
+						</button>
+					</Dialog.Close>
+					<button type="submit">Create User</button>
+				</div>
+			</form>
+		</Dialog>
+	);
+};

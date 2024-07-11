@@ -14,7 +14,8 @@ details.user {
 
   summary + ul {
     margin-top: 0.3rem;
-    margin-left: -0.1rem;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
 
     li a {
       display: flex;

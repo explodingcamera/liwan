@@ -8,7 +8,6 @@ rust-version="1.79"
 # encoding
 hex={version="0.4"}
 bs58="0.5.1"
-toml={version="0.8"}
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
 
@@ -24,6 +23,8 @@ colored={version="2.1"}
 figment={version="0.10", features=["toml", "env"]}
 sha3={version="0.10"}
 argon2={version="0.5"}
+crossbeam="0.8"
+cached="0.52"
 
 # web
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
@@ -35,15 +36,13 @@ mime_guess={version="2.0"}
 rust-embed="8.4"
 
 # database
-rusqlite={version="0.31.0", features=["bundled", "chrono"]}
-duckdb={version="0.10", features=["chrono", "bundled", "r2d2"]}
-r2d2="0.8"
+duckdb={version="1.0.0", features=["bundled", "chrono", "r2d2"]}
+rusqlite={version="0.31", features=["bundled", "chrono"]}
+r2d2={version="0.8"}
 r2d2_sqlite="0.24.0"
 refinery={version="0.8", features=["rusqlite"]}
 refinery-core="0.8"
-crossbeam="0.8"
 maxminddb={version="0.24", optional=true}
-cached="0.52"
 
 [features]
 default=["geoip"]

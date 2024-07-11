@@ -25,7 +25,7 @@ export const LoginButton = () => {
 			</summary>
 			<ul>
 				<li>
-					<a href="/settings">
+					<a href="/settings/projects">
 						<SettingsIcon size="16" />
 						Settings
 					</a>
