@@ -42,6 +42,13 @@ struct GraphResponse {
     data: Vec<u32>,
 }
 
+#[derive(Debug, Object, Clone)]
+pub(crate) struct CreateUserRequest {
+    pub(crate) username: String,
+    pub(crate) password: String,
+    pub(crate) role: UserRole,
+}
+
 pub(crate) struct DashboardAPI;
 
 fn can_access_project(project: &Project, user: &Option<&SessionUser>) -> bool {
@@ -111,6 +118,20 @@ impl DashboardAPI {
         }
 
         app.user_delete(&username).http_internal("Failed to delete user")?;
+        EmptyResponse::ok()
+    }
+
+    #[oai(path = "/user", method = "post")]
+    async fn user_create_handler(
+        &self,
+        Json(user): Json<CreateUserRequest>,
+        Data(app): Data<&App>,
+        SessionUser(session_user): SessionUser,
+    ) -> APIResult<EmptyResponse> {
+        if session_user.role != UserRole::Admin {
+            http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+        }
+        app.user_create(&user.username, &user.password, user.role, &[]).http_internal("Failed to create user")?;
         EmptyResponse::ok()
     }
 

@@ -1,4 +1,4 @@
-use super::session::{SessionId, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE};
+use super::session::{SessionId, SessionUser, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE};
 use super::webext::*;
 use crate::app::models::UserRole;
 use crate::app::App;
@@ -26,6 +26,12 @@ struct SetupRequest {
     password: String,
 }
 
+#[derive(Object)]
+struct MeResponse {
+    username: String,
+    role: UserRole,
+}
+
 fn login_rate_limit(ep: impl Endpoint + 'static) -> impl Endpoint {
     ep.with(RateLimitLayer::new(10, std::time::Duration::from_secs(10)).compat())
 }
@@ -33,6 +39,11 @@ fn login_rate_limit(ep: impl Endpoint + 'static) -> impl Endpoint {
 pub(crate) struct AuthApi;
 #[OpenApi]
 impl AuthApi {
+    #[oai(path = "/auth/me", method = "get")]
+    async fn me(&self, SessionUser(user): SessionUser) -> Json<MeResponse> {
+        Json(MeResponse { username: user.username, role: user.role })
+    }
+
     #[oai(path = "/auth/setup", method = "post", transform = "login_rate_limit")]
     async fn setup(&self, Data(app): Data<&App>, Json(params): Json<SetupRequest>) -> APIResult<EmptyResponse> {
         let token = app.onboarding.read().http_internal("internal error")?.clone();
@@ -40,7 +51,7 @@ impl AuthApi {
             http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
         }
 
-        app.user_create(&params.username, &params.password, UserRole::Admin, vec![]).http_internal("internal error")?;
+        app.user_create(&params.username, &params.password, UserRole::Admin, &[]).http_internal("internal error")?;
         *app.onboarding.write().http_internal("internal error")? = None;
         EmptyResponse::ok()
     }

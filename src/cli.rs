@@ -97,7 +97,7 @@ pub(crate) fn handle_command(app: App, cmd: Command) -> Result<()> {
                     true => UserRole::Admin,
                     false => UserRole::User,
                 },
-                vec![],
+                &[],
             )?;
 
             println!("User {} created", add.username);

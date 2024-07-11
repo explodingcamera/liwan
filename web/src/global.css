@@ -15,9 +15,13 @@ h6 {
 
 :root {
   --pico-border-radius: 0.7rem;
-  --pico-spacing: 0.5rem;
+  --pico-spacing: 0.75rem;
   --pico-form-element-spacing-vertical: 0.5rem;
   --pico-form-element-spacing-horizontal: 0.6rem;
+}
+
+label > :where(input, select, textarea) {
+  margin-top: calc(var(--pico-spacing) * 0.5);
 }
 
 article {

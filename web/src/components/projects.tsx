@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { api, metricNames, useQuery, type Metric } from "../api";
+import { api, metricNames, useMe, useQuery, type Metric } from "../api";
 import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
 import { LineGraph, toDataPoints } from "./graph";
 import styles from "./projects.module.css";
@@ -7,9 +7,31 @@ import CountUp from "react-countup";
 import { CircleIcon, LockIcon } from "lucide-react";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { getUsername } from "../api/utils";
-import { Dialog } from "./dialog";
 
 const signedIn = getUsername();
+
+// Only load the role if no projects are available
+const NoProjects = () => {
+	const { role } = useMe();
+	return (
+		<div className={styles.info}>
+			{role === "admin" ? (
+				<h3>
+					You do not have any projects yet.
+					<br />
+					<a href="/settings/projects">Create a new project</a>
+					&nbsp;to get started.
+				</h3>
+			) : (
+				<h3>
+					You do not have any projects yet.
+					<br />
+					Contact an admin to create a new project.
+				</h3>
+			)}
+		</div>
+	);
+};
 
 export const Projects = () => {
 	const { data, isLoading } = useQuery({
@@ -28,19 +50,7 @@ export const Projects = () => {
 	const projects = Object.entries(data?.projects || {});
 
 	if (isLoading) return null;
-
-	if (projects.length === 0 && signedIn)
-		return (
-			<div className={styles.info}>
-				<h3>
-					You do not have any projects yet.
-					<br />
-					<a href="/settings/projects">Create a new project</a>
-					&nbsp;to get started.
-				</h3>
-			</div>
-		);
-
+	if (projects.length === 0 && signedIn) return <NoProjects />;
 	if (projects.length === 0 && !signedIn)
 		return (
 			<div className={styles.info}>

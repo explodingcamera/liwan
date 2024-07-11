@@ -1,23 +1,41 @@
 import { useRef } from "react";
 import { Dialog } from "../dialog";
+import { api, useMe, useMutation } from "../../api";
+import styles from "./dialogs.module.css";
 
 export const CreateProject = () => {
 	const closeRef = useRef<HTMLButtonElement>(null);
+	const { role } = useMe();
+
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/project"].post,
+		onSuccess: closeRef?.current?.click,
+		onError: console.error,
+	});
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
-		const { id, displayname } = Object.fromEntries(new FormData(form)) as { id: string; displayname: string };
+		const { id, displayName, isPublic } = Object.fromEntries(new FormData(form)) as {
+			id: string;
+			displayName: string;
+			isPublic: string;
+		};
+
+		mutate({ json: { id, displayName, public: isPublic === "on" } });
 	};
 
 	return (
 		<Dialog
+			onOpenChange={() => reset()}
 			title="Create a new project"
 			trigger={
-				<button type="button" className="contrast">
-					New
-				</button>
+				role === "admin" && (
+					<button type="button" className="contrast">
+						New
+					</button>
+				)
 			}
 		>
 			<form onSubmit={handleSubmit}>
@@ -32,8 +50,17 @@ export const CreateProject = () => {
 				</label>
 				<label>
 					Project Name <small>(Used in the dashboard)</small>
-					<input required name="displayname" type="text" placeholder="My Project" />
+					<input required name="displayName" type="text" placeholder="My Project" />
 				</label>
+				<label>
+					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
+					<input type="checkbox" role="switch" name="isPublic" />
+					Make Public
+					<br />
+					<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
+				</label>
+				<br />
+
 				<div className="grid">
 					<Dialog.Close asChild>
 						<button className="secondary outline" type="button" ref={closeRef}>
@@ -42,6 +69,13 @@ export const CreateProject = () => {
 					</Dialog.Close>
 					<button type="submit">Create Project</button>
 				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while creating the project:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
 			</form>
 		</Dialog>
 	);
@@ -49,6 +83,12 @@ export const CreateProject = () => {
 
 export const CreateEntity = () => {
 	const closeRef = useRef<HTMLButtonElement>(null);
+	const { role } = useMe();
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/entity"].post,
+		onSuccess: closeRef?.current?.click,
+		onError: console.error,
+	});
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -61,9 +101,11 @@ export const CreateEntity = () => {
 		<Dialog
 			title="Create a new entity"
 			trigger={
-				<button type="button" className="contrast">
-					New
-				</button>
+				role === "admin" && (
+					<button type="button" className="contrast">
+						New
+					</button>
+				)
 			}
 		>
 			<form onSubmit={handleSubmit}>
@@ -87,13 +129,27 @@ export const CreateEntity = () => {
 					</Dialog.Close>
 					<button type="submit">Create Entity</button>
 				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while creating the entity:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
 			</form>
 		</Dialog>
 	);
 };
 
 export const CreateUser = () => {
+	const { role } = useMe();
 	const closeRef = useRef<HTMLButtonElement>(null);
+
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/user"].post,
+		onSuccess: closeRef?.current?.click,
+		onError: console.error,
+	});
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -106,9 +162,11 @@ export const CreateUser = () => {
 		<Dialog
 			title="Create a new user"
 			trigger={
-				<button type="button" className="contrast">
-					New
-				</button>
+				role === "admin" && (
+					<button type="button" className="contrast">
+						New
+					</button>
+				)
 			}
 		>
 			<form onSubmit={handleSubmit}>
@@ -137,6 +195,13 @@ export const CreateUser = () => {
 					</Dialog.Close>
 					<button type="submit">Create User</button>
 				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while creating the user:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
 			</form>
 		</Dialog>
 	);

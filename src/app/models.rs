@@ -15,6 +15,7 @@ pub(crate) struct Event {
 }
 
 #[derive(Debug, Object, Serialize, Deserialize, Clone)]
+#[oai(rename_all = "camelCase")]
 pub(crate) struct Project {
     pub(crate) id: String,
     pub(crate) display_name: String,
@@ -23,6 +24,7 @@ pub(crate) struct Project {
 }
 
 #[derive(Clone, Object, Debug, Serialize, Deserialize)]
+#[oai(rename_all = "camelCase")]
 pub(crate) struct Entity {
     pub(crate) id: String,
     pub(crate) display_name: String,
@@ -36,7 +38,7 @@ pub(crate) struct User {
 }
 
 #[derive(Debug, Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
-#[oai(rename_all = "lowercase")]
+#[oai(rename_all = "snake_case")]
 pub(crate) enum UserRole {
     #[serde(rename = "admin")]
     Admin,

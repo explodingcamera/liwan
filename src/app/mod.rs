@@ -200,13 +200,7 @@ impl App {
         Ok(user.clone())
     }
 
-    pub(crate) fn user_create(
-        &self,
-        username: &str,
-        password: &str,
-        role: UserRole,
-        projects: Vec<String>,
-    ) -> Result<()> {
+    pub(crate) fn user_create(&self, username: &str, password: &str, role: UserRole, projects: &[&str]) -> Result<()> {
         if !is_valid_username(username) {
             bail!("invalid username");
         }

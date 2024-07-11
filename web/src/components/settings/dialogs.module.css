@@ -1,0 +1,9 @@
+.error {
+  position: absolute;
+  color: rgb(255, 85, 85);
+  width: 100%;
+  text-align: center;
+  top: -0.5rem;
+  right: 0;
+  transform: translateY(-100%);
+}

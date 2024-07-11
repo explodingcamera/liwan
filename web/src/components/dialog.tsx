@@ -6,14 +6,16 @@ export const Dialog = ({
 	description,
 	trigger,
 	children,
+	onOpenChange,
 }: {
 	title?: string;
 	description?: string;
 	trigger: React.ReactNode;
 	children: React.ReactNode;
+	onOpenChange?: (open: boolean) => void;
 }) => {
 	return (
-		<Dia.Root>
+		<Dia.Root onOpenChange={onOpenChange}>
 			<Dia.Trigger asChild>{trigger}</Dia.Trigger>
 			<Dia.Portal>
 				<Dia.Overlay className={styles.overlay} />
