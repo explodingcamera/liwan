@@ -46,6 +46,13 @@ fn save_spec() -> Result<()> {
             .replace("; charset=utf-8", "") // fets doesn't detect the json content type correctly
             .replace(r#""format":"int64","#, ""); // fets uses bigint for int64
 
+        // check if the spec has changed
+        let old_spec = std::fs::read_to_string(path)?;
+        if old_spec == format!("export default {} as const;\n", spec) {
+            return Ok(());
+        }
+
+        tracing::info!("API has changed, updating the openapi spec...");
         std::fs::write(path, format!("export default {} as const;\n", spec))?;
     }
     Ok(())
@@ -89,7 +96,7 @@ pub(crate) async fn start_webserver(app: App, events: Sender<Event>) -> Result<(
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
     if let Some(onboarding) = app.onboarding.read().unwrap().as_ref() {
-        println!("{}", "Welcome to App!".bold().white());
+        println!("{}", "Welcome to Liwan!".bold().white());
         println!(
             "You can get started by visiting: {}",
             format!("http://localhost:{}/setup?t={}", app.config.port, onboarding).underline().white()

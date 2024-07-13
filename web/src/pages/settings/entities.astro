@@ -1,5 +1,6 @@
 ---
 import { CreateEntity } from "../../components/settings/dialogs";
+import { EntitiesTable } from "../../components/settings/tables";
 import Settings from "../../layouts/Settings.astro";
 ---
 
@@ -8,4 +9,5 @@ import Settings from "../../layouts/Settings.astro";
     <h1>Entities</h1>
     <CreateEntity client:load />
   </nav>
+  <EntitiesTable client:load />
 </Settings>

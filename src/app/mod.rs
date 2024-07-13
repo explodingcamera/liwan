@@ -41,15 +41,19 @@ const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs
 
 impl App {
     pub(crate) fn try_new(config: Config) -> Result<Self> {
+        tracing::debug!("Initializing app");
         let folder = std::path::Path::new(&config.db_dir);
         if !folder.exists() {
+            tracing::debug!(path = config.db_dir, "Creating database folder since it doesn't exist");
             std::fs::create_dir_all(folder)?;
         }
 
+        tracing::debug!("Initializing databases");
         let conn_app = init_sqlite(&folder.join("liwan-app.sqlite"), embedded::app::migrations::runner())?;
         let conn_events = init_duckdb(&folder.join("liwan-events.duckdb"), embedded::events::migrations::runner())?;
 
         let onboarding = {
+            tracing::debug!("Checking if an onboarding token needs to be generated");
             let conn = conn_app.get()?;
             let mut stmt = conn.prepare("select 1 from users limit 1")?;
             ShardedLock::new(match stmt.exists([])? {
@@ -59,6 +63,7 @@ impl App {
         };
 
         let daily_salt: (String, chrono::DateTime<chrono::Utc>) = {
+            tracing::debug!("Loading daily salt");
             conn_app.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
                 Ok((row.get(0)?, row.get(1)?))
             })?
@@ -109,6 +114,7 @@ impl App {
 
         // if the salt is older than 24 hours, replace it with a new one (utils::generate_salt)
         if chrono::Utc::now() - updated_at > chrono::Duration::hours(24) {
+            tracing::debug!("Daily salt expired, generating a new one");
             let new_salt = generate_salt();
             let now = chrono::Utc::now();
             let conn = self.conn_app()?;
@@ -133,10 +139,13 @@ impl App {
                     appender.append_row(event_params![event])?;
 
                     // Non-blockingly drain the remaining events in the queue if there are any
+                    let mut count = 1;
                     for event in events.try_iter() {
                         appender.append_row(event_params![event])?;
+                        count += 1;
                     }
                     appender.flush()?;
+                    tracing::debug!("Processed {} events", count);
 
                     // Sleep to allow more events to be received before the next batch
                     std::thread::sleep(EVENT_BATCH_INTERVAL);

@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Dialog } from "../dialog";
-import { api, useMe, useMutation } from "../../api";
+import { api, queryClient, useMe, useMutation } from "../../api";
 import styles from "./dialogs.module.css";
 
 export const CreateProject = () => {
@@ -9,7 +9,10 @@ export const CreateProject = () => {
 
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/project"].post,
-		onSuccess: closeRef?.current?.click,
+		onSuccess: () => {
+			closeRef?.current?.click();
+			queryClient.invalidateQueries({ queryKey: ["projects"] });
+		},
 		onError: console.error,
 	});
 
@@ -86,7 +89,10 @@ export const CreateEntity = () => {
 	const { role } = useMe();
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/entity"].post,
-		onSuccess: closeRef?.current?.click,
+		onSuccess: () => {
+			closeRef?.current?.click();
+			queryClient.invalidateQueries({ queryKey: ["entities"] });
+		},
 		onError: console.error,
 	});
 
@@ -147,7 +153,10 @@ export const CreateUser = () => {
 
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/user"].post,
-		onSuccess: closeRef?.current?.click,
+		onSuccess: () => {
+			closeRef?.current?.click();
+			queryClient.invalidateQueries({ queryKey: ["users"] });
+		},
 		onError: console.error,
 	});
 

@@ -20,7 +20,7 @@ create table projects (
     id text primary key not null,
     display_name text not null,
     public boolean not null,
-    secret text not null
+    secret text
 );
 
 create table project_entities (

@@ -6,7 +6,8 @@ use crate::utils::ua;
 
 use cached::{Cached, TimedCache};
 use crossbeam::channel::Sender;
-use poem::http::Uri;
+use eyre::Context;
+use poem::http::{StatusCode, Uri};
 use poem::web::{headers, Data, RealIp, TypedHeader};
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
@@ -37,7 +38,7 @@ impl EventApi {
         Data(events): Data<&Sender<Event>>,
         Json(event): Json<EventRequest>,
         TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
-    ) -> APIResult<EmptyResponse> {
+    ) -> ApiResult<EmptyResponse> {
         let client = ua::parse(user_agent.as_str());
         if ua::is_bot(&client) {
             return EmptyResponse::ok();
@@ -48,15 +49,15 @@ impl EventApi {
         };
 
         if !EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_get(&event.entity_id).is_some()) {
-            if !app.entity_exists(&event.entity_id).http_internal("internal error")? {
+            if !app.entity_exists(&event.entity_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)? {
                 return EmptyResponse::ok();
             }
             EXISTING_ENTITIES
                 .with(|cache| cache.borrow_mut().cache_set(event.entity_id.clone(), event.entity_id.clone()));
         }
 
-        let url = Uri::from_str(&event.url).http_bad_request("invalid url")?;
-        let daily_salt = app.get_salt().await.http_internal("internal error")?;
+        let url = Uri::from_str(&event.url).wrap_err("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
+        let daily_salt = app.get_salt().await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
         let visitor_id = match ip {
             Some(ip) => hash_ip(&ip, user_agent.as_str(), &daily_salt, &event.entity_id),
             None => visitor_id(),

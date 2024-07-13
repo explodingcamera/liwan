@@ -46,6 +46,8 @@ pub(crate) static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
 
 impl Config {
     pub(crate) fn load(path: Option<String>) -> Result<Self> {
+        tracing::debug!(path = ?path, "loading config");
+
         let config: Config = Figment::new()
             .merge(Toml::file(path.unwrap_or("liwan.config.toml".to_string())))
             .merge(Env::prefixed("LIWAN_"))

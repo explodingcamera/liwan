@@ -7,7 +7,7 @@ use crate::utils::validate;
 
 use poem::http::StatusCode;
 use poem::web::{Data, Path};
-use poem_openapi::payload::Json;
+use poem_openapi::payload::{Json, Response};
 use poem_openapi::{Object, OpenApi};
 use std::collections::BTreeMap;
 
@@ -58,12 +58,16 @@ fn can_access_project(project: &Project, user: &Option<&SessionUser>) -> bool {
 #[OpenApi]
 impl DashboardAPI {
     #[oai(path = "/users", method = "get")]
-    async fn users_handler(&self, Data(app): Data<&App>, SessionUser(user): SessionUser) -> APIResult<Json<Vec<User>>> {
+    async fn users_handler(
+        &self,
+        Data(app): Data<&App>,
+        SessionUser(user): SessionUser,
+    ) -> ApiResult<Response<Json<Vec<User>>>> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
-        let users = app.users().http_internal("Failed to get users")?;
-        Ok(Json(users))
+        let users = app.users().http_err("Failed to get users", StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(Response::new(Json(users)).header("Cache-Control", "private"))
     }
 
     #[oai(path = "/user/:username", method = "put")]
@@ -73,7 +77,7 @@ impl DashboardAPI {
         Json(user): Json<User>,
         Data(app): Data<&App>,
         SessionUser(session_user): SessionUser,
-    ) -> APIResult<Json<User>> {
+    ) -> ApiResult<Json<User>> {
         if session_user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
@@ -82,7 +86,7 @@ impl DashboardAPI {
             http_bail!(StatusCode::FORBIDDEN, "Cannot change own role")
         }
 
-        let user = app.user_update(&user).http_internal("Failed to update user")?;
+        let user = app.user_update(&user).http_err("Failed to update user", StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(Json(user))
     }
 
@@ -93,12 +97,13 @@ impl DashboardAPI {
         Json(password): Json<String>,
         Data(app): Data<&App>,
         SessionUser(session_user): SessionUser,
-    ) -> APIResult<EmptyResponse> {
+    ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.user_update_password(&username, &password).http_internal("Failed to update password")?;
+        app.user_update_password(&username, &password)
+            .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
         EmptyResponse::ok()
     }
 
@@ -108,7 +113,7 @@ impl DashboardAPI {
         Path(username): Path<String>,
         Data(app): Data<&App>,
         SessionUser(session_user): SessionUser,
-    ) -> APIResult<EmptyResponse> {
+    ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
@@ -117,7 +122,7 @@ impl DashboardAPI {
             http_bail!(StatusCode::FORBIDDEN, "Cannot delete own user")
         }
 
-        app.user_delete(&username).http_internal("Failed to delete user")?;
+        app.user_delete(&username).http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
         EmptyResponse::ok()
     }
 
@@ -127,11 +132,14 @@ impl DashboardAPI {
         Json(user): Json<CreateUserRequest>,
         Data(app): Data<&App>,
         SessionUser(session_user): SessionUser,
-    ) -> APIResult<EmptyResponse> {
+    ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
-        app.user_create(&user.username, &user.password, user.role, &[]).http_internal("Failed to create user")?;
+
+        app.user_create(&user.username, &user.password, user.role, &[])
+            .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
+
         EmptyResponse::ok()
     }
 
@@ -140,11 +148,12 @@ impl DashboardAPI {
         &self,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<Json<BTreeMap<String, String>>> {
+    ) -> ApiResult<Response<Json<BTreeMap<String, String>>>> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
-        Ok(Json(app.entities().http_internal("Failed to get entities")?))
+        let entities = app.entities().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(Response::new(Json(entities)).header("Cache-Control", "private"))
     }
 
     #[oai(path = "/entity", method = "post")]
@@ -153,12 +162,14 @@ impl DashboardAPI {
         Json(entity): Json<Entity>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<Json<Entity>> {
+    ) -> ApiResult<Json<Entity>> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        let entity = app.entity_create(&entity).http_internal("Failed to create entity")?;
+        let entity =
+            app.entity_create(&entity).http_err("Failed to create entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+
         Ok(Json(entity))
     }
 
@@ -168,12 +179,12 @@ impl DashboardAPI {
         Path(entity_id): Path<String>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<EmptyResponse> {
+    ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.entity_delete(&entity_id).http_internal("Failed to delete entity")?;
+        app.entity_delete(&entity_id).http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
         EmptyResponse::ok()
     }
 
@@ -182,14 +193,8 @@ impl DashboardAPI {
         &self,
         Data(app): Data<&App>,
         user: Option<SessionUser>,
-    ) -> poem::Result<Json<ProjectsResponse>> {
-        let projects = app
-            .projects()
-            .map_err(|e| {
-                println!("Failed to get projects: {}", e);
-                e
-            })
-            .http_internal("Failed to get projects")?;
+    ) -> ApiResult<Response<Json<ProjectsResponse>>> {
+        let projects = app.projects().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
         let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, &user.as_ref())).collect();
 
         let mut resp = BTreeMap::new();
@@ -198,13 +203,15 @@ impl DashboardAPI {
                 project.id.clone(),
                 ProjectResponse {
                     display_name: project.display_name.clone(),
-                    entities: app.project_entities(&project.id).http_internal("Failed to get entity names")?,
+                    entities: app
+                        .project_entities(&project.id)
+                        .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?,
                     public: project.public,
                 },
             );
         }
 
-        Ok(Json(ProjectsResponse { projects: resp }))
+        Ok(Response::new(Json(ProjectsResponse { projects: resp })).header("Cache-Control", "private"))
     }
 
     #[oai(path = "/project", method = "post")]
@@ -213,12 +220,13 @@ impl DashboardAPI {
         Json(project): Json<Project>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<Json<Project>> {
+    ) -> ApiResult<Json<Project>> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        let project = app.project_create(&project).http_internal("Failed to create project")?;
+        let project =
+            app.project_create(&project).http_err("Failed to create project", StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(Json(project))
     }
 
@@ -228,11 +236,12 @@ impl DashboardAPI {
         Json(project): Json<Project>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<Json<Project>> {
+    ) -> ApiResult<Json<Project>> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
-        let project = app.project_update(&project).http_internal("Failed to update project")?;
+        let project =
+            app.project_update(&project).http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
         Ok(Json(project))
     }
 
@@ -242,13 +251,16 @@ impl DashboardAPI {
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         user: Option<SessionUser>,
-    ) -> APIResult<Json<BTreeMap<String, String>>> {
-        let project = app.project(&project_id).http_not_found("Project not found")?;
+    ) -> ApiResult<Response<Json<BTreeMap<String, String>>>> {
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if !can_access_project(&project, &user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
         }
 
-        Ok(Json(app.project_entities(&project_id).http_internal("Failed to get entities")?))
+        Ok(Response::new(Json(
+            app.project_entities(&project_id).http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?,
+        ))
+        .header("Cache-Control", "private"))
     }
 
     #[oai(path = "/project/:project_id/entity/:entity_id", method = "put")]
@@ -258,13 +270,15 @@ impl DashboardAPI {
         Path(entity_id): Path<String>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<EmptyResponse> {
-        let project = app.project(&project_id).http_not_found("Project not found")?;
+    ) -> ApiResult<EmptyResponse> {
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.project_add_entity(&project.id, &entity_id).http_internal("Failed to update entity")?;
+        app.project_add_entity(&project.id, &entity_id)
+            .http_err("Failed to add entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+
         EmptyResponse::ok()
     }
 
@@ -275,13 +289,15 @@ impl DashboardAPI {
         Path(entity_id): Path<String>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<EmptyResponse> {
-        let project = app.project(&project_id).http_not_found("Project not found")?;
+    ) -> ApiResult<EmptyResponse> {
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.project_remove_entity(&project.id, &entity_id).http_internal("Failed to delete entity")?;
+        app.project_remove_entity(&project.id, &entity_id)
+            .http_err("Failed to remove entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+
         EmptyResponse::ok()
     }
 
@@ -291,13 +307,13 @@ impl DashboardAPI {
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
-    ) -> APIResult<EmptyResponse> {
-        let project = app.project(&project_id).http_not_found("Project not found")?;
+    ) -> ApiResult<EmptyResponse> {
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.project_delete(&project.id).http_internal("Failed to delete project")?;
+        app.project_delete(&project.id).http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
         EmptyResponse::ok()
     }
 
@@ -308,14 +324,14 @@ impl DashboardAPI {
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         user: Option<SessionUser>,
-    ) -> APIResult<Json<GraphResponse>> {
+    ) -> ApiResult<Json<GraphResponse>> {
         if req.data_points > validate::MAX_DATAPOINTS {
             http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
         }
 
-        let conn = app.conn_events().http_internal("Failed to get connection")?;
-        let project = app.project(&project_id).http_not_found("Project not found")?;
-        let entities = app.project_entity_ids(&project.id).http_internal("Failed to get entity names")?;
+        let conn = app.conn_events().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let entities = app.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         if !can_access_project(&project, &user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
@@ -323,7 +339,7 @@ impl DashboardAPI {
 
         let report =
             reports::overall_report(&conn, &entities, "pageview", &req.range, req.data_points, &[], &req.metric)
-                .http_internal("Failed to generate report")?;
+                .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(GraphResponse { data: report }))
     }
@@ -335,17 +351,17 @@ impl DashboardAPI {
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         user: Option<SessionUser>,
-    ) -> APIResult<Json<ReportStats>> {
-        let conn = app.conn_events().http_internal("Failed to get connection")?;
-        let project = app.project(&project_id).http_not_found("Project not found")?;
-        let entities = app.project_entity_ids(&project.id).http_internal("Failed to get entity names")?;
+    ) -> ApiResult<Json<ReportStats>> {
+        let conn = app.conn_events().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let entities = app.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         if !can_access_project(&project, &user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
         }
 
         let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &[])
-            .http_internal("Failed to generate stats")?;
+            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(stats))
     }

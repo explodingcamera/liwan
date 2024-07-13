@@ -25,6 +25,8 @@ sha3={version="0.10"}
 argon2={version="0.5"}
 crossbeam="0.8"
 cached="0.52"
+tracing="0.1"
+tracing-subscriber={version="0.3", features=["env-filter"]}
 
 # web
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}

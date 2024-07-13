@@ -4,11 +4,14 @@ use crate::app::models::UserRole;
 use crate::app::App;
 use crate::utils::hash::session_token;
 
+use eyre::eyre;
 use poem::http::StatusCode;
 use poem::middleware::TowerLayerCompatExt;
+use poem::web::headers::Header;
 use poem::web::{cookie::CookieJar, Data};
+use poem::IntoResponse;
 use poem::{Endpoint, EndpointExt};
-use poem_openapi::payload::Json;
+use poem_openapi::payload::{Json, Response};
 use poem_openapi::{Object, OpenApi};
 use serde::Deserialize;
 use tower::limit::RateLimitLayer;
@@ -40,19 +43,29 @@ pub(crate) struct AuthApi;
 #[OpenApi]
 impl AuthApi {
     #[oai(path = "/auth/me", method = "get")]
-    async fn me(&self, SessionUser(user): SessionUser) -> Json<MeResponse> {
-        Json(MeResponse { username: user.username, role: user.role })
+    async fn me(&self, SessionUser(user): SessionUser) -> Response<Json<MeResponse>> {
+        Response::new(Json(MeResponse { username: user.username, role: user.role })).header("Cache-Control", "private")
     }
 
     #[oai(path = "/auth/setup", method = "post", transform = "login_rate_limit")]
-    async fn setup(&self, Data(app): Data<&App>, Json(params): Json<SetupRequest>) -> APIResult<EmptyResponse> {
-        let token = app.onboarding.read().http_internal("internal error")?.clone();
+    async fn setup(&self, Data(app): Data<&App>, Json(params): Json<SetupRequest>) -> ApiResult<EmptyResponse> {
+        let token = app.onboarding.read().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+
         if token != Some(params.token) {
             http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
         }
 
-        app.user_create(&params.username, &params.password, UserRole::Admin, &[]).http_internal("internal error")?;
-        *app.onboarding.write().http_internal("internal error")? = None;
+        app.user_create(&params.username, &params.password, UserRole::Admin, &[])
+            .http_err("failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let mut onboarding = app
+            .onboarding
+            .write()
+            .map_err(|_| eyre!("onboarding lock poisoned"))
+            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        _ = onboarding.take();
+
         EmptyResponse::ok()
     }
 
@@ -62,14 +75,14 @@ impl AuthApi {
         Data(app): Data<&App>,
         Json(params): Json<LoginRequest>,
         cookies: &CookieJar,
-    ) -> APIResult<EmptyResponse> {
+    ) -> ApiResult<EmptyResponse> {
         if !(app.check_login(&params.username, &params.password).unwrap_or(false)) {
             http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
         }
 
         let session_id = session_token();
         let expires = chrono::Utc::now() + MAX_SESSION_AGE;
-        app.session_create(&session_id, &params.username, expires).http_internal("internal error")?;
+        app.session_create(&session_id, &params.username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
@@ -88,8 +101,8 @@ impl AuthApi {
         Data(app): Data<&App>,
         cookies: &CookieJar,
         SessionId(session_id): SessionId,
-    ) -> APIResult<EmptyResponse> {
-        app.session_delete(&session_id).http_internal("internal error")?;
+    ) -> ApiResult<EmptyResponse> {
+        app.session_delete(&session_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
         public_cookie.set_secure(app.config.secure());

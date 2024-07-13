@@ -34,7 +34,7 @@ const NoProjects = () => {
 };
 
 export const Projects = () => {
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, isError } = useQuery({
 		queryKey: ["projects"],
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
@@ -50,6 +50,12 @@ export const Projects = () => {
 	const projects = Object.entries(data?.projects || {});
 
 	if (isLoading) return null;
+	if (isError)
+		return (
+			<div className={styles.info}>
+				<h1>Failed to load data</h1>
+			</div>
+		);
 	if (projects.length === 0 && signedIn) return <NoProjects />;
 	if (projects.length === 0 && !signedIn)
 		return (

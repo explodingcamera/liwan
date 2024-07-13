@@ -13,6 +13,10 @@ pub(crate) struct Args {
     /// path to the configuration file
     pub(crate) config: Option<String>,
 
+    #[argh(option, default = "tracing::Level::INFO")]
+    /// set the log level (default: INFO)
+    pub(crate) log_level: tracing::Level,
+
     #[argh(subcommand)]
     pub(crate) cmd: Option<Command>,
 }

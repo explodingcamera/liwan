@@ -1,5 +1,6 @@
 ---
 import { CreateUser } from "../../components/settings/dialogs";
+import { UsersTable } from "../../components/settings/tables";
 import Settings from "../../layouts/Settings.astro";
 ---
 
@@ -8,4 +9,5 @@ import Settings from "../../layouts/Settings.astro";
     <h1>Users</h1>
     <CreateUser client:load />
   </nav>
+  <UsersTable client:load />
 </Settings>

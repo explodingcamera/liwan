@@ -7,10 +7,19 @@ mod utils;
 use app::{models::Event, App};
 use config::Config;
 use eyre::Result;
+use tracing::Level;
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     let args = cli::args();
+
+    // external crates should use WARN
+    let filter = EnvFilter::from_default_env()
+        .add_directive(format!("{}={}", env!("CARGO_PKG_NAME"), args.log_level).parse()?)
+        .add_directive(Level::WARN.into());
+    tracing_subscriber::fmt().with_env_filter(filter).compact().init();
+
     let config = Config::load(args.config)?;
     let (s, r) = crossbeam::channel::unbounded::<Event>();
 

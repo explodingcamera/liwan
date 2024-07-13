@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fmt::Display, marker::PhantomData};
 
 use poem::{
     http::{header, Method, StatusCode},
@@ -10,65 +10,48 @@ use rust_embed::RustEmbed;
 use serde::Serialize;
 use serde_json::json;
 
+pub(crate) async fn catch_error(err: poem::Error) -> impl IntoResponse {
+    Json(json!({ "status": "error", "message": err.to_string() })).with_status(err.status())
+}
+
+#[rustfmt::skip]
 pub(crate) trait PoemErrExt<T> {
     fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T>;
-
-    fn http_internal(self, message: &str) -> poem::Result<T>
-    where
-        Self: Sized,
-    {
-        self.http_err(message, StatusCode::INTERNAL_SERVER_ERROR)
-    }
-
-    fn http_bad_request(self, message: &str) -> poem::Result<T>
-    where
-        Self: Sized,
-    {
-        self.http_err(message, StatusCode::BAD_REQUEST)
-    }
-
-    fn http_unauthorized(self, message: &str) -> poem::Result<T>
-    where
-        Self: Sized,
-    {
-        self.http_err(message, StatusCode::UNAUTHORIZED)
-    }
-
-    fn http_not_found(self, message: &str) -> poem::Result<T>
-    where
-        Self: Sized,
-    {
-        self.http_err(message, StatusCode::NOT_FOUND)
-    }
+    fn http_status(self, status: StatusCode) -> poem::Result<T>;
 }
 
 impl<T> PoemErrExt<T> for Option<T> {
     fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T> {
         self.ok_or_else(|| poem::Error::from_string(message, status))
     }
-}
 
-impl<T, E> PoemErrExt<T> for Result<T, E> {
-    fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T> {
-        match self {
-            Ok(ok) => Ok(ok),
-            Err(_) => Err(poem::Error::from_string(message, status)),
-        }
+    fn http_status(self, status: StatusCode) -> poem::Result<T> {
+        self.ok_or_else(|| status.into())
     }
 }
 
-pub(crate) async fn catch_error(err: poem::Error) -> impl IntoResponse {
-    Json(json!({ "status": "error", "message": err.to_string() })).with_status(err.status())
-}
+impl<T, E: Display> PoemErrExt<T> for Result<T, E> {
+    fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(e) => {
+                if status == StatusCode::INTERNAL_SERVER_ERROR {
+                    tracing::error!("{message}: {err}", err = e);
+                } else {
+                    tracing::debug!("{message}: {err}", err = e);
+                }
 
-#[macro_export]
-macro_rules! http_bail {
-    ($status:expr, $message:expr) => {
-        return Err(poem::Error::from_string($message, $status))
-    };
-    ($message:expr) => {
-        return Err(poem::Error::from_string($message, poem::http::StatusCode::INTERNAL_SERVER_ERROR))
-    };
+                Err(poem::Error::from_string(message, status))
+            }
+        }
+    }
+
+    fn http_status(self, status: StatusCode) -> poem::Result<T> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(_) => Err(status.into()),
+        }
+    }
 }
 
 pub(crate) struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
@@ -79,7 +62,7 @@ impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
     }
 }
 
-pub(crate) type APIResult<T> = poem::Result<T, poem::Error>;
+pub(crate) type ApiResult<T> = poem::Result<T, poem::Error>;
 
 #[derive(Object, Serialize)]
 pub(crate) struct StatusResponse {
@@ -94,7 +77,7 @@ pub(crate) enum EmptyResponse {
 }
 
 impl EmptyResponse {
-    pub(crate) fn ok() -> APIResult<Self> {
+    pub(crate) fn ok() -> ApiResult<Self> {
         Ok(EmptyResponse::Ok(poem_openapi::payload::Json(StatusResponse { status: "ok".to_string(), message: None })))
     }
 }
@@ -152,6 +135,15 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
             None => Err(StatusCode::NOT_FOUND.into()),
         }
     }
+}
+
+macro_rules! http_bail {
+    ($status:expr, $message:expr) => {
+        return Err(poem::Error::from_string($message, $status))
+    };
+    ($message:expr) => {
+        return Err(poem::Error::from_string($message, poem::http::StatusCode::INTERNAL_SERVER_ERROR))
+    };
 }
 
 pub(crate) use http_bail;

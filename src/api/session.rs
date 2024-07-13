@@ -1,14 +1,12 @@
 use std::time::Duration;
 
+use crate::app::models::User;
 use lazy_static::lazy_static;
 use poem::{
     web::cookie::{Cookie, SameSite},
     FromRequest,
 };
 
-use crate::app::models::User;
-
-use super::PoemErrExt;
 pub(crate) const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 
 lazy_static! {
@@ -36,7 +34,8 @@ pub(crate) struct SessionUser(pub(crate) User);
 impl<'a> FromRequest<'a> for SessionId {
     async fn from_request(req: &'a poem::Request, _body: &mut poem::RequestBody) -> poem::Result<Self> {
         let session_id = req.cookie().get(SESSION_COOKIE.name()).map(|cookie| cookie.value_str().to_owned());
-        let session_id = session_id.http_unauthorized("Unauthorized")?;
+        let session_id = session_id.ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+
         Ok(Self(session_id))
     }
 }
@@ -44,10 +43,16 @@ impl<'a> FromRequest<'a> for SessionId {
 impl<'a> FromRequest<'a> for SessionUser {
     async fn from_request(req: &'a poem::Request, _body: &mut poem::RequestBody) -> poem::Result<Self> {
         let session_id = SessionId::from_request(req, _body).await?.0;
-        let app = req.data::<crate::app::App>().http_internal("Internal error")?;
-        let username =
-            app.session_get(&session_id).http_unauthorized("Unauthorized")?.http_unauthorized("Unauthorized")?;
-        let user = app.user(&username).http_internal("Internal error")?;
+        let app = req
+            .data::<crate::app::App>()
+            .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+
+        let username = app
+            .session_get(&session_id)
+            .map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?
+            .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+
+        let user = app.user(&username).map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
         Ok(Self(user))
     }
 }
