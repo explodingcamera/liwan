@@ -6,6 +6,7 @@ import { useQuery } from "./utils";
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
 export type DateRange = OASModel<DashboardSpec, "DateRange">;
+export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
 
 export const api = createClient<DashboardSpec>({
 	globalParams: { credentials: "same-origin" },

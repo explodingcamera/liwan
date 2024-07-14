@@ -14,8 +14,7 @@ pub(crate) struct Event {
     pub(crate) city: Option<String>,
 }
 
-#[derive(Debug, Object, Serialize, Deserialize, Clone)]
-#[oai(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub(crate) struct Project {
     pub(crate) id: String,
     pub(crate) display_name: String,
@@ -23,14 +22,13 @@ pub(crate) struct Project {
     pub(crate) secret: Option<String>, // enable public access with password protection
 }
 
-#[derive(Clone, Object, Debug, Serialize, Deserialize)]
-#[oai(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub(crate) struct Entity {
     pub(crate) id: String,
     pub(crate) display_name: String,
 }
 
-#[derive(Debug, Object, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct User {
     pub(crate) username: String,
     pub(crate) role: UserRole,
@@ -89,5 +87,5 @@ macro_rules! event_params {
 }
 
 pub(crate) use event_params;
-use poem_openapi::{Enum, Object};
+use poem_openapi::Enum;
 use serde::{Deserialize, Serialize};

@@ -56,7 +56,7 @@ pub(crate) enum FilterType {
 pub(crate) type ReportGraph = Vec<u32>;
 pub(crate) type ReportTable = BTreeMap<String, u32>;
 
-#[derive(Object, Clone, Debug)]
+#[derive(Object, Clone, Debug, Default)]
 #[oai(rename_all = "camelCase")]
 pub(crate) struct ReportStats {
     total_views: u32,
@@ -87,6 +87,10 @@ fn metric_sql(metric: &Metric) -> Result<String> {
 }
 
 pub(crate) fn online_users(conn: &DuckDBConn, entities: &[&str]) -> Result<u32> {
+    if entities.is_empty() {
+        return Ok(0);
+    }
+
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
     if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
         return Err(eyre::eyre!("Invalid entity ID"));
@@ -123,6 +127,10 @@ pub(crate) fn overall_report(
     filters: &[DimensionFilter],
     metric: &Metric,
 ) -> Result<ReportGraph> {
+    if entities.is_empty() {
+        return Ok(ReportGraph::default());
+    }
+
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
     if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
         return Err(eyre::eyre!("Invalid entity ID"));
@@ -211,6 +219,10 @@ pub(crate) fn overall_stats(
     range: &DateRange,
     filters: &[DimensionFilter],
 ) -> Result<ReportStats> {
+    if entities.is_empty() {
+        return Ok(ReportStats::default());
+    }
+
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
     if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
         return Err(eyre::eyre!("Invalid entity ID"));

@@ -47,7 +47,7 @@ export const Projects = () => {
 		if (detailsRef.current) detailsRef.current.open = false;
 		setDateRange(name);
 	};
-	const projects = Object.entries(data?.projects || {});
+	const projects = data?.projects || [];
 
 	if (isLoading) return null;
 	if (isError)
@@ -87,14 +87,14 @@ export const Projects = () => {
 				</details>
 			</div>
 
-			{projects.map(([key, value]) => {
+			{projects.map((project) => {
 				return (
 					<Project
-						key={key}
+						key={project.id}
 						rangeName={dateRange}
-						id={key}
-						displayName={value.displayName}
-						isPublic={value.public}
+						id={project.id}
+						displayName={project.displayName}
+						isPublic={project.public}
 						metric={metric}
 						setMetric={setMetric}
 					/>

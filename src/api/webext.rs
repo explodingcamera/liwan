@@ -49,7 +49,15 @@ impl<T, E: Display> PoemErrExt<T> for Result<T, E> {
     fn http_status(self, status: StatusCode) -> poem::Result<T> {
         match self {
             Ok(ok) => Ok(ok),
-            Err(_) => Err(status.into()),
+            Err(e) => {
+                if status == StatusCode::INTERNAL_SERVER_ERROR {
+                    tracing::error!("{err}", err = e);
+                } else {
+                    tracing::debug!("{err}", err = e);
+                }
+
+                Err(status.into())
+            }
         }
     }
 }

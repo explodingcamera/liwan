@@ -8,7 +8,7 @@ export const ProjectsTable = () => {
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
 
-	const rows = Object.entries(data?.projects ?? {}).map(([id, rest]) => ({ id, ...rest })) ?? [];
+	const rows = data?.projects ?? [];
 
 	const columns: Column<(typeof rows)[number]>[] = [
 		{
@@ -36,7 +36,7 @@ export const EntitiesTable = () => {
 		queryFn: () => api["/api/dashboard/entities"].get().json(),
 	});
 
-	const rows = Object.entries(data ?? {}).map(([id, displayName]) => ({ id, displayName })) ?? [];
+	const rows = data?.entities ?? [];
 
 	const columns: Column<(typeof rows)[number]>[] = [
 		{
@@ -60,7 +60,7 @@ export const UsersTable = () => {
 		queryFn: () => api["/api/dashboard/users"].get().json(),
 	});
 
-	const rows = data?.map((user) => ({ id: user.username, ...user })) ?? [];
+	const rows = data?.users.map((user) => ({ id: user.username, ...user })) ?? [];
 
 	const columns: Column<(typeof rows)[number]>[] = [
 		{

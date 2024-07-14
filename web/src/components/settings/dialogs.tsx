@@ -1,14 +1,40 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Dialog } from "../dialog";
-import { api, queryClient, useMe, useMutation } from "../../api";
+import { api, queryClient, useMe, useMutation, useQuery, type ProjectResponse } from "../../api";
 import styles from "./dialogs.module.css";
+
+export const EditProject = ({ project, trigger }: { project: ProjectResponse; trigger: JSX.Element }) => {
+	const closeRef = useRef<HTMLButtonElement>(null);
+	const [proj, setProj] = useState(project);
+	const { role } = useMe();
+
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/project/{project_id}"].put,
+		onSuccess: () => {
+			closeRef?.current?.click();
+			queryClient.invalidateQueries({ queryKey: ["projects"] });
+		},
+		onError: console.error,
+	});
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const form = e.target as HTMLFormElement;
+		const { displayName, isPublic } = Object.fromEntries(new FormData(form)) as {
+			displayName: string;
+			isPublic: string;
+		};
+		mutate({ params: { project_id: project.id }, json: { displayName, public: isPublic === "on" } });
+	};
+};
 
 export const CreateProject = () => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
 
 	const { mutate, error, reset } = useMutation({
-		mutationFn: api["/api/dashboard/project"].post,
+		mutationFn: api["/api/dashboard/project/{project_id}"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
 			queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -26,7 +52,10 @@ export const CreateProject = () => {
 			isPublic: string;
 		};
 
-		mutate({ json: { id, displayName, public: isPublic === "on" } });
+		mutate({
+			params: { project_id: id },
+			json: { displayName, public: isPublic === "on" },
+		});
 	};
 
 	return (

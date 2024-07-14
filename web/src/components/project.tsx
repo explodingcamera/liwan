@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import styles from "./project.module.css";
-import type * as api from "../api";
 
 const server = typeof window === "undefined";
 

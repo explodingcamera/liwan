@@ -10,7 +10,6 @@ use eyre::{bail, Result};
 use models::{event_params, Event, Project, User, UserRole};
 use r2d2_sqlite::SqliteConnectionManager;
 use refinery::Runner;
-use std::collections::BTreeMap;
 use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -202,11 +201,11 @@ impl App {
         Ok(())
     }
 
-    pub(crate) fn user_update(&self, user: &User) -> Result<User> {
+    pub(crate) fn user_update(&self, username: &str, role: UserRole, projects: &[String]) -> Result<()> {
         let conn = self.conn_app()?;
         let mut stmt = conn.prepare_cached("update users set role = ?, projects = ? where username = ?")?;
-        stmt.execute([&user.role.to_string(), &user.projects.join(","), &user.username])?;
-        Ok(user.clone())
+        stmt.execute([&role.to_string(), &projects.join(","), username])?;
+        Ok(())
     }
 
     pub(crate) fn user_create(&self, username: &str, password: &str, role: UserRole, projects: &[&str]) -> Result<()> {
@@ -233,11 +232,12 @@ impl App {
 // MARK: - Projects/Entities
 impl App {
     /// Get all entities
-    pub(crate) fn entities(&self) -> Result<BTreeMap<String, String>> {
+    pub(crate) fn entities(&self) -> Result<Vec<models::Entity>> {
         let conn = self.conn_app()?;
         let mut stmt = conn.prepare("select id, display_name from entities")?;
-        let entities = stmt.query_map([], |row| Ok((row.get("id")?, row.get("display_name")?)))?;
-        Ok(entities.collect::<Result<BTreeMap<String, String>, rusqlite::Error>>()?)
+        let entities = stmt
+            .query_map([], |row| Ok(models::Entity { id: row.get("id")?, display_name: row.get("display_name")? }))?;
+        Ok(entities.collect::<Result<Vec<models::Entity>, rusqlite::Error>>()?)
     }
 
     /// Create a new entity
@@ -274,14 +274,32 @@ impl App {
     }
 
     /// Get all entities associated with a project
-    pub(crate) fn project_entities(&self, project_id: &str) -> Result<BTreeMap<String, String>> {
+    pub(crate) fn project_entities(&self, project_id: &str) -> Result<Vec<models::Entity>> {
         let conn = self.conn_app()?;
         let mut stmt = conn.prepare_cached(
             "select e.id, e.display_name from entities e join project_entities pe on e.id = pe.entity_id where pe.project_id = ?",
         )?;
-        let entities =
-            stmt.query_map(rusqlite::params![project_id], |row| Ok((row.get("id")?, row.get("display_name")?)))?;
-        Ok(entities.collect::<Result<BTreeMap<String, String>, rusqlite::Error>>()?)
+        let entities = stmt.query_map(rusqlite::params![project_id], |row| {
+            Ok(models::Entity { id: row.get("id")?, display_name: row.get("display_name")? })
+        })?;
+        Ok(entities.collect::<Result<Vec<models::Entity>, rusqlite::Error>>()?)
+    }
+
+    /// Get all projects associated with an entity
+    pub(crate) fn entity_projects(&self, entity_id: &str) -> Result<Vec<Project>> {
+        let conn = self.conn_app()?;
+        let mut stmt = conn.prepare_cached(
+            "select p.id, p.display_name, p.public, p.secret from projects p join project_entities pe on p.id = pe.project_id where pe.entity_id = ?",
+        )?;
+        let projects = stmt.query_map(rusqlite::params![entity_id], |row| {
+            Ok(Project {
+                id: row.get("id")?,
+                display_name: row.get("display_name")?,
+                public: row.get("public")?,
+                secret: row.get("secret")?,
+            })
+        })?;
+        Ok(projects.collect::<Result<Vec<Project>, rusqlite::Error>>()?)
     }
 
     /// Get all entity IDs associated with a project
@@ -295,7 +313,7 @@ impl App {
     /// Get a project by ID
     pub(crate) fn project(&self, id: &str) -> Result<Project> {
         let conn = self.conn_app()?;
-        let project = conn.prepare("select id, display_name, public, password from projects where id = ?")?.query_row(
+        let project = conn.prepare("select id, display_name, public, secret from projects where id = ?")?.query_row(
             rusqlite::params![id],
             |row| {
                 Ok(Project {

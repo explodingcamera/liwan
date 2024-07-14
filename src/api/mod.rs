@@ -1,3 +1,4 @@
+mod admin;
 mod auth;
 mod dashboard;
 mod event;
@@ -34,8 +35,9 @@ fn event_service() -> OpenApiService<EventApi, ()> {
     OpenApiService::new(event::EventApi, "event api", "1.0").url_prefix("/api/")
 }
 
-fn dashboard_service() -> OpenApiService<(dashboard::DashboardAPI, auth::AuthApi), ()> {
-    OpenApiService::new((dashboard::DashboardAPI, auth::AuthApi), "dashboard api", "1.0").url_prefix("/api/dashboard")
+fn dashboard_service() -> OpenApiService<(dashboard::DashboardAPI, admin::AdminAPI, auth::AuthApi), ()> {
+    OpenApiService::new((dashboard::DashboardAPI, admin::AdminAPI, auth::AuthApi), "liwan dashboard api", "1.0")
+        .url_prefix("/api/dashboard")
 }
 
 fn save_spec() -> Result<()> {
@@ -62,52 +64,50 @@ pub(crate) async fn start_webserver(app: App, events: Sender<Event>) -> Result<(
     #[cfg(debug_assertions)]
     save_spec()?;
 
+    let handle_events =
+        event_service().with(Cors::new().allow_origin("*").allow_method("POST").allow_credentials(false));
+
+    let serve_script = EmbeddedFileEndpoint::<Script>::new("script.min.js")
+        .with(Cors::new().allow_origin("*").allow_method("GET").allow_credentials(false));
+
+    let headers = SetHeader::new()
+        .appending("X-Frame-Options", "DENY")
+        .appending("X-Content-Type-Options", "nosniff")
+        .appending("X-XSS-Protection", "1; mode=block")
+        .appending("Content-Security-Policy", "default-src 'self' data: 'unsafe-inline'")
+        .appending("Referrer-Policy", "same-origin")
+        .appending("Feature-Policy", "geolocation 'none'; microphone 'none'; camera 'none'")
+        .appending("Permissions-Policy", "geolocation=(), microphone=(), camera=(), interest-cohort=()");
+
     let api_router = Route::new()
-        .nest_no_strip(
-            "/event",
-            event_service().with(Cors::new().allow_origin("*").allow_method("POST").allow_credentials(false)),
-        )
+        .nest_no_strip("/event", handle_events)
         .nest("/dashboard", dashboard_service().with(CookieJarManager::new()))
         .catch_all_error(catch_error);
 
     let router = Route::new()
         .nest("/api", api_router)
-        .at(
-            "/script.js",
-            EmbeddedFileEndpoint::<Script>::new("script.min.js")
-                .with(Cors::new().allow_origin("*").allow_method("GET").allow_credentials(false)),
-        )
+        .at("/script.js", serve_script)
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
         .with(AddData::new(app.clone()))
         .with(AddData::new(events))
         .with(CookieJarManager::new())
         .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]))
-        .with(
-            SetHeader::new()
-                .appending("X-Frame-Options", "DENY")
-                .appending("X-Content-Type-Options", "nosniff")
-                .appending("X-XSS-Protection", "1; mode=block")
-                .appending("Content-Security-Policy", "default-src 'self' data: 'unsafe-inline'")
-                .appending("Referrer-Policy", "same-origin")
-                .appending("Feature-Policy", "geolocation 'none'; microphone 'none'; camera 'none'")
-                .appending("Permissions-Policy", "geolocation=(), microphone=(), camera=(), interest-cohort=()"),
-        );
+        .with(headers);
 
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
     if let Some(onboarding) = app.onboarding.read().unwrap().as_ref() {
-        println!("{}", "Welcome to Liwan!".bold().white());
-        println!(
-            "You can get started by visiting: {}",
-            format!("http://localhost:{}/setup?t={}", app.config.port, onboarding).underline().white()
-        );
-        println!("{}", "To see all available commands, run `liwan --help`".bold().white());
-    } else {
-        println!(
+        tracing::info!("{}", "It looks like you're running Liwan for the first time!".bold().white());
+        tracing::info!(
             "{}",
-            format!("App is running at: {}", app.config.base_url.to_string().underline().white()).bold().white()
+            format!("You can get started by visiting: http://localhost:{}/setup?t={}", app.config.port, onboarding)
+                .underline()
+                .white()
         );
+        tracing::info!("{}", "To see all available commands, run `liwan --help`".bold().white());
+    } else {
+        tracing::info!("{}", format!("Liwan is running on {}", app.config.base_url.underline()).bold().white());
     }
 
-    Server::new(listener).run(router).await.wrap_err("server exected unecpectedly")
+    Server::new(listener).run(router).await.wrap_err("server exited unexpectedly")
 }
