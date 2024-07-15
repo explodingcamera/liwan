@@ -1,6 +1,8 @@
 import { ReactTags, type TagSelected, type TagSuggestion } from "react-tag-autocomplete";
+export type { Tag } from "react-tag-autocomplete";
 import styles from "./tags.module.css";
 import { useId } from "react";
+import { CheckIcon } from "lucide-react";
 
 export const Tags = ({
 	onAdd,
@@ -8,6 +10,7 @@ export const Tags = ({
 	selected,
 	suggestions,
 	labelText,
+	placeholderText,
 	noOptionsText,
 }: {
 	onAdd: (tag: TagSuggestion) => void;
@@ -15,6 +18,7 @@ export const Tags = ({
 	selected: TagSelected[];
 	suggestions: TagSuggestion[];
 	noOptionsText: string;
+	placeholderText?: string;
 	labelText?: string | React.ReactNode;
 }) => {
 	const id = useId();
@@ -30,8 +34,11 @@ export const Tags = ({
 				onAdd={onAdd}
 				onDelete={onDelete}
 				selected={selected}
-				suggestions={suggestions}
-				noOptionsText={noOptionsText}
+				suggestions={suggestions.filter((suggestion) => !selected.some((tag) => tag.value === suggestion.value))}
+				noOptionsText={noOptionsText ?? "No matching options..."}
+				placeholderText={placeholderText ?? "Type to search..."}
+				collapseOnSelect
+				activateFirstOption
 				renderInput={({ classNames, inputWidth, "aria-invalid": _, ...props }) => {
 					return (
 						<input

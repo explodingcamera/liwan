@@ -1,7 +1,7 @@
 import { createClient, type NormalizeOAS, type OASModel } from "fets";
 export { queryClient, useMutation, useQuery } from "./utils";
 import type dashboardspec from "./dashboard";
-import { useQuery } from "./utils";
+import { queryClient, useQuery } from "./utils";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
@@ -38,3 +38,31 @@ export const useMe = () => {
 	});
 	return { role: data?.role, username: data?.username, isLoading };
 };
+
+export const useProjects = () => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["projects"],
+		queryFn: () => api["/api/dashboard/projects"].get().json(),
+	});
+	return { projects: data?.projects ?? [], isLoading, error };
+};
+
+export const useEntities = () => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["entities"],
+		queryFn: () => api["/api/dashboard/entities"].get().json(),
+	});
+	return { entities: data?.entities ?? [], isLoading, error };
+};
+
+export const useUsers = () => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["users"],
+		queryFn: () => api["/api/dashboard/users"].get().json(),
+	});
+	return { users: data?.users ?? [], isLoading, error };
+};
+
+export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });
+export const invalidateEntities = () => queryClient.invalidateQueries({ queryKey: ["entities"] });
+export const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ["users"] });

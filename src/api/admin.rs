@@ -84,9 +84,10 @@ struct EntityProject {
 
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
-struct EntityRequest {
+struct CreateEntityRequest {
     id: String,
     display_name: String,
+    projects: Vec<String>,
 }
 
 #[derive(Object)]
@@ -328,7 +329,7 @@ impl AdminAPI {
     #[oai(path = "/entity", method = "post")]
     async fn entity_create_handler(
         &self,
-        Json(entity): Json<EntityRequest>,
+        Json(entity): Json<CreateEntityRequest>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<Json<EntityResponse>> {
@@ -336,15 +337,13 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        let entity = app
-            .entity_create(&Entity { id: entity.id, display_name: entity.display_name })
-            .http_err("Failed to create entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.entity_create(
+            &Entity { id: entity.id.clone(), display_name: entity.display_name.clone() },
+            entity.projects.as_slice(),
+        )
+        .http_err("Failed to create entity", StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        Ok(Json(EntityResponse {
-            id: entity.id.clone(),
-            display_name: entity.display_name.clone(),
-            projects: Vec::new(),
-        }))
+        Ok(Json(EntityResponse { id: entity.id, display_name: entity.display_name, projects: Vec::new() }))
     }
 
     #[oai(path = "/entity/:entity_id", method = "delete")]

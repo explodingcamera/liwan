@@ -1,16 +1,10 @@
 import { id } from "date-fns/locale";
-import { api, useQuery } from "../../api";
+import { api, useEntities, useProjects, useQuery, useUsers } from "../../api";
 import { Table, type Column } from "../table";
 
 export const ProjectsTable = () => {
-	const { data, isLoading } = useQuery({
-		queryKey: ["projects"],
-		queryFn: () => api["/api/dashboard/projects"].get().json(),
-	});
-
-	const rows = data?.projects ?? [];
-
-	const columns: Column<(typeof rows)[number]>[] = [
+	const { projects, isLoading } = useProjects();
+	const columns: Column<(typeof projects)[number]>[] = [
 		{
 			id: "public",
 			render: (row) => (row.public ? "Public" : "Private"),
@@ -27,18 +21,12 @@ export const ProjectsTable = () => {
 		},
 	];
 
-	return <Table columns={columns} rows={rows} />;
+	return <Table columns={columns} rows={projects} />;
 };
 
 export const EntitiesTable = () => {
-	const { data, isLoading } = useQuery({
-		queryKey: ["entities"],
-		queryFn: () => api["/api/dashboard/entities"].get().json(),
-	});
-
-	const rows = data?.entities ?? [];
-
-	const columns: Column<(typeof rows)[number]>[] = [
+	const { entities, isLoading } = useEntities();
+	const columns: Column<(typeof entities)[number]>[] = [
 		{
 			id: "id",
 			header: "ID",
@@ -51,16 +39,12 @@ export const EntitiesTable = () => {
 		},
 	];
 
-	return <Table columns={columns} rows={rows} />;
+	return <Table columns={columns} rows={entities} />;
 };
 
 export const UsersTable = () => {
-	const { data, isLoading } = useQuery({
-		queryKey: ["users"],
-		queryFn: () => api["/api/dashboard/users"].get().json(),
-	});
-
-	const rows = data?.users.map((user) => ({ id: user.username, ...user })) ?? [];
+	const { users, isLoading } = useUsers();
+	const rows = users.map((user) => ({ id: user.username, ...user })) ?? [];
 
 	const columns: Column<(typeof rows)[number]>[] = [
 		{

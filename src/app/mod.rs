@@ -241,11 +241,21 @@ impl App {
     }
 
     /// Create a new entity
-    pub(crate) fn entity_create(&self, entity: &models::Entity) -> Result<models::Entity> {
-        let conn = self.conn_app()?;
-        let mut stmt = conn.prepare_cached("insert into entities (id, display_name) values (?, ?)")?;
-        stmt.execute(rusqlite::params![entity.id, entity.display_name])?;
-        Ok(entity.clone())
+    pub(crate) fn entity_create(&self, entity: &models::Entity, initial_project: &[String]) -> Result<()> {
+        let mut conn = self.conn_app()?;
+        let tx = conn.transaction()?;
+        tx.execute(
+            "insert into entities (id, display_name) values (?, ?)",
+            rusqlite::params![entity.id, entity.display_name],
+        )?;
+        for project_id in initial_project {
+            tx.execute(
+                "insert into project_entities (project_id, entity_id) values (?, ?)",
+                rusqlite::params![project_id, entity.id],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
     }
 
     /// Delete an entity (does not remove associated events)

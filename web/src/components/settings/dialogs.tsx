@@ -1,9 +1,19 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Dialog } from "../dialog";
-import { api, queryClient, useMe, useMutation, useQuery, type ProjectResponse } from "../../api";
+import {
+	api,
+	invalidateEntities,
+	invalidateProjects,
+	invalidateUsers,
+	queryClient,
+	useMe,
+	useMutation,
+	useProjects,
+	type ProjectResponse,
+} from "../../api";
+
 import styles from "./dialogs.module.css";
-import { ReactTags } from "react-tag-autocomplete";
-import { Tags } from "../tags";
+import { Tags, type Tag } from "../tags";
 
 export const EditProject = ({ project, trigger }: { project: ProjectResponse; trigger: JSX.Element }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
@@ -39,7 +49,7 @@ export const CreateProject = () => {
 		mutationFn: api["/api/dashboard/project/{project_id}"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
-			queryClient.invalidateQueries({ queryKey: ["projects"] });
+			invalidateProjects();
 		},
 		onError: console.error,
 	});
@@ -119,20 +129,26 @@ export const CreateEntity = () => {
 		mutationFn: api["/api/dashboard/entity"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
-			queryClient.invalidateQueries({ queryKey: ["entities"] });
+			invalidateEntities();
 		},
 		onError: console.error,
 	});
+
+	const { projects } = useProjects();
+	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
+	const [selectedProjects, setSelectedProjects] = useState<Tag[]>([]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
-		const { id, displayname } = Object.fromEntries(new FormData(form)) as { id: string; displayname: string };
+		const { id, displayName } = Object.fromEntries(new FormData(form)) as { id: string; displayName: string };
+		mutate({ json: { id, displayName, projects: selectedProjects.map((tag) => tag.value as string) } });
 	};
 
 	return (
 		<Dialog
+			onOpenChange={() => reset()}
 			title="Create a new entity"
 			description="Entities are individual clients or services that you want to track, like distinct websites or mobile apps. The entity id is used in the tracking snippet to identify the source of the data."
 			trigger={
@@ -150,14 +166,14 @@ export const CreateEntity = () => {
 				</label>
 				<label>
 					Entity Name <small>(Used in the dashboard)</small>
-					<input required name="displayname" type="text" placeholder="My Website" />
+					<input required name="displayName" type="text" placeholder="My Website" />
 				</label>
 				<Tags
 					labelText="Add to Projects"
-					selected={[{ value: "1", label: "Project 1" }]}
-					suggestions={[]}
-					onAdd={() => {}}
-					onDelete={() => {}}
+					selected={selectedProjects}
+					suggestions={projectTags}
+					onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
+					onDelete={(i) => setSelectedProjects(selectedProjects.filter((_, index) => index !== i))}
 					noOptionsText="No matching projects"
 				/>
 				<div className="grid">
@@ -188,7 +204,7 @@ export const CreateUser = () => {
 		mutationFn: api["/api/dashboard/user"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
-			queryClient.invalidateQueries({ queryKey: ["users"] });
+			invalidateUsers();
 		},
 		onError: console.error,
 	});
