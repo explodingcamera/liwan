@@ -7,7 +7,7 @@ import Settings from "../../layouts/Settings.astro";
 <Settings title="Projects">
   <nav>
     <h1>Projects</h1>
-    <CreateProject client:load />
+    <CreateProject client:only="react" />
   </nav>
-  <ProjectsTable client:load />
+  <ProjectsTable client:only="react" />
 </Settings>

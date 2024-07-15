@@ -13,6 +13,7 @@ export default defineConfig({
 	vite: {
 		server: { proxy },
 		preview: { proxy },
+		css: { transformer: "lightningcss" },
 	},
 	integrations: [react()],
 	redirects: {

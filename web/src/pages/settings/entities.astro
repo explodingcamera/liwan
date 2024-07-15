@@ -7,7 +7,7 @@ import Settings from "../../layouts/Settings.astro";
 <Settings title="Entities">
   <nav>
     <h1>Entities</h1>
-    <CreateEntity client:load />
+    <CreateEntity client:only="react" />
   </nav>
-  <EntitiesTable client:load />
+  <EntitiesTable client:only="react" />
 </Settings>

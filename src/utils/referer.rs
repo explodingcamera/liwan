@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 lazy_static! {
-    static ref REFERERS: HashMap<&'static str, &'static str> = {
+    pub(crate) static ref REFERERS: HashMap<&'static str, &'static str> = {
         let mut map = HashMap::new();
         for line in include_str!("../../data/referers.txt").lines() {
             let mut parts = line.split('=');
@@ -14,11 +14,7 @@ lazy_static! {
         }
         map
     };
-    static ref SPAMMERS: HashSet<&'static str> = include_str!("../../data/spammers.txt").lines().collect();
-}
-
-pub(crate) fn get_referer_name(fqdn: &str) -> Option<&'static str> {
-    REFERERS.get(fqdn).copied()
+    pub(crate) static ref SPAMMERS: HashSet<&'static str> = include_str!("../../data/spammers.txt").lines().collect();
 }
 
 pub(crate) fn is_spammer(fqdn: &str) -> bool {

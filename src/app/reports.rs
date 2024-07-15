@@ -56,13 +56,12 @@ pub(crate) enum FilterType {
 pub(crate) type ReportGraph = Vec<u32>;
 pub(crate) type ReportTable = BTreeMap<String, u32>;
 
-#[derive(Object, Clone, Debug, Default)]
-#[oai(rename_all = "camelCase")]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct ReportStats {
-    total_views: u32,
-    total_sessions: u32,
-    unique_visitors: u32,
-    avg_views_per_session: u32, // 3 decimal places
+    pub(crate) total_views: u32,
+    pub(crate) total_sessions: u32,
+    pub(crate) unique_visitors: u32,
+    pub(crate) avg_views_per_session: u32, // 3 decimal places
 }
 
 #[derive(Object, Debug)]
@@ -86,7 +85,7 @@ fn metric_sql(metric: &Metric) -> Result<String> {
     }.to_owned())
 }
 
-pub(crate) fn online_users(conn: &DuckDBConn, entities: &[&str]) -> Result<u32> {
+pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u32> {
     if entities.is_empty() {
         return Ok(0);
     }

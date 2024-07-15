@@ -2,7 +2,7 @@ use super::admin::{ProjectEntity, ProjectResponse, ProjectsResponse};
 use super::session::SessionUser;
 use super::webext::*;
 use crate::app::models::{Project, UserRole};
-use crate::app::reports::{self, DateRange, Metric, ReportStats};
+use crate::app::reports::{self, DateRange, Metric};
 use crate::app::App;
 use crate::utils::validate;
 
@@ -28,6 +28,16 @@ struct GraphRequest {
     range: DateRange,
     data_points: u32,
     metric: Metric,
+}
+
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct StatsResponse {
+    total_views: u32,
+    total_sessions: u32,
+    unique_visitors: u32,
+    avg_views_per_session: u32, // 3 decimal places
+    current_visitors: u32,
 }
 
 pub(crate) struct DashboardAPI;
@@ -125,7 +135,7 @@ impl DashboardAPI {
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         user: Option<SessionUser>,
-    ) -> ApiResult<Json<ReportStats>> {
+    ) -> ApiResult<Json<StatsResponse>> {
         let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
         let entities = app.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -137,6 +147,14 @@ impl DashboardAPI {
         let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &[])
             .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        Ok(Json(stats))
+        let online = reports::online_users(&conn, &entities).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        Ok(Json(StatsResponse {
+            total_views: stats.total_views,
+            total_sessions: stats.total_sessions,
+            unique_visitors: stats.unique_visitors,
+            avg_views_per_session: stats.avg_views_per_session,
+            current_visitors: online,
+        }))
     }
 }

@@ -172,7 +172,7 @@ const Project = ({
 					</span>
 					<span className={styles.online}>
 						<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
-						<CountUp preserveValue duration={1} end={0} /> Current Visitors
+						<CountUp preserveValue duration={1} end={stats?.currentVisitors || 0} /> Current Visitors
 					</span>
 				</h1>
 				<div>

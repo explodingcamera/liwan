@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import { Dialog } from "../dialog";
 import { api, queryClient, useMe, useMutation, useQuery, type ProjectResponse } from "../../api";
 import styles from "./dialogs.module.css";
+import { ReactTags } from "react-tag-autocomplete";
+import { Tags } from "../tags";
 
 export const EditProject = ({ project, trigger }: { project: ProjectResponse; trigger: JSX.Element }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
@@ -62,6 +64,8 @@ export const CreateProject = () => {
 		<Dialog
 			onOpenChange={() => reset()}
 			title="Create a new project"
+			description="Project's are a collection of entities that you want to track and are used to group data from different
+					sources together."
 			trigger={
 				role === "admin" && (
 					<button type="button" className="contrast">
@@ -71,11 +75,6 @@ export const CreateProject = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<p>
-					Project's are a collection of entities that you want to track and are used to group data from different
-					sources together.
-				</p>
-
 				<label>
 					Project ID <small>(This cannot be changed later)</small>
 					<input required pattern="^[A-Za-z0-9_\-]{1,15}$" name="id" type="text" placeholder="my-project" />
@@ -135,6 +134,7 @@ export const CreateEntity = () => {
 	return (
 		<Dialog
 			title="Create a new entity"
+			description="Entities are individual clients or services that you want to track, like distinct websites or mobile apps. The entity id is used in the tracking snippet to identify the source of the data."
 			trigger={
 				role === "admin" && (
 					<button type="button" className="contrast">
@@ -144,18 +144,22 @@ export const CreateEntity = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<p>
-					Entities are individual clients or services that you want to track, like distinct websites or mobile apps.
-				</p>
-
 				<label>
 					Entity ID <small>(This cannot be changed later)</small>
 					<input required pattern="^[A-Za-z0-9_\-]{1,15}$" name="id" type="text" placeholder="my-website" />
 				</label>
 				<label>
-					Project Name <small>(Used in the dashboard)</small>
+					Entity Name <small>(Used in the dashboard)</small>
 					<input required name="displayname" type="text" placeholder="My Website" />
 				</label>
+				<Tags
+					labelText="Add to Projects"
+					selected={[{ value: "1", label: "Project 1" }]}
+					suggestions={[]}
+					onAdd={() => {}}
+					onDelete={() => {}}
+					noOptionsText="No matching projects"
+				/>
 				<div className="grid">
 					<Dialog.Close asChild>
 						<button className="secondary outline" type="button" ref={closeRef}>
@@ -193,12 +197,13 @@ export const CreateUser = () => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
-		const { email, password } = Object.fromEntries(new FormData(form)) as { email: string; password: string };
+		const { username, password } = Object.fromEntries(new FormData(form)) as { username: string; password: string };
 	};
 
 	return (
 		<Dialog
 			title="Create a new user"
+			description="Non-admin users can only view data of projects they are members of, and cannot create or edit projects, entities, or users."
 			trigger={
 				role === "admin" && (
 					<button type="button" className="contrast">

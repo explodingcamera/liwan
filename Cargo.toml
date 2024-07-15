@@ -50,6 +50,10 @@ maxminddb={version="0.24", optional=true}
 default=["geoip"]
 geoip=["dep:maxminddb"]
 
+[profile.dev]
+opt-level=1
+incremental=true
+
 [profile.release]
 lto="thin"
 strip=true

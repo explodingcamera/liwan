@@ -1,4 +1,7 @@
-.full {
+@import "@explodingcamera/css/all.css" layer(base);
+@import "@picocss/pico/css/pico.lime.min.css" layer(pico);
+
+.full { 
   min-height: 100%;
 }
 
