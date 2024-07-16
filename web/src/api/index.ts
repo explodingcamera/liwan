@@ -7,6 +7,8 @@ export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
 export type DateRange = OASModel<DashboardSpec, "DateRange">;
 export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
+export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;
+export type UserResponse = OASModel<DashboardSpec, "UserResponse">;
 
 export const api = createClient<DashboardSpec>({
 	globalParams: { credentials: "same-origin" },

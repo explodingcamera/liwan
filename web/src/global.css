@@ -1,7 +1,7 @@
 @import "@explodingcamera/css/all.css" layer(base);
 @import "@picocss/pico/css/pico.lime.min.css" layer(pico);
 
-.full { 
+.full {
   min-height: 100%;
 }
 
@@ -21,10 +21,6 @@ h6 {
   --pico-spacing: 0.75rem;
   --pico-form-element-spacing-vertical: 0.5rem;
   --pico-form-element-spacing-horizontal: 0.6rem;
-}
-
-label > :where(input, select, textarea) {
-  margin-top: calc(var(--pico-spacing) * 0.5);
 }
 
 article {

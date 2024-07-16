@@ -101,7 +101,7 @@ pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u32
             select count(distinct visitor_id) from events
             where
                 entity_id in ({entities_list}) and
-                created_at >= now() - interval '5 minutes';
+                created_at >= (now()::timestamp - (interval 5 minute));
     "
     );
 

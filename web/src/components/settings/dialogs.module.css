@@ -7,3 +7,15 @@
   right: 0;
   transform: translateY(-100%);
 }
+
+.danger {
+  --pico-background-color: var(--pico-del-color);
+  --pico-border-color: var(--pico-del-color);
+  box-shadow: none;
+
+  &:hover {
+    --pico-background-color: var(--pico-del-color);
+    --pico-border-color: var(--pico-del-color);
+    box-shadow: none;
+  }
+}

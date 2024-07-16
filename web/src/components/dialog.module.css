@@ -25,6 +25,10 @@
   animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.title {
+  white-space: preserve-breaks;
+}
+
 .content {
   position: fixed;
   top: 50%;

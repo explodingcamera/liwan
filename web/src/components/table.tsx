@@ -1,7 +1,12 @@
+import styles from "./table.module.css";
+
 export type Column<T> = {
 	id: string;
 	header?: string | JSX.Element;
+	icon?: JSX.Element;
 	render?: (row: T) => JSX.Element | string;
+	full?: boolean;
+	nowrap?: boolean;
 };
 
 export const Table = <T extends { id: string }>({
@@ -14,11 +19,20 @@ export const Table = <T extends { id: string }>({
 	return (
 		<div>
 			<div>
-				<table className="striped">
+				<table className={styles.table}>
 					<thead>
 						<tr>
 							{columns?.map((col) => (
-								<td key={col.id}>{col.header ?? null}</td>
+								<th scope="col" key={col.id} className={col.full ? styles.full : undefined}>
+									{col.icon ? (
+										<div className={styles.icon}>
+											{col.icon}
+											{col.header ?? null}
+										</div>
+									) : (
+										col.header ?? null
+									)}
+								</th>
 							))}
 						</tr>
 					</thead>
@@ -27,7 +41,9 @@ export const Table = <T extends { id: string }>({
 							rows.map((row) => (
 								<tr key={row.id}>
 									{columns?.map((col) => (
-										<td key={col.id}>{col.render ? col.render(row) : null}</td>
+										<td key={col.id} className={col.nowrap ? styles.nowrap : undefined}>
+											{col.render ? col.render(row) : null}
+										</td>
 									))}
 								</tr>
 							))

@@ -1,45 +1,203 @@
-import { id } from "date-fns/locale";
-import { api, useEntities, useProjects, useQuery, useUsers } from "../../api";
+import {
+	useEntities,
+	useProjects,
+	useUsers,
+	type EntityResponse,
+	type ProjectResponse,
+	type UserResponse,
+} from "../../api";
 import { Table, type Column } from "../table";
+import {
+	ClipboardCopyIcon,
+	EditIcon,
+	EllipsisVerticalIcon,
+	RectangleEllipsisIcon,
+	ShieldIcon,
+	TrashIcon,
+	UserIcon,
+} from "lucide-react";
+import styles from "./tables.module.css";
+import { Fragment, useRef } from "react";
+import { DeleteDialog } from "./dialogs";
+
+type DropdownOptions = Record<string, (close: () => void) => JSX.Element>;
+
+const Dropdown = ({ options }: { options: DropdownOptions }) => {
+	const detailsRef = useRef<HTMLDetailsElement>(null);
+	return (
+		<details className={`dropdown ${styles.edit}`} ref={detailsRef}>
+			<summary>
+				<EllipsisVerticalIcon />
+			</summary>
+			<ul>
+				{Object.entries(options).map(([key, val]) => (
+					<li key={key}>{val(() => detailsRef.current?.removeAttribute("open"))}</li>
+				))}
+			</ul>
+		</details>
+	);
+};
+
+const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
+	const options: DropdownOptions = {
+		edit: (close) => (
+			<button type="button" onClick={close}>
+				<EditIcon size={18} />
+				Edit
+			</button>
+		),
+		delete: (close) => (
+			<DeleteDialog
+				id={project.id}
+				displayName={project.displayName}
+				type="project"
+				trigger={
+					<button type="button" onClick={close} className={styles.danger}>
+						<TrashIcon size={18} />
+						Delete
+					</button>
+				}
+			/>
+		),
+	};
+	return <Dropdown options={options} />;
+};
 
 export const ProjectsTable = () => {
 	const { projects, isLoading } = useProjects();
 	const columns: Column<(typeof projects)[number]>[] = [
 		{
-			id: "public",
-			render: (row) => (row.public ? "Public" : "Private"),
+			id: "displayName",
+			header: "Name",
+			render: (row) => <span>{row.displayName}</span>,
+			nowrap: true,
 		},
 		{
 			id: "id",
 			header: "ID",
-			render: (row) => <a href={`/settings/projects/${row.id}`}>{row.id}</a>,
+			render: (row) => <i>{row.id}</i>,
 		},
 		{
-			id: "displayName",
-			header: "Name",
-			render: (row) => <a href={`/settings/projects/${row.id}`}>{row.displayName}</a>,
+			id: "public",
+			header: "Visibility",
+			render: (row) => <>{row.public ? "Public" : "Private"}</>,
+		},
+		{
+			id: "entities",
+			header: "Entities",
+			render: (row) => (
+				<>
+					{row.entities.map((entity, i) => (
+						<Fragment key={entity.id}>
+							{i > 0 && ", "}
+							<u data-tooltip={`ID: ${entity.id}`}>{entity.displayName}</u>
+						</Fragment>
+					))}
+				</>
+			),
+			full: true,
+		},
+		{
+			id: "edit",
+			render: (row) => <ProjectDropdown project={row} />,
 		},
 	];
 
 	return <Table columns={columns} rows={projects} />;
 };
 
+const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
+	const options: DropdownOptions = {
+		edit: (close) => (
+			<button type="button" onClick={close}>
+				<EditIcon size={18} />
+				Edit
+			</button>
+		),
+		delete: (close) => (
+			<DeleteDialog
+				id={entity.id}
+				displayName={entity.displayName}
+				type="entity"
+				trigger={
+					<button type="button" onClick={close} className={styles.danger}>
+						<TrashIcon size={18} />
+						Delete
+					</button>
+				}
+			/>
+		),
+	};
+	return <Dropdown options={options} />;
+};
+
 export const EntitiesTable = () => {
 	const { entities, isLoading } = useEntities();
 	const columns: Column<(typeof entities)[number]>[] = [
 		{
-			id: "id",
-			header: "ID",
-			render: (row) => <a href={`/settings/entities/${row.id}`}>{row.id}</a>,
-		},
-		{
 			id: "displayName",
 			header: "Name",
-			render: (row) => <a href={`/settings/entities/${row.id}`}>{row.displayName}</a>,
+			render: (row) => <span>{row.displayName}</span>,
+			nowrap: true,
+		},
+		{
+			id: "id",
+			header: "ID",
+			render: (row) => <span>{row.id}</span>,
+		},
+		{
+			id: "projects",
+			header: "Projects",
+			render: (row) => (
+				<>
+					{row.projects.map((project, i) => (
+						<Fragment key={project.id}>
+							{i > 0 && ", "}
+							<u data-tooltip={`ID: ${project.id}`}>{project.displayName}</u>
+						</Fragment>
+					))}
+				</>
+			),
+			full: true,
+		},
+		{
+			id: "edit",
+			render: (row) => <EntityDropdown entity={row} />,
 		},
 	];
 
 	return <Table columns={columns} rows={entities} />;
+};
+
+const UserDropdown = ({ user }: { user: UserResponse }) => {
+	const options: DropdownOptions = {
+		edit: (close) => (
+			<button type="button" onClick={close}>
+				<EditIcon size={18} />
+				Edit
+			</button>
+		),
+		updatePassword: (close) => (
+			<button type="button" onClick={close}>
+				<RectangleEllipsisIcon size={18} />
+				Update Password
+			</button>
+		),
+		delete: (close) => (
+			<DeleteDialog
+				id={user.username}
+				displayName={user.username}
+				type="user"
+				trigger={
+					<button type="button" onClick={close} className={styles.danger}>
+						<TrashIcon size={18} />
+						Delete
+					</button>
+				}
+			/>
+		),
+	};
+	return <Dropdown options={options} />;
 };
 
 export const UsersTable = () => {
@@ -50,12 +208,19 @@ export const UsersTable = () => {
 		{
 			id: "username",
 			header: "Username",
-			render: (row) => <a href={`/settings/users/${row.username}`}>{row.username}</a>,
+			icon: <UserIcon size={18} />,
+			render: (row) => <span>{row.username}</span>,
 		},
 		{
 			id: "role",
 			header: "Role",
+			icon: <ShieldIcon size={18} />,
 			render: (row) => row.role,
+			full: true,
+		},
+		{
+			id: "edit",
+			render: (row) => <UserDropdown user={row} />,
 		},
 	];
 

@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::utils::hash::{generate_salt, hash_password, onboarding_token, verify_password};
 use crate::utils::refinery_duckdb::DuckDBConnection;
-use crate::utils::validate::is_valid_username;
+use crate::utils::validate::{is_valid_id, is_valid_username};
 
 use crossbeam::channel::{Receiver, RecvError};
 use crossbeam::sync::ShardedLock;
@@ -241,14 +241,18 @@ impl App {
     }
 
     /// Create a new entity
-    pub(crate) fn entity_create(&self, entity: &models::Entity, initial_project: &[String]) -> Result<()> {
+    pub(crate) fn entity_create(&self, entity: &models::Entity, initial_projects: &[String]) -> Result<()> {
+        if !is_valid_id(&entity.id) {
+            bail!("invalid entity ID");
+        }
+
         let mut conn = self.conn_app()?;
         let tx = conn.transaction()?;
         tx.execute(
             "insert into entities (id, display_name) values (?, ?)",
             rusqlite::params![entity.id, entity.display_name],
         )?;
-        for project_id in initial_project {
+        for project_id in initial_projects {
             tx.execute(
                 "insert into project_entities (project_id, entity_id) values (?, ?)",
                 rusqlite::params![project_id, entity.id],
@@ -260,10 +264,11 @@ impl App {
 
     /// Delete an entity (does not remove associated events)
     pub(crate) fn entity_delete(&self, id: &str) -> Result<()> {
-        let conn = self.conn_app()?;
-        let mut stmt =
-            conn.prepare_cached("delete from entities where id = ?; delete from project_entities where entity_id = ?")?;
-        stmt.execute([id])?;
+        let mut conn = self.conn_app()?;
+        let tx = conn.transaction()?;
+        tx.execute("delete from entities where id = ?", rusqlite::params![id])?;
+        tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![id])?;
+        tx.commit()?;
         Ok(())
     }
 
@@ -354,11 +359,23 @@ impl App {
     }
 
     /// Create a new project
-    pub(crate) fn project_create(&self, project: &Project) -> Result<Project> {
-        let conn = self.conn_app()?;
-        let mut stmt =
-            conn.prepare_cached("insert into projects (id, display_name, public, secret) values (?, ?, ?, ?)")?;
-        stmt.execute(rusqlite::params![project.id, project.display_name, project.public, project.secret])?;
+    pub(crate) fn project_create(&self, project: &Project, initial_entities: &[String]) -> Result<Project> {
+        if !is_valid_id(&project.id) {
+            bail!("invalid project ID");
+        }
+        let mut conn = self.conn_app()?;
+        let tx = conn.transaction()?;
+        tx.execute(
+            "insert into projects (id, display_name, public, secret) values (?, ?, ?, ?)",
+            rusqlite::params![project.id, project.display_name, project.public, project.secret],
+        )?;
+        for entity_id in initial_entities {
+            tx.execute(
+                "insert into project_entities (project_id, entity_id) values (?, ?)",
+                rusqlite::params![project.id, entity_id],
+            )?;
+        }
+        tx.commit()?;
         Ok(project.clone())
     }
 
@@ -373,11 +390,11 @@ impl App {
 
     /// remove the project and all associated project_entities
     pub(crate) fn project_delete(&self, id: &str) -> Result<()> {
-        let conn = self.conn_app()?;
-        let mut stmt = conn
-            .prepare_cached("delete from projects where id = ?; delete from project_entities where project_id = ?")?;
-
-        stmt.execute([id, id])?;
+        let mut conn = self.conn_app()?;
+        let tx = conn.transaction()?;
+        tx.execute("delete from projects where id = ?", rusqlite::params![id])?;
+        tx.execute("delete from project_entities where project_id = ?", rusqlite::params![id])?;
+        tx.commit()?;
         Ok(())
     }
 

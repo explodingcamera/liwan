@@ -1,0 +1,17 @@
+.full {
+  width: 100%;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.table {
+  th {
+    div.icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+  }
+}

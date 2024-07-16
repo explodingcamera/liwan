@@ -39,10 +39,19 @@ struct UsersResponse {
 
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
-struct ProjectRequest {
+struct UpdateProjectRequest {
     display_name: String,
     public: bool,
     secret: Option<String>,
+}
+
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct CreateProjectRequest {
+    display_name: String,
+    public: bool,
+    secret: Option<String>,
+    entities: Vec<String>,
 }
 
 #[derive(Object)]
@@ -197,7 +206,7 @@ impl AdminAPI {
     #[oai(path = "/project/:project_id", method = "post")]
     async fn project_create_handler(
         &self,
-        Json(project): Json<ProjectRequest>,
+        Json(project): Json<CreateProjectRequest>,
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
@@ -206,12 +215,15 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.project_create(&Project {
-            id: project_id,
-            display_name: project.display_name,
-            public: project.public,
-            secret: project.secret,
-        })
+        app.project_create(
+            &Project {
+                id: project_id,
+                display_name: project.display_name,
+                public: project.public,
+                secret: project.secret,
+            },
+            project.entities.as_slice(),
+        )
         .http_err("Failed to create project", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -220,7 +232,7 @@ impl AdminAPI {
     #[oai(path = "/project/:project_id", method = "put")]
     async fn project_update_handler(
         &self,
-        Json(project): Json<ProjectRequest>,
+        Json(project): Json<UpdateProjectRequest>,
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,

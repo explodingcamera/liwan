@@ -1,0 +1,44 @@
+details.edit {
+  margin-bottom: 0;
+}
+
+details.edit summary {
+  all: unset;
+  cursor: pointer;
+  user-select: none;
+
+  &::after {
+    all: unset;
+  }
+}
+
+details.edit summary + ul {
+  right: 0;
+  top: 0;
+  left: unset;
+  overflow: hidden;
+
+  button {
+    all: unset;
+    cursor: pointer;
+    margin: calc(var(--pico-form-element-spacing-vertical) * -0.5)
+      calc(var(--pico-form-element-spacing-horizontal) * -1);
+    padding: calc(var(--pico-form-element-spacing-vertical) * 0.5)
+      var(--pico-form-element-spacing-horizontal);
+    width: 100%;
+
+    align-items: center;
+    gap: 0.6rem;
+    display: flex;
+  }
+
+  button:hover {
+    background-color: var(--pico-dropdown-hover-background-color);
+  }
+}
+
+.danger {
+  svg {
+    color: var(--pico-del-color);
+  }
+}
