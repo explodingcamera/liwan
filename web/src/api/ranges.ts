@@ -1,3 +1,6 @@
+import type { DateRange } from ".";
+import type { GraphRange } from "../components/graph";
+
 import {
 	addDays,
 	addHours,
@@ -12,8 +15,6 @@ import {
 	subDays,
 	subMonths,
 } from "date-fns";
-import type { DateRange } from ".";
-import type { GraphRange } from "../components/graph";
 
 export const rangeNames = {
 	today: "Today",

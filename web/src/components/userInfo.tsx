@@ -1,7 +1,7 @@
-import { getUsername } from "../api/utils";
-import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
 import styles from "./userInfo.module.css";
-import { api } from "../api";
+
+import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
+import { api, getUsername } from "../api";
 
 export const LoginButton = () => {
 	const username = getUsername();

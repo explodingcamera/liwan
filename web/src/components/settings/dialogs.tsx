@@ -1,5 +1,9 @@
 import { useMemo, useRef, useState } from "react";
+
 import { Dialog } from "../dialog";
+import { Tags, type Tag } from "../tags";
+import styles from "./dialogs.module.css";
+
 import {
 	api,
 	invalidateEntities,
@@ -13,9 +17,6 @@ import {
 	type ProjectResponse,
 	type UserResponse,
 } from "../../api";
-
-import styles from "./dialogs.module.css";
-import { Tags, type Tag } from "../tags";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 

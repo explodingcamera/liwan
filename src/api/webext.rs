@@ -1,10 +1,8 @@
 use std::{fmt::Display, marker::PhantomData};
 
-use poem::{
-    http::{header, Method, StatusCode},
-    web::Json,
-    Endpoint, IntoResponse, Request, Response,
-};
+use poem::http::{header, Method, StatusCode};
+use poem::web::Json;
+use poem::{Endpoint, IntoResponse, Request, Response};
 use poem_openapi::{ApiResponse, Object};
 use rust_embed::RustEmbed;
 use serde::Serialize;

@@ -4,6 +4,7 @@ mod dashboard;
 mod event;
 mod session;
 mod webext;
+pub(crate) use session::SessionUser;
 
 use crate::app::models::Event;
 use crate::app::App;

@@ -1,5 +1,5 @@
 import { createClient, type NormalizeOAS, type OASModel } from "fets";
-export { queryClient, useMutation, useQuery } from "./utils";
+export { queryClient, useMutation, useQuery, getUsername } from "./utils";
 import type dashboardspec from "./dashboard";
 import { queryClient, useQuery } from "./utils";
 

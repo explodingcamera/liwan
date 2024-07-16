@@ -1,14 +1,12 @@
 use super::{session::SessionUser, webext::*};
-use crate::app::{
-    models::{Entity, Project, UserRole},
-    App,
-};
+use crate::app::models::{Entity, Project, UserRole};
+use crate::app::App;
+use crate::utils::validate::can_access_project;
+
 use poem::{http::StatusCode, web::Data};
-use poem_openapi::{
-    param::Path,
-    payload::{Json, Response},
-    Object, OpenApi,
-};
+use poem_openapi::param::Path;
+use poem_openapi::payload::{Json, Response};
+use poem_openapi::{Object, OpenApi};
 
 pub(crate) struct AdminAPI;
 
@@ -260,6 +258,59 @@ impl AdminAPI {
         })
         .http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
         EmptyResponse::ok()
+    }
+
+    #[oai(path = "/projects", method = "get")]
+    async fn projects_handler(
+        &self,
+        Data(app): Data<&App>,
+        user: Option<SessionUser>,
+    ) -> ApiResult<Response<Json<ProjectsResponse>>> {
+        let projects = app.projects().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
+        let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, &user.as_ref())).collect();
+
+        let mut resp = Vec::new();
+        for project in projects {
+            resp.push(ProjectResponse {
+                id: project.id.clone(),
+                display_name: project.display_name.clone(),
+                entities: app
+                    .project_entities(&project.id)
+                    .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
+                    .into_iter()
+                    .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
+                    .collect(),
+                public: project.public,
+            });
+        }
+
+        Ok(Response::new(Json(ProjectsResponse { projects: resp })).header("Cache-Control", "private"))
+    }
+
+    #[oai(path = "/project/:project_id", method = "get")]
+    async fn project_handler(
+        &self,
+        Path(project_id): Path<String>,
+        Data(app): Data<&App>,
+        user: Option<SessionUser>,
+    ) -> ApiResult<Response<Json<ProjectResponse>>> {
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        if !can_access_project(&project, &user.as_ref()) {
+            return Err(StatusCode::NOT_FOUND.into());
+        }
+
+        Ok(Response::new(Json(ProjectResponse {
+            id: project.id.clone(),
+            display_name: project.display_name.clone(),
+            entities: app
+                .project_entities(&project.id)
+                .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
+                .into_iter()
+                .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
+                .collect(),
+            public: project.public,
+        }))
+        .header("Cache-Control", "private"))
     }
 
     #[oai(path = "/project/:project_id/entity/:entity_id", method = "put")]

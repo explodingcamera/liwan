@@ -1,7 +1,9 @@
-import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
 import { useMemo } from "react";
 import styles from "./graph.module.css";
+
 import { differenceInSeconds } from "date-fns";
+import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
+
 import type { Metric } from "../api";
 
 export type DataPoint = {

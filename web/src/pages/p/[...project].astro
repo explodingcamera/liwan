@@ -1,14 +1,14 @@
 ---
 import type { GetStaticPaths } from "astro";
+
 import Layout from "../../layouts/Layout.astro";
 import { Project } from "../../components/project";
 
 export const getStaticPaths = (() => {
-  if (import.meta.env.DEV) return [{ params: { project: "personal" } }];
-  return [{ params: { project: undefined } }];
+  return [{ params: { project: "project" } }];
 }) satisfies GetStaticPaths;
 ---
 
 <Layout title="">
-  <Project client:load />
+  <Project client:only="react" />
 </Layout>

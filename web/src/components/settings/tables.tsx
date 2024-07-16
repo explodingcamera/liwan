@@ -1,3 +1,10 @@
+import { Fragment, useRef } from "react";
+import styles from "./tables.module.css";
+
+import { Table, type Column } from "../table";
+import { DeleteDialog, EditEntity, EditPassword, EditProject, EditUser } from "./dialogs";
+import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, ShieldIcon, TrashIcon, UserIcon } from "lucide-react";
+
 import {
 	useEntities,
 	useMe,
@@ -7,19 +14,6 @@ import {
 	type ProjectResponse,
 	type UserResponse,
 } from "../../api";
-import { Table, type Column } from "../table";
-import {
-	ClipboardCopyIcon,
-	EditIcon,
-	EllipsisVerticalIcon,
-	RectangleEllipsisIcon,
-	ShieldIcon,
-	TrashIcon,
-	UserIcon,
-} from "lucide-react";
-import styles from "./tables.module.css";
-import { Fragment, useRef } from "react";
-import { DeleteDialog, EditEntity, EditPassword, EditProject, EditUser } from "./dialogs";
 
 type DropdownOptions = Record<string, ((close: () => void) => JSX.Element) | null>;
 

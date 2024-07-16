@@ -1,12 +1,9 @@
-use std::str::FromStr;
-
 use eyre::{bail, Context, Result};
-use figment::{
-    providers::{Env, Format, Toml},
-    Figment,
-};
+use figment::providers::{Env, Format, Toml};
+use figment::Figment;
 use poem::http::Uri;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 fn default_base() -> String {
     "http://localhost:8080".to_string()

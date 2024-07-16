@@ -1,8 +1,8 @@
-mod api;
-mod app;
-mod cli;
-mod config;
-mod utils;
+pub(crate) mod api;
+pub(crate) mod app;
+pub(crate) mod cli;
+pub(crate) mod config;
+pub(crate) mod utils;
 
 use app::{models::Event, App};
 use config::Config;
