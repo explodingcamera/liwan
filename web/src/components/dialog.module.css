@@ -35,7 +35,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: 90vw;
-  max-width: 450px;
+  max-width: 25rem;
   max-height: 85vh;
   padding: 1rem;
   padding-bottom: 0.5rem;

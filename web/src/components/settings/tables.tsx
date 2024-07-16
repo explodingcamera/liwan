@@ -1,5 +1,6 @@
 import {
 	useEntities,
+	useMe,
 	useProjects,
 	useUsers,
 	type EntityResponse,
@@ -18,9 +19,9 @@ import {
 } from "lucide-react";
 import styles from "./tables.module.css";
 import { Fragment, useRef } from "react";
-import { DeleteDialog } from "./dialogs";
+import { DeleteDialog, EditEntity, EditPassword, EditProject, EditUser } from "./dialogs";
 
-type DropdownOptions = Record<string, (close: () => void) => JSX.Element>;
+type DropdownOptions = Record<string, ((close: () => void) => JSX.Element) | null>;
 
 const Dropdown = ({ options }: { options: DropdownOptions }) => {
 	const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -30,21 +31,33 @@ const Dropdown = ({ options }: { options: DropdownOptions }) => {
 				<EllipsisVerticalIcon />
 			</summary>
 			<ul>
-				{Object.entries(options).map(([key, val]) => (
-					<li key={key}>{val(() => detailsRef.current?.removeAttribute("open"))}</li>
-				))}
+				{Object.entries(options)
+					.filter(([, val]) => val !== null)
+					.map(([key, val]) => (
+						<li key={key}>{val?.(() => detailsRef.current?.removeAttribute("open"))}</li>
+					))}
 			</ul>
 		</details>
 	);
 };
 
 const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
+	const { role } = useMe();
+	if (role === "user") {
+		return null;
+	}
+
 	const options: DropdownOptions = {
 		edit: (close) => (
-			<button type="button" onClick={close}>
-				<EditIcon size={18} />
-				Edit
-			</button>
+			<EditProject
+				project={project}
+				trigger={
+					<button type="button" onClick={close}>
+						<EditIcon size={18} />
+						Edit
+					</button>
+				}
+			/>
 		),
 		delete: (close) => (
 			<DeleteDialog
@@ -109,10 +122,15 @@ export const ProjectsTable = () => {
 const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
 	const options: DropdownOptions = {
 		edit: (close) => (
-			<button type="button" onClick={close}>
-				<EditIcon size={18} />
-				Edit
-			</button>
+			<EditEntity
+				entity={entity}
+				trigger={
+					<button type="button" onClick={close}>
+						<EditIcon size={18} />
+						Edit
+					</button>
+				}
+			/>
 		),
 		delete: (close) => (
 			<DeleteDialog
@@ -143,7 +161,7 @@ export const EntitiesTable = () => {
 		{
 			id: "id",
 			header: "ID",
-			render: (row) => <span>{row.id}</span>,
+			render: (row) => <i>{row.id}</i>,
 		},
 		{
 			id: "projects",
@@ -170,18 +188,32 @@ export const EntitiesTable = () => {
 };
 
 const UserDropdown = ({ user }: { user: UserResponse }) => {
+	const { username } = useMe();
 	const options: DropdownOptions = {
-		edit: (close) => (
-			<button type="button" onClick={close}>
-				<EditIcon size={18} />
-				Edit
-			</button>
-		),
+		edit:
+			username !== user.username
+				? (close) => (
+						<EditUser
+							trigger={
+								<button type="button" onClick={close}>
+									<EditIcon size={18} />
+									Edit
+								</button>
+							}
+							user={user}
+						/>
+					)
+				: null,
 		updatePassword: (close) => (
-			<button type="button" onClick={close}>
-				<RectangleEllipsisIcon size={18} />
-				Update Password
-			</button>
+			<EditPassword
+				user={user}
+				trigger={
+					<button type="button" onClick={close}>
+						<RectangleEllipsisIcon size={18} />
+						Update Password
+					</button>
+				}
+			/>
 		),
 		delete: (close) => (
 			<DeleteDialog
@@ -197,6 +229,7 @@ const UserDropdown = ({ user }: { user: UserResponse }) => {
 			/>
 		),
 	};
+
 	return <Dropdown options={options} />;
 };
 

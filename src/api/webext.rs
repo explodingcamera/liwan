@@ -11,7 +11,8 @@ use serde::Serialize;
 use serde_json::json;
 
 pub(crate) async fn catch_error(err: poem::Error) -> impl IntoResponse {
-    Json(json!({ "status": "error", "message": err.to_string() })).with_status(err.status())
+    Json(json!({ "status": "error", "message": err.to_string(), "code": err.status().as_u16()}))
+        .with_status(err.status())
 }
 
 #[rustfmt::skip]

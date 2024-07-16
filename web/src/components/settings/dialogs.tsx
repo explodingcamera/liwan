@@ -9,11 +9,15 @@ import {
 	useMe,
 	useMutation,
 	useProjects,
+	type EntityResponse,
 	type ProjectResponse,
+	type UserResponse,
 } from "../../api";
 
 import styles from "./dialogs.module.css";
 import { Tags, type Tag } from "../tags";
+
+const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 
 export const DeleteDialog = ({
 	id,
@@ -58,7 +62,7 @@ export const DeleteDialog = ({
 	return (
 		<Dialog
 			onOpenChange={() => reset()}
-			title={`Delete ${type}: ${displayName}`}
+			title={`Delete ${toTitleCase(type)}: ${displayName}`}
 			description={`Are you sure you want to delete this ${type}?\n ${
 				type === "entity" ? "This will not delete the data associated with it." : "This action cannot be undone."
 			}`}
@@ -113,6 +117,46 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 		};
 		mutate({ params: { project_id: project.id }, json: { displayName, public: isPublic === "on" } });
 	};
+
+	return (
+		<Dialog
+			onOpenChange={() => reset()}
+			title={`Edit Project: ${project.displayName}`}
+			description="Edit the project's name or change its visibility."
+			hideDescription
+			trigger={role === "admin" && trigger}
+		>
+			<form onSubmit={handleSubmit}>
+				<label>
+					Project Name <small>(Used in the dashboard)</small>
+					<input required name="displayName" type="text" defaultValue={project.displayName} />
+				</label>
+				<label>
+					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
+					<input type="checkbox" role="switch" name="isPublic" defaultChecked={project.public} />
+					Make Public
+					<br />
+					<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
+				</label>
+				<br />
+				<div className="grid">
+					<Dialog.Close asChild>
+						<button className="secondary outline" type="button" ref={closeRef}>
+							Cancel
+						</button>
+					</Dialog.Close>
+					<button type="submit">Save Changes</button>
+				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while editing the project:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
+			</form>
+		</Dialog>
+	);
 };
 
 export const CreateProject = () => {
@@ -196,6 +240,63 @@ export const CreateProject = () => {
 	);
 };
 
+export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigger: JSX.Element }) => {
+	const closeRef = useRef<HTMLButtonElement>(null);
+	const { role } = useMe();
+
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/entity/{entity_id}"].put,
+		onSuccess: () => {
+			closeRef?.current?.click();
+			invalidateEntities();
+		},
+		onError: console.error,
+	});
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const form = e.target as HTMLFormElement;
+		const { displayName } = Object.fromEntries(new FormData(form)) as { displayName: string };
+		mutate({
+			params: { entity_id: entity.id },
+			json: { displayName },
+		});
+	};
+
+	return (
+		<Dialog
+			onOpenChange={() => reset()}
+			title={`Edit Entity: ${entity.displayName}`}
+			description="Edit the entity's name or change the projects it is associated with."
+			hideDescription
+			trigger={role === "admin" && trigger}
+		>
+			<form onSubmit={handleSubmit}>
+				<label>
+					Entity Name <small>(Used in the dashboard)</small>
+					<input required name="displayName" type="text" defaultValue={entity.displayName} />
+				</label>
+				<div className="grid">
+					<Dialog.Close asChild>
+						<button className="secondary outline" type="button" ref={closeRef}>
+							Cancel
+						</button>
+					</Dialog.Close>
+					<button type="submit">Save Changes</button>
+				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while editing the entity:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
+			</form>
+		</Dialog>
+	);
+};
+
 export const CreateEntity = () => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
@@ -270,6 +371,133 @@ export const CreateEntity = () => {
 	);
 };
 
+export const EditPassword = ({ user, trigger }: { user: UserResponse; trigger: JSX.Element }) => {
+	const closeRef = useRef<HTMLButtonElement>(null);
+	const confirmPasswordRef = useRef<HTMLInputElement>(null);
+	const { role } = useMe();
+
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/user/{username}/password"].put,
+		onSuccess: () => {
+			closeRef?.current?.click();
+		},
+		onError: console.error,
+	});
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const form = e.target as HTMLFormElement;
+		const { password, confirm } = Object.fromEntries(new FormData(form)) as { password: string; confirm: string };
+		console.log(password, confirm);
+
+		if (password !== confirm) {
+			confirmPasswordRef.current?.setCustomValidity("Passwords do not match");
+			confirmPasswordRef.current?.reportValidity();
+			return;
+		}
+
+		confirmPasswordRef.current?.setCustomValidity("");
+		mutate({ params: { username: user.username }, json: { password } });
+	};
+
+	return (
+		<Dialog
+			onOpenChange={() => reset()}
+			title={`Change Password: ${user.username}`}
+			description="Enter a new password for the user."
+			hideDescription
+			trigger={role === "admin" && trigger}
+		>
+			<form onSubmit={handleSubmit}>
+				<label>
+					New Password
+					<input minLength={8} required name="password" type="password" autoComplete="new-password" />
+				</label>
+				<label>
+					Confirm New Password
+					<input required name="confirm" type="password" autoComplete="new-password" ref={confirmPasswordRef} />
+				</label>
+				<div className="grid">
+					<Dialog.Close asChild>
+						<button className="secondary outline" type="button" ref={closeRef}>
+							Cancel
+						</button>
+					</Dialog.Close>
+					<button type="submit">Change Password</button>
+				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while changing the user's password:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
+			</form>
+		</Dialog>
+	);
+};
+
+const roles = ["admin", "user"] as const;
+
+export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: JSX.Element }) => {
+	const closeRef = useRef<HTMLButtonElement>(null);
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/user/{username}"].put,
+		onSuccess: () => {
+			closeRef?.current?.click();
+			invalidateUsers();
+		},
+		onError: console.error,
+	});
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const form = e.target as HTMLFormElement;
+		const { role } = Object.fromEntries(new FormData(form)) as { role: (typeof roles)[number] };
+		mutate({ params: { username: user.username }, json: { role, projects: [] } });
+	};
+
+	return (
+		<Dialog
+			onOpenChange={() => reset()}
+			title={`Edit User: ${user.username}`}
+			description="Edit the user's role."
+			hideDescription
+			trigger={trigger}
+		>
+			<form onSubmit={handleSubmit}>
+				<label>
+					Role
+					<select name="role" defaultValue={user.role}>
+						{roles.map((r) => (
+							<option key={r} value={r}>
+								{r}
+							</option>
+						))}
+					</select>
+				</label>
+				<div className="grid">
+					<Dialog.Close asChild>
+						<button className="secondary outline" type="button" ref={closeRef}>
+							Cancel
+						</button>
+					</Dialog.Close>
+					<button type="submit">Save Changes</button>
+				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while editing the user:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
+			</form>
+		</Dialog>
+	);
+};
+
 export const CreateUser = () => {
 	const { role } = useMe();
 	const closeRef = useRef<HTMLButtonElement>(null);
@@ -287,7 +515,13 @@ export const CreateUser = () => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
-		const { username, password } = Object.fromEntries(new FormData(form)) as { username: string; password: string };
+		const { username, password, admin } = Object.fromEntries(new FormData(form)) as {
+			username: string;
+			password: string;
+			admin: string;
+		};
+		const role = admin === "on" ? "admin" : "user";
+		mutate({ json: { username, password, role } });
 	};
 
 	return (
@@ -305,13 +539,19 @@ export const CreateUser = () => {
 			<form onSubmit={handleSubmit}>
 				<label>
 					Username <small>(This cannot be changed later)</small>
-					<input required pattern="^[A-Za-z0-9_\-]{1,15}$" name="username" type="text" placeholder="MyUsername" />
+					<input
+						required
+						pattern="^[A-Za-z0-9_\-]{1,15}$"
+						name="username"
+						type="text"
+						placeholder="MyUsername"
+						autoComplete="username"
+					/>
 				</label>
 				<label>
 					Password
-					<input required name="password" type="password" />
+					<input required name="password" type="password" autoComplete="new-password" minLength={8} />
 				</label>
-
 				<label>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
 					<input name="publish" type="checkbox" role="switch" />

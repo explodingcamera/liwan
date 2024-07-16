@@ -262,6 +262,14 @@ impl App {
         Ok(())
     }
 
+    /// Update an entity
+    pub(crate) fn entity_update(&self, entity: &models::Entity) -> Result<models::Entity> {
+        let conn = self.conn_app()?;
+        let mut stmt = conn.prepare_cached("update entities set display_name = ? where id = ?")?;
+        stmt.execute(rusqlite::params![entity.display_name, entity.id])?;
+        Ok(entity.clone())
+    }
+
     /// Delete an entity (does not remove associated events)
     pub(crate) fn entity_delete(&self, id: &str) -> Result<()> {
         let mut conn = self.conn_app()?;

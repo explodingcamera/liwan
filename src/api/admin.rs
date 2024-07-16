@@ -46,6 +46,11 @@ struct UpdateProjectRequest {
 }
 
 #[derive(Object)]
+struct UpdatePasswordRequest {
+    password: String,
+}
+
+#[derive(Object)]
 #[oai(rename_all = "camelCase")]
 struct CreateProjectRequest {
     display_name: String,
@@ -97,6 +102,12 @@ struct CreateEntityRequest {
     id: String,
     display_name: String,
     projects: Vec<String>,
+}
+
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct UpdateEntityRequest {
+    display_name: String,
 }
 
 #[derive(Object)]
@@ -152,7 +163,7 @@ impl AdminAPI {
     async fn user_password_handler(
         &self,
         Path(username): Path<String>,
-        Json(password): Json<String>,
+        Json(password): Json<UpdatePasswordRequest>,
         Data(app): Data<&App>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
@@ -160,7 +171,7 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.user_update_password(&username, &password)
+        app.user_update_password(&username, &password.password)
             .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -356,6 +367,24 @@ impl AdminAPI {
         .http_err("Failed to create entity", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(EntityResponse { id: entity.id, display_name: entity.display_name, projects: Vec::new() }))
+    }
+
+    #[oai(path = "/entity/:entity_id", method = "put")]
+    async fn entity_update_handler(
+        &self,
+        Path(entity_id): Path<String>,
+        Json(entity): Json<UpdateEntityRequest>,
+        Data(app): Data<&App>,
+        SessionUser(user): SessionUser,
+    ) -> ApiResult<EmptyResponse> {
+        if user.role != UserRole::Admin {
+            http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+        }
+
+        app.entity_update(&Entity { id: entity_id.clone(), display_name: entity.display_name.clone() })
+            .http_err("Failed to update entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        EmptyResponse::ok()
     }
 
     #[oai(path = "/entity/:entity_id", method = "delete")]

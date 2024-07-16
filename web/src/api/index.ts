@@ -54,6 +54,7 @@ export const useEntities = () => {
 		queryKey: ["entities"],
 		queryFn: () => api["/api/dashboard/entities"].get().json(),
 	});
+
 	return { entities: data?.entities ?? [], isLoading, error };
 };
 
