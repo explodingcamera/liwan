@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 pub(crate) mod hash;
 pub(crate) mod referer;
 pub(crate) mod refinery_duckdb;
+pub(crate) mod refinery_sqlite;
 pub(crate) mod ua;
 pub(crate) mod validate;
 

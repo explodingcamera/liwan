@@ -20,6 +20,13 @@ pub(crate) struct DateRange {
     pub(crate) end: Timestamp,
 }
 
+impl DateRange {
+    pub(crate) fn prev(&self) -> DateRange {
+        let duration = self.end - self.start;
+        DateRange { start: self.start - duration, end: self.start }
+    }
+}
+
 #[derive(Debug, Enum)]
 #[oai(rename_all = "snake_case")]
 pub(crate) enum Metric {
@@ -56,7 +63,8 @@ pub(crate) enum FilterType {
 pub(crate) type ReportGraph = Vec<u32>;
 pub(crate) type ReportTable = BTreeMap<String, u32>;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Object, Clone, Debug, Default)]
+#[oai(rename_all = "camelCase")]
 pub(crate) struct ReportStats {
     pub(crate) total_views: u32,
     pub(crate) total_sessions: u32,
@@ -127,7 +135,7 @@ pub(crate) fn overall_report(
     metric: &Metric,
 ) -> Result<ReportGraph> {
     if entities.is_empty() {
-        return Ok(ReportGraph::default());
+        return Ok(vec![0; data_points as usize]);
     }
 
     // recheck the validity of the entity IDs to be super sure there's no SQL injection

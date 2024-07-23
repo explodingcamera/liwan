@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::utils::hash::{generate_salt, hash_password, onboarding_token, verify_password};
 use crate::utils::refinery_duckdb::DuckDBConnection;
+use crate::utils::refinery_sqlite::RqlConnection;
 use crate::utils::validate::{is_valid_id, is_valid_username};
 
 use crossbeam::channel::{Receiver, RecvError};
@@ -99,7 +100,7 @@ fn init_sqlite(path: &PathBuf, mut migrations_runner: Runner) -> Result<r2d2::Po
     let conn = SqliteConnectionManager::file(path);
     let pool = r2d2::Pool::new(conn)?;
     migrations_runner.set_migration_table_name("migrations");
-    migrations_runner.run(pool.get()?.deref_mut())?;
+    migrations_runner.run(&mut RqlConnection(pool.get()?))?;
     Ok(pool)
 }
 

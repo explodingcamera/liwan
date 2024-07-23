@@ -1,5 +1,5 @@
 use super::{webext::*, SessionUser};
-use crate::app::reports::{self, DateRange, Metric};
+use crate::app::reports::{self, DateRange, Metric, ReportStats};
 use crate::app::App;
 use crate::utils::validate::{self, can_access_project};
 
@@ -30,11 +30,9 @@ struct GraphRequest {
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
 struct StatsResponse {
-    total_views: u32,
-    total_sessions: u32,
-    unique_visitors: u32,
-    avg_views_per_session: u32, // 3 decimal places
     current_visitors: u32,
+    stats: ReportStats,
+    stats_prev: ReportStats,
 }
 
 pub(crate) struct DashboardAPI;
@@ -84,17 +82,15 @@ impl DashboardAPI {
         }
 
         let conn = app.conn_events().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
         let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &[])
+            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let stats_prev = reports::overall_stats(&conn, &entities, "pageview", &req.range.prev(), &[])
             .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let online = reports::online_users(&conn, &entities).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        Ok(Json(StatsResponse {
-            total_views: stats.total_views,
-            total_sessions: stats.total_sessions,
-            unique_visitors: stats.unique_visitors,
-            avg_views_per_session: stats.avg_views_per_session,
-            current_visitors: online,
-        }))
+        Ok(Json(StatsResponse { stats, stats_prev, current_visitors: online }))
     }
 }

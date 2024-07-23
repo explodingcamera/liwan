@@ -24,7 +24,7 @@ figment={version="0.10", features=["toml", "env"]}
 sha3={version="0.10"}
 argon2={version="0.5"}
 crossbeam="0.8"
-cached="0.52"
+cached="0.53"
 tracing="0.1"
 tracing-subscriber={version="0.3", features=["env-filter"]}
 
@@ -38,11 +38,11 @@ mime_guess={version="2.0"}
 rust-embed="8.4"
 
 # database
-duckdb={version="1.0.0", features=["bundled", "chrono", "r2d2"]}
-rusqlite={version="0.31", features=["bundled", "chrono"]}
+duckdb={version="1.0", features=["bundled", "chrono", "r2d2"]}
+rusqlite={version="0.32", features=["bundled", "chrono"]}
 r2d2={version="0.8"}
-r2d2_sqlite="0.24.0"
-refinery={version="0.8", features=["rusqlite"]}
+r2d2_sqlite="0.25.0"
+refinery={version="0.8"}
 refinery-core="0.8"
 maxminddb={version="0.24", optional=true}
 
