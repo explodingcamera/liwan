@@ -2,8 +2,18 @@ import { Fragment, useRef } from "react";
 import styles from "./tables.module.css";
 
 import { Table, type Column } from "../table";
-import { DeleteDialog, EditEntity, EditPassword, EditProject, EditUser } from "./dialogs";
-import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, ShieldIcon, TrashIcon, UserIcon } from "lucide-react";
+import { DeleteDialog, EditEntity, EditPassword, EditProject, EditProjectEntities, EditUser } from "./dialogs";
+import {
+	AppWindowIcon,
+	EditIcon,
+	EllipsisVerticalIcon,
+	RectangleEllipsisIcon,
+	ShieldIcon,
+	TagIcon,
+	TrashIcon,
+	UserIcon,
+	WholeWordIcon,
+} from "lucide-react";
 
 import {
 	useEntities,
@@ -42,6 +52,17 @@ const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
 	}
 
 	const options: DropdownOptions = {
+		entities: (close) => (
+			<EditProjectEntities
+				project={project}
+				trigger={
+					<button type="button" onClick={close}>
+						<AppWindowIcon size={18} />
+						Assign Entities
+					</button>
+				}
+			/>
+		),
 		edit: (close) => (
 			<EditProject
 				project={project}
@@ -53,6 +74,7 @@ const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
 				}
 			/>
 		),
+
 		delete: (close) => (
 			<DeleteDialog
 				id={project.id}
@@ -75,22 +97,26 @@ export const ProjectsTable = () => {
 	const columns: Column<(typeof projects)[number]>[] = [
 		{
 			id: "displayName",
+			icon: <TagIcon size={18} />,
 			header: "Name",
 			render: (row) => <span>{row.displayName}</span>,
 			nowrap: true,
 		},
 		{
 			id: "id",
+			icon: <WholeWordIcon size={18} />,
 			header: "ID",
 			render: (row) => <i>{row.id}</i>,
 		},
 		{
 			id: "public",
+			icon: <ShieldIcon size={18} />,
 			header: "Visibility",
 			render: (row) => <>{row.public ? "Public" : "Private"}</>,
 		},
 		{
 			id: "entities",
+			icon: <AppWindowIcon size={18} />,
 			header: "Entities",
 			render: (row) => (
 				<>
@@ -148,17 +174,20 @@ export const EntitiesTable = () => {
 	const columns: Column<(typeof entities)[number]>[] = [
 		{
 			id: "displayName",
+			icon: <TagIcon size={18} />,
 			header: "Name",
 			render: (row) => <span>{row.displayName}</span>,
 			nowrap: true,
 		},
 		{
 			id: "id",
+			icon: <WholeWordIcon size={18} />,
 			header: "ID",
 			render: (row) => <i>{row.id}</i>,
 		},
 		{
 			id: "projects",
+			icon: <AppWindowIcon size={18} />,
 			header: "Projects",
 			render: (row) => (
 				<>

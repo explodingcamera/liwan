@@ -8,7 +8,7 @@ import { CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-r
 import { getUsername } from "../api/utils";
 import { LineGraph, toDataPoints } from "./graph";
 import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
-import { api, metricNames, useMe, useQuery, type Metric } from "../api";
+import { api, metricNames, useMe, useQuery, type Metric, type ProjectResponse } from "../api";
 
 const signedIn = getUsername();
 
@@ -91,14 +91,12 @@ export const Projects = () => {
 
 			{projects.map((project) => {
 				return (
-					<Project
+					<ProjectOverview
 						key={project.id}
-						rangeName={dateRange}
-						id={project.id}
-						displayName={project.displayName}
-						isPublic={project.public}
+						project={project}
 						metric={metric}
 						setMetric={setMetric}
+						rangeName={dateRange}
 					/>
 				);
 			})}
@@ -106,26 +104,23 @@ export const Projects = () => {
 	);
 };
 
-const Project = ({
-	id,
-	displayName,
-	rangeName,
+export const ProjectOverview = ({
+	project,
 	metric,
 	setMetric,
-	isPublic,
+	rangeName,
 }: {
-	id: string;
-	displayName: string;
-	rangeName: RangeName;
+	project: ProjectResponse;
 	metric: Metric;
 	setMetric: (value: Metric) => void;
-	isPublic: boolean;
+	rangeName: RangeName;
 }) => {
+	const { displayName, id, public: isPublic } = project;
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
 
 	let refetchInterval = undefined;
 	let staleTime = 1000 * 60 * 10;
-	if (rangeName === "today") {
+	if (rangeName === "today" || rangeName.startsWith("last")) {
 		refetchInterval = 1000 * 60;
 		staleTime = 1000 * 60;
 	}
@@ -170,7 +165,7 @@ const Project = ({
 								&nbsp;
 							</>
 						)}
-						{displayName}&nbsp;
+						<a href={`/p/${id}`}>{displayName}</a>&nbsp;
 					</span>
 					<span className={styles.online}>
 						<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
@@ -180,12 +175,6 @@ const Project = ({
 					</span>
 				</h1>
 				<div>
-					{/* <button type="button" data-active={metric === "views"} onClick={() => setMetric("views")}>
-						<h2>Total Views</h2>
-						<h3>
-							<CountUp preserveValue duration={1} end={stats?.stats.totalViews || 0} />
-						</h3>
-					</button> */}
 					<Stat
 						title="Total Views"
 						value={stats?.stats.totalViews}
@@ -226,7 +215,7 @@ const Project = ({
 	);
 };
 
-const Stat = ({
+export const Stat = ({
 	title,
 	value = 0,
 	prevValue = 0,

@@ -270,6 +270,21 @@ impl App {
         Ok(entity.clone())
     }
 
+    /// Update an entity's projects
+    pub(crate) fn entity_update_projects(&self, entity_id: &str, project_ids: &[String]) -> Result<()> {
+        let mut conn = self.conn_app()?;
+        let tx = conn.transaction()?;
+        tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![entity_id])?;
+        for project_id in project_ids {
+            tx.execute(
+                "insert into project_entities (project_id, entity_id) values (?, ?)",
+                rusqlite::params![project_id, entity_id],
+            )?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
     /// Delete an entity (does not remove associated events)
     pub(crate) fn entity_delete(&self, id: &str) -> Result<()> {
         let mut conn = self.conn_app()?;
@@ -281,18 +296,17 @@ impl App {
     }
 
     /// Link an entity to a project
-    pub(crate) fn project_add_entity(&self, project_id: &str, entity_id: &str) -> Result<()> {
-        let conn = self.conn_app()?;
-        let mut stmt = conn.prepare_cached("insert into project_entities (project_id, entity_id) values (?, ?)")?;
-        stmt.execute(rusqlite::params![project_id, entity_id])?;
-        Ok(())
-    }
-
-    /// Remove an entity from a project (does not delete the entity itself)
-    pub(crate) fn project_remove_entity(&self, project_id: &str, entity_id: &str) -> Result<()> {
-        let conn = self.conn_app()?;
-        let mut stmt = conn.prepare_cached("delete from project_entities where project_id = ? and entity_id = ?")?;
-        stmt.execute(rusqlite::params![project_id, entity_id])?;
+    pub(crate) fn project_update_entities(&self, project_id: &str, entity_ids: &[String]) -> Result<()> {
+        let mut conn = self.conn_app()?;
+        let tx = conn.transaction()?;
+        tx.execute("delete from project_entities where project_id = ?", rusqlite::params![project_id])?;
+        for entity_id in entity_ids {
+            tx.execute(
+                "insert into project_entities (project_id, entity_id) values (?, ?)",
+                rusqlite::params![project_id, entity_id],
+            )?;
+        }
+        tx.commit()?;
         Ok(())
     }
 

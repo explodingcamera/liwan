@@ -38,6 +38,13 @@ struct UsersResponse {
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
 struct UpdateProjectRequest {
+    project: Option<UpdateProjectInfo>,
+    entities: Option<Vec<String>>,
+}
+
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct UpdateProjectInfo {
     display_name: String,
     public: bool,
     secret: Option<String>,
@@ -105,7 +112,8 @@ struct CreateEntityRequest {
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
 struct UpdateEntityRequest {
-    display_name: String,
+    display_name: Option<String>,
+    projects: Option<Vec<String>>,
 }
 
 #[derive(Object)]
@@ -241,7 +249,7 @@ impl AdminAPI {
     #[oai(path = "/project/:project_id", method = "put")]
     async fn project_update_handler(
         &self,
-        Json(project): Json<UpdateProjectRequest>,
+        Json(req): Json<UpdateProjectRequest>,
         Path(project_id): Path<String>,
         Data(app): Data<&App>,
         SessionUser(user): SessionUser,
@@ -250,13 +258,21 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.project_update(&Project {
-            id: project_id,
-            display_name: project.display_name,
-            public: project.public,
-            secret: project.secret,
-        })
-        .http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
+        if let Some(project) = req.project {
+            app.project_update(&Project {
+                id: project_id.clone(),
+                display_name: project.display_name,
+                public: project.public,
+                secret: project.secret,
+            })
+            .http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+
+        if let Some(entities) = req.entities {
+            app.project_update_entities(&project_id, entities.as_slice())
+                .http_err("Failed to update project entities", StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+
         EmptyResponse::ok()
     }
 
@@ -311,44 +327,6 @@ impl AdminAPI {
             public: project.public,
         }))
         .header("Cache-Control", "private"))
-    }
-
-    #[oai(path = "/project/:project_id/entity/:entity_id", method = "put")]
-    async fn project_entity_update_handler(
-        &self,
-        Path(project_id): Path<String>,
-        Path(entity_id): Path<String>,
-        Data(app): Data<&App>,
-        SessionUser(user): SessionUser,
-    ) -> ApiResult<EmptyResponse> {
-        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        if user.role != UserRole::Admin {
-            http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-        }
-
-        app.project_add_entity(&project.id, &entity_id)
-            .http_err("Failed to add entity", StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        EmptyResponse::ok()
-    }
-
-    #[oai(path = "/project/:project_id/entity/:entity_id", method = "delete")]
-    async fn project_entity_delete_handler(
-        &self,
-        Path(project_id): Path<String>,
-        Path(entity_id): Path<String>,
-        Data(app): Data<&App>,
-        SessionUser(user): SessionUser,
-    ) -> ApiResult<EmptyResponse> {
-        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        if user.role != UserRole::Admin {
-            http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-        }
-
-        app.project_remove_entity(&project.id, &entity_id)
-            .http_err("Failed to remove entity", StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        EmptyResponse::ok()
     }
 
     #[oai(path = "/project/:project_id", method = "delete")]
@@ -432,8 +410,15 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.entity_update(&Entity { id: entity_id.clone(), display_name: entity.display_name.clone() })
-            .http_err("Failed to update entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+        if let Some(display_name) = entity.display_name {
+            app.entity_update(&Entity { id: entity_id.clone(), display_name })
+                .http_err("Failed to update entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+
+        if let Some(projects) = entity.projects {
+            app.entity_update_projects(&entity_id, projects.as_slice())
+                .http_err("Failed to update entity projects", StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
 
         EmptyResponse::ok()
     }

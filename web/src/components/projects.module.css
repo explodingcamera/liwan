@@ -83,6 +83,11 @@
     align-items: center;
     display: flex;
 
+    a {
+      all: unset;
+      cursor: pointer;
+    }
+
     > span.online {
       > svg {
         margin-right: 0.1rem;

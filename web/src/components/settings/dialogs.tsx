@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Dialog } from "../dialog";
 import { Tags, type Tag } from "../tags";
@@ -10,6 +10,7 @@ import {
 	invalidateProjects,
 	invalidateUsers,
 	queryClient,
+	useEntities,
 	useMe,
 	useMutation,
 	useProjects,
@@ -17,6 +18,7 @@ import {
 	type ProjectResponse,
 	type UserResponse,
 } from "../../api";
+import { InfoIcon } from "lucide-react";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 
@@ -94,9 +96,87 @@ export const DeleteDialog = ({
 	);
 };
 
+export const EditProjectEntities = ({ project, trigger }: { project: ProjectResponse; trigger: JSX.Element }) => {
+	const closeRef = useRef<HTMLButtonElement>(null);
+	const { role } = useMe();
+
+	const { entities } = useEntities();
+	const entityTags = useMemo(() => entities.map((p) => ({ value: p.id, label: p.displayName })), [entities]);
+	const [selectedEntities, setSelectedEntities] = useState<Tag[]>([]);
+
+	useEffect(() => {
+		setSelectedEntities(
+			project.entities.map((entity) => ({
+				value: entity.id,
+				label: entity.displayName,
+			})),
+		);
+	}, [project.entities]);
+
+	const { mutate, error, reset } = useMutation({
+		mutationFn: api["/api/dashboard/project/{project_id}"].put,
+		onSuccess: () => {
+			closeRef?.current?.click();
+			invalidateProjects();
+		},
+		onError: console.error,
+	});
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const submitEntities = selectedEntities.map((tag) => tag.value as string);
+		const updateEntities =
+			project.entities
+				.map((p) => p.id)
+				.sort()
+				.join() === submitEntities.sort().join();
+
+		mutate({
+			params: { project_id: project.id },
+			json: { entities: updateEntities ? undefined : submitEntities },
+		});
+	};
+
+	return (
+		<Dialog
+			onOpenChange={() => reset()}
+			title={`Edit Entities: ${project.displayName}`}
+			description="Edit the entities associated with this project."
+			// hideDescription
+			trigger={role === "admin" && trigger}
+		>
+			<form onSubmit={handleSubmit}>
+				<Tags
+					labelText="Associated Entities"
+					selected={selectedEntities}
+					suggestions={entityTags}
+					onAdd={(tag) => setSelectedEntities((rest) => [...rest, tag])}
+					onDelete={(i) => setSelectedEntities(selectedEntities.filter((_, index) => index !== i))}
+					noOptionsText="No matching entities"
+				/>
+				<div className="grid">
+					<Dialog.Close asChild>
+						<button className="secondary outline" type="button" ref={closeRef}>
+							Cancel
+						</button>
+					</Dialog.Close>
+					<button type="submit">Save Changes</button>
+				</div>
+				{error && (
+					<article role="alert" className={styles.error}>
+						{"An error occurred while editing the project's entities:"}
+						<br />
+						{error?.message ?? "Unknown error"}
+					</article>
+				)}
+			</form>
+		</Dialog>
+	);
+};
+
 export const EditProject = ({ project, trigger }: { project: ProjectResponse; trigger: JSX.Element }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
-	const [proj, setProj] = useState(project);
 	const { role } = useMe();
 
 	const { mutate, error, reset } = useMutation({
@@ -116,7 +196,16 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 			displayName: string;
 			isPublic: string;
 		};
-		mutate({ params: { project_id: project.id }, json: { displayName, public: isPublic === "on" } });
+
+		mutate({
+			params: { project_id: project.id },
+			json: {
+				project: {
+					displayName,
+					public: isPublic === "on",
+				},
+			},
+		});
 	};
 
 	return (
@@ -135,8 +224,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 				<label>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
 					<input type="checkbox" role="switch" name="isPublic" defaultChecked={project.public} />
-					Make Public
-					<br />
+					Make Public <br />
 					<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
 				</label>
 				<br />
@@ -254,14 +342,35 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 		onError: console.error,
 	});
 
+	const { projects } = useProjects();
+	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
+	const [selectedProjects, setSelectedProjects] = useState<Tag[]>([]);
+
+	useEffect(() => {
+		setSelectedProjects(
+			entity.projects.map((project) => ({
+				value: project.id,
+				label: project.displayName,
+			})),
+		);
+	}, [entity.projects]);
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
 		const { displayName } = Object.fromEntries(new FormData(form)) as { displayName: string };
+
+		const submitProjects = selectedProjects.map((tag) => tag.value as string);
+		const updateProjects =
+			entity.projects
+				.map((p) => p.id)
+				.sort()
+				.join() === submitProjects.sort().join();
+
 		mutate({
 			params: { entity_id: entity.id },
-			json: { displayName },
+			json: { displayName, projects: updateProjects ? undefined : submitProjects },
 		});
 	};
 
@@ -278,6 +387,14 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 					Entity Name <small>(Used in the dashboard)</small>
 					<input required name="displayName" type="text" defaultValue={entity.displayName} />
 				</label>
+				<Tags
+					labelText="Associated Projects"
+					selected={selectedProjects}
+					suggestions={projectTags}
+					onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
+					onDelete={(i) => setSelectedProjects(selectedProjects.filter((_, index) => index !== i))}
+					noOptionsText="No matching projects"
+				/>
 				<div className="grid">
 					<Dialog.Close asChild>
 						<button className="secondary outline" type="button" ref={closeRef}>
