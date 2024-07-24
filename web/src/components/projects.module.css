@@ -63,6 +63,17 @@
   }
 }
 
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
 .stats {
   align-items: center;
 
@@ -75,6 +86,11 @@
     > span.online {
       > svg {
         margin-right: 0.1rem;
+      }
+
+      .pulse {
+        position: absolute;
+        animation: pulse 2s infinite;
       }
 
       margin-left: 0.5rem;
@@ -93,37 +109,6 @@
     @media (max-width: 768px) {
       flex-direction: column;
     }
-
-    h3 {
-      margin: 0;
-      font-size: 1.2rem;
-      font-weight: 500;
-      margin-right: 1rem;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: 0.8rem;
-      font-weight: 400;
-    }
-
-    button {
-      all: unset;
-      cursor: pointer;
-      margin: 0;
-      font-size: 0.8rem;
-
-      &[data-active="true"] {
-        h2 {
-          text-decoration: underline;
-          font-weight: 500;
-        }
-        h2,
-        h3 {
-          color: var(--pico-h1-color);
-        }
-      }
-    }
   }
 }
 
@@ -133,4 +118,44 @@
   margin-left: -1.9rem;
   margin-right: -2rem;
   margin-bottom: 3rem;
+}
+
+button.stat {
+  all: unset;
+  cursor: pointer;
+  margin: 0;
+  font-size: 0.8rem;
+
+  &[data-active="true"] {
+    h2 {
+      text-decoration: underline;
+      font-weight: 500;
+    }
+    h2,
+    h3 {
+      color: var(--pico-h1-color);
+    }
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-right: 1rem;
+
+    display: inline-flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 400;
+  }
+
+  span.change {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
 }

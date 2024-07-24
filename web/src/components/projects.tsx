@@ -3,7 +3,7 @@ import styles from "./projects.module.css";
 
 import CountUp from "react-countup";
 import { useLocalStorage } from "@uidotdev/usehooks";
-import { CircleIcon, LockIcon } from "lucide-react";
+import { CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 
 import { getUsername } from "../api/utils";
 import { LineGraph, toDataPoints } from "./graph";
@@ -174,38 +174,48 @@ const Project = ({
 					</span>
 					<span className={styles.online}>
 						<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
-						<CountUp preserveValue duration={1} end={stats?.currentVisitors || 0} /> Current Visitors
+						<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
+						<CountUp preserveValue duration={1} end={stats?.currentVisitors || 0} />{" "}
+						{stats?.currentVisitors === 1 ? "Current Visitor" : "Current Visitors"}
 					</span>
 				</h1>
 				<div>
-					<button type="button" data-active={metric === "views"} onClick={() => setMetric("views")}>
+					{/* <button type="button" data-active={metric === "views"} onClick={() => setMetric("views")}>
 						<h2>Total Views</h2>
 						<h3>
-							<CountUp preserveValue duration={1} end={stats?.totalViews || 0} />
+							<CountUp preserveValue duration={1} end={stats?.stats.totalViews || 0} />
 						</h3>
-					</button>
-					<button type="button" data-active={metric === "sessions"} onClick={() => setMetric("sessions")}>
-						<h2>Total Sessions</h2>
-						<h3>
-							<CountUp preserveValue duration={1} end={stats?.totalSessions || 0} />
-						</h3>
-					</button>
-					<button type="button" data-active={metric === "unique_visitors"} onClick={() => setMetric("unique_visitors")}>
-						<h2>Unique Visitors</h2>
-						<h3>
-							<CountUp preserveValue duration={1} end={stats?.uniqueVisitors || 0} />
-						</h3>
-					</button>
-					<button
-						type="button"
-						data-active={metric === "avg_views_per_session"}
-						onClick={() => setMetric("avg_views_per_session")}
-					>
-						<h2>Avg Views Per Session</h2>
-						<h3>
-							<CountUp preserveValue decimals={1} duration={1} end={(stats?.avgViewsPerSession || 0) / 1000} />
-						</h3>
-					</button>
+					</button> */}
+					<Stat
+						title="Total Views"
+						value={stats?.stats.totalViews}
+						prevValue={stats?.statsPrev.totalViews}
+						onSelect={() => setMetric("views")}
+						selected={metric === "views"}
+					/>
+
+					<Stat
+						title="Total Sessions"
+						value={stats?.stats.totalSessions}
+						prevValue={stats?.statsPrev.totalSessions}
+						onSelect={() => setMetric("sessions")}
+						selected={metric === "sessions"}
+					/>
+					<Stat
+						title="Unique Visitors"
+						value={stats?.stats.uniqueVisitors}
+						prevValue={stats?.statsPrev.uniqueVisitors}
+						onSelect={() => setMetric("unique_visitors")}
+						selected={metric === "unique_visitors"}
+					/>
+					<Stat
+						title="Avg Views Per Session"
+						value={(stats?.stats.avgViewsPerSession ?? 0) / 1000}
+						prevValue={(stats?.statsPrev.avgViewsPerSession ?? 0) / 1000}
+						decimals={1}
+						onSelect={() => setMetric("avg_views_per_session")}
+						selected={metric === "avg_views_per_session"}
+					/>
 				</div>
 			</div>
 
@@ -213,5 +223,44 @@ const Project = ({
 				<LineGraph title={metricNames[metric]} data={chartData || []} range={graphRange} />
 			</div>
 		</div>
+	);
+};
+
+const Stat = ({
+	title,
+	value = 0,
+	prevValue = 0,
+	decimals = 0,
+	onSelect,
+	selected,
+}: {
+	title: string;
+	value?: number;
+	prevValue?: number;
+	decimals?: number;
+	onSelect: () => void;
+	selected: boolean;
+}) => {
+	const change = value - prevValue;
+	const changePercent = prevValue ? (change / prevValue) * 100 : value ? -1 : 0;
+	const color = change > 0 ? "#22c55e" : change < 0 ? "red" : "gray";
+	const icon = change > 0 ? <TrendingUpIcon size={14} /> : change < 0 ? <TrendingDownIcon size={14} /> : "—";
+
+	return (
+		<button type="button" onClick={onSelect} data-active={selected} className={styles.stat}>
+			<h2>{title}</h2>
+			<h3>
+				<CountUp preserveValue decimals={decimals} duration={1} end={value} />
+				<span style={{ color }} className={styles.change}>
+					{icon}{" "}
+					{changePercent === -1 ? (
+						"∞"
+					) : (
+						<CountUp preserveValue decimals={1} duration={1} end={Math.abs(changePercent)} />
+					)}
+					%
+				</span>
+			</h3>
+		</button>
 	);
 };

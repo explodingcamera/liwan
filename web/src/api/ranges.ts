@@ -28,7 +28,7 @@ export const rangeNames = {
 export type RangeName = keyof typeof rangeNames;
 
 const lastXDays = (days: number) => {
-	const end = addDays(endOfDay(new Date()), 1).getTime();
+	const end = endOfDay(new Date()).getTime();
 	const start = subDays(end, days).getTime();
 	return { start, end };
 };

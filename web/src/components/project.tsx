@@ -17,6 +17,6 @@ export const Project = () => {
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}"].get({ params: { project_id: projectId as string } }).json(),
 	});
-
+ 
 	return <div className={styles.project}>{data?.displayName}</div>;
 };

@@ -11,7 +11,6 @@ use eyre::{bail, Result};
 use models::{event_params, Event, Project, User, UserRole};
 use r2d2_sqlite::SqliteConnectionManager;
 use refinery::Runner;
-use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::sync::Arc;
 
