@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import styles from "./graph.module.css";
 
-import { differenceInSeconds } from "date-fns";
+import { addMonths, differenceInSeconds, nextDay } from "date-fns";
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
 
 import type { Metric } from "../api";
@@ -14,7 +14,7 @@ export type DataPoint = {
 export const toDataPoints = (data: number[], range: { start: number; end: number }, metric: Metric): DataPoint[] => {
 	const step = differenceInSeconds(range.end, range.start) / data.length;
 	return data.map((value, i) => ({
-		x: new Date(range.start + i * step * 1000),
+		x: new Date(range.start + i * step * 1000 + 1000),
 		y: metric === "avg_views_per_session" ? value / 1000 : value,
 	}));
 };
@@ -26,7 +26,7 @@ const formatDate = (date: Date, range: GraphRange = "day") => {
 		case "year":
 			return Intl.DateTimeFormat("en-US", { year: "numeric" }).format(date);
 		case "month":
-			return Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
+			return Intl.DateTimeFormat("en-US", { month: "short" }).format(addMonths(date, 1));
 		case "day":
 			return Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
 		case "hour":
@@ -63,16 +63,7 @@ export const LineGraph = ({
 		<ResponsiveLine
 			data={[{ data, id: "data", color: "hsl(0, 70%, 50%)" }]}
 			margin={{ top: 10, right: 40, bottom: 30, left: 40 }}
-			xScale={
-				data.length > 14
-					? {
-							type: "time",
-							// useUTC: false,
-						}
-					: {
-							type: "point",
-						}
-			}
+			xScale={data.length > 14 ? { type: "time" } : { type: "point" }}
 			yScale={{
 				type: "linear",
 				nice: true,
@@ -106,15 +97,8 @@ export const LineGraph = ({
 			defs={[
 				{
 					colors: [
-						{
-							color: "inherit",
-							offset: 0,
-						},
-						{
-							color: "inherit",
-							offset: 100,
-							opacity: 0,
-						},
+						{ color: "inherit", offset: 0 },
+						{ color: "inherit", offset: 100, opacity: 0 },
 					],
 					id: "gradientA",
 					type: "linearGradient",

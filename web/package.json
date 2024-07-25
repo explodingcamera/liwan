@@ -31,5 +31,8 @@
 		"react-dom": "^18.3.1",
 		"react-tag-autocomplete": "^7.3.0",
 		"typescript": "^5.5.4"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.8.3"
 	}
 }

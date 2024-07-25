@@ -1,7 +1,7 @@
 use super::webext::*;
 use crate::app::{models::Event, App};
 use crate::utils::hash::{hash_ip, visitor_id};
-use crate::utils::referer::process_referer;
+use crate::utils::referrer::process_referer;
 use crate::utils::ua;
 
 use cached::{Cached, TimedCache};

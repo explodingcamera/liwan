@@ -6,7 +6,7 @@ use std::str::FromStr;
 lazy_static! {
     pub(crate) static ref REFERERS: HashMap<&'static str, &'static str> = {
         let mut map = HashMap::new();
-        for line in include_str!("../../data/referers.txt").lines() {
+        for line in include_str!("../../data/referrers.txt").lines() {
             let mut parts = line.split('=');
             let name = parts.next().unwrap();
             let fqdn = parts.next().unwrap();
@@ -14,7 +14,25 @@ lazy_static! {
         }
         map
     };
+    pub(crate) static ref REFERRER_ICONS: HashMap<&'static str, &'static str> = {
+        let mut map = HashMap::new();
+        for line in include_str!("../../data/referrer_icons.txt").lines() {
+            let mut parts = line.split('=');
+            let fqdn = parts.next().unwrap();
+            let icon = parts.next().unwrap();
+            map.insert(fqdn, icon);
+        }
+        map
+    };
     pub(crate) static ref SPAMMERS: HashSet<&'static str> = include_str!("../../data/spammers.txt").lines().collect();
+}
+
+pub(crate) fn get_referer_name(fqdn: &str) -> Option<String> {
+    REFERERS.get(fqdn).map(|s| s.to_string())
+}
+
+pub(crate) fn get_referer_icon(fqdn: &str) -> Option<String> {
+    REFERRER_ICONS.get(fqdn).map(|s| s.to_string())
 }
 
 pub(crate) fn is_spammer(fqdn: &str) -> bool {

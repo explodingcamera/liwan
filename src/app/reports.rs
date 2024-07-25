@@ -60,16 +60,16 @@ pub(crate) enum FilterType {
     IsNull,
 }
 
-pub(crate) type ReportGraph = Vec<u32>;
-pub(crate) type ReportTable = BTreeMap<String, u32>;
+pub(crate) type ReportGraph = Vec<u64>;
+pub(crate) type ReportTable = BTreeMap<String, u64>;
 
 #[derive(Object, Clone, Debug, Default)]
 #[oai(rename_all = "camelCase")]
 pub(crate) struct ReportStats {
-    pub(crate) total_views: u32,
-    pub(crate) total_sessions: u32,
-    pub(crate) unique_visitors: u32,
-    pub(crate) avg_views_per_session: u32, // 3 decimal places
+    pub(crate) total_views: u64,
+    pub(crate) total_sessions: u64,
+    pub(crate) unique_visitors: u64,
+    pub(crate) avg_views_per_session: u64, // 3 decimal places
 }
 
 #[derive(Object, Debug)]
@@ -93,7 +93,7 @@ fn metric_sql(metric: &Metric) -> Result<String> {
     }.to_owned())
 }
 
-pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u32> {
+pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     if entities.is_empty() {
         return Ok(0);
     }
@@ -115,14 +115,14 @@ pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u32
 
     let mut stmt = conn.prepare_cached(&query)?;
     let rows = stmt.query_map([], |row| row.get(0))?;
-    let online_users = rows.collect::<Result<Vec<u32>, duckdb::Error>>()?;
+    let online_users = rows.collect::<Result<Vec<u64>, duckdb::Error>>()?;
     Ok(online_users[0])
 }
 
 #[cached(
     ty = "SizedCache<String, ReportGraph>",
     create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_REPORTS)}",
-    convert = r#"{format!("{:?}:{}:{:?}:{:?}:{:?}", entities, event, range, filters, metric)}"#,
+    convert = r#"{format!("{:?}:{}:{:?}:{:?}:{:?}:{}", entities, event, range, filters, metric, data_points)}"#,
     result = true
 )]
 pub(crate) fn overall_report(
@@ -202,13 +202,13 @@ pub(crate) fn overall_report(
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
-            let report_graph = rows.collect::<Result<Vec<u32>, duckdb::Error>>()?;
+            let report_graph = rows.collect::<Result<Vec<u64>, duckdb::Error>>()?;
             Ok(report_graph)
         }
         Metric::AvgViewsPerSession => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
             let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
-            Ok(report_graph.iter().map(|v| (v * 1000.0).round() as u32).collect())
+            Ok(report_graph.iter().map(|v| (v * 1000.0).round() as u64).collect())
         }
     }
 }
@@ -279,7 +279,7 @@ pub(crate) fn overall_stats(
             total_views: row.get(0)?,
             total_sessions: row.get(1)?,
             unique_visitors: row.get(2)?,
-            avg_views_per_session: (row.get::<_, Option<f64>>(3)?.unwrap_or(0.0) * 1000.0).round() as u32,
+            avg_views_per_session: (row.get::<_, Option<f64>>(3)?.unwrap_or(0.0) * 1000.0).round() as u64,
         })
     })?;
 
@@ -296,10 +296,10 @@ pub(crate) fn dimension_report(
     conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
-    range: DateRange,
-    dimension: Dimension,
+    range: &DateRange,
+    dimension: &Dimension,
     filters: &[DimensionFilter],
-    metric: Metric,
+    metric: &Metric,
 ) -> Result<ReportTable> {
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
     if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
@@ -362,19 +362,19 @@ pub(crate) fn dimension_report(
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
-                let total_metric: u32 = row.get(1)?;
+                let total_metric: u64 = row.get(1)?;
                 Ok((dimension_value, total_metric))
             })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, u32>, duckdb::Error>>()?;
+            let report_table = rows.collect::<Result<BTreeMap<String, u64>, duckdb::Error>>()?;
             Ok(report_table)
         }
         Metric::AvgViewsPerSession => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: f64 = row.get(1)?;
-                Ok((dimension_value, (total_metric * 1000.0).round() as u32))
+                Ok((dimension_value, (total_metric * 1000.0).round() as u64))
             })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, u32>, duckdb::Error>>()?;
+            let report_table = rows.collect::<Result<BTreeMap<String, u64>, duckdb::Error>>()?;
             Ok(report_table)
         }
     }

@@ -2,7 +2,6 @@ import type { DateRange } from ".";
 import type { GraphRange } from "../components/graph";
 
 import {
-	addDays,
 	addHours,
 	differenceInDays,
 	differenceInHours,
@@ -42,12 +41,12 @@ export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: num
 		const end = endOfHour(now).getTime();
 		const start = startOfDay(now).getTime();
 		const hours = differenceInHours(end, start);
-		return { range: { start, end }, dataPoints: hours, graphRange: "hour" };
+		return { range: { start, end }, dataPoints: hours + 1, graphRange: "hour" };
 	},
 	yesterday: () => {
 		const end = startOfDay(new Date());
 		const start = subDays(end, 1);
-		return { range: { start: start.getTime(), end: addHours(end, 1).getTime() }, dataPoints: 13, graphRange: "hour" };
+		return { range: { start: start.getTime(), end: addHours(end, 1).getTime() }, dataPoints: 25, graphRange: "hour" };
 	},
 	last7Days: () => ({ range: lastXDays(7), dataPoints: 7, graphRange: "day" }),
 	last30Days: () => ({ range: lastXDays(30), dataPoints: 30, graphRange: "day" }),

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import styles from "./project.module.css";
 
-import { api, useQuery, type EntityResponse, type Metric } from "../api";
+import { api, useQuery, type Metric } from "../api";
 import { ProjectOverview } from "./projects";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import type { RangeName } from "../api/ranges";
@@ -28,6 +28,7 @@ export const Project = () => {
 
 	return (
 		<div className={styles.project}>
+			<h1>{data.displayName}</h1>
 			<Entities entities={data.entities} />
 			<ProjectOverview project={data} metric={metric} setMetric={setMetric} rangeName={dateRange} />
 		</div>
@@ -39,7 +40,7 @@ const Entities = ({ entities }: { entities: { id: string; displayName: string }[
 		<div className={styles.entities}>
 			{entities.map((entity) => (
 				<div key={entity.id} className={styles.entity}>
-					<h2>{entity.displayName}</h2>
+					<h3>{entity.displayName}</h3>
 				</div>
 			))}
 		</div>

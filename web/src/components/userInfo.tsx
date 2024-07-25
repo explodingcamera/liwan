@@ -7,14 +7,14 @@ export const LoginButton = () => {
 	const username = getUsername();
 	if (!username)
 		return (
-			<li>
+			<>
 				<a href="/login">
 					<button type="button" className="outline secondary">
 						Login
 					</button>
 				</a>
 				&nbsp;&nbsp;
-			</li>
+			</>
 		);
 
 	return (

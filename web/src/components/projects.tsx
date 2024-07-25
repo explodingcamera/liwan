@@ -79,7 +79,7 @@ export const Projects = () => {
 					<ul>
 						{Object.entries(rangeNames).map(([key, value]) => (
 							<li key={key}>
-								{/* biome-ignore lint/a11y/useValidAnchor: <explanation> */}
+								{/* biome-ignore lint/a11y/useValidAnchor: this is fine */}
 								<a className={key === dateRange ? styles.selected : ""} onClick={onSelect(key as RangeName)}>
 									{value}
 								</a>
@@ -122,7 +122,7 @@ export const ProjectOverview = ({
 	let staleTime = 1000 * 60 * 10;
 	if (rangeName === "today" || rangeName.startsWith("last")) {
 		refetchInterval = 1000 * 60;
-		staleTime = 1000 * 60;
+		staleTime = 0;
 	}
 
 	const {
@@ -215,6 +215,11 @@ export const ProjectOverview = ({
 	);
 };
 
+const formatPercent = (value: number) => {
+	if (value === -1) return "∞";
+	return value.toFixed(1).replace(/\.0$/, "") || "0";
+};
+
 export const Stat = ({
 	title,
 	value = 0,
@@ -241,13 +246,7 @@ export const Stat = ({
 			<h3>
 				<CountUp preserveValue decimals={decimals} duration={1} end={value} />
 				<span style={{ color }} className={styles.change}>
-					{icon}{" "}
-					{changePercent === -1 ? (
-						"∞"
-					) : (
-						<CountUp preserveValue decimals={1} duration={1} end={Math.abs(changePercent)} />
-					)}
-					%
+					{icon} {formatPercent(changePercent)}%
 				</span>
 			</h3>
 		</button>

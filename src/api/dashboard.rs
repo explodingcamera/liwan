@@ -1,5 +1,5 @@
 use super::{webext::*, SessionUser};
-use crate::app::reports::{self, DateRange, Metric, ReportStats};
+use crate::app::reports::{self, DateRange, Dimension, Metric, ReportStats};
 use crate::app::App;
 use crate::utils::validate::{self, can_access_project};
 
@@ -11,7 +11,7 @@ use poem_openapi::{Object, OpenApi};
 
 #[derive(Object)]
 struct GraphResponse {
-    data: Vec<u32>,
+    data: Vec<u64>,
 }
 
 #[derive(Object)]
@@ -30,9 +30,32 @@ struct GraphRequest {
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
 struct StatsResponse {
-    current_visitors: u32,
+    current_visitors: u64,
     stats: ReportStats,
     stats_prev: ReportStats,
+}
+
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct DimensionRequest {
+    range: DateRange,
+    metric: Metric,
+    dimension: Dimension,
+}
+
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct DimensionResponse {
+    data: Vec<DimensionTableRow>,
+}
+
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct DimensionTableRow {
+    dimension_value: String,
+    value: u64,
+    dispay_name: Option<String>,
+    icon: Option<String>,
 }
 
 pub(crate) struct DashboardAPI;
@@ -92,5 +115,43 @@ impl DashboardAPI {
         let online = reports::online_users(&conn, &entities).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(StatsResponse { stats, stats_prev, current_visitors: online }))
+    }
+
+    #[oai(path = "/project/:project_id/dimension", method = "post")]
+    async fn project_detailed_handler(
+        &self,
+        Json(req): Json<DimensionRequest>,
+        Path(project_id): Path<String>,
+        Data(app): Data<&App>,
+        user: Option<SessionUser>,
+    ) -> ApiResult<Json<DimensionResponse>> {
+        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let entities = app.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if !can_access_project(&project, &user.as_ref()) {
+            http_bail!(StatusCode::NOT_FOUND, "Project not found")
+        }
+
+        let conn = app.conn_events().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let stats =
+            reports::dimension_report(&conn, &entities, "pageview", &req.range, &req.dimension, &[], &req.metric)
+                .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let mut data = Vec::new();
+        for (key, value) in stats {
+            match req.dimension {
+                Dimension::Referrer => {
+                    let icon = crate::utils::referrer::get_referer_icon(&key);
+                    let dispay_name = crate::utils::referrer::get_referer_name(&key);
+                    data.push(DimensionTableRow { dimension_value: key, value, dispay_name, icon });
+                }
+                _ => {
+                    data.push(DimensionTableRow { dimension_value: key, value, dispay_name: None, icon: None });
+                }
+            }
+        }
+
+        Ok(Json(DimensionResponse { data }))
     }
 }
