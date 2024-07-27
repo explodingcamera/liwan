@@ -2,7 +2,7 @@
 name="liwan"
 version="0.1.0"
 edition="2021"
-rust-version="1.79"
+rust-version="1.80"
 repository="https://github.com/explodingcamera/liwan"
 
 [dependencies]
@@ -18,7 +18,6 @@ eyre={version="0.6"}
 rand={version="0.8"}
 chrono={version="0.4", features=["serde"]}
 time={version="0.3"} # need both chrono and time for compatibility with dependencies
-lazy_static={version="1.5"}
 itertools={version="0.13"}
 colored={version="2.1"}
 figment={version="0.10", features=["toml", "env"]}

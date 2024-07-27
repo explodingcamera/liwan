@@ -1,14 +1,16 @@
-use lazy_static::lazy_static;
+use std::cell::LazyCell;
 use uaparser::{Client, Parser, UserAgentParser};
 
-lazy_static! {
-    static ref PARSER: UserAgentParser = UserAgentParser::builder()
-        .build_from_bytes(include_bytes!("../../data/ua_regexes.yaml"))
-        .expect("Parser creation failed");
+thread_local! {
+    static PARSER: LazyCell<UserAgentParser> = LazyCell::new(|| {
+        UserAgentParser::builder()
+            .build_from_bytes(include_bytes!("../../data/ua_regexes.yaml"))
+            .expect("Parser creation failed")
+    });
 }
 
 pub(crate) fn parse(header: &str) -> Client {
-    PARSER.parse(header)
+    PARSER.with(|p| p.parse(header))
 }
 
 pub(crate) fn is_bot(client: &Client) -> bool {

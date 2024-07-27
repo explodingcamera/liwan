@@ -308,7 +308,7 @@ pub(crate) fn dimension_report(
 
     let entities_list = entities.iter().map(|entity| format!("'{}'", entity.as_ref())).join(", ");
     let filters_clause = filter_sql(filters)?;
-    let metric_column = metric_sql(&metric)?;
+    let metric_column = metric_sql(metric)?;
     let (dimension_column, group_by_columns) = match dimension {
         Dimension::Path => ("concat(fqdn, path)", "fqdn, path"),
         Dimension::Fqdn => ("fqdn", "fqdn"),

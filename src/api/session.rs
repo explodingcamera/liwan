@@ -1,30 +1,29 @@
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use crate::app::models::User;
-use lazy_static::lazy_static;
 use poem::web::cookie::{Cookie, SameSite};
 use poem::FromRequest;
 
 pub(crate) const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 
-lazy_static! {
-    pub(crate) static ref PUBLIC_COOKIE: Cookie = {
-        let mut public_cookie = Cookie::named("liwan-username");
-        public_cookie.set_max_age(MAX_SESSION_AGE);
-        public_cookie.set_http_only(false);
-        public_cookie.set_path("/");
-        public_cookie.set_same_site(SameSite::Strict);
-        public_cookie
-    };
-    pub(crate) static ref SESSION_COOKIE: Cookie = {
-        let mut session_cookie = Cookie::named("liwan-session");
-        session_cookie.set_max_age(MAX_SESSION_AGE);
-        session_cookie.set_http_only(true);
-        session_cookie.set_path("/api/dashboard");
-        session_cookie.set_same_site(SameSite::Strict);
-        session_cookie
-    };
-}
+pub(crate) static PUBLIC_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
+    let mut public_cookie = Cookie::named("liwan-username");
+    public_cookie.set_max_age(MAX_SESSION_AGE);
+    public_cookie.set_http_only(false);
+    public_cookie.set_path("/");
+    public_cookie.set_same_site(SameSite::Strict);
+    public_cookie
+});
+
+pub(crate) static SESSION_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
+    let mut session_cookie = Cookie::named("liwan-session");
+    session_cookie.set_max_age(MAX_SESSION_AGE);
+    session_cookie.set_http_only(true);
+    session_cookie.set_path("/api/dashboard");
+    session_cookie.set_same_site(SameSite::Strict);
+    session_cookie
+});
 
 pub(crate) struct SessionId(pub(crate) String);
 pub(crate) struct SessionUser(pub(crate) User);

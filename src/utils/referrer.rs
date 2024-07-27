@@ -1,42 +1,43 @@
-use lazy_static::lazy_static;
-
+use std::cell::LazyCell;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-lazy_static! {
-    pub(crate) static ref REFERERS: HashMap<&'static str, &'static str> = {
+thread_local! {
+    pub(crate) static REFERERS: LazyCell<HashMap<String, String>> = LazyCell::new(|| {
         let mut map = HashMap::new();
         for line in include_str!("../../data/referrers.txt").lines() {
             let mut parts = line.split('=');
             let name = parts.next().unwrap();
             let fqdn = parts.next().unwrap();
-            map.insert(fqdn, name);
+            map.insert(fqdn.to_string(), name.to_string());
         }
         map
-    };
-    pub(crate) static ref REFERRER_ICONS: HashMap<&'static str, &'static str> = {
+    });
+
+    pub(crate) static REFERRER_ICONS: LazyCell<HashMap<String, String>> = LazyCell::new(|| {
         let mut map = HashMap::new();
         for line in include_str!("../../data/referrer_icons.txt").lines() {
             let mut parts = line.split('=');
             let fqdn = parts.next().unwrap();
             let icon = parts.next().unwrap();
-            map.insert(fqdn, icon);
+            map.insert(fqdn.to_string(), icon.to_string());
         }
         map
-    };
-    pub(crate) static ref SPAMMERS: HashSet<&'static str> = include_str!("../../data/spammers.txt").lines().collect();
+    });
+    pub(crate) static SPAMMERS: LazyCell<HashSet<String>> =
+        LazyCell::new(|| include_str!("../../data/spammers.txt").lines().map(|s| s.to_string()).collect());
 }
 
 pub(crate) fn get_referer_name(fqdn: &str) -> Option<String> {
-    REFERERS.get(fqdn).map(|s| s.to_string())
+    REFERERS.with(|r| r.get(fqdn).map(|s| s.to_string()))
 }
 
 pub(crate) fn get_referer_icon(fqdn: &str) -> Option<String> {
-    REFERRER_ICONS.get(fqdn).map(|s| s.to_string())
+    REFERRER_ICONS.with(|r| r.get(fqdn).map(|s| s.to_string()))
 }
 
 pub(crate) fn is_spammer(fqdn: &str) -> bool {
-    SPAMMERS.contains(fqdn)
+    SPAMMERS.with(|s| s.contains(fqdn))
 }
 
 pub(crate) fn process_referer(referer: Option<&str>) -> Result<Option<String>, ()> {
