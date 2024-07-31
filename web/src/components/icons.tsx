@@ -1,107 +1,11 @@
-import {
-	SiTencentqq,
-	SiFoursquare,
-	SiVk,
-	SiSinaweibo,
-	SiTelegram,
-	SiPixelfed,
-	SiWorkplace,
-	SiX,
-	SiThreads,
-	SiMaildotru,
-	SiYcombinator,
-	SiTiktok,
-	SiFacebook,
-	SiLastdotfm,
-	SiLinkedin,
-	SiDribbble,
-	SiReddit,
-	SiFlickr,
-	SiGithub,
-	SiPinterest,
-	SiSkyrock,
-	SiStackoverflow,
-	SiBluesky,
-	SiLivejournal,
-	SiV2ex,
-	SiDouban,
-	SiRenren,
-	SiTumblr,
-	SiSnapchat,
-	SiBadoo,
-	SiYoutube,
-	SiInstagram,
-	SiViadeo,
-	SiOdnoklassniki,
-	SiVimeo,
-	SiMastodon,
-	SiSourceforge,
-	SiTwitch,
-	SiXing,
-	SiGoogle,
-	SiDuckduckgo,
-	SiGooglechrome,
-	SiFirefox,
-	SiSafari,
-	SiOpera,
-	SiAndroid,
-	SiIos,
-	SiMacos,
-	SiLinux,
-} from "@icons-pack/react-simple-icons";
-import {
-	AppWindowIcon,
-	EarthIcon,
-	LayoutGridIcon,
-	MonitorIcon,
-	SearchIcon,
-	SmartphoneIcon,
-	TabletIcon,
-} from "lucide-react";
+import styles from "./icons.module.css";
 
-const brandIcons = {
-	tencentqq: SiTencentqq,
-	foursquare: SiFoursquare,
-	vk: SiVk,
-	sinaweibo: SiSinaweibo,
-	telegram: SiTelegram,
-	pixelfed: SiPixelfed,
-	workplace: SiWorkplace,
-	x: SiX,
-	threads: SiThreads,
-	Ru: SiMaildotru,
-	News: SiYcombinator,
-	tiktok: SiTiktok,
-	facebook: SiFacebook,
-	lastdotfm: SiLastdotfm,
-	linkedin: SiLinkedin,
-	dribbble: SiDribbble,
-	reddit: SiReddit,
-	flickr: SiFlickr,
-	github: SiGithub,
-	pinterest: SiPinterest,
-	skyrock: SiSkyrock,
-	stackoverflow: SiStackoverflow,
-	bluesky: SiBluesky,
-	livejournal: SiLivejournal,
-	v2ex: SiV2ex,
-	douban: SiDouban,
-	renren: SiRenren,
-	tumblr: SiTumblr,
-	snapchat: SiSnapchat,
-	badoo: SiBadoo,
-	youtube: SiYoutube,
-	instagram: SiInstagram,
-	viadeo: SiViadeo,
-	odnoklassniki: SiOdnoklassniki,
-	vimeo: SiVimeo,
-	mastodon: SiMastodon,
-	sourceforge: SiSourceforge,
-	twitch: SiTwitch,
-	xing: SiXing,
-	google: SiGoogle,
-	duckduckgo: SiDuckduckgo,
-};
+// biome-ignore format:
+import { SiTencentqq, SiFoursquare, SiVk, SiSinaweibo, SiTelegram, SiPixelfed, SiWorkplace, SiX, SiThreads, SiMaildotru, SiYcombinator, SiTiktok, SiFacebook, SiLastdotfm, SiLinkedin, SiDribbble, SiReddit, SiFlickr, SiGithub, SiPinterest, SiSkyrock, SiStackoverflow, SiBluesky, SiLivejournal, SiV2ex, SiDouban, SiRenren, SiTumblr, SiSnapchat, SiBadoo, SiYoutube, SiInstagram, SiViadeo, SiOdnoklassniki, SiVimeo, SiMastodon, SiSourceforge, SiTwitch, SiXing, SiGoogle, SiDuckduckgo, SiGooglechrome, SiFirefox, SiSafari, SiOpera, SiAndroid, SiIos, SiMacos, SiLinux } from "@icons-pack/react-simple-icons";
+// biome-ignore format:
+import { AppWindowIcon, EarthIcon, LayoutGridIcon, MonitorIcon, SearchIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
+// biome-ignore format:
+const brandIcons = { tencentqq: SiTencentqq, foursquare: SiFoursquare, vk: SiVk, sinaweibo: SiSinaweibo, telegram: SiTelegram, pixelfed: SiPixelfed, workplace: SiWorkplace, x: SiX, threads: SiThreads, Ru: SiMaildotru, News: SiYcombinator, tiktok: SiTiktok, facebook: SiFacebook, lastdotfm: SiLastdotfm, linkedin: SiLinkedin, dribbble: SiDribbble, reddit: SiReddit, flickr: SiFlickr, github: SiGithub, pinterest: SiPinterest, skyrock: SiSkyrock, stackoverflow: SiStackoverflow, bluesky: SiBluesky, livejournal: SiLivejournal, v2ex: SiV2ex, douban: SiDouban, renren: SiRenren, tumblr: SiTumblr, snapchat: SiSnapchat, badoo: SiBadoo, youtube: SiYoutube, instagram: SiInstagram, viadeo: SiViadeo, odnoklassniki: SiOdnoklassniki, vimeo: SiVimeo, mastodon: SiMastodon, sourceforge: SiSourceforge, twitch: SiTwitch, xing: SiXing, google: SiGoogle, duckduckgo: SiDuckduckgo,};
 
 const genericIcons = {
 	search: SearchIcon,
@@ -109,18 +13,20 @@ const genericIcons = {
 
 // microsoft icons are not included in simple-icons
 const browserIcons = {
-	chrome: SiGooglechrome,
-	firefox: SiFirefox,
-	safari: SiSafari,
-	opera: SiOpera,
+	chrome: [SiGooglechrome, "#ffffff", "#000000"],
+	firefox: [SiFirefox, "#FF7139", "#FF7139"],
+	safari: [SiSafari, "#1E90FF", "#1E90FF"],
+	opera: [SiOpera, "#FF4B2B", "#FF1B2D"],
+	edge: [EarthIcon, "#0078D7", "#0078D7"],
 };
 const browsers = Object.keys(browserIcons);
 
 const osIcons = {
-	android: SiAndroid,
-	ios: SiIos,
-	macos: SiMacos,
-	linux: SiLinux,
+	android: [SiAndroid, "#3DDC84", "#3DDC84"],
+	ios: [SiIos, "#FFFFFF", "#000000"],
+	macos: [SiMacos, "#FFFFFF", "#000000"],
+	linux: [SiLinux, "#FCC624", "#000000"],
+	kindle: [TabletIcon, "#FFFFFF", "#000000"],
 };
 const oses = Object.keys(osIcons);
 
@@ -137,9 +43,11 @@ type IconProps = {
 
 export const BrowserIcon = ({ browser, ...props }: { browser: string } & IconProps) => {
 	for (const b of browsers) {
-		if (browser.toLowerCase().includes(b)) {
-			const Icon = browserIcons[b as keyof typeof browserIcons];
-			return <Icon {...props} />;
+		if (browser.toLowerCase().replaceAll(" ", "").includes(b)) {
+			const [Icon, dark, light] = browserIcons[b as keyof typeof browserIcons];
+			return (
+				<Icon {...props} style={{ "--dark": dark, "--light": light } as React.CSSProperties} className={styles.icon} />
+			);
 		}
 	}
 
@@ -151,9 +59,11 @@ export const OSIcon = ({ os, ...props }: { os: string } & IconProps) => {
 		return <LayoutGridIcon {...props} />;
 	}
 	for (const o of oses) {
-		if (os.toLowerCase().includes(o)) {
-			const Icon = osIcons[o as keyof typeof osIcons];
-			return <Icon {...props} />;
+		if (os.toLowerCase().replaceAll(" ", "").includes(o)) {
+			const [Icon, dark, light] = osIcons[o as keyof typeof osIcons];
+			return (
+				<Icon {...props} style={{ "--dark": dark, "--light": light } as React.CSSProperties} className={styles.icon} />
+			);
 		}
 	}
 	return <AppWindowIcon {...props} />;

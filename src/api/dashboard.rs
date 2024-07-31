@@ -54,7 +54,7 @@ struct DimensionResponse {
 struct DimensionTableRow {
     dimension_value: String,
     value: u64,
-    dispay_name: Option<String>,
+    display_name: Option<String>,
     icon: Option<String>,
 }
 
@@ -143,11 +143,19 @@ impl DashboardAPI {
             match req.dimension {
                 Dimension::Referrer => {
                     let icon = crate::utils::referrer::get_referer_icon(&key);
-                    let dispay_name = crate::utils::referrer::get_referer_name(&key);
-                    data.push(DimensionTableRow { dimension_value: key, value, dispay_name, icon });
+                    let display_name = crate::utils::referrer::get_referer_name(&key);
+                    data.push(DimensionTableRow { dimension_value: key, value, display_name, icon });
+                }
+                Dimension::Browser => {
+                    let display_name = match key.as_str() {
+                        "Edge" => Some("Microsoft Edge".to_string()),
+                        _ => None,
+                    };
+
+                    data.push(DimensionTableRow { dimension_value: key, value, display_name, icon: None });
                 }
                 _ => {
-                    data.push(DimensionTableRow { dimension_value: key, value, dispay_name: None, icon: None });
+                    data.push(DimensionTableRow { dimension_value: key, value, display_name: None, icon: None });
                 }
             }
         }

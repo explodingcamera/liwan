@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import styles from "./project.module.css";
 
-import { api, useQuery, type DateRange, type Dimension, type Metric, type ProjectResponse } from "../api";
+import {
+	api,
+	dimensionNames,
+	metricNames,
+	useQuery,
+	type DateRange,
+	type Dimension,
+	type Metric,
+	type ProjectResponse,
+} from "../api";
 import { ProjectOverview } from "./projects";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { resolveRange, type RangeName } from "../api/ranges";
@@ -30,14 +39,22 @@ export const Project = () => {
 	return (
 		<div className={styles.project}>
 			{/* <Entities entities={data.entities} /> */}
-			<ProjectOverview project={data} metric={metric} setMetric={setMetric} rangeName={dateRange} />
-			<DimTable project={data} dimension={"platform"} metric={metric} range={resolveRange(dateRange).range} />
-			<DimTable project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
-			<DimTable project={data} dimension={"path"} metric={metric} range={resolveRange(dateRange).range} />
-			<DimTable project={data} dimension={"mobile"} metric={metric} range={resolveRange(dateRange).range} />
-			<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
-			<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
-			<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
+			<ProjectOverview
+				project={data}
+				metric={metric}
+				setMetric={setMetric}
+				rangeName={dateRange}
+				graphClassName={styles.graph}
+			/>
+			<div className={styles.tables}>
+				<DimTable project={data} dimension={"platform"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"path"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"mobile"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
+			</div>
 		</div>
 	);
 };
@@ -61,6 +78,7 @@ const DimTable = ({
 	range,
 }: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange }) => {
 	const { data } = useQuery({
+		placeholderData: (prev) => prev,
 		queryKey: ["dimension", project.id, dimension, metric, range],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/dimension"]
@@ -76,47 +94,34 @@ const DimTable = ({
 	});
 
 	const biggest = useMemo(() => data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0, [data]);
-	const sorted = useMemo(() => data?.data?.sort((a, b) => b.value - a.value), [data]);
+	// e.g ["Chrome", "Firefox", "Safari"]
+	const order = useMemo(() => data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue), [data]);
 
 	return (
 		<div>
-			<h2>
-				{
-					{
-						platform: "Platform",
-						browser: "Browser",
-						path: "Path",
-						mobile: "Mobile",
-						referrer: "Referrer",
-						city: "City",
-						country: "Country",
-						fqdn: "Domain",
-					}[dimension]
-				}
-			</h2>
-			<table className={styles.dimTable}>
-				<tbody>
-					{sorted?.map((d) => {
-						const value = metric === "avg_views_per_session" ? d.value / 1000 : d.value;
-						const biggestVal = metric === "avg_views_per_session" ? biggest / 1000 : biggest;
+			<div className={styles.dimTable}>
+				<div className={styles.header}>
+					<div>{dimensionNames[dimension]}</div>
+					<div>{metricNames[metric]}</div>
+				</div>
+				{data?.data?.map((d) => {
+					const value = metric === "avg_views_per_session" ? d.value / 1000 : d.value;
+					const biggestVal = metric === "avg_views_per_session" ? biggest / 1000 : biggest;
 
-						return (
-							<tr key={d.dimensionValue}>
-								<td>
-									<DimensionValueBar value={value} biggest={biggestVal}>
-										{dimension === "browser" && <BrowserIcon browser={d.dimensionValue} size={24} />}
-										{dimension === "platform" && <OSIcon os={d.dimensionValue} size={24} />}
-										&nbsp;
-										{d.dispayName ?? d.dimensionValue}
-									</DimensionValueBar>
-								</td>
+					return (
+						<div key={d.dimensionValue} style={{ order: order?.indexOf(d.dimensionValue) }} className={styles.row}>
+							<DimensionValueBar value={value} biggest={biggestVal}>
+								{dimension === "browser" && <BrowserIcon browser={d.dimensionValue} size={24} />}
+								{dimension === "platform" && <OSIcon os={d.dimensionValue} size={24} />}
+								&nbsp;
+								{d.displayName ?? d.dimensionValue}
+							</DimensionValueBar>
 
-								<td>{value.toFixed(1).replace(/\.0$/, "") || "0"}</td>
-							</tr>
-						);
-					})}
-				</tbody>
-			</table>
+							<div>{value.toFixed(1).replace(/\.0$/, "") || "0"}</div>
+						</div>
+					);
+				})}
+			</div>
 		</div>
 	);
 };

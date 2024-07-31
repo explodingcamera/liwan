@@ -33,6 +33,17 @@ export const metricNames: Record<Metric, string> = {
 	avg_views_per_session: "Avg Views Per Session",
 };
 
+export const dimensionNames: Record<Dimension, string> = {
+	platform: "Platform",
+	browser: "Browser",
+	path: "Path",
+	mobile: "Device Type",
+	referrer: "Referrer",
+	city: "City",
+	country: "Country",
+	fqdn: "Domain",
+};
+
 export const useMe = () => {
 	const { data, isLoading } = useQuery({
 		queryKey: ["me"],

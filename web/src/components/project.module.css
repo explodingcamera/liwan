@@ -16,7 +16,50 @@
   gap: 1rem;
 }
 
+div.graph {
+  height: 18rem;
+  margin-bottom: 1rem;
+}
+
+.tables {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  row-gap: 1rem;
+  margin: 0 -0.4rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+
+  > div {
+    padding: 1rem;
+    background-color: var(--pico-form-element-background-color);
+    border-radius: var(--pico-border-radius);
+    background: var(--pico-card-background-color);
+    box-shadow: var(--pico-card-box-shadow);
+  }
+}
+
+.dimTable {
+  display: flex;
+  flex-direction: column;
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .header {
+    color: var(--pico-h5-color);
+    margin-bottom: 1rem;
+  }
+}
+
 .percentage {
+  flex: 1;
   position: relative;
   z-index: 1;
   padding-left: 0.5rem;

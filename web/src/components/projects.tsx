@@ -97,6 +97,11 @@ export const Projects = () => {
 						metric={metric}
 						setMetric={setMetric}
 						rangeName={dateRange}
+						detailsElement={() => (
+							<a href={`/p/${project.id}`}>
+								<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
+							</a>
+						)}
 					/>
 				);
 			})}
@@ -109,11 +114,15 @@ export const ProjectOverview = ({
 	metric,
 	setMetric,
 	rangeName,
+	detailsElement,
+	graphClassName = "",
 }: {
 	project: ProjectResponse;
 	metric: Metric;
 	setMetric: (value: Metric) => void;
 	rangeName: RangeName;
+	detailsElement?: () => JSX.Element;
+	graphClassName?: string;
 }) => {
 	const { displayName, id, public: isPublic } = project;
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
@@ -208,12 +217,10 @@ export const ProjectOverview = ({
 						/>
 					</div>
 				</div>
-				<a href={`/p/${id}`}>
-					<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
-				</a>
+				{detailsElement?.()}
 			</div>
 
-			<div className={styles.graph}>
+			<div className={`${graphClassName} ${styles.graph}`}>
 				<LineGraph title={metricNames[metric]} data={chartData || []} range={graphRange} />
 			</div>
 		</div>
