@@ -10,7 +10,9 @@ thread_local! {
 }
 
 pub(crate) fn parse(header: &str) -> Client {
-    PARSER.with(|p| p.parse(header))
+    let mut client = PARSER.with(|p| p.parse(header));
+    client.os.family = client.os.family.replace("Mac OS X", "macOS").replace("Other", "Unknown").into();
+    client
 }
 
 pub(crate) fn is_bot(client: &Client) -> bool {

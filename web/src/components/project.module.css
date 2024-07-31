@@ -15,3 +15,25 @@
   flex-direction: column;
   gap: 1rem;
 }
+
+.percentage {
+  position: relative;
+  z-index: 1;
+  padding-left: 0.5rem;
+  padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: var(--percentage);
+    height: 100%;
+    background: var(--pico-h5-color);
+    opacity: 0.08;
+    z-index: -1;
+    transition: width 0.3s ease-in-out;
+  }
+}

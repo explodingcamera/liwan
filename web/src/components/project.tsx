@@ -5,6 +5,7 @@ import { api, useQuery, type DateRange, type Dimension, type Metric, type Projec
 import { ProjectOverview } from "./projects";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { resolveRange, type RangeName } from "../api/ranges";
+import { BrowserIcon, OSIcon } from "./icons";
 const server = typeof window === "undefined";
 
 export const Project = () => {
@@ -28,10 +29,15 @@ export const Project = () => {
 
 	return (
 		<div className={styles.project}>
-			<h1>{data.displayName}</h1>
-			<Entities entities={data.entities} />
+			{/* <Entities entities={data.entities} /> */}
 			<ProjectOverview project={data} metric={metric} setMetric={setMetric} rangeName={dateRange} />
-			<Test project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
+			<DimTable project={data} dimension={"platform"} metric={metric} range={resolveRange(dateRange).range} />
+			<DimTable project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
+			<DimTable project={data} dimension={"path"} metric={metric} range={resolveRange(dateRange).range} />
+			<DimTable project={data} dimension={"mobile"} metric={metric} range={resolveRange(dateRange).range} />
+			<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
+			<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
+			<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
 		</div>
 	);
 };
@@ -48,7 +54,7 @@ const Entities = ({ entities }: { entities: { id: string; displayName: string }[
 	);
 };
 
-const Test = ({
+const DimTable = ({
 	project,
 	dimension,
 	metric,
@@ -69,26 +75,68 @@ const Test = ({
 				.json(),
 	});
 
+	const biggest = useMemo(() => data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0, [data]);
+	const sorted = useMemo(() => data?.data?.sort((a, b) => b.value - a.value), [data]);
+
 	return (
 		<div>
-			{/* {data?.data?.map((d) => (
-				<div key={d.dimensionValue}>
-					<h2>{d.dispayName ?? d.dimensionValue}</h2>
-					<p>{d.value}</p>
-				</div>
-			))} */}
-			<table>
+			<h2>
+				{
+					{
+						platform: "Platform",
+						browser: "Browser",
+						path: "Path",
+						mobile: "Mobile",
+						referrer: "Referrer",
+						city: "City",
+						country: "Country",
+						fqdn: "Domain",
+					}[dimension]
+				}
+			</h2>
+			<table className={styles.dimTable}>
 				<tbody>
-					{data?.data?.map((d) => (
-						<tr key={d.dimensionValue}>
-							<td>{d.dispayName ?? d.dimensionValue}</td>
-							<td>
-								{d.value} ({d.icon})
-							</td>
-						</tr>
-					))}
+					{sorted?.map((d) => {
+						const value = metric === "avg_views_per_session" ? d.value / 1000 : d.value;
+						const biggestVal = metric === "avg_views_per_session" ? biggest / 1000 : biggest;
+
+						return (
+							<tr key={d.dimensionValue}>
+								<td>
+									<DimensionValueBar value={value} biggest={biggestVal}>
+										{dimension === "browser" && <BrowserIcon browser={d.dimensionValue} size={24} />}
+										{dimension === "platform" && <OSIcon os={d.dimensionValue} size={24} />}
+										&nbsp;
+										{d.dispayName ?? d.dimensionValue}
+									</DimensionValueBar>
+								</td>
+
+								<td>{value.toFixed(1).replace(/\.0$/, "") || "0"}</td>
+							</tr>
+						);
+					})}
 				</tbody>
 			</table>
+		</div>
+	);
+};
+
+const DimensionValueBar = ({
+	value,
+	biggest,
+	children,
+}: { value: number; biggest: number; children?: React.ReactNode | React.ReactNode[] }) => {
+	const percent = (value / biggest) * 100;
+	return (
+		<div
+			className={styles.percentage}
+			style={
+				{
+					"--percentage": `${percent}%`,
+				} as React.CSSProperties
+			}
+		>
+			{children}
 		</div>
 	);
 };

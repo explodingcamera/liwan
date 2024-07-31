@@ -114,6 +114,7 @@ const browserIcons = {
 	safari: SiSafari,
 	opera: SiOpera,
 };
+const browsers = Object.keys(browserIcons);
 
 const osIcons = {
 	android: SiAndroid,
@@ -121,6 +122,7 @@ const osIcons = {
 	macos: SiMacos,
 	linux: SiLinux,
 };
+const oses = Object.keys(osIcons);
 
 const deviceIcons = {
 	phone: SmartphoneIcon,
@@ -134,20 +136,25 @@ type IconProps = {
 };
 
 export const BrowserIcon = ({ browser, ...props }: { browser: string } & IconProps) => {
-	if (Object.hasOwnProperty.call(browserIcons, browser)) {
-		const Icon = browserIcons[browser as keyof typeof browserIcons];
-		return <Icon {...props} />;
+	for (const b of browsers) {
+		if (browser.toLowerCase().includes(b)) {
+			const Icon = browserIcons[b as keyof typeof browserIcons];
+			return <Icon {...props} />;
+		}
 	}
+
 	return <EarthIcon {...props} />;
 };
 
 export const OSIcon = ({ os, ...props }: { os: string } & IconProps) => {
-	if (Object.hasOwnProperty.call(osIcons, os)) {
-		const Icon = osIcons[os as keyof typeof osIcons];
-		return <Icon {...props} />;
-	}
-	if (os === "windows") {
+	if (os.toLowerCase() === "windows") {
 		return <LayoutGridIcon {...props} />;
+	}
+	for (const o of oses) {
+		if (os.toLowerCase().includes(o)) {
+			const Icon = osIcons[o as keyof typeof osIcons];
+			return <Icon {...props} />;
+		}
 	}
 	return <AppWindowIcon {...props} />;
 };
