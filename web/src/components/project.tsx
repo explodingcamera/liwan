@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./project.module.css";
 
-import { api, useQuery, type Metric } from "../api";
+import { api, useQuery, type DateRange, type Dimension, type Metric, type ProjectResponse } from "../api";
 import { ProjectOverview } from "./projects";
 import { useLocalStorage } from "@uidotdev/usehooks";
-import type { RangeName } from "../api/ranges";
+import { resolveRange, type RangeName } from "../api/ranges";
 const server = typeof window === "undefined";
 
 export const Project = () => {
@@ -31,6 +31,7 @@ export const Project = () => {
 			<h1>{data.displayName}</h1>
 			<Entities entities={data.entities} />
 			<ProjectOverview project={data} metric={metric} setMetric={setMetric} rangeName={dateRange} />
+			<Test project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
 		</div>
 	);
 };
@@ -43,6 +44,51 @@ const Entities = ({ entities }: { entities: { id: string; displayName: string }[
 					<h3>{entity.displayName}</h3>
 				</div>
 			))}
+		</div>
+	);
+};
+
+const Test = ({
+	project,
+	dimension,
+	metric,
+	range,
+}: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange }) => {
+	const { data } = useQuery({
+		queryKey: ["dimension", project.id, dimension, metric, range],
+		queryFn: () =>
+			api["/api/dashboard/project/{project_id}/dimension"]
+				.post({
+					params: { project_id: project.id },
+					json: {
+						dimension,
+						metric,
+						range,
+					},
+				})
+				.json(),
+	});
+
+	return (
+		<div>
+			{/* {data?.data?.map((d) => (
+				<div key={d.dimensionValue}>
+					<h2>{d.dispayName ?? d.dimensionValue}</h2>
+					<p>{d.value}</p>
+				</div>
+			))} */}
+			<table>
+				<tbody>
+					{data?.data?.map((d) => (
+						<tr key={d.dimensionValue}>
+							<td>{d.dispayName ?? d.dimensionValue}</td>
+							<td>
+								{d.value} ({d.icon})
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
 		</div>
 	);
 };

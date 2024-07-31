@@ -336,7 +336,7 @@ pub(crate) fn dimension_report(
             ),
             session_data as (
                 select
-                    {dimension_column} as dimension_value,
+                    coalesce({dimension_column}, 'Unknown') as dimension_value,
                     visitor_id,
                     created_at,
                     coalesce(lead(created_at) over (partition by visitor_id order by created_at) - created_at, interval '0' second) as session_duration
@@ -363,11 +363,11 @@ pub(crate) fn dimension_report(
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start, range.end, event];
+    let params = params![range.start.to_time(), range.end.to_time(), event];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
+            let rows = stmt.query_map(params, |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: u64 = row.get(1)?;
                 Ok((dimension_value, total_metric))
@@ -376,7 +376,7 @@ pub(crate) fn dimension_report(
             Ok(report_table)
         }
         Metric::AvgViewsPerSession => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
+            let rows = stmt.query_map(params, |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: f64 = row.get(1)?;
                 Ok((dimension_value, (total_metric * 1000.0).round() as u64))

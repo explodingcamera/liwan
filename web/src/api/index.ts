@@ -5,6 +5,7 @@ import { queryClient, useQuery } from "./utils";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
+export type Dimension = OASModel<DashboardSpec, "Dimension">;
 export type DateRange = OASModel<DashboardSpec, "DateRange">;
 export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
 export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;
