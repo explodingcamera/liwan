@@ -17,46 +17,44 @@ export const Table = <T extends { id: string }>({
 	columns: Column<T>[];
 }) => {
 	return (
-		<div>
-			<div>
-				<table className={styles.table}>
-					<thead>
-						<tr>
-							{columns?.map((col) => (
-								<th scope="col" key={col.id} className={col.full ? styles.full : undefined}>
-									{col.icon ? (
-										<div className={styles.icon}>
-											{col.icon}
-											{col.header ?? null}
-										</div>
-									) : (
-										col.header ?? null
-									)}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{rows?.length ? (
-							rows.map((row) => (
-								<tr key={row.id}>
-									{columns?.map((col) => (
-										<td key={col.id} className={col.nowrap ? styles.nowrap : undefined}>
-											{col.render ? col.render(row) : null}
-										</td>
-									))}
-								</tr>
-							))
-						) : (
-							<tr>
-								<td colSpan={columns?.length} className="h-24 text-center">
-									No results.
-								</td>
+		<div className="overflow-auto">
+			<table className={styles.table}>
+				<thead>
+					<tr>
+						{columns?.map((col) => (
+							<th scope="col" key={col.id} className={col.full ? styles.full : undefined}>
+								{col.icon ? (
+									<div className={styles.icon}>
+										{col.icon}
+										{col.header ?? null}
+									</div>
+								) : (
+									col.header ?? null
+								)}
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{rows?.length ? (
+						rows.map((row) => (
+							<tr key={row.id}>
+								{columns?.map((col) => (
+									<td key={col.id} className={col.nowrap ? styles.nowrap : undefined}>
+										{col.render ? col.render(row) : null}
+									</td>
+								))}
 							</tr>
-						)}
-					</tbody>
-				</table>
-			</div>
+						))
+					) : (
+						<tr>
+							<td colSpan={columns?.length} className="h-24 text-center">
+								No results.
+							</td>
+						</tr>
+					)}
+				</tbody>
+			</table>
 		</div>
 	);
 };

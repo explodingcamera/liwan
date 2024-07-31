@@ -3,7 +3,7 @@ import styles from "./projects.module.css";
 
 import CountUp from "react-countup";
 import { useLocalStorage } from "@uidotdev/usehooks";
-import { CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import { ChevronRightIcon, CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 
 import { getUsername } from "../api/utils";
 import { LineGraph, toDataPoints } from "./graph";
@@ -156,56 +156,61 @@ export const ProjectOverview = ({
 	return (
 		<div className={styles.project} data-loading={isLoadingStats || isLoadingGraph || isErrorStats || isErrorGraph}>
 			{(isErrorStats || isErrorGraph) && <h1 className={styles.error}>Failed to load data</h1>}
-			<div className={styles.stats}>
-				<h1>
-					<span>
-						{isPublic ? null : (
-							<>
-								<LockIcon size={16} />
-								&nbsp;
-							</>
-						)}
-						<a href={`/p/${id}`}>{displayName}</a>&nbsp;
-					</span>
-					<span className={styles.online}>
-						<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
-						<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
-						<CountUp preserveValue duration={1} end={stats?.currentVisitors || 0} />{" "}
-						{stats?.currentVisitors === 1 ? "Current Visitor" : "Current Visitors"}
-					</span>
-				</h1>
-				<div>
-					<Stat
-						title="Total Views"
-						value={stats?.stats.totalViews}
-						prevValue={stats?.statsPrev.totalViews}
-						onSelect={() => setMetric("views")}
-						selected={metric === "views"}
-					/>
+			<div className={styles.statsContainer}>
+				<div className={styles.stats}>
+					<h1>
+						<span>
+							{isPublic ? null : (
+								<>
+									<LockIcon size={16} />
+									&nbsp;
+								</>
+							)}
+							<a href={`/p/${id}`}>{displayName}</a>&nbsp;
+						</span>
+						<span className={styles.online}>
+							<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
+							<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
+							<CountUp preserveValue duration={1} end={stats?.currentVisitors || 0} />{" "}
+							{stats?.currentVisitors === 1 ? "Current Visitor" : "Current Visitors"}
+						</span>
+					</h1>
+					<div>
+						<Stat
+							title="Total Views"
+							value={stats?.stats.totalViews}
+							prevValue={stats?.statsPrev.totalViews}
+							onSelect={() => setMetric("views")}
+							selected={metric === "views"}
+						/>
 
-					<Stat
-						title="Total Sessions"
-						value={stats?.stats.totalSessions}
-						prevValue={stats?.statsPrev.totalSessions}
-						onSelect={() => setMetric("sessions")}
-						selected={metric === "sessions"}
-					/>
-					<Stat
-						title="Unique Visitors"
-						value={stats?.stats.uniqueVisitors}
-						prevValue={stats?.statsPrev.uniqueVisitors}
-						onSelect={() => setMetric("unique_visitors")}
-						selected={metric === "unique_visitors"}
-					/>
-					<Stat
-						title="Avg Views Per Session"
-						value={(stats?.stats.avgViewsPerSession ?? 0) / 1000}
-						prevValue={(stats?.statsPrev.avgViewsPerSession ?? 0) / 1000}
-						decimals={1}
-						onSelect={() => setMetric("avg_views_per_session")}
-						selected={metric === "avg_views_per_session"}
-					/>
+						<Stat
+							title="Total Sessions"
+							value={stats?.stats.totalSessions}
+							prevValue={stats?.statsPrev.totalSessions}
+							onSelect={() => setMetric("sessions")}
+							selected={metric === "sessions"}
+						/>
+						<Stat
+							title="Unique Visitors"
+							value={stats?.stats.uniqueVisitors}
+							prevValue={stats?.statsPrev.uniqueVisitors}
+							onSelect={() => setMetric("unique_visitors")}
+							selected={metric === "unique_visitors"}
+						/>
+						<Stat
+							title="Avg Views Per Session"
+							value={(stats?.stats.avgViewsPerSession ?? 0) / 1000}
+							prevValue={(stats?.statsPrev.avgViewsPerSession ?? 0) / 1000}
+							decimals={1}
+							onSelect={() => setMetric("avg_views_per_session")}
+							selected={metric === "avg_views_per_session"}
+						/>
+					</div>
 				</div>
+				<a href={`/p/${id}`}>
+					<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
+				</a>
 			</div>
 
 			<div className={styles.graph}>

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import styles from "./graph.module.css";
 
-import { addMonths, differenceInSeconds, nextDay } from "date-fns";
+import { addMonths, differenceInSeconds } from "date-fns";
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
 
 import type { Metric } from "../api";

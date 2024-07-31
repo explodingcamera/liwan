@@ -22,7 +22,7 @@ const { title } = Astro.props;
         </li>
       </ul>
       <ul>
-        <li><LoginButton client:only="react" /></li>
+        <li class="login"><LoginButton client:only="react" /></li>
         <li class="theme">
           <ThemeSwitcher />
         </li>
@@ -41,6 +41,10 @@ const { title } = Astro.props;
 
   nav {
     height: 3rem;
+  }
+
+  .login {
+    padding-right: 0.2rem;
   }
 
   .theme {

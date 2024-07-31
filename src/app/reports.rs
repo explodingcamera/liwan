@@ -1,23 +1,30 @@
 use std::collections::BTreeMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use crate::utils::{validate, TimeExt};
 use crate::{app::DuckDBConn, utils::Timestamp};
-use cached::proc_macro::cached;
-use cached::SizedCache;
 use duckdb::params;
 use eyre::Result;
 use itertools::Itertools;
 use poem_openapi::{Enum, Object};
 
-const CACHE_SIZE_OVERALL_STATS: usize = 512;
-const CACHE_SIZE_OVERALL_REPORTS: usize = 512;
-const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
+// TODO: more fine-grained caching (e.g. don't cache for short durations/ending in now)
+// use cached::proc_macro::cached;
+// use cached::SizedCache;
+// const CACHE_SIZE_OVERALL_STATS: usize = 512;
+// const CACHE_SIZE_OVERALL_REPORTS: usize = 512;
+// const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
 
-#[derive(Debug, Object)]
+#[derive(Object)]
 pub(crate) struct DateRange {
     pub(crate) start: Timestamp,
     pub(crate) end: Timestamp,
+}
+
+impl Display for DateRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} - {}", self.start, self.end)
+    }
 }
 
 impl DateRange {
@@ -119,12 +126,12 @@ pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64
     Ok(online_users[0])
 }
 
-#[cached(
-    ty = "SizedCache<String, ReportGraph>",
-    create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_REPORTS)}",
-    convert = r#"{format!("{:?}:{}:{:?}:{:?}:{:?}:{}", entities, event, range, filters, metric, data_points)}"#,
-    result = true
-)]
+// #[cached(
+//     ty = "SizedCache<String, ReportGraph>",
+//     create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_REPORTS)}",
+//     convert = r#"{format!("{:?}:{}:{}:{:?}:{:?}:{}", entities, event, range, filters, metric, data_points)}"#,
+//     result = true
+// )]
 pub(crate) fn overall_report(
     conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
@@ -213,12 +220,12 @@ pub(crate) fn overall_report(
     }
 }
 
-#[cached(
-    ty = "SizedCache<String, ReportStats>",
-    create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_STATS)}",
-    convert = r#"{format!("{:?}:{}:{:?}:{:?}", entities, event, range, filters)}"#,
-    result = true
-)]
+// #[cached(
+//     ty = "SizedCache<String, ReportStats>",
+//     create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_STATS)}",
+//     convert = r#"{format!("{:?}:{}:{}:{:?}", entities, event, range, filters)}"#,
+//     result = true
+// )]
 pub(crate) fn overall_stats(
     conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
@@ -286,12 +293,12 @@ pub(crate) fn overall_stats(
     Ok(result)
 }
 
-#[cached(
-    ty = "SizedCache<String, ReportTable>",
-    create = "{ SizedCache::with_size(CACHE_SIZE_DIMENSION_REPORTS)}",
-    convert = r#"{format!("{:?}:{}:{:?}:{:?}:{:?}:{:?}", entities, event, range, dimension, filters, metric)}"#,
-    result = true
-)]
+// #[cached(
+//     ty = "SizedCache<String, ReportTable>",
+//     create = "{ SizedCache::with_size(CACHE_SIZE_DIMENSION_REPORTS)}",
+//     convert = r#"{format!("{:?}:{}:{}:{:?}:{:?}:{:?}", entities, event, range, dimension, filters, metric)}"#,
+//     result = true
+// )]
 pub(crate) fn dimension_report(
     conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],

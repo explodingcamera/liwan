@@ -1,4 +1,6 @@
 details.user {
+  margin: 0;
+
   summary {
     display: flex;
     justify-content: space-between;

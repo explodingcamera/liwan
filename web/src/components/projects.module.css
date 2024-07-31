@@ -74,6 +74,28 @@
   }
 }
 
+.statsContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  > a {
+    padding: 1rem 0.2rem 1rem 1rem;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+  }
+
+  > a:hover {
+    opacity: 1;
+  }
+
+  @media (max-width: 768px) {
+    > a {
+      display: none;
+    }
+  }
+}
+
 .stats {
   align-items: center;
 
@@ -112,7 +134,7 @@
     gap: 1rem;
     padding-bottom: 1rem;
     @media (max-width: 768px) {
-      flex-direction: column;
+      flex-wrap: wrap;
     }
   }
 }

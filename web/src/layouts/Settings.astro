@@ -2,7 +2,7 @@
 import Layout from "./Layout.astro";
 
 type Props = {
-	title: string;
+  title: string;
 };
 
 const path = Astro.url.pathname;
@@ -81,5 +81,22 @@ const { title } = Astro.props;
 
   main {
     padding: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .settings {
+      flex-direction: column;
+    }
+
+    .sidebar {
+      padding-right: 0;
+      flex-direction: row;
+      gap: 1rem;
+      margin-bottom: 2rem;
+
+      li {
+        font-size: 1.4rem;
+      }
+    }
   }
 </style>
