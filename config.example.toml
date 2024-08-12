@@ -5,13 +5,16 @@ base_url="http://localhost:8080"
 port=8080
 
 # Folder to store the database in (Will be created if it doesn't exist)
-db_dir="./liwan-db"
+data_dir="./liwan-data"
 
 # GeoIp settings (Optional)
 [geoip]
+# # MaxMind account ID and license key
+# # Required to automatically download the database and keep it up to date
 # maxmind_account_id="MY_ACCOUNT_ID"
 # maxmind_license_key="MY_LICENSE_KEY"
 # maxmind_edition="GeoLite2-City"
 
 # # If you don't want to automatically download the database, you can specify a path to a local file
+# # Otherwise, the database will be downloaded automatically and stored in the data_dir
 # maxmind_db_path="./GeoLite2-City.mmdb"

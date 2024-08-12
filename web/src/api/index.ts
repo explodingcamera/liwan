@@ -11,6 +11,7 @@ export type DateRange = OASModel<DashboardSpec, "DateRange">;
 export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
 export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;
 export type UserResponse = OASModel<DashboardSpec, "UserResponse">;
+export type StatsResponse = OASModel<DashboardSpec, "StatsResponse">;
 
 export const api = createClient<DashboardSpec>({
 	globalParams: { credentials: "same-origin" },
@@ -36,8 +37,9 @@ export const metricNames: Record<Metric, string> = {
 
 export const dimensionNames: Record<Dimension, string> = {
 	platform: "Platform",
-	browser: "Browser",  
+	browser: "Browser",
 	url: "URL",
+	path: "Path",
 	mobile: "Device Type",
 	referrer: "Referrer",
 	city: "City",

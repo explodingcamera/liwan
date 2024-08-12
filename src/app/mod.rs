@@ -1,18 +1,16 @@
+mod core;
+mod db;
+
+pub(crate) mod models;
+pub(crate) use core::reports;
+
 use crate::config::Config;
-use crate::utils::refinery_duckdb::DuckDBConnection;
-use crate::utils::refinery_sqlite::RqlConnection;
 
 use core::{LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjects, LiwanSessions, LiwanUsers};
 use duckdb::DuckdbConnectionManager;
 use eyre::Result;
 use r2d2_sqlite::SqliteConnectionManager;
-use refinery::Runner;
-use std::path::PathBuf;
 use std::sync::Arc;
-
-mod core;
-pub(crate) mod models;
-pub(crate) mod reports;
 
 pub(crate) type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub(crate) type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
@@ -28,6 +26,7 @@ pub(crate) struct Liwan {
     pub(crate) onboarding: core::onboarding::LiwanOnboarding,
     pub(crate) entities: core::entities::LiwanEntities,
     pub(crate) projects: core::projects::LiwanProjects,
+    pub(crate) geoip: Option<core::geoip::LiwanGeoIP>,
 
     pub(crate) config: Arc<Config>,
 }
@@ -43,17 +42,20 @@ const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs
 impl Liwan {
     pub(crate) fn try_new(config: Config) -> Result<Self> {
         tracing::debug!("Initializing app");
-        let folder = std::path::Path::new(&config.db_dir);
+        let folder = std::path::Path::new(&config.data_dir);
         if !folder.exists() {
-            tracing::debug!(path = config.db_dir, "Creating database folder since it doesn't exist");
+            tracing::debug!(path = config.data_dir, "Creating database folder since it doesn't exist");
             std::fs::create_dir_all(folder)?;
         }
 
         tracing::debug!("Initializing databases");
-        let conn_app = init_sqlite(&folder.join("liwan-app.sqlite"), embedded::app::migrations::runner())?;
-        let conn_events = init_duckdb(&folder.join("liwan-events.duckdb"), embedded::events::migrations::runner())?;
+        let conn_app = db::init_sqlite(&folder.join("liwan-app.sqlite"), embedded::app::migrations::runner())?;
+        let conn_events = db::init_duckdb(&folder.join("liwan-events.duckdb"), embedded::events::migrations::runner())?;
 
         Ok(Self {
+            #[cfg(feature = "geoip")]
+            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?,
+
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
             onboarding: LiwanOnboarding::try_new(conn_app.clone())?,
             sessions: LiwanSessions::new(conn_app.clone()),
@@ -69,8 +71,10 @@ impl Liwan {
     pub(crate) fn events_conn(&self) -> Result<DuckDBConn> {
         Ok(self.events_pool.get()?)
     }
+}
 
-    #[cfg(debug_assertions)]
+#[cfg(debug_assertions)]
+impl Liwan {
     pub(crate) fn seed_database(&self) -> Result<()> {
         use models::UserRole;
         use rand::Rng;
@@ -117,40 +121,4 @@ impl Liwan {
 
         Ok(())
     }
-}
-
-fn init_duckdb(path: &PathBuf, mut migrations_runner: Runner) -> Result<r2d2::Pool<DuckdbConnectionManager>> {
-    let conn = DuckdbConnectionManager::file(path)?;
-    let pool = r2d2::Pool::new(conn)?;
-    migrations_runner.set_migration_table_name("migrations");
-    migrations_runner.run(&mut DuckDBConnection(pool.get()?))?;
-
-    {
-        let conn = pool.get()?;
-        conn.pragma_update(None, "allow_community_extensions", &"false")?;
-        conn.pragma_update(None, "autoinstall_known_extensions", &"false")?;
-        conn.pragma_update(None, "autoload_known_extensions", &"false")?;
-        conn.pragma_update(None, "enable_fsst_vectors", &"true")?;
-    }
-
-    Ok(pool)
-}
-
-fn init_sqlite(path: &PathBuf, mut migrations_runner: Runner) -> Result<r2d2::Pool<SqliteConnectionManager>> {
-    let conn = SqliteConnectionManager::file(path);
-    let pool = r2d2::Pool::new(conn)?;
-    migrations_runner.set_migration_table_name("migrations");
-    migrations_runner.run(&mut RqlConnection(pool.get()?))?;
-
-    {
-        let conn = pool.get()?;
-        conn.pragma_update(None, "foreign_keys", &"ON")?;
-        conn.pragma_update(None, "journal_mode", &"WAL")?;
-        conn.pragma_update(None, "synchronous", &"NORMAL")?;
-        conn.pragma_update(None, "mmap_size", &"268435456")?;
-        conn.pragma_update(None, "journal_size_limit", &"268435456")?;
-        conn.pragma_update(None, "cache_size", &"2000")?;
-    }
-
-    Ok(pool)
 }

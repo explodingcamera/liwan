@@ -4,7 +4,6 @@ use crate::utils::validate::{self, can_access_project};
 use crate::web::session::SessionUser;
 use crate::web::webext::{http_bail, ApiResult, PoemErrExt};
 
-use maxminddb::geoip2::country;
 use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::param::Path;

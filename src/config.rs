@@ -13,8 +13,8 @@ fn default_port() -> u16 {
     8080
 }
 
-fn default_db_dir() -> String {
-    "./liwan-db".to_string()
+fn default_data_dir() -> String {
+    "./liwan-data".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,8 +25,8 @@ pub(crate) struct Config {
     #[serde(default = "default_port")]
     pub(crate) port: u16,
 
-    #[serde(default = "default_db_dir")]
-    pub(crate) db_dir: String,
+    #[serde(default = "default_data_dir")]
+    pub(crate) data_dir: String,
 
     pub(crate) geoip: Option<GeoIpConfig>,
 }

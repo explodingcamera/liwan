@@ -8,7 +8,7 @@ import { ChevronRightIcon, CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIco
 import { getUsername } from "../api/utils";
 import { LineGraph, toDataPoints } from "./graph";
 import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
-import { api, metricNames, useMe, useQuery, type Metric, type ProjectResponse } from "../api";
+import { api, metricNames, useMe, useQuery, type Metric, type ProjectResponse, type StatsResponse } from "../api";
 
 const signedIn = getUsername();
 
@@ -116,6 +116,7 @@ export const ProjectOverview = ({
 	rangeName,
 	detailsElement,
 	graphClassName = "",
+	renderHeader = defaultHeader,
 }: {
 	project: ProjectResponse;
 	metric: Metric;
@@ -123,6 +124,7 @@ export const ProjectOverview = ({
 	rangeName: RangeName;
 	detailsElement?: () => JSX.Element;
 	graphClassName?: string;
+	renderHeader?: (props: { stats?: StatsResponse; project: ProjectResponse }) => JSX.Element;
 }) => {
 	const { displayName, id, public: isPublic } = project;
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
@@ -167,23 +169,7 @@ export const ProjectOverview = ({
 			{(isErrorStats || isErrorGraph) && <h1 className={styles.error}>Failed to load data</h1>}
 			<div className={styles.statsContainer}>
 				<div className={styles.stats}>
-					<h1>
-						<span>
-							{isPublic ? null : (
-								<>
-									<LockIcon size={16} />
-									&nbsp;
-								</>
-							)}
-							<a href={`/p/${id}`}>{displayName}</a>&nbsp;
-						</span>
-						<span className={styles.online}>
-							<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
-							<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
-							<CountUp preserveValue duration={1} end={stats?.currentVisitors || 0} />{" "}
-							{stats?.currentVisitors === 1 ? "Current Visitor" : "Current Visitors"}
-						</span>
-					</h1>
+					{renderHeader({ stats, project })}
 					<div>
 						<Stat
 							title="Total Views"
@@ -224,6 +210,39 @@ export const ProjectOverview = ({
 				<LineGraph title={metricNames[metric]} data={chartData || []} range={graphRange} />
 			</div>
 		</div>
+	);
+};
+
+const defaultHeader = ({
+	project,
+	stats,
+}: {
+	stats?: StatsResponse;
+	project: ProjectResponse;
+}) => {
+	return (
+		<h1>
+			<span>
+				{project.public ? null : (
+					<>
+						<LockIcon size={16} />
+						&nbsp;
+					</>
+				)}
+				<a href={`/p/${project.id}`}>{project.displayName}</a>&nbsp;
+			</span>
+			<LiveVisitorCount count={stats?.currentVisitors || 0} />
+		</h1>
+	);
+};
+
+export const LiveVisitorCount = ({ count }: { count: number }) => {
+	return (
+		<span className={styles.online}>
+			<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
+			<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
+			<CountUp preserveValue duration={1} end={count || 0} /> {count === 1 ? "Current Visitor" : "Current Visitors"}
+		</span>
 	);
 };
 
