@@ -32,7 +32,15 @@ pub(crate) enum Command {
     UpdatePassword(UpdatePassword),
     AddUser(AddUser),
     Users(ListUsers),
+    #[cfg(debug_assertions)]
+    SeedDatabase(SeedDatabase),
 }
+
+#[cfg(debug_assertions)]
+#[derive(FromArgs)]
+#[argh(subcommand, name = "seed-database")]
+/// Seed the database with some test data
+pub(crate) struct SeedDatabase {}
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "generate-config")]
@@ -77,11 +85,11 @@ pub(crate) struct AddUser {
 pub(crate) fn handle_command(app: Liwan, cmd: Command) -> Result<()> {
     match cmd {
         Command::UpdatePassword(update) => {
-            app.users.user_update_password(&update.username, &update.password)?;
+            app.users.update_password(&update.username, &update.password)?;
             println!("Password updated for user {}", update.username);
         }
         Command::Users(_) => {
-            let users = app.users.users()?;
+            let users = app.users.all()?;
             if users.is_empty() {
                 println!("{}", "No users found".bold());
                 println!("Use `liwan add-user` to create a new user");
@@ -94,7 +102,7 @@ pub(crate) fn handle_command(app: Liwan, cmd: Command) -> Result<()> {
             }
         }
         Command::AddUser(add) => {
-            app.users.user_create(
+            app.users.create(
                 &add.username,
                 &add.password,
                 if add.admin { UserRole::Admin } else { UserRole::User },
@@ -111,6 +119,11 @@ pub(crate) fn handle_command(app: Liwan, cmd: Command) -> Result<()> {
 
             std::fs::write("liwan.config.toml", DEFAULT_CONFIG)?;
             println!("Configuration file written to liwan.config.toml");
+        }
+        #[cfg(debug_assertions)]
+        Command::SeedDatabase(_) => {
+            app.seed_database()?;
+            println!("Database seeded with test data");
         }
     }
 

@@ -11,7 +11,8 @@ impl LiwanSessions {
         Self { pool }
     }
 
-    pub(crate) fn session_create(
+    /// Create a new session
+    pub(crate) fn create(
         &self,
         session_id: &str,
         username: &str,
@@ -25,7 +26,7 @@ impl LiwanSessions {
 
     /// Get the username associated with a session ID, if the session is still valid.
     /// Returns None if the session is expired
-    pub(crate) fn session_get(&self, session_id: &str) -> Result<Option<String>> {
+    pub(crate) fn get(&self, session_id: &str) -> Result<Option<String>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("select username, expires_at from sessions where id = ?")?;
         let (username, expires_at): (String, chrono::DateTime<chrono::Utc>) =
@@ -36,7 +37,8 @@ impl LiwanSessions {
         Ok(Some(username))
     }
 
-    pub(crate) fn session_delete(&self, session_id: &str) -> Result<()> {
+    /// Delete a session
+    pub(crate) fn delete(&self, session_id: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("update sessions set expires_at = ? where id = ?")?;
         stmt.execute(rusqlite::params![chrono::Utc::now(), session_id])?;

@@ -6,6 +6,7 @@ import { queryClient, useQuery } from "./utils";
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
 export type Dimension = OASModel<DashboardSpec, "Dimension">;
+export type DimensionTableRow = OASModel<DashboardSpec, "DimensionTableRow">;
 export type DateRange = OASModel<DashboardSpec, "DateRange">;
 export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
 export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;
@@ -35,8 +36,8 @@ export const metricNames: Record<Metric, string> = {
 
 export const dimensionNames: Record<Dimension, string> = {
 	platform: "Platform",
-	browser: "Browser",
-	path: "Path",
+	browser: "Browser",  
+	url: "URL",
 	mobile: "Device Type",
 	referrer: "Referrer",
 	city: "City",

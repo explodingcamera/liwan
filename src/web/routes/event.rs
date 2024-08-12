@@ -49,7 +49,7 @@ impl EventApi {
         };
 
         if !EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_get(&event.entity_id).is_some()) {
-            if !app.entities.entity_exists(&event.entity_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)? {
+            if !app.entities.exists(&event.entity_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)? {
                 return EmptyResponse::ok();
             }
             EXISTING_ENTITIES
@@ -73,8 +73,8 @@ impl EventApi {
             entity_id: event.entity_id,
             event: event.name,
             fqdn: url.host().unwrap_or_default().to_string().into(),
-            mobile: Some(useragent::is_mobile(&client)),
             path: url.path().to_string().into(),
+            mobile: Some(useragent::is_mobile(&client)),
             platform: client.os.family.to_string().into(),
         };
 

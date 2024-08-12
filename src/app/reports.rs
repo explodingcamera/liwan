@@ -47,8 +47,9 @@ pub(crate) enum Metric {
 #[derive(Debug, Enum)]
 #[oai(rename_all = "snake_case")]
 pub(crate) enum Dimension {
-    Path,
+    Url,
     Fqdn,
+    Path,
     Referrer,
     Platform,
     Browser,
@@ -317,14 +318,15 @@ pub(crate) fn dimension_report(
     let filters_clause = filter_sql(filters)?;
     let metric_column = metric_sql(metric)?;
     let (dimension_column, group_by_columns) = match dimension {
-        Dimension::Path => ("concat(fqdn, path)", "fqdn, path"),
+        Dimension::Url => ("concat(fqdn, path)", "fqdn, path"),
+        Dimension::Path => ("path", "path"),
         Dimension::Fqdn => ("fqdn", "fqdn"),
         Dimension::Referrer => ("referrer", "referrer"),
         Dimension::Platform => ("platform", "platform"),
         Dimension::Browser => ("browser", "browser"),
         Dimension::Mobile => ("mobile::text", "mobile"),
         Dimension::Country => ("country", "country"),
-        Dimension::City => ("city", "city"),
+        Dimension::City => ("concat(country, city)", "country, city"),
     };
 
     let query = format!("--sql

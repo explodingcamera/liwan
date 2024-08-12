@@ -2,7 +2,7 @@ use crate::app::models::UserRole;
 use crate::app::Liwan;
 use crate::utils::hash::session_token;
 use crate::web::session::{SessionId, SessionUser, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE};
-use crate::web::webext::{ApiResult, EmptyResponse, http_bail};
+use crate::web::webext::{http_bail, ApiResult, EmptyResponse};
 use crate::web::PoemErrExt;
 
 use eyre::eyre;
@@ -55,7 +55,7 @@ impl AuthApi {
         }
 
         app.users
-            .user_create(&params.username, &params.password, UserRole::Admin, &[])
+            .create(&params.username, &params.password, UserRole::Admin, &[])
             .http_err("failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         app.onboarding
@@ -79,9 +79,7 @@ impl AuthApi {
 
         let session_id = session_token();
         let expires = chrono::Utc::now() + MAX_SESSION_AGE;
-        app.sessions
-            .session_create(&session_id, &params.username, expires)
-            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.sessions.create(&session_id, &params.username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
@@ -101,7 +99,7 @@ impl AuthApi {
         cookies: &CookieJar,
         SessionId(session_id): SessionId,
     ) -> ApiResult<EmptyResponse> {
-        app.sessions.session_delete(&session_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.sessions.delete(&session_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
         public_cookie.set_secure(app.config.secure());

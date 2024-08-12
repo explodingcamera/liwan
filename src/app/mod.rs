@@ -69,6 +69,54 @@ impl Liwan {
     pub(crate) fn events_conn(&self) -> Result<DuckDBConn> {
         Ok(self.events_pool.get()?)
     }
+
+    #[cfg(debug_assertions)]
+    pub(crate) fn seed_database(&self) -> Result<()> {
+        use models::UserRole;
+        use rand::Rng;
+
+        let entities = vec![
+            ("entity-1", "Entity 1", "example.com", vec!["public-project".to_string(), "private-project".to_string()]),
+            ("entity-2", "Entity 2", "test.example.com", vec!["private-project".to_string()]),
+            ("entity-3", "Entity 3", "example.org", vec!["public-project".to_string()]),
+        ];
+        let projects = vec![("public-project", "Public Project", true), ("private-project", "Private Project", false)];
+        let users = vec![("admin", "admin", UserRole::Admin), ("user", "user", UserRole::User)];
+
+        for (username, password, role) in users.iter() {
+            self.users.create(username, password, *role, &[])?;
+        }
+
+        for (project_id, display_name, public) in projects.iter() {
+            self.projects.create(
+                &models::Project {
+                    id: project_id.to_string(),
+                    display_name: display_name.to_string(),
+                    public: *public,
+                    secret: None,
+                },
+                &[],
+            )?;
+        }
+
+        let start = chrono::Utc::now().checked_sub_signed(chrono::Duration::days(365)).unwrap();
+        let end = chrono::Utc::now();
+        for (entity_id, display_name, fqdn, project_ids) in entities.iter() {
+            self.entities.create(
+                &models::Entity { id: entity_id.to_string(), display_name: display_name.to_string() },
+                project_ids,
+            )?;
+            let events = crate::utils::seed::random_events(
+                (start, end),
+                entity_id,
+                fqdn,
+                rand::thread_rng().gen_range(5000..20000),
+            );
+            self.events.append(events)?;
+        }
+
+        Ok(())
+    }
 }
 
 fn init_duckdb(path: &PathBuf, mut migrations_runner: Runner) -> Result<r2d2::Pool<DuckdbConnectionManager>> {
@@ -76,7 +124,15 @@ fn init_duckdb(path: &PathBuf, mut migrations_runner: Runner) -> Result<r2d2::Po
     let pool = r2d2::Pool::new(conn)?;
     migrations_runner.set_migration_table_name("migrations");
     migrations_runner.run(&mut DuckDBConnection(pool.get()?))?;
-    pool.get()?.execute_batch("set enable_fsst_vectors = true")?;
+
+    {
+        let conn = pool.get()?;
+        conn.pragma_update(None, "allow_community_extensions", &"false")?;
+        conn.pragma_update(None, "autoinstall_known_extensions", &"false")?;
+        conn.pragma_update(None, "autoload_known_extensions", &"false")?;
+        conn.pragma_update(None, "enable_fsst_vectors", &"true")?;
+    }
+
     Ok(pool)
 }
 
@@ -85,5 +141,16 @@ fn init_sqlite(path: &PathBuf, mut migrations_runner: Runner) -> Result<r2d2::Po
     let pool = r2d2::Pool::new(conn)?;
     migrations_runner.set_migration_table_name("migrations");
     migrations_runner.run(&mut RqlConnection(pool.get()?))?;
+
+    {
+        let conn = pool.get()?;
+        conn.pragma_update(None, "foreign_keys", &"ON")?;
+        conn.pragma_update(None, "journal_mode", &"WAL")?;
+        conn.pragma_update(None, "synchronous", &"NORMAL")?;
+        conn.pragma_update(None, "mmap_size", &"268435456")?;
+        conn.pragma_update(None, "journal_size_limit", &"268435456")?;
+        conn.pragma_update(None, "cache_size", &"2000")?;
+    }
+
     Ok(pool)
 }

@@ -8,13 +8,15 @@ import {
 	useQuery,
 	type DateRange,
 	type Dimension,
+	type DimensionTableRow,
 	type Metric,
 	type ProjectResponse,
 } from "../api";
 import { ProjectOverview } from "./projects";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { resolveRange, type RangeName } from "../api/ranges";
-import { BrowserIcon, OSIcon } from "./icons";
+import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "./icons";
+import { LinkIcon } from "lucide-react";
 const server = typeof window === "undefined";
 
 export const Project = () => {
@@ -49,7 +51,8 @@ export const Project = () => {
 			<div className={styles.tables}>
 				<DimTable project={data} dimension={"platform"} metric={metric} range={resolveRange(dateRange).range} />
 				<DimTable project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"path"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"url"} metric={metric} range={resolveRange(dateRange).range} />
+				<DimTable project={data} dimension={"fqdn"} metric={metric} range={resolveRange(dateRange).range} />
 				<DimTable project={data} dimension={"mobile"} metric={metric} range={resolveRange(dateRange).range} />
 				<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
 				<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
@@ -111,10 +114,7 @@ const DimTable = ({
 					return (
 						<div key={d.dimensionValue} style={{ order: order?.indexOf(d.dimensionValue) }} className={styles.row}>
 							<DimensionValueBar value={value} biggest={biggestVal}>
-								{dimension === "browser" && <BrowserIcon browser={d.dimensionValue} size={24} />}
-								{dimension === "platform" && <OSIcon os={d.dimensionValue} size={24} />}
-								&nbsp;
-								{d.displayName ?? d.dimensionValue}
+								<DimensionLabel dimension={dimension} value={d} />
 							</DimensionValueBar>
 
 							<div>{value.toFixed(1).replace(/\.0$/, "") || "0"}</div>
@@ -124,6 +124,108 @@ const DimTable = ({
 			</div>
 		</div>
 	);
+};
+
+const DimensionLabel = ({ dimension, value }: { dimension: Dimension; value: DimensionTableRow }) => {
+	if (dimension === "platform")
+		return (
+			<>
+				<OSIcon os={value.dimensionValue} size={24} />
+				&nbsp;
+				{value.dimensionValue}
+			</>
+		);
+
+	if (dimension === "browser")
+		return (
+			<>
+				<BrowserIcon browser={value.dimensionValue} size={24} />
+				&nbsp;
+				{value.dimensionValue}
+			</>
+		);
+
+	if (dimension === "url") {
+		const url = value.dimensionValue;
+		return (
+			<>
+				<LinkIcon size={16} />
+				&nbsp;
+				<a href={value.dimensionValue}>{url}</a>
+			</>
+		);
+	}
+
+	if (dimension === "fqdn") {
+		const url = tryParseUrl(value.dimensionValue);
+		return (
+			<>
+				<LinkIcon size={16} />
+				&nbsp;
+				<a href={value.dimensionValue}>{url.hostname}</a>
+			</>
+		);
+	}
+
+	if (dimension === "mobile")
+		return (
+			<>
+				<MobileDeviceIcon isMobile={value.dimensionValue === "true"} size={24} />
+				&nbsp;
+				{value.dimensionValue === "true" ? "Mobile" : "Desktop"}
+			</>
+		);
+
+	if (dimension === "country") {
+		return (
+			<>
+				{countryCodeToFlag(value.dimensionValue)}
+				&nbsp;
+				{value.displayName ?? value.dimensionValue ?? "Unknown"}
+			</>
+		);
+	}
+
+	if (dimension === "city") {
+		console.log(value);
+
+		return (
+			<>
+				{countryCodeToFlag(value.icon || "XX")}
+				&nbsp;
+				{value.displayName ?? value.dimensionValue ?? "Unknown"}
+			</>
+		);
+	}
+
+	if (dimension === "referrer") {
+		return (
+			<>
+				<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
+				&nbsp;
+				{value.displayName ?? value.dimensionValue ?? "Unknown"}
+			</>
+		);
+	}
+
+	return <>{value.displayName ?? value.dimensionValue ?? "Unknown"}</>;
+};
+
+const tryParseUrl = (url: string) => {
+	try {
+		return new URL(url);
+	} catch {
+		return new URL(`https://${url}`);
+	}
+};
+
+const countryCodeToFlag = (countryCode: string) => {
+	const code = countryCode.length === 2 ? countryCode : "XX";
+	const codePoints = code
+		.toUpperCase()
+		.split("")
+		.map((char) => 127397 + char.charCodeAt(0));
+	return String.fromCodePoint(...codePoints);
 };
 
 const DimensionValueBar = ({

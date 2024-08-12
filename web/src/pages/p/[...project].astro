@@ -7,7 +7,8 @@ import { Project } from "../../components/project";
 export const getStaticPaths = (() => {
   return [
     { params: { project: "project" } },
-    { params: { project: "mywebsite" } },
+    { params: { project: "private-project" } },
+    { params: { project: "public-project" } },
   ];
 }) satisfies GetStaticPaths;
 ---

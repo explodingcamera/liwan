@@ -20,6 +20,9 @@ async fn main() -> Result<()> {
         .add_directive(Level::WARN.into());
     tracing_subscriber::fmt().with_env_filter(filter).compact().init();
 
+    #[cfg(debug_assertions)]
+    tracing::info!("Running in debug mode");
+
     let config = Config::load(args.config)?;
     let (s, r) = crossbeam::channel::unbounded::<Event>();
 
@@ -31,6 +34,6 @@ async fn main() -> Result<()> {
 
     tokio::select! {
         res = web::start_webserver(app.clone(), s) => res,
-        res = tokio::task::spawn_blocking(move || app.clone().events.process_events(r)) => res?
+        res = tokio::task::spawn_blocking(move || app.clone().events.process(r)) => res?
     }
 }

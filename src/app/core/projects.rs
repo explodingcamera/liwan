@@ -16,7 +16,7 @@ impl LiwanProjects {
     }
 
     /// Link an entity to a project
-    pub(crate) fn project_update_entities(&self, project_id: &str, entity_ids: &[String]) -> Result<()> {
+    pub(crate) fn update_entities(&self, project_id: &str, entity_ids: &[String]) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from project_entities where project_id = ?", rusqlite::params![project_id])?;
@@ -31,7 +31,7 @@ impl LiwanProjects {
     }
 
     /// Get all entities associated with a project
-    pub(crate) fn project_entities(&self, project_id: &str) -> Result<Vec<models::Entity>> {
+    pub(crate) fn entities(&self, project_id: &str) -> Result<Vec<models::Entity>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
             "select e.id, e.display_name from entities e join project_entities pe on e.id = pe.entity_id where pe.project_id = ?",
@@ -43,7 +43,7 @@ impl LiwanProjects {
     }
 
     /// Get all entity IDs associated with a project
-    pub(crate) fn project_entity_ids(&self, project_id: &str) -> Result<Vec<String>> {
+    pub(crate) fn entity_ids(&self, project_id: &str) -> Result<Vec<String>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("select entity_id from project_entities where project_id = ?")?;
         let entities = stmt.query_map(rusqlite::params![project_id], |row| row.get("entity_id"))?;
@@ -51,7 +51,7 @@ impl LiwanProjects {
     }
 
     /// Get a project by ID
-    pub(crate) fn project(&self, id: &str) -> Result<models::Project> {
+    pub(crate) fn get(&self, id: &str) -> Result<models::Project> {
         let conn = self.pool.get()?;
         let project = conn.prepare("select id, display_name, public, secret from projects where id = ?")?.query_row(
             rusqlite::params![id],
@@ -68,7 +68,7 @@ impl LiwanProjects {
     }
 
     /// Get all projects
-    pub(crate) fn projects(&self) -> Result<Vec<models::Project>> {
+    pub(crate) fn all(&self) -> Result<Vec<models::Project>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare("select id, display_name, public, secret from projects")?;
         let projects = stmt.query_map([], |row| {
@@ -84,11 +84,7 @@ impl LiwanProjects {
     }
 
     /// Create a new project
-    pub(crate) fn project_create(
-        &self,
-        project: &models::Project,
-        initial_entities: &[String],
-    ) -> Result<models::Project> {
+    pub(crate) fn create(&self, project: &models::Project, initial_entities: &[String]) -> Result<models::Project> {
         if !validate::is_valid_id(&project.id) {
             bail!("invalid project ID");
         }
@@ -109,7 +105,7 @@ impl LiwanProjects {
     }
 
     /// Update a project
-    pub(crate) fn project_update(&self, project: &models::Project) -> Result<models::Project> {
+    pub(crate) fn update(&self, project: &models::Project) -> Result<models::Project> {
         let conn = self.pool.get()?;
         let mut stmt =
             conn.prepare_cached("update projects set display_name = ?, public = ?, secret = ? where id = ?")?;
@@ -118,7 +114,7 @@ impl LiwanProjects {
     }
 
     /// remove the project and all associated `project_entities`
-    pub(crate) fn project_delete(&self, id: &str) -> Result<()> {
+    pub(crate) fn delete(&self, id: &str) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from projects where id = ?", rusqlite::params![id])?;

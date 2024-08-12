@@ -4,6 +4,7 @@ use crate::utils::validate::{self, can_access_project};
 use crate::web::session::SessionUser;
 use crate::web::webext::{http_bail, ApiResult, PoemErrExt};
 
+use maxminddb::geoip2::country;
 use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::param::Path;
@@ -75,8 +76,8 @@ impl DashboardAPI {
             http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
         }
 
-        let project = app.projects.project(&project_id).http_status(StatusCode::IM_A_TEAPOT)?;
-        let entities = app.projects.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.projects.get(&project_id).http_status(StatusCode::IM_A_TEAPOT)?;
+        let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         if !can_access_project(&project, user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
@@ -98,8 +99,8 @@ impl DashboardAPI {
         Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<StatsResponse>> {
-        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        let entities = app.projects.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         if !can_access_project(&project, user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
@@ -126,8 +127,8 @@ impl DashboardAPI {
         Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<DimensionResponse>> {
-        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        let entities = app.projects.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         if !can_access_project(&project, user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
@@ -143,8 +144,12 @@ impl DashboardAPI {
         for (key, value) in stats {
             match req.dimension {
                 Dimension::Referrer => {
-                    let icon = crate::utils::referrer::get_referer_icon(&key);
                     let display_name = crate::utils::referrer::get_referer_name(&key);
+                    let icon = if let Some(referrer) = &display_name {
+                        crate::utils::referrer::get_referer_icon(referrer)
+                    } else {
+                        None
+                    };
                     data.push(DimensionTableRow { dimension_value: key, value, display_name, icon });
                 }
                 Dimension::Browser => {
@@ -154,6 +159,18 @@ impl DashboardAPI {
                     };
 
                     data.push(DimensionTableRow { dimension_value: key, value, display_name, icon: None });
+                }
+                Dimension::Country => {
+                    let display_name = crate::utils::geo::get_country_name(&key);
+                    data.push(DimensionTableRow { dimension_value: key, value, display_name, icon: None });
+                }
+                Dimension::City => {
+                    let (country, city) = key
+                        .clone()
+                        .split_at_checked(2)
+                        .map(|(a, b)| (Some(a.to_string()), Some(b.to_string())))
+                        .unwrap_or((None, None));
+                    data.push(DimensionTableRow { dimension_value: key, value, display_name: city, icon: country });
                 }
                 _ => {
                     data.push(DimensionTableRow { dimension_value: key, value, display_name: None, icon: None });

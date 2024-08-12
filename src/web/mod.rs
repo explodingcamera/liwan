@@ -86,16 +86,13 @@ pub(crate) async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
     if let Some(onboarding) = app.onboarding.token()? {
-        tracing::info!("{}", "It looks like you're running Liwan for the first time!".bold().white());
-        tracing::info!(
-            "{}",
-            format!("You can get started by visiting: http://localhost:{}/setup?t={}", app.config.port, onboarding)
-                .underline()
-                .white()
-        );
-        tracing::info!("{}", "To see all available commands, run `liwan --help`".bold().white());
+        let get_started = format!("http://localhost:{}/setup?t={}", app.config.port, onboarding).underline().bold();
+        let command = "liwan --help".bold();
+        tracing::info!("{}", "It looks like you're running Liwan for the first time!".white());
+        tracing::info!("{}", format!("You can get started by visiting: {get_started}").white());
+        tracing::info!("{}", format!("To see all available commands, run `{command}`").white());
     } else {
-        tracing::info!("{}", format!("Liwan is running on {}", app.config.base_url.underline()).bold().white());
+        tracing::info!("{}", format!("Liwan is running on {}", app.config.base_url.underline()).white());
     }
 
     Server::new(listener).run(router).await.wrap_err("server exited unexpectedly")

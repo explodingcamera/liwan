@@ -69,15 +69,24 @@ export const OSIcon = ({ os, ...props }: { os: string } & IconProps) => {
 	return <AppWindowIcon {...props} />;
 };
 
-export const ReferrerIcon = ({ referrer, icon, ...props }: { referrer: string; icon: string } & IconProps) => {
-	if (Object.hasOwnProperty.call(brandIcons, icon)) {
+export const MobileDeviceIcon = ({ isMobile, ...props }: { isMobile: boolean } & IconProps) => {
+	const Icon = isMobile ? deviceIcons.phone : deviceIcons.desktop;
+	return <Icon {...props} />;
+};
+
+export const ReferrerIcon = ({ referrer, icon, ...props }: { referrer: string; icon?: string } & IconProps) => {
+	if (icon && Object.hasOwnProperty.call(brandIcons, icon)) {
 		const Icon = brandIcons[icon as keyof typeof brandIcons];
 		return <Icon {...props} />;
 	}
 
-	if (Object.hasOwnProperty.call(genericIcons, icon)) {
+	if (icon && Object.hasOwnProperty.call(genericIcons, icon)) {
 		const Icon = genericIcons[icon as keyof typeof genericIcons];
 		return <Icon {...props} />;
+	}
+
+	if (referrer === "Unknown") {
+		return <SearchIcon {...props} />;
 	}
 
 	<Favicon {...props} />;

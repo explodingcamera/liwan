@@ -32,8 +32,8 @@ pub(crate) fn get_referer_name(fqdn: &str) -> Option<String> {
     REFERERS.with(|r| r.get(fqdn).map(std::string::ToString::to_string))
 }
 
-pub(crate) fn get_referer_icon(fqdn: &str) -> Option<String> {
-    REFERRER_ICONS.with(|r| r.get(fqdn).map(std::string::ToString::to_string))
+pub(crate) fn get_referer_icon(name: &str) -> Option<String> {
+    REFERRER_ICONS.with(|r| r.get(name).map(std::string::ToString::to_string))
 }
 
 pub(crate) fn is_spammer(fqdn: &str) -> bool {

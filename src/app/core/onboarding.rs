@@ -22,6 +22,7 @@ impl LiwanOnboarding {
         Ok(Self { token: onboarding.into() })
     }
 
+    /// Get the onboarding token, if it exists
     pub(crate) fn token(&self) -> Result<Option<String>> {
         Ok(self
             .token
@@ -31,6 +32,7 @@ impl LiwanOnboarding {
             .cloned())
     }
 
+    /// Clear the onboarding token to prevent it from being used again
     pub(crate) fn clear(&self) -> Result<()> {
         let mut onboarding =
             self.token.write().map_err(|_| eyre::eyre!("Failed to acquire onboarding token write lock"))?;

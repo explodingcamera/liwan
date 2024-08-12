@@ -138,7 +138,7 @@ impl AdminAPI {
 
         let users = app
             .users
-            .users()
+            .all()
             .http_err("Failed to get users", StatusCode::INTERNAL_SERVER_ERROR)?
             .into_iter()
             .map(|u| UserResponse { username: u.username.clone(), role: u.role, projects: u.projects.clone() })
@@ -164,7 +164,7 @@ impl AdminAPI {
         }
 
         app.users
-            .user_update(&username, user.role, user.projects.as_slice())
+            .update(&username, user.role, user.projects.as_slice())
             .http_err("Failed to update user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -183,7 +183,7 @@ impl AdminAPI {
         }
 
         app.users
-            .user_update_password(&username, &password.password)
+            .update_password(&username, &password.password)
             .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -204,7 +204,7 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Cannot delete own user")
         }
 
-        app.users.user_delete(&username).http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.users.delete(&username).http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
     }
@@ -221,7 +221,7 @@ impl AdminAPI {
         }
 
         app.users
-            .user_create(&user.username, &user.password, user.role, &[])
+            .create(&user.username, &user.password, user.role, &[])
             .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -240,7 +240,7 @@ impl AdminAPI {
         }
 
         app.projects
-            .project_create(
+            .create(
                 &Project {
                     id: project_id,
                     display_name: project.display_name,
@@ -268,7 +268,7 @@ impl AdminAPI {
 
         if let Some(project) = req.project {
             app.projects
-                .project_update(&Project {
+                .update(&Project {
                     id: project_id.clone(),
                     display_name: project.display_name,
                     public: project.public,
@@ -279,7 +279,7 @@ impl AdminAPI {
 
         if let Some(entities) = req.entities {
             app.projects
-                .project_update_entities(&project_id, entities.as_slice())
+                .update_entities(&project_id, entities.as_slice())
                 .http_err("Failed to update project entities", StatusCode::INTERNAL_SERVER_ERROR)?;
         }
 
@@ -292,7 +292,7 @@ impl AdminAPI {
         Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Response<Json<ProjectsResponse>>> {
-        let projects = app.projects.projects().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
+        let projects = app.projects.all().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
         let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, user.as_ref())).collect();
 
         let mut resp = Vec::new();
@@ -302,7 +302,7 @@ impl AdminAPI {
                 display_name: project.display_name.clone(),
                 entities: app
                     .projects
-                    .project_entities(&project.id)
+                    .entities(&project.id)
                     .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
                     .into_iter()
                     .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
@@ -321,7 +321,7 @@ impl AdminAPI {
         Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Response<Json<ProjectResponse>>> {
-        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if !can_access_project(&project, user.as_ref()) {
             return Err(StatusCode::NOT_FOUND.into());
         }
@@ -331,7 +331,7 @@ impl AdminAPI {
             display_name: project.display_name.clone(),
             entities: app
                 .projects
-                .project_entities(&project.id)
+                .entities(&project.id)
                 .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
                 .into_iter()
                 .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
@@ -348,14 +348,12 @@ impl AdminAPI {
         Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
-        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.projects
-            .project_delete(&project.id)
-            .http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.projects.delete(&project.id).http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
         EmptyResponse::ok()
     }
 
@@ -369,7 +367,7 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        let entities = app.entities.entities().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
+        let entities = app.entities.all().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut resp = Vec::new();
         for entity in entities {
@@ -378,7 +376,7 @@ impl AdminAPI {
                 display_name: entity.display_name.clone(),
                 projects: app
                     .entities
-                    .entity_projects(&entity.id)
+                    .projects(&entity.id)
                     .http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?
                     .into_iter()
                     .map(|project| EntityProject {
@@ -405,7 +403,7 @@ impl AdminAPI {
         }
 
         app.entities
-            .entity_create(
+            .create(
                 &Entity { id: entity.id.clone(), display_name: entity.display_name.clone() },
                 entity.projects.as_slice(),
             )
@@ -428,13 +426,13 @@ impl AdminAPI {
 
         if let Some(display_name) = entity.display_name {
             app.entities
-                .entity_update(&Entity { id: entity_id.clone(), display_name })
+                .update(&Entity { id: entity_id.clone(), display_name })
                 .http_err("Failed to update entity", StatusCode::INTERNAL_SERVER_ERROR)?;
         }
 
         if let Some(projects) = entity.projects {
             app.entities
-                .entity_update_projects(&entity_id, projects.as_slice())
+                .update_projects(&entity_id, projects.as_slice())
                 .http_err("Failed to update entity projects", StatusCode::INTERNAL_SERVER_ERROR)?;
         }
 
@@ -452,9 +450,7 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.entities
-            .entity_delete(&entity_id)
-            .http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.entities.delete(&entity_id).http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
     }

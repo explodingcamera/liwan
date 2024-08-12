@@ -22,12 +22,7 @@ export const Dialog = ({
 			<Dia.Portal>
 				<Dia.Overlay className={styles.overlay} />
 
-				<Dia.Content
-					asChild
-					onSubmit={(e) => {
-						console.log("submit");
-					}}
-				>
+				<Dia.Content asChild>
 					<article className={styles.content}>
 						{title && <Dia.Title className={styles.title}>{title}</Dia.Title>}
 						{description && (

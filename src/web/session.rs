@@ -46,12 +46,12 @@ impl<'a> FromRequest<'a> for SessionUser {
 
         let username = app
             .sessions
-            .session_get(&session_id)
+            .get(&session_id)
             .map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?
             .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
 
         let user =
-            app.users.user(&username).map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+            app.users.get(&username).map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
 
         Ok(Self(user))
     }

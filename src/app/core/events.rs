@@ -29,6 +29,7 @@ impl LiwanEvents {
         Ok(Self { duckdb, sqlite, daily_salt: ShardedLock::new(daily_salt).into() })
     }
 
+    /// Get the daily salt, generating a new one if the current one is older than 24 hours
     pub(crate) async fn get_salt(&self) -> Result<String> {
         let (salt, updated_at) = {
             let salt = self.daily_salt.read().map_err(|_| eyre::eyre!("Failed to acquire read lock"))?;
@@ -53,7 +54,19 @@ impl LiwanEvents {
         Ok(salt)
     }
 
-    pub(crate) fn process_events(&self, events: Receiver<Event>) -> Result<()> {
+    /// Append events in batch
+    pub(crate) fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
+        let conn = self.duckdb.get()?;
+        let mut appender = conn.appender("events")?;
+        for event in events {
+            appender.append_row(event_params![event])?;
+        }
+        appender.flush()?;
+        Ok(())
+    }
+
+    /// Start processing events from the given channel. Blocks until the channel is closed.
+    pub(crate) fn process(&self, events: Receiver<Event>) -> Result<()> {
         loop {
             match events.recv() {
                 Ok(event) => {
