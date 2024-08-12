@@ -1,10 +1,10 @@
-pub(crate) mod api;
 pub(crate) mod app;
 pub(crate) mod cli;
 pub(crate) mod config;
 pub(crate) mod utils;
+pub(crate) mod web;
 
-use app::{models::Event, App};
+use app::{models::Event, Liwan};
 use config::Config;
 use eyre::Result;
 use tracing::Level;
@@ -23,14 +23,14 @@ async fn main() -> Result<()> {
     let config = Config::load(args.config)?;
     let (s, r) = crossbeam::channel::unbounded::<Event>();
 
-    let app = App::try_new(config)?;
+    let app = Liwan::try_new(config)?;
 
     if let Some(cmd) = args.cmd {
         return cli::handle_command(app, cmd);
     }
 
     tokio::select! {
-        res = api::start_webserver(app.clone(), s) => res,
-        res = tokio::task::spawn_blocking(move || app.clone().process_events(r)) => res?
+        res = web::start_webserver(app.clone(), s) => res,
+        res = tokio::task::spawn_blocking(move || app.clone().events.process_events(r)) => res?
     }
 }

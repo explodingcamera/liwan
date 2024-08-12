@@ -1,7 +1,10 @@
-use super::{session::SessionUser, webext::*};
 use crate::app::models::{Entity, Project, UserRole};
-use crate::app::App;
+use crate::app::Liwan;
 use crate::utils::validate::can_access_project;
+use crate::web::{
+    session::SessionUser,
+    webext::{http_bail, ApiResult, EmptyResponse, PoemErrExt},
+};
 
 use poem::{http::StatusCode, web::Data};
 use poem_openapi::param::Path;
@@ -126,7 +129,7 @@ impl AdminAPI {
     #[oai(path = "/users", method = "get")]
     async fn users_handler(
         &self,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<Response<Json<UsersResponse>>> {
         if user.role != UserRole::Admin {
@@ -134,6 +137,7 @@ impl AdminAPI {
         }
 
         let users = app
+            .users
             .users()
             .http_err("Failed to get users", StatusCode::INTERNAL_SERVER_ERROR)?
             .into_iter()
@@ -148,7 +152,7 @@ impl AdminAPI {
         &self,
         Path(username): Path<String>,
         Json(user): Json<UpdateUserRequest>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
@@ -159,7 +163,8 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Cannot change own role")
         }
 
-        app.user_update(&username, user.role, user.projects.as_slice())
+        app.users
+            .user_update(&username, user.role, user.projects.as_slice())
             .http_err("Failed to update user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -170,14 +175,15 @@ impl AdminAPI {
         &self,
         Path(username): Path<String>,
         Json(password): Json<UpdatePasswordRequest>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.user_update_password(&username, &password.password)
+        app.users
+            .user_update_password(&username, &password.password)
             .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -187,7 +193,7 @@ impl AdminAPI {
     async fn user_delete_handler(
         &self,
         Path(username): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
@@ -198,7 +204,7 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Cannot delete own user")
         }
 
-        app.user_delete(&username).http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.users.user_delete(&username).http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
     }
@@ -207,14 +213,15 @@ impl AdminAPI {
     async fn user_create_handler(
         &self,
         Json(user): Json<CreateUserRequest>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.user_create(&user.username, &user.password, user.role, &[])
+        app.users
+            .user_create(&user.username, &user.password, user.role, &[])
             .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
@@ -225,23 +232,24 @@ impl AdminAPI {
         &self,
         Json(project): Json<CreateProjectRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.project_create(
-            &Project {
-                id: project_id,
-                display_name: project.display_name,
-                public: project.public,
-                secret: project.secret,
-            },
-            project.entities.as_slice(),
-        )
-        .http_err("Failed to create project", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.projects
+            .project_create(
+                &Project {
+                    id: project_id,
+                    display_name: project.display_name,
+                    public: project.public,
+                    secret: project.secret,
+                },
+                project.entities.as_slice(),
+            )
+            .http_err("Failed to create project", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
     }
@@ -251,7 +259,7 @@ impl AdminAPI {
         &self,
         Json(req): Json<UpdateProjectRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
@@ -259,17 +267,19 @@ impl AdminAPI {
         }
 
         if let Some(project) = req.project {
-            app.project_update(&Project {
-                id: project_id.clone(),
-                display_name: project.display_name,
-                public: project.public,
-                secret: project.secret,
-            })
-            .http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
+            app.projects
+                .project_update(&Project {
+                    id: project_id.clone(),
+                    display_name: project.display_name,
+                    public: project.public,
+                    secret: project.secret,
+                })
+                .http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
         }
 
         if let Some(entities) = req.entities {
-            app.project_update_entities(&project_id, entities.as_slice())
+            app.projects
+                .project_update_entities(&project_id, entities.as_slice())
                 .http_err("Failed to update project entities", StatusCode::INTERNAL_SERVER_ERROR)?;
         }
 
@@ -279,11 +289,11 @@ impl AdminAPI {
     #[oai(path = "/projects", method = "get")]
     async fn projects_handler(
         &self,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Response<Json<ProjectsResponse>>> {
-        let projects = app.projects().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
-        let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, &user.as_ref())).collect();
+        let projects = app.projects.projects().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
+        let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, user.as_ref())).collect();
 
         let mut resp = Vec::new();
         for project in projects {
@@ -291,6 +301,7 @@ impl AdminAPI {
                 id: project.id.clone(),
                 display_name: project.display_name.clone(),
                 entities: app
+                    .projects
                     .project_entities(&project.id)
                     .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
                     .into_iter()
@@ -307,11 +318,11 @@ impl AdminAPI {
     async fn project_handler(
         &self,
         Path(project_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Response<Json<ProjectResponse>>> {
-        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        if !can_access_project(&project, &user.as_ref()) {
+        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        if !can_access_project(&project, user.as_ref()) {
             return Err(StatusCode::NOT_FOUND.into());
         }
 
@@ -319,6 +330,7 @@ impl AdminAPI {
             id: project.id.clone(),
             display_name: project.display_name.clone(),
             entities: app
+                .projects
                 .project_entities(&project.id)
                 .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
                 .into_iter()
@@ -333,29 +345,31 @@ impl AdminAPI {
     async fn project_delete_handler(
         &self,
         Path(project_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
-        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.project_delete(&project.id).http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.projects
+            .project_delete(&project.id)
+            .http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
         EmptyResponse::ok()
     }
 
     #[oai(path = "/entities", method = "get")]
     async fn entities_handler(
         &self,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<Response<Json<EntitiesResponse>>> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        let entities = app.entities().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
+        let entities = app.entities.entities().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut resp = Vec::new();
         for entity in entities {
@@ -363,6 +377,7 @@ impl AdminAPI {
                 id: entity.id.clone(),
                 display_name: entity.display_name.clone(),
                 projects: app
+                    .entities
                     .entity_projects(&entity.id)
                     .http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?
                     .into_iter()
@@ -382,18 +397,19 @@ impl AdminAPI {
     async fn entity_create_handler(
         &self,
         Json(entity): Json<CreateEntityRequest>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<Json<EntityResponse>> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.entity_create(
-            &Entity { id: entity.id.clone(), display_name: entity.display_name.clone() },
-            entity.projects.as_slice(),
-        )
-        .http_err("Failed to create entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.entities
+            .entity_create(
+                &Entity { id: entity.id.clone(), display_name: entity.display_name.clone() },
+                entity.projects.as_slice(),
+            )
+            .http_err("Failed to create entity", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(EntityResponse { id: entity.id, display_name: entity.display_name, projects: Vec::new() }))
     }
@@ -403,7 +419,7 @@ impl AdminAPI {
         &self,
         Path(entity_id): Path<String>,
         Json(entity): Json<UpdateEntityRequest>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
@@ -411,12 +427,14 @@ impl AdminAPI {
         }
 
         if let Some(display_name) = entity.display_name {
-            app.entity_update(&Entity { id: entity_id.clone(), display_name })
+            app.entities
+                .entity_update(&Entity { id: entity_id.clone(), display_name })
                 .http_err("Failed to update entity", StatusCode::INTERNAL_SERVER_ERROR)?;
         }
 
         if let Some(projects) = entity.projects {
-            app.entity_update_projects(&entity_id, projects.as_slice())
+            app.entities
+                .entity_update_projects(&entity_id, projects.as_slice())
                 .http_err("Failed to update entity projects", StatusCode::INTERNAL_SERVER_ERROR)?;
         }
 
@@ -427,14 +445,17 @@ impl AdminAPI {
     async fn entity_delete_handler(
         &self,
         Path(entity_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.entity_delete(&entity_id).http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.entities
+            .entity_delete(&entity_id)
+            .http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+
         EmptyResponse::ok()
     }
 }

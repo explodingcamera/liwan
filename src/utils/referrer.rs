@@ -25,15 +25,15 @@ thread_local! {
         map
     });
     pub(crate) static SPAMMERS: LazyCell<HashSet<String>> =
-        LazyCell::new(|| include_str!("../../data/spammers.txt").lines().map(|s| s.to_string()).collect());
+        LazyCell::new(|| include_str!("../../data/spammers.txt").lines().map(std::string::ToString::to_string).collect());
 }
 
 pub(crate) fn get_referer_name(fqdn: &str) -> Option<String> {
-    REFERERS.with(|r| r.get(fqdn).map(|s| s.to_string()))
+    REFERERS.with(|r| r.get(fqdn).map(std::string::ToString::to_string))
 }
 
 pub(crate) fn get_referer_icon(fqdn: &str) -> Option<String> {
-    REFERRER_ICONS.with(|r| r.get(fqdn).map(|s| s.to_string()))
+    REFERRER_ICONS.with(|r| r.get(fqdn).map(std::string::ToString::to_string))
 }
 
 pub(crate) fn is_spammer(fqdn: &str) -> bool {
@@ -51,7 +51,7 @@ pub(crate) fn process_referer(referer: Option<&str>) -> Result<Option<String>, (
             Some(referer_fqn.to_owned())
         }
         // invalid referer are kept as is (e.g. when using custom referer values outside of the browser)
-        Some(Err(_)) => referer.map(|r| r.to_owned()),
+        Some(Err(_)) => referer.map(std::borrow::ToOwned::to_owned),
         None => None,
     };
 

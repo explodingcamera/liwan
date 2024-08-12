@@ -102,12 +102,9 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
             return Err(StatusCode::METHOD_NOT_ALLOWED.into());
         }
 
-        let file = match E::get(&path) {
-            Some(content) => Some(content),
-            None => {
-                path = format!("{}/index.html", path);
-                E::get(&path)
-            }
+        let file = if let Some(content) = E::get(&path) { Some(content) } else {
+            path = format!("{path}/index.html");
+            E::get(&path)
         };
 
         let orig_path = req.original_uri().path();
@@ -115,7 +112,7 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
             let redirect = req.original_uri().path().trim_start_matches('/').trim_end_matches('/');
             return Ok(Response::builder()
                 .status(StatusCode::MOVED_PERMANENTLY)
-                .header(header::LOCATION, format!("/{}", redirect))
+                .header(header::LOCATION, format!("/{redirect}"))
                 .body(vec![]));
         }
 
@@ -125,8 +122,7 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
                 if req
                     .headers()
                     .get(header::IF_NONE_MATCH)
-                    .map(|etag| etag.to_str().unwrap_or("000000").eq(&hash))
-                    .unwrap_or(false)
+                    .is_some_and(|etag| etag.to_str().unwrap_or("000000").eq(&hash))
                 {
                     return Err(StatusCode::NOT_MODIFIED.into());
                 }

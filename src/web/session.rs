@@ -38,18 +38,21 @@ impl<'a> FromRequest<'a> for SessionId {
 }
 
 impl<'a> FromRequest<'a> for SessionUser {
-    async fn from_request(req: &'a poem::Request, _body: &mut poem::RequestBody) -> poem::Result<Self> {
-        let session_id = SessionId::from_request(req, _body).await?.0;
+    async fn from_request(req: &'a poem::Request, body: &mut poem::RequestBody) -> poem::Result<Self> {
+        let session_id = SessionId::from_request(req, body).await?.0;
         let app = req
-            .data::<crate::app::App>()
+            .data::<crate::app::Liwan>()
             .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
 
         let username = app
+            .sessions
             .session_get(&session_id)
             .map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?
             .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
 
-        let user = app.user(&username).map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+        let user =
+            app.users.user(&username).map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+
         Ok(Self(user))
     }
 }

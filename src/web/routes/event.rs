@@ -1,8 +1,8 @@
-use super::webext::*;
-use crate::app::{models::Event, App};
+use crate::app::{models::Event, Liwan};
 use crate::utils::hash::{hash_ip, visitor_id};
 use crate::utils::referrer::process_referer;
-use crate::utils::ua;
+use crate::utils::useragent;
+use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
 
 use cached::{Cached, TimedCache};
 use crossbeam::channel::Sender;
@@ -34,13 +34,13 @@ impl EventApi {
     async fn event_handler(
         &self,
         RealIp(ip): RealIp,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         Data(events): Data<&Sender<Event>>,
         Json(event): Json<EventRequest>,
         TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
     ) -> ApiResult<EmptyResponse> {
-        let client = ua::parse(user_agent.as_str());
-        if ua::is_bot(&client) {
+        let client = useragent::parse(user_agent.as_str());
+        if useragent::is_bot(&client) {
             return EmptyResponse::ok();
         }
 
@@ -49,7 +49,7 @@ impl EventApi {
         };
 
         if !EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_get(&event.entity_id).is_some()) {
-            if !app.entity_exists(&event.entity_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)? {
+            if !app.entities.entity_exists(&event.entity_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)? {
                 return EmptyResponse::ok();
             }
             EXISTING_ENTITIES
@@ -57,7 +57,7 @@ impl EventApi {
         }
 
         let url = Uri::from_str(&event.url).wrap_err("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
-        let daily_salt = app.get_salt().await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let daily_salt = app.events.get_salt().await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
         let visitor_id = match ip {
             Some(ip) => hash_ip(&ip, user_agent.as_str(), &daily_salt, &event.entity_id),
             None => visitor_id(),
@@ -73,7 +73,7 @@ impl EventApi {
             entity_id: event.entity_id,
             event: event.name,
             fqdn: url.host().unwrap_or_default().to_string().into(),
-            mobile: Some(ua::is_mobile(&client)),
+            mobile: Some(useragent::is_mobile(&client)),
             path: url.path().to_string().into(),
             platform: client.os.family.to_string().into(),
         };

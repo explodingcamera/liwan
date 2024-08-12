@@ -88,7 +88,7 @@ pub(crate) struct DimensionFilter {
 }
 
 fn filter_sql(_filters: &[DimensionFilter]) -> Result<String> {
-    Ok("".to_string())
+    Ok(String::new())
 }
 
 fn metric_sql(metric: &Metric) -> Result<String> {
@@ -109,7 +109,7 @@ pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64
     if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
         return Err(eyre::eyre!("Invalid entity ID"));
     }
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity)).join(", ");
+    let entities_list = entities.iter().map(|entity| format!("'{entity}'")).join(", ");
 
     let query = format!(
         "--sql

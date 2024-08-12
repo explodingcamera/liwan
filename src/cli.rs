@@ -1,5 +1,5 @@
 use crate::{
-    app::{models::UserRole, App},
+    app::{models::UserRole, Liwan},
     config::DEFAULT_CONFIG,
 };
 use argh::FromArgs;
@@ -74,14 +74,14 @@ pub(crate) struct AddUser {
     admin: bool,
 }
 
-pub(crate) fn handle_command(app: App, cmd: Command) -> Result<()> {
+pub(crate) fn handle_command(app: Liwan, cmd: Command) -> Result<()> {
     match cmd {
         Command::UpdatePassword(update) => {
-            app.user_update_password(&update.username, &update.password)?;
+            app.users.user_update_password(&update.username, &update.password)?;
             println!("Password updated for user {}", update.username);
         }
         Command::Users(_) => {
-            let users = app.users()?;
+            let users = app.users.users()?;
             if users.is_empty() {
                 println!("{}", "No users found".bold());
                 println!("Use `liwan add-user` to create a new user");
@@ -94,13 +94,10 @@ pub(crate) fn handle_command(app: App, cmd: Command) -> Result<()> {
             }
         }
         Command::AddUser(add) => {
-            app.user_create(
+            app.users.user_create(
                 &add.username,
                 &add.password,
-                match add.admin {
-                    true => UserRole::Admin,
-                    false => UserRole::User,
-                },
+                if add.admin { UserRole::Admin } else { UserRole::User },
                 &[],
             )?;
 

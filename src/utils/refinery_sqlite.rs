@@ -39,7 +39,7 @@ impl<T: DerefMut<Target = Connection>> Transaction for RqlConnection<T> {
     fn execute(&mut self, queries: &[&str]) -> Result<usize, Self::Error> {
         let transaction = self.0.transaction()?;
         let mut count = 0;
-        for query in queries.iter() {
+        for query in queries {
             transaction.execute_batch(query)?;
             count += 1;
         }

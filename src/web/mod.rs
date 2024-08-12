@@ -1,28 +1,25 @@
-mod admin;
-mod auth;
-mod dashboard;
-mod event;
+mod routes;
 mod session;
 mod webext;
-pub(crate) use session::SessionUser;
 
 use crate::app::models::Event;
-use crate::app::App;
-use colored::Colorize;
-use event::EventApi;
-use std::path::Path;
-use webext::*;
+use crate::app::Liwan;
+use routes::{dashboard_service, event_service};
+use webext::{catch_error, EmbeddedFilesEndpoint, PoemErrExt};
 
+pub(crate) use session::SessionUser;
+
+use colored::Colorize;
 use crossbeam::channel::Sender;
 use eyre::{Context, Result};
 use rust_embed::RustEmbed;
+use std::path::Path;
 
 use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
 use poem::middleware::{AddData, Compression, CookieJarManager, Cors, SetHeader};
 use poem::web::CompressionAlgo;
 use poem::{EndpointExt, Route, Server};
-use poem_openapi::OpenApiService;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -31,15 +28,6 @@ struct Files;
 #[derive(RustEmbed, Clone)]
 #[folder = "./tracker"]
 struct Script;
-
-fn event_service() -> OpenApiService<EventApi, ()> {
-    OpenApiService::new(event::EventApi, "event api", "1.0").url_prefix("/api/")
-}
-
-fn dashboard_service() -> OpenApiService<(dashboard::DashboardAPI, admin::AdminAPI, auth::AuthApi), ()> {
-    OpenApiService::new((dashboard::DashboardAPI, admin::AdminAPI, auth::AuthApi), "liwan dashboard api", "1.0")
-        .url_prefix("/api/dashboard")
-}
 
 fn save_spec() -> Result<()> {
     let path = Path::new("./web/src/api/dashboard.ts");
@@ -51,17 +39,17 @@ fn save_spec() -> Result<()> {
 
         // check if the spec has changed
         let old_spec = std::fs::read_to_string(path)?;
-        if old_spec == format!("export default {} as const;\n", spec) {
+        if old_spec == format!("export default {spec} as const;\n") {
             return Ok(());
         }
 
         tracing::info!("API has changed, updating the openapi spec...");
-        std::fs::write(path, format!("export default {} as const;\n", spec))?;
+        std::fs::write(path, format!("export default {spec} as const;\n"))?;
     }
     Ok(())
 }
 
-pub(crate) async fn start_webserver(app: App, events: Sender<Event>) -> Result<()> {
+pub(crate) async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result<()> {
     #[cfg(debug_assertions)]
     save_spec()?;
 
@@ -97,7 +85,7 @@ pub(crate) async fn start_webserver(app: App, events: Sender<Event>) -> Result<(
 
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
-    if let Some(onboarding) = app.onboarding.read().unwrap().as_ref() {
+    if let Some(onboarding) = app.onboarding.token()? {
         tracing::info!("{}", "It looks like you're running Liwan for the first time!".bold().white());
         tracing::info!(
             "{}",

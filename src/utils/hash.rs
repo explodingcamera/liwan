@@ -33,7 +33,7 @@ pub(crate) fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id
     hasher.update(daily_salt);
     hasher.update(entity_id);
     let hash = hasher.finalize();
-    format!("{:02x}", hash)[..32].to_string()
+    format!("{hash:02x}")[..32].to_string()
 }
 
 pub(crate) fn visitor_id() -> String {

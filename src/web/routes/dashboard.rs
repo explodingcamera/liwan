@@ -1,7 +1,8 @@
-use super::{webext::*, SessionUser};
 use crate::app::reports::{self, DateRange, Dimension, Metric, ReportStats};
-use crate::app::App;
+use crate::app::Liwan;
 use crate::utils::validate::{self, can_access_project};
+use crate::web::session::SessionUser;
+use crate::web::webext::{http_bail, ApiResult, PoemErrExt};
 
 use poem::http::StatusCode;
 use poem::web::Data;
@@ -67,21 +68,21 @@ impl DashboardAPI {
         &self,
         Json(req): Json<GraphRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<GraphResponse>> {
         if req.data_points > validate::MAX_DATAPOINTS {
             http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
         }
 
-        let project = app.project(&project_id).http_status(StatusCode::IM_A_TEAPOT)?;
-        let entities = app.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.projects.project(&project_id).http_status(StatusCode::IM_A_TEAPOT)?;
+        let entities = app.projects.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        if !can_access_project(&project, &user.as_ref()) {
+        if !can_access_project(&project, user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
         }
 
-        let conn = app.conn_events().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
         let report =
             reports::overall_report(&conn, &entities, "pageview", &req.range, req.data_points, &[], &req.metric)
                 .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -94,17 +95,17 @@ impl DashboardAPI {
         &self,
         Json(req): Json<StatsRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<StatsResponse>> {
-        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        let entities = app.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let entities = app.projects.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        if !can_access_project(&project, &user.as_ref()) {
+        if !can_access_project(&project, user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
         }
 
-        let conn = app.conn_events().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &[])
             .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -122,17 +123,17 @@ impl DashboardAPI {
         &self,
         Json(req): Json<DimensionRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<DimensionResponse>> {
-        let project = app.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        let entities = app.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let project = app.projects.project(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        let entities = app.projects.project_entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        if !can_access_project(&project, &user.as_ref()) {
+        if !can_access_project(&project, user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
         }
 
-        let conn = app.conn_events().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let stats =
             reports::dimension_report(&conn, &entities, "pageview", &req.range, &req.dimension, &[], &req.metric)

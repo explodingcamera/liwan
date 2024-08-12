@@ -52,7 +52,7 @@ impl TryFrom<String> for UserRole {
         match value.as_str() {
             "admin" => Ok(UserRole::Admin),
             "user" => Ok(UserRole::User),
-            _ => Err(format!("invalid role: {}", value)),
+            _ => Err(format!("invalid role: {value}")),
         }
     }
 }

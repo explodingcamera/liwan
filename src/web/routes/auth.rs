@@ -1,8 +1,9 @@
-use super::session::{SessionId, SessionUser, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE};
-use super::webext::*;
 use crate::app::models::UserRole;
-use crate::app::App;
+use crate::app::Liwan;
 use crate::utils::hash::session_token;
+use crate::web::session::{SessionId, SessionUser, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE};
+use crate::web::webext::{ApiResult, EmptyResponse, http_bail};
+use crate::web::PoemErrExt;
 
 use eyre::eyre;
 use poem::http::StatusCode;
@@ -46,23 +47,21 @@ impl AuthApi {
     }
 
     #[oai(path = "/auth/setup", method = "post", transform = "login_rate_limit")]
-    async fn setup(&self, Data(app): Data<&App>, Json(params): Json<SetupRequest>) -> ApiResult<EmptyResponse> {
-        let token = app.onboarding.read().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+    async fn setup(&self, Data(app): Data<&Liwan>, Json(params): Json<SetupRequest>) -> ApiResult<EmptyResponse> {
+        let token = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
 
         if token != Some(params.token) {
             http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
         }
 
-        app.user_create(&params.username, &params.password, UserRole::Admin, &[])
+        app.users
+            .user_create(&params.username, &params.password, UserRole::Admin, &[])
             .http_err("failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let mut onboarding = app
-            .onboarding
-            .write()
+        app.onboarding
+            .clear()
             .map_err(|_| eyre!("onboarding lock poisoned"))
             .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        _ = onboarding.take();
 
         EmptyResponse::ok()
     }
@@ -70,17 +69,19 @@ impl AuthApi {
     #[oai(path = "/auth/login", method = "post", transform = "login_rate_limit")]
     async fn login(
         &self,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         Json(params): Json<LoginRequest>,
         cookies: &CookieJar,
     ) -> ApiResult<EmptyResponse> {
-        if !(app.check_login(&params.username, &params.password).unwrap_or(false)) {
+        if !(app.users.check_login(&params.username, &params.password).unwrap_or(false)) {
             http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
         }
 
         let session_id = session_token();
         let expires = chrono::Utc::now() + MAX_SESSION_AGE;
-        app.session_create(&session_id, &params.username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.sessions
+            .session_create(&session_id, &params.username, expires)
+            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
@@ -96,11 +97,11 @@ impl AuthApi {
     #[oai(path = "/auth/logout", method = "post")]
     async fn logout(
         &self,
-        Data(app): Data<&App>,
+        Data(app): Data<&Liwan>,
         cookies: &CookieJar,
         SessionId(session_id): SessionId,
     ) -> ApiResult<EmptyResponse> {
-        app.session_delete(&session_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.sessions.session_delete(&session_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
         public_cookie.set_secure(app.config.secure());

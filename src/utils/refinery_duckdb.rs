@@ -47,13 +47,12 @@ impl<T: DerefMut<Target = duckdb::Connection>> Query<Vec<Migration>> for DuckDBC
 impl<T: DerefMut<Target = duckdb::Connection>> Migrate for DuckDBConnection<T> {
     fn assert_migrations_table(&mut self, migration_table_name: &str) -> std::result::Result<usize, refinery::Error> {
         let query = format!(
-            "create table if not exists {} (
+            "create table if not exists {migration_table_name} (
                 version int primary key,
                 name text not null,
                 applied_on timestamp not null,
                 checksum text not null
-            )",
-            migration_table_name
+            )"
         );
         self.execute(&[&query]).migration_err("error asserting migrations table", None)?;
         Ok(0)
