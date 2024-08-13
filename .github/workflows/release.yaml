@@ -21,8 +21,26 @@ jobs:
           prefix: liwan
           token: ${{ secrets.GITHUB_TOKEN }}
 
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Build web project
+        run: |
+          bun install
+          bun run build
+        working-directory: ./web
+      - name: Upload web assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: ./web/dist
+
   upload-assets:
-    needs: create-release
+    needs: [create-release, build-web]
     strategy:
       matrix:
         include:
@@ -38,6 +56,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: ./web/dist
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: liwan
