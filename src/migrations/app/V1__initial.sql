@@ -35,9 +35,4 @@ create table salts (
     updated_at timestamp not null default (datetime('now'))
 );
 
-create table maxmind_updates (
-    id integer primary key,
-    updated_at timestamp not null default (datetime('now'))
-);
-
 insert into salts (id, salt, updated_at) values (1, '', '1970-01-01 00:00:00');
