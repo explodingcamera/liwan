@@ -15,6 +15,3 @@ pub(crate) use users::LiwanUsers;
 
 #[cfg(feature = "geoip")]
 pub(crate) mod geoip;
-
-#[cfg(feature = "geoip")]
-pub(crate) use geoip::LiwanGeoIP;

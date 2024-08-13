@@ -71,6 +71,10 @@ impl Liwan {
     pub(crate) fn events_conn(&self) -> Result<DuckDBConn> {
         Ok(self.events_pool.get()?)
     }
+
+    pub(crate) fn run_background_tasks(&self) {
+        core::geoip::keep_updated(self.geoip.clone());
+    }
 }
 
 #[cfg(debug_assertions)]

@@ -2,6 +2,7 @@
 
 use std::{
     collections::HashMap,
+    net::IpAddr,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -17,10 +18,14 @@ use md5::{Digest, Md5};
 use tokio_tar::Archive;
 use tokio_util::io::StreamReader;
 
-const UPDATE_CHECK_INTERVAL: chrono::Duration = chrono::Duration::days(1);
 const BASE_URL: &str = "https://updates.maxmind.com";
 const METADATA_ENDPOINT: &str = "/geoip/updates/metadata?edition_id=";
 const DOWNLOAD_ENDPOINT: &str = "/geoip/databases/";
+
+pub(crate) struct LookupResult {
+    pub city: Option<String>,
+    pub country_code: Option<String>,
+}
 
 #[derive(Clone)]
 pub(crate) struct LiwanGeoIP {
@@ -41,11 +46,17 @@ impl LiwanGeoIP {
         };
 
         let edition = geoip.maxmind_edition.as_deref().unwrap_or("GeoLite2-City");
-        let default_path = PathBuf::from(config.data_dir.clone()).join(format!("{}.mmdb", edition));
+        let default_path = PathBuf::from(config.data_dir.clone()).join(format!("./geoip/{}.mmdb", edition));
         let path = geoip.maxmind_db_path.as_ref().map(PathBuf::from).unwrap_or(default_path);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        if path.extension() != Some("mmdb".as_ref()) {
+            return Err(eyre::eyre!("Invalid GeoIP database path file extension, expected '.mmdb'"));
+        }
 
         tracing::info!(database = geoip.maxmind_db_path, "GeoIP support enabled, loading database");
-
         let reader = if path.exists() {
             Some(maxminddb::Reader::open_readfile(path.clone()).expect("Failed to open GeoIP database file"))
         } else {
@@ -60,6 +71,16 @@ impl LiwanGeoIP {
             path,
             downloading: Arc::new(AtomicBool::new(false)),
         }))
+    }
+
+    // Lookup the IP address in the GeoIP database
+    pub(crate) fn lookup(&self, ip: &IpAddr) -> Result<LookupResult> {
+        let reader = self.reader.read().map_err(|_| eyre::eyre!("Failed to acquire GeoIP reader lock"))?;
+        let reader = reader.as_ref().ok_or_eyre("GeoIP database not found")?;
+        let lookup: maxminddb::geoip2::City = reader.lookup(*ip)?;
+        let city = lookup.city.and_then(|city| city.names.and_then(|names| names.get("en").map(|s| s.to_string())));
+        let country_code = lookup.country.and_then(|country| country.iso_code.map(|s| s.to_string()));
+        Ok(LookupResult { city, country_code })
     }
 
     // Check for updates and download the latest database if available
@@ -108,7 +129,8 @@ impl LiwanGeoIP {
             }
 
             // move the downloaded file to the correct path
-            std::fs::rename(&file, &self.path)?;
+            std::fs::copy(&file, &self.path)?;
+            std::fs::remove_file(file)?;
 
             // open the new reader
             let reader = maxminddb::Reader::open_readfile(self.path.clone())?;
@@ -120,6 +142,29 @@ impl LiwanGeoIP {
         self.downloading.store(false, Ordering::Release);
         Ok(())
     }
+}
+
+pub(crate) fn keep_updated(geoip: Option<LiwanGeoIP>) {
+    let Some(geoip) = geoip else { return };
+
+    tokio::task::spawn(async move {
+        if let Err(e) = geoip.check_for_updates().await {
+            tracing::error!(error = ?e, "Failed to check for GeoIP database updates");
+        }
+
+        // Create an interval that ticks every 24 hours
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400));
+        loop {
+            interval.tick().await;
+            let geoip = geoip.clone();
+            // Run the task once a day
+            tokio::task::spawn(async move {
+                if let Err(e) = geoip.check_for_updates().await {
+                    tracing::error!(error = ?e, "Failed to check for GeoIP database updates");
+                }
+            });
+        }
+    });
 }
 
 async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> Result<String> {

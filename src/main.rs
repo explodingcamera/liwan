@@ -26,12 +26,13 @@ async fn main() -> Result<()> {
     let config = Config::load(args.config)?;
     let (s, r) = crossbeam::channel::unbounded::<Event>();
 
-    let app = Liwan::try_new(config)?;
-
     if let Some(cmd) = args.cmd {
-        return cli::handle_command(app, cmd);
+        return cli::handle_command(config, cmd);
     }
 
+    let app = Liwan::try_new(config)?;
+
+    app.run_background_tasks();
     tokio::select! {
         res = web::start_webserver(app.clone(), s) => res,
         res = tokio::task::spawn_blocking(move || app.clone().events.process(r)) => res?

@@ -63,11 +63,19 @@ impl EventApi {
             None => visitor_id(),
         };
 
+        let (country, city) = match (&app.geoip, ip) {
+            (Some(geoip), Some(ip)) => match geoip.lookup(&ip) {
+                Ok(lookup) => (lookup.country_code, lookup.city),
+                Err(_) => (None, None),
+            },
+            _ => (None, None),
+        };
+
         let event = Event {
             visitor_id,
             referrer,
-            city: None,
-            country: None,
+            country,
+            city,
             browser: client.user_agent.family.to_string().into(),
             created_at: chrono::Utc::now(),
             entity_id: event.entity_id,

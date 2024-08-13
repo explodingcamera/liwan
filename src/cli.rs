@@ -1,6 +1,6 @@
 use crate::{
     app::{models::UserRole, Liwan},
-    config::DEFAULT_CONFIG,
+    config::{Config, DEFAULT_CONFIG},
 };
 use argh::FromArgs;
 use colored::Colorize;
@@ -82,7 +82,10 @@ pub(crate) struct AddUser {
     admin: bool,
 }
 
-pub(crate) fn handle_command(app: Liwan, cmd: Command) -> Result<()> {
+pub(crate) fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
+    config.geoip = None; // disable GeoIP support in CLI
+    let app = Liwan::try_new(config)?;
+
     match cmd {
         Command::UpdatePassword(update) => {
             app.users.update_password(&update.username, &update.password)?;
