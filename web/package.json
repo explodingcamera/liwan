@@ -12,6 +12,7 @@
 		"@explodingcamera/css": "^0.0.4",
 		"@fontsource-variable/figtree": "^5.0.21",
 		"@icons-pack/react-simple-icons": "^9.6.0",
+		"@nivo/line": "^0.87.0",
 		"@picocss/pico": "^2.0.6",
 		"@radix-ui/react-dialog": "^1.1.1",
 		"@react-spring/web": "^9.7.4",
@@ -34,5 +35,5 @@
 	"devDependencies": {
 		"@biomejs/biome": "1.8.3"
 	},
-	"trustedDependencies": ["@biomejs/biome"]
+	"trustedDependencies": ["@biomejs/biome", "esbuild", "sharp"]
 }
