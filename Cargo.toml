@@ -38,11 +38,16 @@ tokio-tar={package="krata-tokio-tar", version="0.4.0"}
 # web
 poem={version="3.0", features=["embed", "session", "cookie", "compression", "tower-compat"]}
 poem-openapi={version="5.0", features=["chrono"]}
-tower={version="0.4.8", default-features=false, features=["limit"]}
+tower={version="0.5", default-features=false, features=["limit"]}
 uaparser="0.6"
 mime_guess={version="2.0"}
 rust-embed="8.4"
-reqwest={version="0.12", features=["json", "stream"]}
+reqwest={version="0.12", default-features=false, features=[
+    "json",
+    "stream",
+    "charset",
+    "rustls-tls",
+]}
 
 # database
 duckdb={version="1.0", features=["bundled", "chrono", "r2d2"]}
