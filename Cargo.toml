@@ -6,6 +6,10 @@ rust-version="1.80"
 repository="https://github.com/explodingcamera/liwan"
 
 [dependencies]
+tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
+tokio-util={version="0.7", features=["io"]}
+futures-util="0.3"
+
 # encoding
 hex={version="0.4"}
 bs58="0.5.1"
@@ -28,10 +32,10 @@ crossbeam="0.8"
 cached="0.53"
 tracing="0.1"
 tracing-subscriber={version="0.3", features=["env-filter"]}
+async-compression="0.4.12"
+tokio-tar={package="krata-tokio-tar", version="0.4.0"}
 
 # web
-tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
-tokio-util={version="0.7", features=["io"]}
 poem={version="3.0", features=["embed", "session", "cookie", "compression", "tower-compat"]}
 poem-openapi={version="5.0", features=["chrono"]}
 tower={version="0.4.8", default-features=false, features=["limit"]}
@@ -39,8 +43,6 @@ uaparser="0.6"
 mime_guess={version="2.0"}
 rust-embed="8.4"
 reqwest={version="0.12", features=["json", "stream"]}
-tokio-tar={package="krata-tokio-tar", version="0.4.0"}
-async-compression="0.4.12"
 
 # database
 duckdb={version="1.0", features=["bundled", "chrono", "r2d2"]}
@@ -50,7 +52,6 @@ r2d2_sqlite="0.25.0"
 refinery={version="0.8"}
 refinery-core="0.8"
 maxminddb={version="0.24", optional=true}
-futures="0.3.30"
 
 [features]
 default=["geoip"]

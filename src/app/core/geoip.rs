@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -10,7 +12,7 @@ use std::{
 use crate::app::SqlitePool;
 use crossbeam::sync::ShardedLock;
 use eyre::{OptionExt, Result};
-use futures::{StreamExt, TryStreamExt};
+use futures_util::{StreamExt, TryStreamExt};
 use md5::{Digest, Md5};
 use tokio_tar::Archive;
 use tokio_util::io::StreamReader;
@@ -134,7 +136,7 @@ async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> R
     Ok(response
         .get("databases")
         .ok_or_eyre("No databases found")?
-        .get(0)
+        .first()
         .ok_or_eyre("MD5 hash not found")?
         .get("md5")
         .ok_or_eyre("MD5 hash not found")?
@@ -161,8 +163,8 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
     let mut archive = Archive::new(stream);
     let mut entries = archive.entries()?;
 
-    let folder = PathBuf::from(std::env::temp_dir()).join("liwan-geoip");
-    let mut file = PathBuf::new();
+    let folder = std::env::temp_dir().join("liwan-geoip");
+    let file;
     loop {
         let mut entry = entries
             .next()
@@ -171,7 +173,6 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
             .map_err(|e| eyre::eyre!("Failed to read entry: {}", e))?;
 
         let entry_path = entry.path()?;
-
         if entry_path.extension().map_or(false, |ext| ext == "mmdb") {
             file = entry
                 .unpack_in(folder)

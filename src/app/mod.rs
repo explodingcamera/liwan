@@ -84,8 +84,8 @@ impl Liwan {
             ("entity-2", "Entity 2", "test.example.com", vec!["private-project".to_string()]),
             ("entity-3", "Entity 3", "example.org", vec!["public-project".to_string()]),
         ];
-        let projects = vec![("public-project", "Public Project", true), ("private-project", "Private Project", false)];
-        let users = vec![("admin", "admin", UserRole::Admin), ("user", "user", UserRole::User)];
+        let projects = [("public-project", "Public Project", true), ("private-project", "Private Project", false)];
+        let users = [("admin", "admin", UserRole::Admin), ("user", "user", UserRole::User)];
 
         for (username, password, role) in users.iter() {
             self.users.create(username, password, *role, &[])?;

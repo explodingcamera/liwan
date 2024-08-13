@@ -74,7 +74,7 @@ fn random_date(min: DateTime<Utc>, max: DateTime<Utc>, scale: f64) -> DateTime<U
     min + weighted_duration
 }
 
-fn random_el<'a, T>(slice: &'a [T], scale: f64) -> &'a T {
+fn random_el<T>(slice: &[T], scale: f64) -> &T {
     let mut rng = rand::thread_rng();
     let len = slice.len();
 

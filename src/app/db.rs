@@ -38,12 +38,12 @@ pub(super) fn init_sqlite(
 
     {
         let conn = pool.get()?;
-        conn.pragma_update(None, "foreign_keys", &"ON")?;
-        conn.pragma_update(None, "journal_mode", &"WAL")?;
-        conn.pragma_update(None, "synchronous", &"NORMAL")?;
-        conn.pragma_update(None, "mmap_size", &"268435456")?;
-        conn.pragma_update(None, "journal_size_limit", &"268435456")?;
-        conn.pragma_update(None, "cache_size", &"2000")?;
+        conn.pragma_update(None, "foreign_keys", "ON")?;
+        conn.pragma_update(None, "journal_mode", "WAL")?;
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
+        conn.pragma_update(None, "mmap_size", "268435456")?;
+        conn.pragma_update(None, "journal_size_limit", "268435456")?;
+        conn.pragma_update(None, "cache_size", "2000")?;
     }
 
     Ok(pool)
