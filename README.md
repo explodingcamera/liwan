@@ -48,3 +48,4 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 - `data/ua_regexes.yaml` is based on data from [ua-parser/uap-core](https://github.com/ua-parser/uap-core/blob/master/regexes.yaml) (Copyright 2009 Google Inc. and available under the Apache License, Version 2.0)
 - `data/spammers.txt` is in the public domain (see [matomo-org/referrer-spam-list](https://github.com/matomo-org/referrer-spam-list))
 - `data/socials.txt` is based on [matomo-org/searchengine-and-social-list](https://github.com/matomo-org/searchengine-and-social-list) (available under the CC0 1.0 Universal Public Domain Dedication)
+- `data/geo.json` is based on data from [natural earth data](https://naturalearthdata.com/) (which is available under the public domain)
