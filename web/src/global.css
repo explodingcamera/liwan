@@ -1,8 +1,26 @@
 @import "@explodingcamera/css/all.css" layer(base);
 @import "@picocss/pico/css/pico.lime.min.css" layer(pico);
 
+@layer pico {
+  :root {
+  }
+
+  @media only screen and (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --pico-background-color: #0a0c10;
+      --pico-card-background-color: #141a1d;
+    }
+  }
+}
+
 .full {
   min-height: 100%;
+}
+
+body {
+  --color: oklab(0.51 -0.1 0 / 0.1);
+  background: linear-gradient(215deg, var(--color), transparent 50%),
+    radial-gradient(var(--color), transparent 40%) no-repeat -60vw -40vh /90vw 300vh;
 }
 
 h1,

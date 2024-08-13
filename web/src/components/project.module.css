@@ -68,6 +68,12 @@ div.graph {
   align-items: center;
   gap: 0.2rem;
 
+  &:hover {
+    &::after {
+      opacity: 0.3;
+    }
+  }
+
   &::after {
     content: "";
     position: absolute;
@@ -75,8 +81,9 @@ div.graph {
     width: var(--percentage);
     height: 100%;
     background: var(--pico-h5-color);
-    opacity: 0.08;
+    opacity: 0.09;
     z-index: -1;
-    transition: width 0.3s ease-in-out;
+    transition: width 0.3s ease-in-out, opacity 0.1s ease-in-out;
+    border-radius: 1rem;
   }
 }
