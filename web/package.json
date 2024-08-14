@@ -21,7 +21,7 @@
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.3.0",
 		"@uidotdev/usehooks": "^2.4.1",
-		"astro": "^4.13.3",
+		"astro": "^4.13.4",
 		"date-fns": "^3.6.0",
 		"fets": "^0.8.2",
 		"lightningcss": "^1.26.0",

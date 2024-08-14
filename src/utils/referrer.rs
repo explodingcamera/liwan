@@ -57,3 +57,31 @@ pub(crate) fn process_referer(referer: Option<&str>) -> Result<Option<String>, (
 
     Ok(res)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_process_referer() {
+        assert_eq!(process_referer(None), Ok(None), "Should return None when no referer is provided");
+
+        assert_eq!(
+            process_referer(Some("https://example.com/path?query=string")),
+            Ok(Some("example.com".to_string())),
+            "Should return the FQDN for a valid referer that is not a spammer"
+        );
+
+        assert_eq!(
+            process_referer(Some("https://adf.ly/path")),
+            Err(()),
+            "Should return an error for a referer identified as a spammer"
+        );
+
+        assert_eq!(
+            process_referer(Some("invalid_referrer")),
+            Ok(Some("invalid_referrer".to_string())),
+            "Should return the original referrer if it is invalid"
+        );
+    }
+}

@@ -58,6 +58,9 @@ refinery={version="0.8"}
 refinery-core="0.8"
 maxminddb={version="0.24", optional=true}
 
+[dev-dependencies]
+figment={version="0.10", features=["toml", "env", "test"]}
+
 [features]
 default=["geoip"]
 geoip=["dep:maxminddb"]

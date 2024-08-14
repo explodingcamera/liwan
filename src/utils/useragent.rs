@@ -23,3 +23,18 @@ static MOBILE_OS: [&str; 2] = ["iOS", "Android"]; // good enough for 99% of case
 pub(crate) fn is_mobile(client: &Client) -> bool {
     MOBILE_OS.contains(&&*client.os.family)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_ua_parser() {
+        let user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1";
+        let client = parse(user_agent);
+        assert_eq!(client.os.family, "iOS", "Expected OS family to be iOS");
+        assert_eq!(client.device.family, "iPhone", "Expected device family to be iPhone");
+        assert!(is_mobile(&client), "Expected device to be mobile");
+        assert!(!is_bot(&client), "Expected device to not be a bot");
+    }
+}
