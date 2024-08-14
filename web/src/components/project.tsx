@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import styles from "./project.module.css";
 
 import {
@@ -18,6 +18,8 @@ import { resolveRange, type RangeName } from "../api/ranges";
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "./icons";
 import { LinkIcon } from "lucide-react";
 const server = typeof window === "undefined";
+
+const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
 
 export const Project = () => {
 	const [projectId, setProjectId] = useState<string | null>(null);
@@ -57,6 +59,9 @@ export const Project = () => {
 				<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
 				<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
 				<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
+				<Suspense>
+					<WorldMap />
+				</Suspense>
 			</div>
 		</div>
 	);

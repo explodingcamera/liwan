@@ -102,7 +102,9 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
             return Err(StatusCode::METHOD_NOT_ALLOWED.into());
         }
 
-        let file = if let Some(content) = E::get(&path) { Some(content) } else {
+        let file = if let Some(content) = E::get(&path) {
+            Some(content)
+        } else {
             path = format!("{path}/index.html");
             E::get(&path)
         };
