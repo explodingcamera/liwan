@@ -12,14 +12,15 @@ type Props = { title: string; hideFooter?: boolean };
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="robots" content="noindex">
+    <meta name="robots" content="noindex" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <ViewTransitions />
     <title>{Astro.props.title}</title>
   </head>
   <body>
     <slot />
-      {!Astro.props.hideFooter && (
+    {
+      !Astro.props.hideFooter && (
         <footer class="container-fluid footer">
           <small>
             <a
@@ -31,43 +32,39 @@ type Props = { title: string; hideFooter?: boolean };
               <span>Liwan - Lightweight Analytics</span>
             </a>
             &nbsp;| Made by&nbsp;
-            <a class="secondary" target="_blank" href="https://henrygressmann.de"
-              >Henry Gressmann</a
+            <a
+              class="secondary"
+              target="_blank"
+              href="https://henrygressmann.de"
             >
-            <!-- , available under&nbsp;<a
-              class="secondary"
-              target="_blank"
-              href="https://opensource.org/license/mit">MIT</a
-            > / <a
-              class="secondary"
-              target="_blank"
-              href="https://opensource.org/license/apache-2.0">Apache 2.0</a
-            > -->
+              Henry Gressmann
+            </a>
           </small>
         </footer>
-      )}
-      <style>
-        footer {
-          max-width: 60rem;
-          padding: 1rem 2rem;
-          small {
-            display: inline-flex;
-            flex-wrap: wrap;
-            align-items: center;
-            font-size: 14px;
-          }
-
-          a.icon-link {
-            text-decoration: none;
-            span {
-              text-decoration: underline;
-            }
-            display: inline-flex;
-            align-items: end;
-            justify-content: center;
-            gap: 0.2rem;
-          }
+      )
+    }
+    <style>
+      footer {
+        max-width: 60rem;
+        padding: 1rem 2rem;
+        small {
+          display: inline-flex;
+          flex-wrap: wrap;
+          align-items: center;
+          font-size: 14px;
         }
-      </style>
+
+        a.icon-link {
+          text-decoration: none;
+          span {
+            text-decoration: underline;
+          }
+          display: inline-flex;
+          align-items: end;
+          justify-content: center;
+          gap: 0.2rem;
+        }
+      }
+    </style>
   </body>
 </html>
