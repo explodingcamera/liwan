@@ -4,6 +4,7 @@ import styles from "./project.module.css";
 import {
 	api,
 	dimensionNames,
+	formatMetricVal,
 	metricNames,
 	useQuery,
 	type DateRange,
@@ -51,17 +52,34 @@ export const Project = () => {
 				graphClassName={styles.graph}
 			/>
 			<div className={styles.tables}>
-				<DimTable project={data} dimension={"platform"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"url"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"fqdn"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"mobile"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
-				<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
-				<Suspense>
-					<WorldMap />
-				</Suspense>
+				<Card>
+					<DimTable project={data} dimension={"platform"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+
+				<Card>
+					<DimTable project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card fullWidth>
+					<GeoCard project={data} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card>
+					<DimTable project={data} dimension={"url"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card>
+					<DimTable project={data} dimension={"fqdn"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card>
+					<DimTable project={data} dimension={"mobile"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card>
+					<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card>
+					<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card>
+					<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
 			</div>
 		</div>
 	);
@@ -75,6 +93,59 @@ const Entities = ({ entities }: { entities: { id: string; displayName: string }[
 					<h3>{entity.displayName}</h3>
 				</div>
 			))}
+		</div>
+	);
+};
+
+const Card = ({ children, fullWidth }: { children: React.ReactNode; fullWidth?: boolean }) => {
+	return (
+		<div className={styles.card} data-full-width={fullWidth ?? undefined}>
+			<Suspense>{children}</Suspense>
+		</div>
+	);
+};
+
+const GeoCard = ({ project, metric, range }: { project: ProjectResponse; metric: Metric; range: DateRange }) => {
+	const { data } = useQuery({
+		placeholderData: (prev) => prev,
+		queryKey: ["dimension", project.id, "country", metric, range],
+		queryFn: () =>
+			api["/api/dashboard/project/{project_id}/dimension"]
+				.post({
+					params: { project_id: project.id },
+					json: {
+						dimension: "country",
+						metric,
+						range,
+					},
+				})
+				.json(),
+	});
+
+	const biggest = useMemo(() => data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0, [data]);
+	const order = useMemo(() => data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue), [data]);
+
+	return (
+		<div className={styles.geoCard}>
+			<div>
+				<WorldMap data={data?.data} metric={metric} />
+			</div>
+			<div>
+				{data?.data?.map((d) => {
+					const value = metric === "avg_views_per_session" ? d.value / 1000 : d.value;
+					const biggestVal = metric === "avg_views_per_session" ? biggest / 1000 : biggest;
+
+					return (
+						<div key={d.dimensionValue} style={{ order: order?.indexOf(d.dimensionValue) }} className={styles.dimRow}>
+							<DimensionValueBar value={value} biggest={biggestVal}>
+								<DimensionLabel dimension={"country"} value={d} />
+							</DimensionValueBar>
+
+							<div>{value.toFixed(1).replace(/\.0$/, "") || "0"}</div>
+						</div>
+					);
+				})}
+			</div>
 		</div>
 	);
 };
@@ -102,31 +173,28 @@ const DimTable = ({
 	});
 
 	const biggest = useMemo(() => data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0, [data]);
-	// e.g ["Chrome", "Firefox", "Safari"]
 	const order = useMemo(() => data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue), [data]);
 
 	return (
-		<div>
-			<div className={styles.dimTable}>
-				<div className={styles.header}>
-					<div>{dimensionNames[dimension]}</div>
-					<div>{metricNames[metric]}</div>
-				</div>
-				{data?.data?.map((d) => {
-					const value = metric === "avg_views_per_session" ? d.value / 1000 : d.value;
-					const biggestVal = metric === "avg_views_per_session" ? biggest / 1000 : biggest;
-
-					return (
-						<div key={d.dimensionValue} style={{ order: order?.indexOf(d.dimensionValue) }} className={styles.row}>
-							<DimensionValueBar value={value} biggest={biggestVal}>
-								<DimensionLabel dimension={dimension} value={d} />
-							</DimensionValueBar>
-
-							<div>{value.toFixed(1).replace(/\.0$/, "") || "0"}</div>
-						</div>
-					);
-				})}
+		<div className={styles.dimTable}>
+			<div className={styles.header}>
+				<div>{dimensionNames[dimension]}</div>
+				<div>{metricNames[metric]}</div>
 			</div>
+			{data?.data?.map((d) => {
+				const value = d.value;
+				const biggestVal = biggest;
+
+				return (
+					<div key={d.dimensionValue} style={{ order: order?.indexOf(d.dimensionValue) }} className={styles.dimRow}>
+						<DimensionValueBar value={value} biggest={biggestVal}>
+							<DimensionLabel dimension={dimension} value={d} />
+						</DimensionValueBar>
+
+						<div>{formatMetricVal(metric, value)}</div>
+					</div>
+				);
+			})}
 		</div>
 	);
 };

@@ -19,9 +19,10 @@
 }
 
 body {
-  --color: oklab(0.51 -0.1 0 / 0.1);
-  background: linear-gradient(215deg, var(--color), transparent 50%),
-    radial-gradient(var(--color), transparent 40%) no-repeat -60vw -40vh /90vw 300vh;
+  --bg-gradient-color: oklab(0.51 -0.1 0 / 0.1);
+  background: linear-gradient(215deg, var(--bg-gradient-color), transparent 50%),
+    radial-gradient(var(--bg-gradient-color), transparent 40%) no-repeat -60vw -40vh /90vw
+      300vh;
 }
 
 h1,

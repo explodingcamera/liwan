@@ -31,13 +31,27 @@ div.graph {
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
+}
 
+.card {
+  padding: 1rem;
+  background-color: var(--pico-form-element-background-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-background-color);
+  box-shadow: var(--pico-card-box-shadow);
+
+  &[data-full-width="true"] {
+    grid-column: span 2;
+  }
+}
+
+.geoCard {
+  display: flex;
+  gap: 2rem;
   > div {
-    padding: 1rem;
-    background-color: var(--pico-form-element-background-color);
-    border-radius: var(--pico-border-radius);
-    background: var(--pico-card-background-color);
-    box-shadow: var(--pico-card-box-shadow);
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }
 
@@ -45,17 +59,20 @@ div.graph {
   display: flex;
   flex-direction: column;
 
-  > div {
+  .header {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 0.2rem;
-  }
-
-  .header {
     color: var(--pico-h5-color);
     margin-bottom: 1rem;
   }
+}
+
+.dimRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.2rem;
 }
 
 .percentage {

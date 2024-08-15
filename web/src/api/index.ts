@@ -47,6 +47,23 @@ export const dimensionNames: Record<Dimension, string> = {
 	fqdn: "Domain",
 };
 
+export const formatMetricVal = (metric: Metric, value: number) => {
+	let res = value;
+	if (metric === "avg_views_per_session") {
+		res = value / 1000;
+	}
+
+	if (res >= 1000) {
+		return `${(res / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+	}
+
+	if (res >= 1000000) {
+		return `${(res / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+	}
+
+	return res.toFixed(1).replace(/\.0$/, "") || "0";
+};
+
 export const useMe = () => {
 	const { data, isLoading } = useQuery({
 		queryKey: ["me"],

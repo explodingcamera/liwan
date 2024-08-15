@@ -1,51 +1,87 @@
 import styles from "./worldmap.module.css";
 import geo from "../../../data/geo.json";
-import { ComposableMap, Geographies, Geography } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 import { Tooltip } from "react-tooltip";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { formatMetricVal, metricNames, type DimensionTableRow, type Metric } from "../api";
 
 type Geo = {
 	name: string;
 	iso: string;
 };
 
-export const WorldMap = () => {
+export const WorldMap = ({
+	metric,
+	data,
+}: {
+	metric: Metric;
+	data?: DimensionTableRow[];
+}) => {
 	const [currentGeo, setCurrentGeo] = useState<Geo | null>(null);
+
+	const countries = useMemo(() => {
+		const countries = new Map<string, number>();
+		for (const row of data ?? []) {
+			countries.set(row.dimensionValue, row.value);
+		}
+		return countries;
+	}, [data]);
+
+	const biggest = useMemo(() => data?.reduce((a, b) => (a.value > b.value ? a : b), data[0]), [data]);
 
 	return (
 		<div className={styles.worldmap} data-tooltip-float={true} data-tooltip-id="map">
-			<ComposableMap projection="geoMercator">
-				<Geographies geography={geo}>
-					{({ geographies }) =>
-						geographies.map((geo) => {
-							console.log(geo);
-
-							return (
-								<Geography
-									className={styles.geo}
-									onMouseEnter={() => {
-										setCurrentGeo({
-											name: geo.properties.name,
-											iso: geo.properties.iso,
-										});
-									}}
-									onMouseLeave={() => {
-										setCurrentGeo(null);
-									}}
-									key={geo.rsmKey}
-									geography={geo}
-								/>
-							);
-						})
-					}
-				</Geographies>
+			<ComposableMap
+				projection="geoMercator"
+				projectionConfig={{
+					rotate: [0, 0, 0],
+					center: [0, 30],
+					scale: 140,
+				}}
+				height={500}
+			>
+				<ZoomableGroup>
+					<Geographies geography={geo}>
+						{({ geographies }) =>
+							geographies.map((geo) => {
+								return (
+									<Geography
+										className={styles.geo}
+										style={{
+											default: {
+												"--percent": (countries.get(geo.properties.iso) ?? 0) / (biggest?.value ?? 100),
+											} as React.CSSProperties,
+											hover: {
+												"--percent": (countries.get(geo.properties.iso) ?? 0) / (biggest?.value ?? 100),
+											} as React.CSSProperties,
+											pressed: {
+												"--percent": (countries.get(geo.properties.iso) ?? 0) / (biggest?.value ?? 100),
+											} as React.CSSProperties,
+										}}
+										onMouseEnter={() => {
+											setCurrentGeo({
+												name: geo.properties.name,
+												iso: geo.properties.iso,
+											});
+										}}
+										onMouseLeave={() => {
+											setCurrentGeo(null);
+										}}
+										key={geo.rsmKey}
+										geography={geo}
+									/>
+								);
+							})
+						}
+					</Geographies>
+				</ZoomableGroup>
 			</ComposableMap>
 			<Tooltip id="map" className={styles.reset} classNameArrow={styles.reset} disableStyleInjection>
 				{currentGeo && (
 					<div className={styles.tooltip} data-theme="dark">
-						<h2>{currentGeo.name}</h2>
+						<h2>{metricNames[metric]}</h2>
 						<h3>
-							{currentGeo.iso} <span>asdf</span>
+							{currentGeo.name} <span>{formatMetricVal(metric, countries.get(currentGeo.iso) ?? 0)}</span>
 						</h3>
 					</div>
 				)}

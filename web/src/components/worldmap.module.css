@@ -3,9 +3,18 @@
 }
 
 .geo {
-  opacity: 0.9;
+  stroke: var(--pico-card-background-color);
+  stroke-width: 1;
+  transition: fill 0.3s, opacity 0.3s;
+
+  fill: hsl(
+    90,
+    calc(0% + 60% * var(--percent) * var(--percent)),
+    calc(40% + 1% * var(--percent))
+  );
+
   &:hover {
-    opacity: 1;
+    opacity: 0.8;
   }
 }
 
