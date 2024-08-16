@@ -20,14 +20,13 @@ When the script is loaded directly in the browser, it will automatically send pa
 ### Custom events
 
 ```ts
-import { event } from "@liwan/tracker";
+import { event } from "liwan-tracker";
 
 await event("pageview", {
   url: "https://example.com",
   referrer: "https://google.com",
   endpoint: "https://liwan.example.com/api/event",
-}).then(({ status }) => {
-  console.log(`Event response: ${status}`);
+  entity: "example",
 });
 ```
 
