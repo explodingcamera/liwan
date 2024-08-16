@@ -1,0 +1,25 @@
+{
+	"name": "liwan-tracker",
+	"version": "0.1.0-beta.1",
+	"homepage": "https://liwan.dev",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/explodingcamera/liwan",
+		"directory": "tracker"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "Henry Gressmann",
+		"email": "mail@henrygressmann.de",
+		"url": "https://henrygressmann.de"
+	},
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./script.min.js",
+			"types": "./script.min.d.ts"
+		}
+	},
+	"module": "script.min.js",
+	"types": "script.min.d.ts"
+}

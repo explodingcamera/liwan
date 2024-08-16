@@ -32,15 +32,25 @@ export type EventOptions = {
 	 * Required in server-side environments.
 	 */
 	endpoint?: string;
+
+	/**
+	 * The entity that the event is associated with.
+	 *
+	 * If not provided, the `data-entity` attribute will be used.
+	 * Required for custom events.
+	 */
+	entity?: string;
 };
 
 let scriptEl: HTMLScriptElement | null = null;
 let endpoint: string | null = null;
+let entity: string | null = null;
 let referrer: string | null = null;
 
 if (typeof document !== "undefined") {
 	scriptEl = document.currentScript as HTMLScriptElement;
 	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && `${new URL(scriptEl.src).origin}/api/event`);
+	entity = scriptEl?.getAttribute("data-entity") || null;
 	referrer = document.referrer;
 }
 
@@ -80,6 +90,7 @@ export async function event(name = "pageview", options?: EventOptions) {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(<Payload>{
+			entity_id: options?.entity || entity,
 			name,
 			referrer: options?.referrer || referrer,
 			url: options?.url || `${location.origin}${location.pathname}`,
