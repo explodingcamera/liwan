@@ -11,26 +11,78 @@ type Payload = {
 };
 
 export type EventOptions = {
-	overrideUrl?: string;
-	overrideReferrer?: string;
+	/**
+	 * The URL of the page where the event occurred.
+	 *
+	 * If not provided, the current page URL with hash and search parameters removed will be used.
+	 */
+	url?: string;
+
+	/**
+	 * The referrer of the page where the event occurred.
+	 *
+	 * If not provided, `document.referrer` will be used if available.
+	 */
+	referrer?: string;
+
+	/**
+	 * The API endpoint to send the event to.
+	 *
+	 * If not provided, either the `data-api` attribute or the url where the script is loaded from will be used.
+	 * Required in server-side environments.
+	 */
+	endpoint?: string;
 };
 
+let scriptEl: HTMLScriptElement | null = null;
+let endpoint: string | null = null;
+let referrer: string | null = null;
+
+if (typeof document !== "undefined") {
+	scriptEl = document.currentScript as HTMLScriptElement;
+	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && `${new URL(scriptEl.src).origin}/api/event`);
+	referrer = document.referrer;
+}
+
 const LOCALHOST_REGEX = /^localhost$|^127(\.[0-9]+){0,2}\.[0-9]+$|^\[::1?\]$/;
-const scriptEl = document?.currentScript as HTMLScriptElement;
-const endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && `${new URL(scriptEl.src).origin}/api/event`);
 const ignoreEvent = (reason: string) => console.info(`[liwan]: ignoring event: ${reason}`);
 
-export async function event(name: string, options?: EventOptions) {
-	if (localStorage.getItem("disable-analytics")) return ignoreEvent("localStorage flag");
+/**
+ * Sends an event to the Liwan API.
+ *
+ * @param name The name of the event. Defaults to "pageview".
+ * @param options Additional options for the event. See {@link EventOptions}.
+ * @returns A promise that resolves with the status code of the response or void if the event was ignored.
+ * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
+ *
+ * @example
+ * ```ts
+ * // Send a pageview event
+ * await event("pageview", {
+ *   url: "https://example.com",
+ *   referrer: "https://google.com",
+ *   endpoint: "https://liwan.example.com/api/event"
+ * }).then(({ status }) => {
+ *   console.log(`Event response: ${status}`);
+ * });
+ * ```
+ */
+export async function event(name = "pageview", options?: EventOptions) {
+	if (typeof window === "undefined" && !options?.endpoint)
+		return Promise.reject(new Error("endpoint is required in server-side environments"));
+	if (typeof localStorage !== "undefined" && localStorage.getItem("disable-liwan"))
+		return ignoreEvent("localStorage flag");
 	if (LOCALHOST_REGEX.test(location.hostname) || location.protocol === "file:") return ignoreEvent("localhost");
+	if (!endpoint && !options?.endpoint) return ignoreEvent("no endpoint");
 
-	return fetch(endpoint, {
+	// biome-ignore lint/style/noNonNullAssertion: we know that endpoint is not null
+	return fetch((options?.endpoint || endpoint)!, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(<Payload>{
 			name,
-			referrer: options?.overrideReferrer || document.referrer,
-			url: options?.overrideUrl || `${location.origin}${location.pathname}`,
+			referrer: options?.referrer || referrer,
+			url: options?.url || `${location.origin}${location.pathname}`,
 		}),
 	}).then((response) => {
 		if (!response.ok) console.error("[liwan]: failed to send event: ", response);
@@ -39,7 +91,6 @@ export async function event(name: string, options?: EventOptions) {
 }
 
 const trackPageviews = () => {
-	if (window.__liwan_loaded) return;
 	window.__liwan_loaded = true;
 	let lastPage: string | undefined;
 	const page = () => {
@@ -59,8 +110,6 @@ const trackPageviews = () => {
 	page();
 };
 
-if (!window.__liwan_loaded && scriptEl) {
+if (typeof window !== "undefined" && !window.__liwan_loaded && scriptEl) {
 	trackPageviews();
-} else {
-	console.info("[liwan]: already loaded, skipping pageview tracking");
 }

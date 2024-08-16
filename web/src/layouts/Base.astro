@@ -3,7 +3,6 @@ import "@fontsource-variable/figtree";
 import "../global.css";
 
 import { ViewTransitions } from "astro:transitions";
-import { SiGithub } from "@icons-pack/react-simple-icons";
 
 type Props = { title: string; hideFooter?: boolean };
 ---
@@ -23,21 +22,13 @@ type Props = { title: string; hideFooter?: boolean };
       !Astro.props.hideFooter && (
         <footer class="container-fluid footer">
           <small>
-            <a
-              href="https://github.com/explodingcamera/liwan"
-              target="_blank"
-              class="secondary icon-link"
-            >
-              <SiGithub size=".8rem" />
-              <span>Liwan - Lightweight Analytics</span>
+            Powered by&nbsp;
+            <a href="https://liwan.dev" target="_blank" class="secondary">
+              <span>Liwan.dev</span>
             </a>
-            &nbsp;| Made by&nbsp;
-            <a
-              class="secondary"
-              target="_blank"
-              href="https://henrygressmann.de"
-            >
-              Henry Gressmann
+            &nbsp;|&nbsp;
+            <a class="secondary" href="/attributions">
+              Open Source Licenses
             </a>
           </small>
         </footer>

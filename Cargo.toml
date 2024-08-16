@@ -4,6 +4,7 @@ version="0.0.0"
 edition="2021"
 rust-version="1.80"
 repository="https://github.com/explodingcamera/liwan"
+license="(AGPL-3.0-only AND Apache-2.0 AND MIT) OR LicenseRef-Liwan"
 
 [dependencies]
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}

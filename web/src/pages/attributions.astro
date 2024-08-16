@@ -1,0 +1,165 @@
+---
+import Layout from "../layouts/Layout.astro";
+// biome-ignore lint/style/useImportType: no
+import licensesNpm from "../../../data/licenses-npm.json";
+import licensesCargo from "../../../data/licenses-cargo.json";
+
+const getRepositoryUrl = (
+  repository: (typeof licensesNpm)[0]["repository"]
+) => {
+  let repo =
+    typeof repository === "object" ? (repository?.url ?? "") : repository;
+  if (repo.startsWith("git+")) repo = repo.slice(4);
+  if (repo.endsWith(".git")) repo = repo.slice(0, -4);
+  repo = repo.replace("git://", "https://");
+  if (!repo.startsWith("https://")) repo = `https://github.com/${repo}`; // Some npm packages don't have the full URL and only have the repo name
+  return repo;
+};
+
+const removeEmails = (authors: string[]) =>
+  authors
+    .map((author) => author.replace(/<.*>/, ""))
+    .map((author) => author.trim())
+    .filter((author) => author.length > 0);
+
+const licenseText = (text: string) => {
+  const lines = text.split("\n");
+
+  // remove the minimum number of leading spaces from each line (ignoring empty lines)
+  const leadingSpaces = lines
+    .filter((line) => line.trim().length > 0)
+    .map((line) => line.match(/^\s*/)?.[0].length ?? 0);
+  const minLeadingSpaces = Math.min(...leadingSpaces);
+  lines.forEach((line, i) => {
+    lines[i] = line.slice(minLeadingSpaces);
+  });
+
+  if (lines[0].trim().length === 0) {
+    lines.shift();
+  }
+  if (lines[0].startsWith("Copyright")) {
+    lines.shift();
+  }
+  if (lines[0].startsWith("All rights reserved.")) {
+    lines.shift();
+  }
+
+  return lines.join("\n");
+};
+---
+
+<Layout title="Home">
+  <h1>Open Source Licenses</h1>
+
+  <h2>Liwan</h2>
+  <p>
+    Liwan is an open source project, available under the AGPL-3.0-only license.
+    See <a href="https://liwan.dev">liwan.dev</a> and <a
+      href="https://github.com/explodingcamera/liwan">GitHub</a
+    > for more information.
+  </p>
+
+  <h2>Attributions</h2>
+
+  Liwan is built on top of a number of amazing open source projects. Following
+  is a list of all packages used on the frontend and backend, along with their
+  licenses. Only the first occurrence of each license text is shown here, the
+  full license text can be found in the respective package's repository
+  (linked).
+
+  <h3>Frontend</h3>
+  {
+    licensesNpm.map((license) => (
+      <div>
+        <h4>
+          <span>
+            {license.name} ({license.version})
+          </span>
+          {license.author?.name && `by ${license.author.name}`}, available under
+          the {license.license} license
+          {license.repository && (
+            <a href={getRepositoryUrl(license.repository)}>[source]</a>
+          )}
+          {license.homepage && <a href={license.homepage}>[homepage]</a>}
+        </h4>
+      </div>
+    ))
+  }
+
+  <h3>Backend</h3>
+  {
+    licensesCargo.crates.map(({ license, package: pkg }) => (
+      <div>
+        <h4>
+          <span>
+            {pkg.name} ({pkg.version})
+          </span>
+          {pkg.authors.length
+            ? `by ${removeEmails(pkg.authors).join(", ")}`
+            : ""}
+          , available under the {license} license
+          {pkg.repository && (
+            <a href={getRepositoryUrl(pkg.repository)}>[source]</a>
+          )}
+        </h4>
+      </div>
+    ))
+  }
+  <div>
+    <h4>
+      <span> Useragent Regexes </span>
+      by Google Inc., available under the Apache-2.0 license
+      <a href="https://github.com/ua-parser/uap-core/blob/master/regexes.yaml"
+        >[source]</a
+      >
+    </h4>
+  </div>
+
+  <h3>License Texts</h3>
+  {
+    licensesCargo.licenses
+      .filter((license) => license.first_of_kind)
+      .map((license) => (
+        <div class="licenses">
+          <h4>{license.name}</h4>
+          <pre>{licenseText(license.text)}</pre>
+        </div>
+      ))
+  }
+</Layout>
+
+<style>
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  h4 {
+    font-size: 1rem;
+    margin-top: 0rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+    font-weight: 400;
+    > span {
+      font-weight: 800;
+    }
+  }
+
+  pre {
+    padding: 0.5rem;
+    width: fit-content;
+    margin-bottom: 2rem;
+    max-width: 100%;
+    text-wrap: balance;
+  }
+
+  .licenses h4 {
+    font-size: 1rem;
+    font-weight: 800;
+  }
+</style>

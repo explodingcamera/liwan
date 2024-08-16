@@ -1,0 +1,14 @@
+workarounds=["ring", "rustls"]
+accepted=[
+    "Apache-2.0",
+    "MIT",
+    "ISC",
+    "MPL-2.0",
+    "BSD-3-Clause",
+    "Unicode-DFS-2016",
+    "OpenSSL",
+    "LicenseRef-Liwan",
+]
+targets=["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "aarch64-apple-darwin"]
+ignore-build-dependencies=true
+ignore-dev-dependencies=true
