@@ -89,9 +89,14 @@ export const ReferrerIcon = ({ referrer, icon, ...props }: { referrer: string; i
 		return <SearchIcon {...props} />;
 	}
 
-	<Favicon {...props} />;
+	<Favicon {...props} fqdn={referrer} />;
 };
 
-export const Favicon = ({ size }: IconProps) => {
-	return <img src={`https://icons.duckduckgo.com/ip3/${size}.ico`} alt="favicon" height={size} width={size} />;
+export const Favicon = ({
+	size,
+	fqdn,
+}: IconProps & {
+	fqdn: string;
+}) => {
+	return <img src={`https://icons.duckduckgo.com/ip3/${fqdn}.ico`} alt="favicon" height={size} width={size} />;
 };
