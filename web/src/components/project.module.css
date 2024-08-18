@@ -9,28 +9,6 @@
   }
 }
 
-.tabs {
-  .tabsList {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  button {
-    all: unset;
-    cursor: pointer;
-
-    &[aria-selected="true"] {
-      text-decoration: underline;
-      font-weight: 600;
-    }
-
-    &:last-of-type {
-      margin-right: auto;
-    }
-  }
-}
-
 .project {
   animation: loadIn 0.2s linear;
   display: flex;
@@ -70,34 +48,20 @@ div.graph {
   margin: 0 -0.4rem;
 }
 
-.card {
-  padding: 1rem;
-  background-color: var(--pico-form-element-background-color);
-  border-radius: var(--pico-border-radius);
-  background: var(--pico-card-background-color);
-  box-shadow: var(--pico-card-box-shadow);
-
-  &[data-full-width="true"] {
-    grid-column: span 2;
-  }
-}
-
-.geoCard {
+.geoCard.geoCard {
   padding: 0;
-  > div {
-    display: flex;
+  grid-column: span 2;
+  display: flex;
 
-    > div {
-      flex: 1;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
+  > div {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .geoMap {
     display: flex;
-    flex: 1;
     position: relative;
+    width: calc(50% + 1rem);
 
     &::after {
       content: "";
@@ -115,59 +79,11 @@ div.graph {
   }
 
   .geoTable {
+    width: calc(50% - 1rem);
+
     > div {
       padding: 1rem;
       padding-left: 0;
     }
-  }
-}
-
-.dimTable {
-  display: flex;
-  flex-direction: column;
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    color: var(--pico-h5-color);
-    margin-bottom: 1rem;
-  }
-}
-
-.dimRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.2rem;
-}
-
-.percentage {
-  flex: 1;
-  position: relative;
-  z-index: 1;
-  padding-left: 0.5rem;
-  padding-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-
-  &:hover {
-    &::after {
-      opacity: 0.3;
-    }
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    width: var(--percentage);
-    height: 100%;
-    background: var(--pico-h5-color);
-    opacity: 0.09;
-    z-index: -1;
-    transition: width 0.3s ease-in-out, opacity 0.1s ease-in-out;
-    border-radius: 1rem;
   }
 }

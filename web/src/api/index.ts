@@ -2,6 +2,7 @@ import { createClient, type NormalizeOAS, type OASModel } from "fets";
 export { queryClient, useMutation, useQuery, getUsername } from "./utils";
 import type dashboardspec from "./dashboard";
 import { queryClient, useQuery } from "./utils";
+import { useMemo } from "react";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
@@ -96,6 +97,43 @@ export const useUsers = () => {
 		queryFn: () => api["/api/dashboard/users"].get().json(),
 	});
 	return { users: data?.users ?? [], isLoading, error };
+};
+
+export const useDimension = ({
+	project,
+	dimension,
+	metric,
+	range,
+}: {
+	project: ProjectResponse;
+	dimension: Dimension;
+	metric: Metric;
+	range: DateRange;
+}): {
+	data: DimensionTableRow[] | undefined;
+	biggest: number;
+	order: string[] | undefined;
+} => {
+	const { data } = useQuery({
+		placeholderData: (prev) => prev,
+		queryKey: ["dimension", project.id, dimension, metric, range],
+		queryFn: () =>
+			api["/api/dashboard/project/{project_id}/dimension"]
+				.post({
+					params: { project_id: project.id },
+					json: {
+						dimension,
+						metric,
+						range,
+					},
+				})
+				.json(),
+	});
+
+	const biggest = useMemo(() => data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0, [data]);
+	const order = useMemo(() => data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue), [data]);
+
+	return { data: data?.data, biggest, order };
 };
 
 export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });

@@ -1,0 +1,74 @@
+.card {
+  padding: 1rem;
+  background-color: var(--pico-form-element-background-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-background-color);
+  box-shadow: var(--pico-card-box-shadow);
+}
+
+.tabs {
+  .tabsList {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  button {
+    all: unset;
+    cursor: pointer;
+
+    &[aria-selected="true"] {
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    &:last-of-type {
+      margin-right: auto;
+    }
+  }
+}
+
+.percentage {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  padding-left: 0.5rem;
+  padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+
+  &:hover {
+    &::after {
+      opacity: 0.3;
+    }
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: var(--percentage);
+    height: 100%;
+    background: var(--pico-h5-color);
+    opacity: 0.09;
+    z-index: -1;
+    transition: width 0.3s ease-in-out, opacity 0.1s ease-in-out;
+    border-radius: 1rem;
+  }
+}
+
+.dimensionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--pico-h5-color);
+  margin-bottom: 1rem;
+}
+
+.dimensionRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.2rem;
+}

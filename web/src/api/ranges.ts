@@ -63,8 +63,8 @@ export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: num
 	},
 	yearToDate: () => {
 		const now = new Date().getTime();
-		const start = startOfYear(now).getTime();
+		const start = endOfDay(subDays(startOfYear(now), 1)).getTime() - 1000;
 		const months = differenceInMonths(now, start);
-		return { range: { start, end: now }, dataPoints: months, graphRange: "month" };
+		return { range: { start, end: now }, dataPoints: months + 1, graphRange: "month" };
 	},
 };
