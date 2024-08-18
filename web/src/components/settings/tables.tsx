@@ -24,6 +24,7 @@ import {
 	type ProjectResponse,
 	type UserResponse,
 } from "../../api";
+import { createToast } from "../toast";
 
 type DropdownOptions = Record<string, ((close: () => void) => JSX.Element) | null>;
 
@@ -74,7 +75,6 @@ const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
 				}
 			/>
 		),
-
 		delete: (close) => (
 			<DeleteDialog
 				id={project.id}
@@ -107,6 +107,7 @@ export const ProjectsTable = () => {
 			icon: <WholeWordIcon size={18} />,
 			header: "ID",
 			render: (row) => <i>{row.id}</i>,
+			nowrap: true,
 		},
 		{
 			id: "public",
@@ -141,6 +142,24 @@ export const ProjectsTable = () => {
 
 const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
 	const options: DropdownOptions = {
+		copy: (close) => (
+			<button
+				type="button"
+				onClick={() => {
+					navigator.clipboard
+						.writeText(
+							`<script type="module" data-entity=${entity.id} src="${window.location.origin}/script.js"></script>`,
+						)
+						.then(() => createToast("Snippet copied to clipboard", "info"))
+						.catch(() => createToast("Failed to copy snippet to clipboard", "error"));
+
+					close();
+				}}
+			>
+				<RectangleEllipsisIcon size={18} />
+				Copy Snippet
+			</button>
+		),
 		edit: (close) => (
 			<EditEntity
 				entity={entity}
@@ -184,6 +203,7 @@ export const EntitiesTable = () => {
 			icon: <WholeWordIcon size={18} />,
 			header: "ID",
 			render: (row) => <i>{row.id}</i>,
+			nowrap: true,
 		},
 		{
 			id: "projects",
@@ -266,6 +286,7 @@ export const UsersTable = () => {
 			header: "Username",
 			icon: <UserIcon size={18} />,
 			render: (row) => <span>{row.username}</span>,
+			nowrap: true,
 		},
 		{
 			id: "role",

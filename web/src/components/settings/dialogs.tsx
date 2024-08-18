@@ -19,6 +19,7 @@ import {
 	type UserResponse,
 } from "../../api";
 import { InfoIcon } from "lucide-react";
+import { createToast } from "../toast";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 
@@ -52,6 +53,7 @@ export const DeleteDialog = ({
 					invalidateUsers();
 					break;
 			}
+			createToast(`${toTitleCase(type)} deleted successfully`, "success");
 		},
 		onError: console.error,
 	});
@@ -117,6 +119,7 @@ export const EditProjectEntities = ({ project, trigger }: { project: ProjectResp
 		mutationFn: api["/api/dashboard/project/{project_id}"].put,
 		onSuccess: () => {
 			closeRef?.current?.click();
+			createToast("Entities updated successfully", "success");
 			invalidateProjects();
 		},
 		onError: console.error,
@@ -184,6 +187,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 		onSuccess: () => {
 			closeRef?.current?.click();
 			queryClient.invalidateQueries({ queryKey: ["projects"] });
+			createToast("Project updated successfully", "success");
 		},
 		onError: console.error,
 	});
@@ -256,6 +260,7 @@ export const CreateProject = () => {
 		mutationFn: api["/api/dashboard/project/{project_id}"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
+			createToast("Project created successfully", "success");
 			invalidateProjects();
 		},
 		onError: console.error,
@@ -337,6 +342,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 		mutationFn: api["/api/dashboard/entity/{entity_id}"].put,
 		onSuccess: () => {
 			closeRef?.current?.click();
+			createToast("Entity updated successfully", "success");
 			invalidateEntities();
 		},
 		onError: console.error,
@@ -422,6 +428,7 @@ export const CreateEntity = () => {
 		mutationFn: api["/api/dashboard/entity"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
+			createToast("Entity created successfully", "success");
 			invalidateEntities();
 		},
 		onError: console.error,
@@ -497,6 +504,7 @@ export const EditPassword = ({ user, trigger }: { user: UserResponse; trigger: J
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/user/{username}/password"].put,
 		onSuccess: () => {
+			createToast("Password updated successfully", "success");
 			closeRef?.current?.click();
 		},
 		onError: console.error,
@@ -564,6 +572,7 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: JSX.E
 		mutationFn: api["/api/dashboard/user/{username}"].put,
 		onSuccess: () => {
 			closeRef?.current?.click();
+			createToast("User updated successfully", "success");
 			invalidateUsers();
 		},
 		onError: console.error,
@@ -624,6 +633,7 @@ export const CreateUser = () => {
 		mutationFn: api["/api/dashboard/user"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
+			createToast("User created successfully", "success");
 			invalidateUsers();
 		},
 		onError: console.error,

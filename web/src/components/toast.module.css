@@ -1,0 +1,35 @@
+.toastContainer {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  z-index: 9999;
+}
+
+.toast {
+  padding: 0.8rem 1.1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  color: #fff;
+  box-shadow: var(--pico-card-box-shadow);
+  border-radius: var(--pico-border-radius);
+}
+
+.success {
+  background-color: #4caf50;
+}
+
+.error {
+  background-color: #f44336;
+}
+
+.info {
+  background-color: var(--pico-primary-background);
+}
+
+.warning {
+  background-color: #ff9800;
+}

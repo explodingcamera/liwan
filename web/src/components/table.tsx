@@ -17,7 +17,7 @@ export const Table = <T extends { id: string }>({
 	columns: Column<T>[];
 }) => {
 	return (
-		<div className="overflow-auto">
+		<div className={styles.container}>
 			<table className={styles.table}>
 				<thead>
 					<tr>
