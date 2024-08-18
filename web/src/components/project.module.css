@@ -9,6 +9,28 @@
   }
 }
 
+.tabs {
+  .tabsList {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  button {
+    all: unset;
+    cursor: pointer;
+
+    &[aria-selected="true"] {
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    &:last-of-type {
+      margin-right: auto;
+    }
+  }
+}
+
 .project {
   animation: loadIn 0.2s linear;
   display: flex;
@@ -46,10 +68,6 @@ div.graph {
   gap: 1rem;
   row-gap: 1rem;
   margin: 0 -0.4rem;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
 }
 
 .card {
@@ -65,12 +83,42 @@ div.graph {
 }
 
 .geoCard {
-  display: flex;
-  gap: 2rem;
+  padding: 0;
   > div {
+    display: flex;
+
+    > div {
+      flex: 1;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+
+  .geoMap {
+    display: flex;
     flex: 1;
-    flex-direction: column;
-    gap: 0.5rem;
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      background: linear-gradient(
+        to right,
+        transparent,
+        var(--pico-card-background-color)
+      );
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 2rem;
+    }
+  }
+
+  .geoTable {
+    > div {
+      padding: 1rem;
+      padding-left: 0;
+    }
   }
 }
 

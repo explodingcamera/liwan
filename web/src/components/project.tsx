@@ -1,15 +1,16 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import styles from "./project.module.css";
 
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { LinkIcon, LockIcon } from "lucide-react";
+import { useLocalStorage } from "@uidotdev/usehooks";
+import * as Tabs from "@radix-ui/react-tabs";
+
+import { resolveRange, type RangeName } from "../api/ranges";
 import { api, dimensionNames, formatMetricVal, metricNames, useQuery } from "../api";
 import type { DateRange, Dimension, DimensionTableRow, Metric, ProjectResponse, StatsResponse } from "../api";
 
-import { useLocalStorage } from "@uidotdev/usehooks";
-import { LiveVisitorCount, ProjectOverview, SelectRange } from "./projects";
-import { resolveRange, type RangeName } from "../api/ranges";
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "./icons";
-import { LinkIcon, LockIcon } from "lucide-react";
-const server = typeof window === "undefined";
+import { LiveVisitorCount, ProjectOverview, SelectRange } from "./projects";
 
 const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
 
@@ -19,7 +20,7 @@ export const Project = () => {
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 
 	useEffect(() => {
-		if (server) return;
+		if (typeof window === "undefined") return;
 		setProjectId(window?.document.location.pathname.split("/").pop() ?? null);
 	}, []);
 
@@ -44,32 +45,23 @@ export const Project = () => {
 			/>
 			<div className={styles.tables}>
 				<Card>
+					<DimTable project={data} dimension={"url"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<Card>
+					<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
+				</Card>
+				<GeoCard project={data} metric={metric} range={resolveRange(dateRange).range} />
+				<Card>
 					<DimTable project={data} dimension={"platform"} metric={metric} range={resolveRange(dateRange).range} />
 				</Card>
-
 				<Card>
 					<DimTable project={data} dimension={"browser"} metric={metric} range={resolveRange(dateRange).range} />
-				</Card>
-				<Card fullWidth>
-					<GeoCard project={data} metric={metric} range={resolveRange(dateRange).range} />
-				</Card>
-				<Card>
-					<DimTable project={data} dimension={"url"} metric={metric} range={resolveRange(dateRange).range} />
 				</Card>
 				<Card>
 					<DimTable project={data} dimension={"fqdn"} metric={metric} range={resolveRange(dateRange).range} />
 				</Card>
 				<Card>
 					<DimTable project={data} dimension={"mobile"} metric={metric} range={resolveRange(dateRange).range} />
-				</Card>
-				<Card>
-					<DimTable project={data} dimension={"referrer"} metric={metric} range={resolveRange(dateRange).range} />
-				</Card>
-				<Card>
-					<DimTable project={data} dimension={"city"} metric={metric} range={resolveRange(dateRange).range} />
-				</Card>
-				<Card>
-					<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
 				</Card>
 			</div>
 		</div>
@@ -108,18 +100,6 @@ const ProjectHeader = ({
 	);
 };
 
-const Entities = ({ entities }: { entities: { id: string; displayName: string }[] }) => {
-	return (
-		<div className={styles.entities}>
-			{entities.map((entity) => (
-				<div key={entity.id} className={styles.entity}>
-					<h3>{entity.displayName}</h3>
-				</div>
-			))}
-		</div>
-	);
-};
-
 const Card = ({ children, fullWidth }: { children: React.ReactNode; fullWidth?: boolean }) => {
 	return (
 		<div className={styles.card} data-full-width={fullWidth ?? undefined}>
@@ -149,26 +129,35 @@ const GeoCard = ({ project, metric, range }: { project: ProjectResponse; metric:
 	const order = useMemo(() => data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue), [data]);
 
 	return (
-		<div className={styles.geoCard}>
-			<div>
-				<WorldMap data={data?.data} metric={metric} />
-			</div>
-			<div>
-				{data?.data?.map((d) => {
-					const value = metric === "avg_views_per_session" ? d.value / 1000 : d.value;
-					const biggestVal = metric === "avg_views_per_session" ? biggest / 1000 : biggest;
-
-					return (
-						<div key={d.dimensionValue} style={{ order: order?.indexOf(d.dimensionValue) }} className={styles.dimRow}>
-							<DimensionValueBar value={value} biggest={biggestVal}>
-								<DimensionLabel dimension={"country"} value={d} />
-							</DimensionValueBar>
-
-							<div>{value.toFixed(1).replace(/\.0$/, "") || "0"}</div>
-						</div>
-					);
-				})}
-			</div>
+		<div className={`${styles.card} ${styles.geoCard}`} data-full-width="true">
+			<Suspense>
+				<div>
+					<div className={styles.geoMap}>
+						<WorldMap data={data?.data} metric={metric} />
+					</div>
+					<div className={styles.geoTable}>
+						<Tabs.Root className={styles.tabs} defaultValue="cities">
+							<Tabs.List className={styles.tabsList}>
+								<Tabs.Trigger value="countries">Countries</Tabs.Trigger>
+								<Tabs.Trigger value="cities">Cities</Tabs.Trigger>
+								<div>{metricNames[metric]}</div>
+							</Tabs.List>
+							<Tabs.Content value="countries">
+								<DimList
+									value={data?.data ?? []}
+									dimension={"country"}
+									metric={metric}
+									biggest={biggest}
+									order={order}
+								/>
+							</Tabs.Content>
+							<Tabs.Content value="cities">
+								<DimTable project={project} dimension={"city"} metric={metric} range={range} noHeader />
+							</Tabs.Content>
+						</Tabs.Root>
+					</div>
+				</div>
+			</Suspense>
 		</div>
 	);
 };
@@ -178,7 +167,8 @@ const DimTable = ({
 	dimension,
 	metric,
 	range,
-}: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange }) => {
+	noHeader,
+}: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange; noHeader?: boolean }) => {
 	const { data } = useQuery({
 		placeholderData: (prev) => prev,
 		queryKey: ["dimension", project.id, dimension, metric, range],
@@ -200,21 +190,40 @@ const DimTable = ({
 
 	return (
 		<div className={styles.dimTable}>
-			<div className={styles.header}>
-				<div>{dimensionNames[dimension]}</div>
-				<div>{metricNames[metric]}</div>
-			</div>
-			{data?.data?.map((d) => {
-				const value = d.value;
-				const biggestVal = biggest;
+			{!noHeader && (
+				<div className={styles.header}>
+					<div>{dimensionNames[dimension]}</div>
+					<div>{metricNames[metric]}</div>
+				</div>
+			)}
+			<DimList value={data?.data ?? []} dimension={dimension} metric={metric} biggest={biggest} order={order} />
+		</div>
+	);
+};
 
+const DimList = ({
+	value,
+	dimension,
+	metric,
+	biggest,
+	order,
+}: {
+	value: DimensionTableRow[];
+	dimension: Dimension;
+	metric: Metric;
+	biggest: number;
+	order?: string[];
+}) => {
+	return (
+		<div>
+			{value.map((d) => {
 				return (
 					<div key={d.dimensionValue} style={{ order: order?.indexOf(d.dimensionValue) }} className={styles.dimRow}>
-						<DimensionValueBar value={value} biggest={biggestVal}>
+						<DimensionValueBar value={d.value} biggest={biggest}>
 							<DimensionLabel dimension={dimension} value={d} />
 						</DimensionValueBar>
 
-						<div>{formatMetricVal(metric, value)}</div>
+						<div>{formatMetricVal(metric, d.value)}</div>
 					</div>
 				);
 			})}

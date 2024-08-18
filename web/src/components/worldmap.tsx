@@ -35,8 +35,8 @@ export const WorldMap = ({
 				projection="geoMercator"
 				projectionConfig={{
 					rotate: [0, 0, 0],
-					center: [0, 30],
-					scale: 140,
+					center: [0, 50],
+					scale: 120,
 				}}
 				height={500}
 			>
@@ -76,7 +76,7 @@ export const WorldMap = ({
 					</Geographies>
 				</ZoomableGroup>
 			</ComposableMap>
-			<Tooltip id="map" className={styles.reset} classNameArrow={styles.reset} disableStyleInjection>
+			<Tooltip id="map" className={`${styles.tooltipContainer}`} classNameArrow={styles.reset} disableStyleInjection>
 				{currentGeo && (
 					<div className={styles.tooltip} data-theme="dark">
 						<h2>{metricNames[metric]}</h2>
