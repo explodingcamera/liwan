@@ -102,6 +102,12 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
             return Err(StatusCode::METHOD_NOT_ALLOWED.into());
         }
 
+        if path.starts_with("p/") {
+            let mut parts = path.splitn(3, '/').collect::<Vec<&str>>();
+            parts[1] = "project";
+            path = parts.join("/");
+        }
+
         let file = if let Some(content) = E::get(&path) {
             Some(content)
         } else {

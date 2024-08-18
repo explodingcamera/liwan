@@ -16,6 +16,25 @@
   gap: 1rem;
 }
 
+.projectHeader.projectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding-bottom: 0rem;
+
+  a {
+    cursor: pointer;
+  }
+
+  > h1 {
+    font-size: 1.7rem;
+    margin: 0;
+    align-items: first baseline;
+  }
+}
+
 div.graph {
   height: 18rem;
   margin-bottom: 1rem;

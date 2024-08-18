@@ -40,14 +40,18 @@
   display: flex;
   justify-content: space-between;
 
-  details {
-    width: 10rem;
+  a {
+    cursor: pointer;
+  }
+}
 
-    .selected {
-      font-weight: 700;
-      color: var(--pico-h1-color);
-      text-decoration: underline;
-    }
+details.selectRange {
+  width: 10rem;
+
+  .selected {
+    font-weight: 700;
+    color: var(--pico-h1-color);
+    text-decoration: underline;
   }
 
   summary {
@@ -56,10 +60,6 @@
     align-items: center;
     --pico-form-element-spacing-vertical: 0.5rem;
     --pico-form-element-spacing-horizontal: 0.6rem;
-  }
-
-  a {
-    cursor: pointer;
   }
 }
 
@@ -94,41 +94,14 @@
       display: none;
     }
   }
+
+  > div {
+    flex: 1;
+  }
 }
 
 .stats {
   align-items: center;
-
-  > h1 {
-    font-size: 1rem;
-    margin-bottom: 0.4rem;
-    align-items: center;
-    display: flex;
-
-    a {
-      all: unset;
-      cursor: pointer;
-    }
-
-    > span.online {
-      > svg {
-        margin-right: 0.1rem;
-      }
-
-      .pulse {
-        position: absolute;
-        animation: pulse 2s infinite;
-      }
-
-      margin-left: 0.5rem;
-      display: inline-flex;
-      gap: 0.2rem;
-      align-items: center;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-  }
-
   > div {
     display: flex;
     gap: 1rem;
@@ -136,6 +109,36 @@
     @media (max-width: 768px) {
       flex-wrap: wrap;
     }
+  }
+}
+
+.statsHeader {
+  font-size: 1rem;
+  margin-bottom: 0.4rem;
+  align-items: center;
+  display: flex;
+
+  a {
+    all: unset;
+    cursor: pointer;
+  }
+
+  > span.online {
+    > svg {
+      margin-right: 0.1rem;
+    }
+
+    .pulse {
+      position: absolute;
+      animation: pulse 2s infinite;
+    }
+
+    margin-left: 0.5rem;
+    display: inline-flex;
+    gap: 0.2rem;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 500;
   }
 }
 

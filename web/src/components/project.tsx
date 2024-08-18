@@ -1,23 +1,14 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import styles from "./project.module.css";
 
-import {
-	api,
-	dimensionNames,
-	formatMetricVal,
-	metricNames,
-	useQuery,
-	type DateRange,
-	type Dimension,
-	type DimensionTableRow,
-	type Metric,
-	type ProjectResponse,
-} from "../api";
-import { ProjectOverview } from "./projects";
+import { api, dimensionNames, formatMetricVal, metricNames, useQuery } from "../api";
+import type { DateRange, Dimension, DimensionTableRow, Metric, ProjectResponse, StatsResponse } from "../api";
+
 import { useLocalStorage } from "@uidotdev/usehooks";
+import { LiveVisitorCount, ProjectOverview, SelectRange } from "./projects";
 import { resolveRange, type RangeName } from "../api/ranges";
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "./icons";
-import { LinkIcon } from "lucide-react";
+import { LinkIcon, LockIcon } from "lucide-react";
 const server = typeof window === "undefined";
 
 const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
@@ -43,13 +34,13 @@ export const Project = () => {
 
 	return (
 		<div className={styles.project}>
-			{/* <Entities entities={data.entities} /> */}
 			<ProjectOverview
 				project={data}
 				metric={metric}
 				setMetric={setMetric}
 				rangeName={dateRange}
 				graphClassName={styles.graph}
+				renderHeader={(props) => <ProjectHeader {...props} range={dateRange} setRange={setDateRange} />}
 			/>
 			<div className={styles.tables}>
 				<Card>
@@ -81,6 +72,38 @@ export const Project = () => {
 					<DimTable project={data} dimension={"country"} metric={metric} range={resolveRange(dateRange).range} />
 				</Card>
 			</div>
+		</div>
+	);
+};
+
+const ProjectHeader = ({
+	project,
+	stats,
+	range,
+	setRange,
+	className,
+}: {
+	stats?: StatsResponse;
+	project: ProjectResponse;
+	range: RangeName;
+	setRange: (range: RangeName) => void;
+	className?: string;
+}) => {
+	return (
+		<div className={styles.projectHeader}>
+			<h1 className={className}>
+				<span>
+					{project.public ? null : (
+						<>
+							<LockIcon size={16} />
+							&nbsp;
+						</>
+					)}
+					<a href={`/p/${project.id}`}>{project.displayName}</a>&nbsp;
+				</span>
+				<LiveVisitorCount count={stats?.currentVisitors || 0} />
+			</h1>
+			<SelectRange range={range} onSelect={setRange} />
 		</div>
 	);
 };
@@ -219,12 +242,15 @@ const DimensionLabel = ({ dimension, value }: { dimension: Dimension; value: Dim
 		);
 
 	if (dimension === "url") {
-		const url = value.dimensionValue;
+		const url = tryParseUrl(value.dimensionValue);
+
 		return (
 			<>
 				<LinkIcon size={16} />
 				&nbsp;
-				<a href={value.dimensionValue}>{url}</a>
+				<a target="_blank" rel="noreferrer" href={getHref(url)}>
+					{formatFullUrl(url)}
+				</a>
 			</>
 		);
 	}
@@ -235,7 +261,9 @@ const DimensionLabel = ({ dimension, value }: { dimension: Dimension; value: Dim
 			<>
 				<LinkIcon size={16} />
 				&nbsp;
-				<a href={value.dimensionValue}>{url.hostname}</a>
+				<a target="_blank" rel="noreferrer" href={getHref(url)}>
+					{formatHost(url)}
+				</a>
 			</>
 		);
 	}
@@ -288,8 +316,31 @@ const tryParseUrl = (url: string) => {
 	try {
 		return new URL(url);
 	} catch {
-		return new URL(`https://${url}`);
+		try {
+			return new URL(`https://${url}`);
+		} catch {
+			return url;
+		}
 	}
+};
+
+const formatHost = (url: string | URL) => {
+	if (typeof url === "string") return url;
+	return url.hostname;
+};
+
+const formatFullUrl = (url: string | URL) => {
+	if (typeof url === "string") return url;
+	return `${url.hostname}${url.pathname}${url.search}`;
+};
+
+const getHref = (url: string | URL) => {
+	if (typeof url === "string") {
+		if (!url.startsWith("http")) return `https://${url}`;
+		return url;
+	}
+
+	return url.href;
 };
 
 const countryCodeToFlag = (countryCode: string) => {

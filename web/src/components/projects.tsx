@@ -41,14 +41,9 @@ export const Projects = () => {
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
 
-	const detailsRef = useRef<HTMLDetailsElement>(null);
 	const [dateRange, setDateRange] = useLocalStorage<RangeName>("date-range", "last7Days");
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 
-	const onSelect = (name: RangeName) => () => {
-		if (detailsRef.current) detailsRef.current.open = false;
-		setDateRange(name);
-	};
 	const projects = data?.projects || [];
 
 	if (isLoading) return null;
@@ -74,19 +69,12 @@ export const Projects = () => {
 		<div className={styles.projects}>
 			<div className={styles.header}>
 				<h1>Dashboard</h1>
-				<details ref={detailsRef} className="dropdown">
-					<summary>{rangeNames[dateRange]}</summary>
-					<ul>
-						{Object.entries(rangeNames).map(([key, value]) => (
-							<li key={key}>
-								{/* biome-ignore lint/a11y/useValidAnchor: this is fine */}
-								<a className={key === dateRange ? styles.selected : ""} onClick={onSelect(key as RangeName)}>
-									{value}
-								</a>
-							</li>
-						))}
-					</ul>
-				</details>
+				<SelectRange
+					onSelect={(name: RangeName) => {
+						setDateRange(name);
+					}}
+					range={dateRange}
+				/>
 			</div>
 
 			{projects.map((project) => {
@@ -109,6 +97,31 @@ export const Projects = () => {
 	);
 };
 
+export const SelectRange = ({ onSelect, range }: { onSelect: (name: RangeName) => void; range: RangeName }) => {
+	const detailsRef = useRef<HTMLDetailsElement>(null);
+
+	const handleSelect = (name: RangeName) => () => {
+		if (detailsRef.current) detailsRef.current.open = false;
+		onSelect(name);
+	};
+
+	return (
+		<details ref={detailsRef} className={`dropdown ${styles.selectRange}`}>
+			<summary>{rangeNames[range]}</summary>
+			<ul>
+				{Object.entries(rangeNames).map(([key, value]) => (
+					<li key={key}>
+						{/* biome-ignore lint/a11y/useValidAnchor: this is fine */}
+						<a className={key === range ? styles.selected : ""} onClick={handleSelect(key as RangeName)}>
+							{value}
+						</a>
+					</li>
+				))}
+			</ul>
+		</details>
+	);
+};
+
 export const ProjectOverview = ({
 	project,
 	metric,
@@ -124,9 +137,8 @@ export const ProjectOverview = ({
 	rangeName: RangeName;
 	detailsElement?: () => JSX.Element;
 	graphClassName?: string;
-	renderHeader?: (props: { stats?: StatsResponse; project: ProjectResponse }) => JSX.Element;
+	renderHeader?: (props: { stats?: StatsResponse; project: ProjectResponse; className?: string }) => JSX.Element;
 }) => {
-	const { displayName, id, public: isPublic } = project;
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
 
 	let refetchInterval = undefined;
@@ -143,9 +155,11 @@ export const ProjectOverview = ({
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		queryKey: ["project_stats", id, range],
+		queryKey: ["project_stats", project.id, range],
 		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/stats"].post({ json: { range }, params: { project_id: id } }).json(),
+			api["/api/dashboard/project/{project_id}/stats"]
+				.post({ json: { range }, params: { project_id: project.id } })
+				.json(),
 		placeholderData: (prev) => prev,
 	});
 
@@ -157,8 +171,9 @@ export const ProjectOverview = ({
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		queryKey: ["project_graph", id, range, graphRange, metric, dataPoints],
-		queryFn: () => api["/api/dashboard/project/{project_id}/graph"].post({ json, params: { project_id: id } }).json(),
+		queryKey: ["project_graph", project.id, range, graphRange, metric, dataPoints],
+		queryFn: () =>
+			api["/api/dashboard/project/{project_id}/graph"].post({ json, params: { project_id: project.id } }).json(),
 		placeholderData: (prev) => prev,
 	});
 
@@ -169,7 +184,7 @@ export const ProjectOverview = ({
 			{(isErrorStats || isErrorGraph) && <h1 className={styles.error}>Failed to load data</h1>}
 			<div className={styles.statsContainer}>
 				<div className={styles.stats}>
-					{renderHeader({ stats, project })}
+					{renderHeader({ stats, project, className: styles.statsHeader })}
 					<div>
 						<Stat
 							title="Total Views"
@@ -194,7 +209,7 @@ export const ProjectOverview = ({
 							selected={metric === "unique_visitors"}
 						/>
 						<Stat
-							title="Avg Views Per Session"
+							title="Avg. Views Per Session"
 							value={(stats?.stats.avgViewsPerSession ?? 0) / 1000}
 							prevValue={(stats?.statsPrev.avgViewsPerSession ?? 0) / 1000}
 							decimals={1}
@@ -216,12 +231,14 @@ export const ProjectOverview = ({
 const defaultHeader = ({
 	project,
 	stats,
+	className,
 }: {
 	stats?: StatsResponse;
 	project: ProjectResponse;
+	className?: string;
 }) => {
 	return (
-		<h1>
+		<h1 className={className}>
 			<span>
 				{project.public ? null : (
 					<>

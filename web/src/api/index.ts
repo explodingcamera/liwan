@@ -32,7 +32,7 @@ export const metricNames: Record<Metric, string> = {
 	views: "Total Views",
 	sessions: "Total Sessions",
 	unique_visitors: "Unique Visitors",
-	avg_views_per_session: "Avg Views Per Session",
+	avg_views_per_session: "Avg. Views Per Session",
 };
 
 export const dimensionNames: Record<Dimension, string> = {

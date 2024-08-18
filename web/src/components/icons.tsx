@@ -98,5 +98,6 @@ export const Favicon = ({
 }: IconProps & {
 	fqdn: string;
 }) => {
+	fqdn = fqdn.replace(/[^a-zA-Z0-9.-]/g, "");
 	return <img src={`https://icons.duckduckgo.com/ip3/${fqdn}.ico`} alt="favicon" height={size} width={size} />;
 };
