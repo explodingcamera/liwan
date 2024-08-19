@@ -1,8 +1,6 @@
 import { Fragment, useRef } from "react";
 import styles from "./tables.module.css";
 
-import { Table, type Column } from "../table";
-import { DeleteDialog, EditEntity, EditPassword, EditProject, EditProjectEntities, EditUser } from "./dialogs";
 import {
 	AppWindowIcon,
 	EditIcon,
@@ -14,15 +12,17 @@ import {
 	UserIcon,
 	WholeWordIcon,
 } from "lucide-react";
+import { type Column, Table } from "../table";
+import { DeleteDialog, EditEntity, EditPassword, EditProject, EditProjectEntities, EditUser } from "./dialogs";
 
 import {
+	type EntityResponse,
+	type ProjectResponse,
+	type UserResponse,
 	useEntities,
 	useMe,
 	useProjects,
 	useUsers,
-	type EntityResponse,
-	type ProjectResponse,
-	type UserResponse,
 } from "../../api";
 import { createToast } from "../toast";
 

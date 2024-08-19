@@ -6,14 +6,25 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 fn default_base() -> String {
-    "http://localhost:8080".to_string()
+    "http://localhost:9042".to_string()
 }
 
 fn default_port() -> u16 {
-    8080
+    9042
 }
 
 fn default_data_dir() -> String {
+    #[cfg(target_family = "unix")]
+    {
+        if std::path::Path::new("~/.local/share").exists() {
+            return "~/.local/share/liwan/data".to_string();
+        }
+        std::env::var("XDG_DATA_HOME")
+            .map(|home| format!("{}/liwan/data", home))
+            .unwrap_or_else(|_| "./liwan-data".to_string())
+    }
+
+    #[cfg(not(target_family = "unix"))]
     "./liwan-data".to_string()
 }
 
@@ -45,7 +56,22 @@ impl Config {
     pub(crate) fn load(path: Option<String>) -> Result<Self> {
         tracing::debug!(path = ?path, "loading config");
 
+        let path = path.or_else(|| std::env::var("LIWAN_CONFIG").ok());
+
+        #[cfg(target_family = "unix")]
+        let path = path.or_else(|| match std::env::var("XDG_CONFIG_HOME") {
+            Ok(home) => Some(format!("{}/liwan/config.toml", home)),
+            Err(_) => {
+                if std::path::Path::new("~/.config").exists() {
+                    Some("~/.config/liwan/config.toml".to_string())
+                } else {
+                    None
+                }
+            }
+        });
+
         let config: Config = Figment::new()
+            .merge(Toml::file("liwan.config.toml".to_string()))
             .merge(Toml::file(path.unwrap_or("liwan.config.toml".to_string())))
             .merge(Env::raw().filter_map(|key| match key {
                 k if !k.starts_with("LIWAN_") => None,
@@ -102,7 +128,7 @@ mod test {
             assert_eq!(config.geoip.as_ref().unwrap().maxmind_db_path, Some("test".to_string()));
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
-            assert_eq!(config.port, 8080);
+            assert_eq!(config.port, 9042);
             Ok(())
         });
     }
@@ -123,7 +149,7 @@ mod test {
             assert!(config.geoip.is_none());
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
-            assert_eq!(config.port, 8080);
+            assert_eq!(config.port, 9042);
             Ok(())
         });
     }
@@ -133,9 +159,8 @@ mod test {
         Jail::expect_with(|_jail| {
             let config = Config::load(None).expect("failed to load config");
             assert!(config.geoip.is_none());
-            assert_eq!(config.base_url, "http://localhost:8080");
-            assert_eq!(config.data_dir, "./liwan-data");
-            assert_eq!(config.port, 8080);
+            assert_eq!(config.base_url, "http://localhost:9042");
+            assert_eq!(config.port, 9042);
             Ok(())
         });
     }

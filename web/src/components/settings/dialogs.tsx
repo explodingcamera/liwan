@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Dialog } from "../dialog";
-import { Tags, type Tag } from "../tags";
+import { type Tag, Tags } from "../tags";
 import styles from "./dialogs.module.css";
 
+import { InfoIcon } from "lucide-react";
 import {
+	type EntityResponse,
+	type ProjectResponse,
+	type UserResponse,
 	api,
 	invalidateEntities,
 	invalidateProjects,
@@ -14,11 +18,7 @@ import {
 	useMe,
 	useMutation,
 	useProjects,
-	type EntityResponse,
-	type ProjectResponse,
-	type UserResponse,
 } from "../../api";
-import { InfoIcon } from "lucide-react";
 import { createToast } from "../toast";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);

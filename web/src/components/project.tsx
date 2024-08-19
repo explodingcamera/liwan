@@ -1,16 +1,16 @@
 import styles from "./project.module.css";
 import "./worldmap.module.css";
 
-import { lazy, Suspense, useEffect, useState } from "react";
-import { LockIcon } from "lucide-react";
 import { useLocalStorage } from "@uidotdev/usehooks";
+import { LockIcon } from "lucide-react";
+import { Suspense, lazy, useEffect, useState } from "react";
 
-import { resolveRange, type RangeName } from "../api/ranges";
 import { api, useDimension, useQuery } from "../api";
 import type { DateRange, Metric, ProjectResponse, StatsResponse } from "../api";
+import { type RangeName, resolveRange } from "../api/ranges";
 
+import { DimensionCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
 import { LiveVisitorCount, ProjectOverview, SelectRange } from "./projects";
-import { cardStyles, DimensionCard, DimensionTabs, DimensionTabsCard } from "./dimensions";
 
 const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
 

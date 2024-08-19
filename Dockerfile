@@ -10,6 +10,10 @@ RUN [ "${TARGETPLATFORM}" = "linux/arm64" ] && export TAR_URL=${TAR_URL_ARM64} |
     && chmod +x /app/liwan
 
 FROM scratch
+
+ENV LIWAN_CONFIG=/app/liwan.config.toml
+ENV LIWAN_DATA_DIR=/data
+
 COPY --from=downloader /app/liwan /liwan
 ENTRYPOINT ["/liwan"]
-EXPOSE 8080
+EXPOSE 9042

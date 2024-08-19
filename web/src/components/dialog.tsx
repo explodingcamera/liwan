@@ -1,5 +1,5 @@
-import styles from "./dialog.module.css";
 import * as Dia from "@radix-ui/react-dialog";
+import styles from "./dialog.module.css";
 
 export const Dialog = ({
 	title,

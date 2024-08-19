@@ -1,9 +1,9 @@
-import styles from "./worldmap.module.css";
-import geo from "../../../data/geo.json";
+import { useMemo, useState } from "react";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 import { Tooltip } from "react-tooltip";
-import { useMemo, useState } from "react";
-import { formatMetricVal, metricNames, type DimensionTableRow, type Metric } from "../api";
+import geo from "../../../data/geo.json";
+import { type DimensionTableRow, type Metric, formatMetricVal, metricNames } from "../api";
+import styles from "./worldmap.module.css";
 
 type Geo = {
 	name: string;

@@ -45,7 +45,11 @@ pub(crate) struct SeedDatabase {}
 #[derive(FromArgs)]
 #[argh(subcommand, name = "generate-config")]
 /// Save a default configuration file to `liwan.config.toml`
-pub(crate) struct GenConfig {}
+pub(crate) struct GenConfig {
+    #[argh(option, short = 'o')]
+    /// the path to write the configuration file to
+    output: Option<String>,
+}
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "update-password")]
@@ -114,13 +118,14 @@ pub(crate) fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
 
             println!("User {} created", add.username);
         }
-        Command::GenerateConfig(_) => {
-            if std::path::Path::new("liwan.config.toml").exists() {
+        Command::GenerateConfig(GenConfig { output }) => {
+            let output = output.unwrap_or_else(|| "liwan.config.toml".to_string());
+            if std::path::Path::new(&output).exists() {
                 println!("Configuration file already exists");
                 return Ok(());
             }
 
-            std::fs::write("liwan.config.toml", DEFAULT_CONFIG)?;
+            std::fs::write(&output, DEFAULT_CONFIG)?;
             println!("Configuration file written to liwan.config.toml");
         }
         #[cfg(debug_assertions)]

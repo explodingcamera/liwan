@@ -1,8 +1,8 @@
-import { createClient, type NormalizeOAS, type OASModel } from "fets";
+import { type NormalizeOAS, type OASModel, createClient } from "fets";
 export { queryClient, useMutation, useQuery, getUsername } from "./utils";
+import { useMemo } from "react";
 import type dashboardspec from "./dashboard";
 import { queryClient, useQuery } from "./utils";
-import { useMemo } from "react";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;

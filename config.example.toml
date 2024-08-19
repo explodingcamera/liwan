@@ -1,11 +1,13 @@
 # The base URL of the Liwan instance
-base_url="http://localhost:8080"
+base_url="http://localhost:9042"
 
 # The port to listen on (http)
-port=8080
+port=9042
 
-# Folder to store the database in (Will be created if it doesn't exist)
-data_dir="./liwan-data"
+# # Folder to store the database in (Will be created if it doesn't exist)
+# # defaults to ./.local/share/liwan/data (or $XDG_DATA_HOME/liwan/data) on linux/macos
+# # defaults to ./liwan-data on other platforms
+# data_dir="./liwan-data"
 
 # GeoIp settings (Optional)
 [geoip]

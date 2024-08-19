@@ -1,15 +1,15 @@
 ---
 import type { GetStaticPaths } from "astro";
 
-import Layout from "../../layouts/Layout.astro";
 import { Project } from "../../components/project";
+import Layout from "../../layouts/Layout.astro";
 
 export const getStaticPaths = (() => {
-  return [
-    { params: { project: "project" } },
-    { params: { project: "private-project" } },
-    { params: { project: "public-project" } },
-  ];
+	return [
+		{ params: { project: "project" } },
+		{ params: { project: "private-project" } },
+		{ params: { project: "public-project" } },
+	];
 }) satisfies GetStaticPaths;
 ---
 

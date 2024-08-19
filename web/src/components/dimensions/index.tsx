@@ -1,17 +1,17 @@
-import styles from "./dimensions.module.css";
-import { LinkIcon } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
+import { LinkIcon } from "lucide-react";
+import styles from "./dimensions.module.css";
 
 import {
-	dimensionNames,
-	formatMetricVal,
-	metricNames,
-	useDimension,
 	type DateRange,
 	type Dimension,
 	type DimensionTableRow,
 	type Metric,
 	type ProjectResponse,
+	dimensionNames,
+	formatMetricVal,
+	metricNames,
+	useDimension,
 } from "../../api";
 
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
@@ -86,25 +86,9 @@ export const DimensionTable = ({
 	range,
 }: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange; noHeader?: boolean }) => {
 	const { data, biggest, order } = useDimension({ project, dimension, metric, range });
-	return <DimensionList value={data ?? []} dimension={dimension} metric={metric} biggest={biggest} order={order} />;
-};
-
-export const DimensionList = ({
-	value,
-	dimension,
-	metric,
-	biggest,
-	order,
-}: {
-	value: DimensionTableRow[];
-	dimension: Dimension;
-	metric: Metric;
-	biggest: number;
-	order?: string[];
-}) => {
 	return (
 		<div>
-			{value.map((d) => {
+			{data?.map((d) => {
 				return (
 					<div
 						key={d.dimensionValue}

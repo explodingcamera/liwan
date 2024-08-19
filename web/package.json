@@ -5,7 +5,8 @@
 	"scripts": {
 		"dev": "bun run --bun astro dev",
 		"build": "bun run --bun astro build",
-		"preview": "bun run --bun astro preview"
+		"preview": "bun run --bun astro preview",
+		"typecheck": "bun run --bun tsc --noEmit"
 	},
 	"dependencies": {
 		"@astrojs/react": "^3.6.2",

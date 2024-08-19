@@ -1,14 +1,14 @@
 import { useMemo, useRef } from "react";
 import styles from "./projects.module.css";
 
-import CountUp from "react-countup";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { ChevronRightIcon, CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import CountUp from "react-countup";
 
+import { type Metric, type ProjectResponse, type StatsResponse, api, metricNames, useMe, useQuery } from "../api";
+import { type RangeName, rangeNames, resolveRange } from "../api/ranges";
 import { getUsername } from "../api/utils";
 import { LineGraph, toDataPoints } from "./graph";
-import { rangeNames, resolveRange, type RangeName } from "../api/ranges";
-import { api, metricNames, useMe, useQuery, type Metric, type ProjectResponse, type StatsResponse } from "../api";
 
 const signedIn = getUsername();
 

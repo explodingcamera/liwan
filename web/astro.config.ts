@@ -6,7 +6,7 @@ const dirname = path.dirname(new URL(import.meta.url).pathname);
 
 const proxy = {
 	"/api": {
-		target: "http://localhost:8080",
+		target: "http://localhost:9042",
 		changeOrigin: true,
 		cookieDomainRewrite: "localhost:4321",
 	},

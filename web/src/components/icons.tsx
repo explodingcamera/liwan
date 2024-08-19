@@ -1,7 +1,7 @@
 import styles from "./icons.module.css";
 
 // biome-ignore format:
-import { SiTencentqq, SiFoursquare, SiVk, SiSinaweibo, SiTelegram, SiPixelfed, SiWorkplace, SiX, SiThreads, SiMaildotru, SiYcombinator, SiTiktok, SiFacebook, SiLastdotfm, SiLinkedin, SiDribbble, SiReddit, SiFlickr, SiGithub, SiPinterest, SiSkyrock, SiStackoverflow, SiBluesky, SiLivejournal, SiV2ex, SiDouban, SiRenren, SiTumblr, SiSnapchat, SiBadoo, SiYoutube, SiInstagram, SiViadeo, SiOdnoklassniki, SiVimeo, SiMastodon, SiSourceforge, SiTwitch, SiXing, SiGoogle, SiDuckduckgo, SiGooglechrome, SiFirefox, SiSafari, SiOpera, SiAndroid, SiIos, SiMacos, SiLinux } from "@icons-pack/react-simple-icons";
+import { SiAndroid, SiBadoo, SiBluesky, SiDouban, SiDribbble, SiDuckduckgo, SiFacebook, SiFirefox, SiFlickr, SiFoursquare, SiGithub, SiGoogle, SiGooglechrome, SiInstagram, SiIos, SiLastdotfm, SiLinkedin, SiLinux, SiLivejournal, SiMacos, SiMaildotru, SiMastodon, SiOdnoklassniki, SiOpera, SiPinterest, SiPixelfed, SiReddit, SiRenren, SiSafari, SiSinaweibo, SiSkyrock, SiSnapchat, SiSourceforge, SiStackoverflow, SiTelegram, SiTencentqq, SiThreads, SiTiktok, SiTumblr, SiTwitch, SiV2ex, SiViadeo, SiVimeo, SiVk, SiWorkplace, SiX, SiXing, SiYcombinator, SiYoutube } from "@icons-pack/react-simple-icons";
 // biome-ignore format:
 import { AppWindowIcon, EarthIcon, LayoutGridIcon, MonitorIcon, SearchIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
 // biome-ignore format:
