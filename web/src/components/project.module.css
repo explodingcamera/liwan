@@ -52,6 +52,7 @@ div.graph {
   padding: 0;
   grid-column: span 2;
   display: flex;
+  flex-direction: row;
 
   > div {
     flex-direction: column;

@@ -1,9 +1,12 @@
 .card {
   padding: 1rem;
+  padding-bottom: 0.6rem;
   background-color: var(--pico-form-element-background-color);
   border-radius: var(--pico-border-radius);
   background: var(--pico-card-background-color);
   box-shadow: var(--pico-card-box-shadow);
+  display: flex;
+  flex-direction: column;
 }
 
 .tabs {
@@ -13,7 +16,7 @@
     margin-bottom: 1rem;
   }
 
-  button {
+  .tabsList > button {
     all: unset;
     cursor: pointer;
 
@@ -25,6 +28,11 @@
     &:last-of-type {
       margin-right: auto;
     }
+  }
+
+  .tabsContent {
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -66,9 +74,49 @@
   margin-bottom: 1rem;
 }
 
+.dimensionTable {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(var(--count) * (2.1rem + 0.2rem));
+}
+
+.showMore {
+  all: unset;
+  cursor: pointer;
+  color: var(--pico-contrast);
+  margin-top: 0.2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3rem;
+  transition: opacity 0.15s ease-in-out;
+  opacity: 0.6;
+  user-select: none;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.showMoreHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .dimensionRow {
+  height: 2.1rem;
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.2rem;
+}
+
+.dimensionEmpty {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+  opacity: 0.6;
 }

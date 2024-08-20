@@ -113,8 +113,10 @@ export const useDimension = ({
 	data: DimensionTableRow[] | undefined;
 	biggest: number;
 	order: string[] | undefined;
+	isLoading: boolean;
+	error: unknown;
 } => {
-	const { data } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		placeholderData: (prev) => prev,
 		queryKey: ["dimension", project.id, dimension, metric, range],
 		queryFn: () =>
@@ -133,7 +135,7 @@ export const useDimension = ({
 	const biggest = useMemo(() => data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0, [data]);
 	const order = useMemo(() => data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue), [data]);
 
-	return { data: data?.data, biggest, order };
+	return { data: data?.data, biggest, order, isLoading, error };
 };
 
 export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });

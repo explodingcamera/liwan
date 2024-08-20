@@ -1,5 +1,5 @@
 import * as Tabs from "@radix-ui/react-tabs";
-import { LinkIcon } from "lucide-react";
+import { FullscreenIcon, LinkIcon, ZoomIn } from "lucide-react";
 import styles from "./dimensions.module.css";
 
 import {
@@ -71,7 +71,7 @@ export const DimensionTabs = ({
 				<div>{metricNames[metric]}</div>
 			</Tabs.List>
 			{dimensions.map((dimension) => (
-				<Tabs.Content key={dimension} value={dimension}>
+				<Tabs.Content key={dimension} value={dimension} className={styles.tabsContent}>
 					<DimensionTable dimension={dimension} metric={metric} range={range} project={project} noHeader />
 				</Tabs.Content>
 			))}
@@ -85,24 +85,43 @@ export const DimensionTable = ({
 	metric,
 	range,
 }: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange; noHeader?: boolean }) => {
-	const { data, biggest, order } = useDimension({ project, dimension, metric, range });
+	const { data, biggest, order, isLoading } = useDimension({ project, dimension, metric, range });
+
+	const dataTruncated = data?.slice(0, 6);
 	return (
-		<div>
-			{data?.map((d) => {
-				return (
-					<div
-						key={d.dimensionValue}
-						style={{ order: order?.indexOf(d.dimensionValue) }}
-						className={styles.dimensionRow}
-					>
-						<DimensionValueBar value={d.value} biggest={biggest}>
-							<DimensionLabel dimension={dimension} value={d} />
-						</DimensionValueBar>
-						<div>{formatMetricVal(metric, d.value)}</div>
+		<>
+			<div className={styles.dimensionTable} style={{ "--count": 6 } as React.CSSProperties}>
+				{dataTruncated?.map((d) => {
+					return (
+						<div
+							key={d.dimensionValue}
+							style={{ order: order?.indexOf(d.dimensionValue) }}
+							className={styles.dimensionRow}
+						>
+							<DimensionValueBar value={d.value} biggest={biggest}>
+								<DimensionLabel dimension={dimension} value={d} />
+							</DimensionValueBar>
+							<div>{formatMetricVal(metric, d.value)}</div>
+						</div>
+					);
+				})}
+				{/* {isLoading && dataTruncated?.length === 0 && (
+				)} */}
+				{!isLoading && dataTruncated?.length === 0 && (
+					<div className={styles.dimensionEmpty}>
+						<div>No data available</div>
 					</div>
-				);
-			})}
-		</div>
+				)}
+			</div>
+			<button
+				type="button"
+				className={`${styles.showMore} ${(dataTruncated?.length ?? 0) === 0 ? styles.showMoreHidden : ""}`}
+				onClick={() => console.log("show more")}
+			>
+				<ZoomIn size={16} />
+				Show details
+			</button>
+		</>
 	);
 };
 
