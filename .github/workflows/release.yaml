@@ -68,3 +68,8 @@ jobs:
           target: ${{ matrix.target }}
           build-tool: ${{ matrix.build-tool }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-container:
+    uses: explodingcamera/liwan/.github/workflows/container.yaml@main
+    with:
+      tag: ${{ github.ref_name }}

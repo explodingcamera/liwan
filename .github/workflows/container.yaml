@@ -1,6 +1,11 @@
 name: "Build & Publish Container Image"
 
 on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       tag:
