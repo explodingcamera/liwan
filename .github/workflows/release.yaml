@@ -70,6 +70,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   publish-container:
+    needs: [create-release, upload-assets]
     uses: explodingcamera/liwan/.github/workflows/container.yaml@main
     with:
       tag: ${{ github.ref_name }}
