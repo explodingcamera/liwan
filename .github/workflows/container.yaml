@@ -26,7 +26,7 @@ jobs:
         id: semver
         run: |
           SEMVER_VERSION=$(echo "${{ github.event.inputs.tag }}" | sed -E 's/liwan-v//')
-          echo "SEMVER_VERSION=$SEMVER_VERSION" >> $GITHUB_OUTPUT
+          echo "SEMVER_VERSION=${SEMVER_VERSION}" >> "$GITHUB_OUTPUT"
       - name: Setup Docker Metadata
         uses: docker/metadata-action@v5
         id: meta
