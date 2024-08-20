@@ -12,6 +12,6 @@
 		"defaultBranch": "main"
 	},
 	"files": {
-		"ignore": ["**/node_modules/*"]
+		"ignore": ["**/node_modules/*", "**/api/dashboard.ts"]
 	}
 }

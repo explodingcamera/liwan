@@ -2,6 +2,7 @@ import styles from "./userInfo.module.css";
 
 import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
 import { api, getUsername } from "../api";
+import { cls } from "../utils";
 
 export const LoginButton = () => {
 	const username = getUsername();
@@ -18,7 +19,7 @@ export const LoginButton = () => {
 		);
 
 	return (
-		<details className={`dropdown ${styles.user}`}>
+		<details className={cls("dropdown", styles.user)}>
 			<summary role="button" className="outline secondary">
 				<UserIcon size="24" />
 				{username}

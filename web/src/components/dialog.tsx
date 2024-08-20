@@ -1,4 +1,6 @@
 import * as Dia from "@radix-ui/react-dialog";
+import { XIcon } from "lucide-react";
+import { cls } from "../utils";
 import styles from "./dialog.module.css";
 
 export const Dialog = ({
@@ -8,23 +10,38 @@ export const Dialog = ({
 	trigger,
 	children,
 	onOpenChange,
+	className,
+	showClose,
+	hideTitle,
 }: {
-	title?: string;
+	title: string;
 	description?: string;
 	hideDescription?: boolean;
-	trigger: React.ReactNode;
+	trigger: React.ReactNode | (() => React.ReactNode);
 	children: React.ReactNode;
 	onOpenChange?: (open: boolean) => void;
+	className?: string;
+	showClose?: boolean;
+	hideTitle?: boolean;
 }) => {
 	return (
 		<Dia.Root onOpenChange={onOpenChange}>
-			<Dia.Trigger asChild>{trigger}</Dia.Trigger>
+			<Dia.Trigger asChild>{typeof trigger === "function" ? trigger() : trigger}</Dia.Trigger>
 			<Dia.Portal>
 				<Dia.Overlay className={styles.overlay} />
+				{showClose && (
+					<Dia.Close asChild>
+						<button type="button" className={styles.close}>
+							<XIcon size="24" />
+						</button>
+					</Dia.Close>
+				)}
 
 				<Dia.Content asChild>
-					<article className={styles.content}>
-						{title && <Dia.Title className={styles.title}>{title}</Dia.Title>}
+					<article className={cls(styles.content, className)}>
+						<Dia.Title className={styles.title} hidden={hideTitle}>
+							{title}
+						</Dia.Title>
 						{description && (
 							<Dia.Description hidden={hideDescription} className={styles.description}>
 								{description}
@@ -39,3 +56,22 @@ export const Dialog = ({
 };
 
 Dialog.Close = Dia.Close;
+
+const Hidden = ({ children }: { children: React.ReactNode }) => (
+	<span
+		style={{
+			position: "absolute",
+			border: 0,
+			width: 1,
+			height: 1,
+			padding: 0,
+			margin: -1,
+			overflow: "hidden",
+			clip: "rect(0, 0, 0, 0)",
+			whiteSpace: "nowrap",
+			wordWrap: "normal",
+		}}
+	>
+		{children}
+	</span>
+);

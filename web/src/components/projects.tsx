@@ -8,6 +8,7 @@ import CountUp from "react-countup";
 import { type Metric, type ProjectResponse, type StatsResponse, api, metricNames, useMe, useQuery } from "../api";
 import { type RangeName, rangeNames, resolveRange } from "../api/ranges";
 import { getUsername } from "../api/utils";
+import { cls } from "../utils";
 import { LineGraph, toDataPoints } from "./graph";
 
 const signedIn = getUsername();
@@ -106,7 +107,7 @@ export const SelectRange = ({ onSelect, range }: { onSelect: (name: RangeName) =
 	};
 
 	return (
-		<details ref={detailsRef} className={`dropdown ${styles.selectRange}`}>
+		<details ref={detailsRef} className={cls("dropdown", styles.selectRange)}>
 			<summary>{rangeNames[range]}</summary>
 			<ul>
 				{Object.entries(rangeNames).map(([key, value]) => (
@@ -221,7 +222,7 @@ export const ProjectOverview = ({
 				{detailsElement?.()}
 			</div>
 
-			<div className={`${graphClassName} ${styles.graph}`}>
+			<div className={cls(graphClassName, styles.graph)}>
 				<LineGraph title={metricNames[metric]} data={chartData || []} range={graphRange} />
 			</div>
 		</div>

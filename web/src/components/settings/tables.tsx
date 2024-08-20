@@ -24,6 +24,7 @@ import {
 	useProjects,
 	useUsers,
 } from "../../api";
+import { cls } from "../../utils";
 import { createToast } from "../toast";
 
 type DropdownOptions = Record<string, ((close: () => void) => JSX.Element) | null>;
@@ -31,7 +32,7 @@ type DropdownOptions = Record<string, ((close: () => void) => JSX.Element) | nul
 const Dropdown = ({ options }: { options: DropdownOptions }) => {
 	const detailsRef = useRef<HTMLDetailsElement>(null);
 	return (
-		<details className={`dropdown ${styles.edit}`} ref={detailsRef}>
+		<details className={cls("dropdown", styles.edit)} ref={detailsRef}>
 			<summary>
 				<EllipsisVerticalIcon />
 			</summary>

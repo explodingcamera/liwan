@@ -120,3 +120,7 @@
   margin-bottom: 1rem;
   opacity: 0.6;
 }
+
+.detailsModal.detailsModal {
+  max-width: 35em;
+}

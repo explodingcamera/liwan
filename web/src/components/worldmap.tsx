@@ -76,7 +76,7 @@ export const WorldMap = ({
 					</Geographies>
 				</ZoomableGroup>
 			</ComposableMap>
-			<Tooltip id="map" className={`${styles.tooltipContainer}`} classNameArrow={styles.reset} disableStyleInjection>
+			<Tooltip id="map" className={styles.tooltipContainer} classNameArrow={styles.reset} disableStyleInjection>
 				{currentGeo && (
 					<div className={styles.tooltip} data-theme="dark">
 						<h2>{metricNames[metric]}</h2>

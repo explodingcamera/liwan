@@ -9,6 +9,7 @@ import { api, useDimension, useQuery } from "../api";
 import type { DateRange, Metric, ProjectResponse, StatsResponse } from "../api";
 import { type RangeName, resolveRange } from "../api/ranges";
 
+import { cls } from "../utils";
 import { DimensionCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
 import { LiveVisitorCount, ProjectOverview, SelectRange } from "./projects";
 
@@ -96,7 +97,7 @@ const GeoCard = ({ project, metric, range }: { project: ProjectResponse; metric:
 	});
 
 	return (
-		<div className={`${cardStyles} ${styles.geoCard}`} data-full-width="true">
+		<div className={cls(cardStyles, styles.geoCard)} data-full-width="true">
 			<div className={styles.geoMap}>
 				<Suspense fallback={null}>
 					<WorldMap data={data ?? []} metric={metric} />

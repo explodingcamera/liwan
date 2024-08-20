@@ -14,6 +14,8 @@ import {
 	useDimension,
 } from "../../api";
 
+import { cls } from "../../utils";
+import { Dialog } from "../dialog";
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
 import { countryCodeToFlag, formatFullUrl, formatHost, getHref, tryParseUrl } from "./utils";
 
@@ -113,15 +115,69 @@ export const DimensionTable = ({
 					</div>
 				)}
 			</div>
-			<button
-				type="button"
-				className={`${styles.showMore} ${(dataTruncated?.length ?? 0) === 0 ? styles.showMoreHidden : ""}`}
-				onClick={() => console.log("show more")}
-			>
-				<ZoomIn size={16} />
-				Show details
-			</button>
+			<DetailsModal project={project} dimension={dimension} metric={metric} range={range} />
 		</>
+	);
+};
+
+const DetailsModal = ({
+	project,
+	dimension,
+	metric,
+	range,
+}: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange }) => {
+	const { data, biggest, order, isLoading } = useDimension({ project, dimension, metric, range });
+
+	return (
+		<Dialog
+			title={`${dimensionNames[dimension]} - ${metricNames[metric]}`}
+			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${metricNames[metric]}`}
+			hideTitle
+			hideDescription
+			showClose
+			className={styles.detailsModal}
+			trigger={() => (
+				<button
+					type="button"
+					className={cls(styles.showMore, (data?.length ?? 0) === 0 && styles.showMoreHidden)}
+					onClick={() => console.log("show more")}
+				>
+					<ZoomIn size={16} />
+					Show details
+				</button>
+			)}
+		>
+			<div className={styles.dimensionTable} style={{ "--count": data?.length } as React.CSSProperties}>
+				<div className={styles.dimensionHeader}>
+					<div>{dimensionNames[dimension]}</div>
+					<div>{metricNames[metric]}</div>
+				</div>
+				{data?.map((d) => {
+					return (
+						<div
+							key={d.dimensionValue}
+							style={{ order: order?.indexOf(d.dimensionValue) }}
+							className={styles.dimensionRow}
+						>
+							<DimensionValueBar value={d.value} biggest={biggest}>
+								<DimensionLabel dimension={dimension} value={d} />
+							</DimensionValueBar>
+							<div>{formatMetricVal(metric, d.value)}</div>
+						</div>
+					);
+				})}
+				{isLoading && data?.length === 0 && (
+					<div className={styles.dimensionEmpty}>
+						<div>Loading...</div>
+					</div>
+				)}
+				{!isLoading && data?.length === 0 && (
+					<div className={styles.dimensionEmpty}>
+						<div>No data available</div>
+					</div>
+				)}
+			</div>
+		</Dialog>
 	);
 };
 
