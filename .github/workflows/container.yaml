@@ -21,7 +21,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag }}
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Extract Semver
         id: semver
         run: |
@@ -53,5 +53,5 @@ jobs:
             linux/amd64
             linux/arm64
           build-args: |
-            TAR_URL_AMD64=https://github.com/explodingcamera/liwan/releases/download/${{ github.ref_name }}/liwan-amd64-linux.tar.gz
-            TAR_URL_ARM64=https://github.com/explodingcamera/liwan/releases/download/${{ github.ref_name }}/liwan-aarch64-linux.tar.gz
+            TAR_URL_AMD64=https://github.com/explodingcamera/liwan/releases/download/${{ github.event.inputs.tag }}/liwan-x86_64-unknown-linux-musl.tar.gz
+            TAR_URL_ARM64=https://github.com/explodingcamera/liwan/releases/download/${{ github.event.inputs.tag }}/liwan-aarch64-unknown-linux-musl.tar.gz
