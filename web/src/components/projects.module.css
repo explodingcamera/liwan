@@ -155,6 +155,7 @@ button.stat {
   cursor: pointer;
   margin: 0;
   font-size: 0.8rem;
+  min-width: 7.5rem;
 
   &[data-active="true"] {
     h2 {

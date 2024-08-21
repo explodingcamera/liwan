@@ -1,11 +1,19 @@
-import { useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import styles from "./projects.module.css";
 
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { ChevronRightIcon, CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
-import CountUp from "react-countup";
 
-import { type Metric, type ProjectResponse, type StatsResponse, api, metricNames, useMe, useQuery } from "../api";
+import {
+	type Metric,
+	type ProjectResponse,
+	type StatsResponse,
+	api,
+	formatMetricVal,
+	metricNames,
+	useMe,
+	useQuery,
+} from "../api";
 import { type RangeName, rangeNames, resolveRange } from "../api/ranges";
 import { getUsername } from "../api/utils";
 import { cls } from "../utils";
@@ -78,22 +86,24 @@ export const Projects = () => {
 				/>
 			</div>
 
-			{projects.map((project) => {
-				return (
-					<ProjectOverview
-						key={project.id}
-						project={project}
-						metric={metric}
-						setMetric={setMetric}
-						rangeName={dateRange}
-						detailsElement={() => (
-							<a href={`/p/${project.id}`}>
-								<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
-							</a>
-						)}
-					/>
-				);
-			})}
+			<Suspense>
+				{projects.map((project) => {
+					return (
+						<ProjectOverview
+							key={project.id}
+							project={project}
+							metric={metric}
+							setMetric={setMetric}
+							rangeName={dateRange}
+							detailsElement={() => (
+								<a href={`/p/${project.id}`} aria-label="View project details">
+									<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
+								</a>
+							)}
+						/>
+					);
+				})}
+			</Suspense>
 		</div>
 	);
 };
@@ -191,6 +201,7 @@ export const ProjectOverview = ({
 							title="Total Views"
 							value={stats?.stats.totalViews}
 							prevValue={stats?.statsPrev.totalViews}
+							metric={metric}
 							onSelect={() => setMetric("views")}
 							selected={metric === "views"}
 						/>
@@ -199,6 +210,7 @@ export const ProjectOverview = ({
 							title="Total Sessions"
 							value={stats?.stats.totalSessions}
 							prevValue={stats?.statsPrev.totalSessions}
+							metric={metric}
 							onSelect={() => setMetric("sessions")}
 							selected={metric === "sessions"}
 						/>
@@ -206,14 +218,15 @@ export const ProjectOverview = ({
 							title="Unique Visitors"
 							value={stats?.stats.uniqueVisitors}
 							prevValue={stats?.statsPrev.uniqueVisitors}
+							metric={metric}
 							onSelect={() => setMetric("unique_visitors")}
 							selected={metric === "unique_visitors"}
 						/>
 						<Stat
 							title="Avg. Views Per Session"
-							value={(stats?.stats.avgViewsPerSession ?? 0) / 1000}
-							prevValue={(stats?.statsPrev.avgViewsPerSession ?? 0) / 1000}
-							decimals={1}
+							value={stats?.stats.avgViewsPerSession}
+							prevValue={stats?.statsPrev.avgViewsPerSession}
+							metric={metric}
 							onSelect={() => setMetric("avg_views_per_session")}
 							selected={metric === "avg_views_per_session"}
 						/>
@@ -221,7 +234,6 @@ export const ProjectOverview = ({
 				</div>
 				{detailsElement?.()}
 			</div>
-
 			<div className={cls(graphClassName, styles.graph)}>
 				<LineGraph title={metricNames[metric]} data={chartData || []} range={graphRange} />
 			</div>
@@ -249,7 +261,7 @@ const defaultHeader = ({
 				)}
 				<a href={`/p/${project.id}`}>{project.displayName}</a>&nbsp;
 			</span>
-			<LiveVisitorCount count={stats?.currentVisitors || 0} />
+			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
 		</h1>
 	);
 };
@@ -259,7 +271,7 @@ export const LiveVisitorCount = ({ count }: { count: number }) => {
 		<span className={styles.online}>
 			<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
 			<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
-			<CountUp preserveValue duration={1} end={count || 0} /> {count === 1 ? "Current Visitor" : "Current Visitors"}
+			{formatMetricVal("unique_visitors", count)} {count === 1 ? "Current Visitor" : "Current Visitors"}
 		</span>
 	);
 };
@@ -273,12 +285,13 @@ export const Stat = ({
 	title,
 	value = 0,
 	prevValue = 0,
-	decimals = 0,
+	metric,
 	onSelect,
 	selected,
 }: {
 	title: string;
 	value?: number;
+	metric: Metric;
 	prevValue?: number;
 	decimals?: number;
 	onSelect: () => void;
@@ -293,7 +306,7 @@ export const Stat = ({
 		<button type="button" onClick={onSelect} data-active={selected} className={styles.stat}>
 			<h2>{title}</h2>
 			<h3>
-				<CountUp preserveValue decimals={decimals} duration={1} end={value} />
+				{formatMetricVal(metric, value)}
 				<span style={{ color }} className={styles.change}>
 					{icon} {formatPercent(changePercent)}%
 				</span>

@@ -13,6 +13,14 @@ export const getStaticPaths = (() => {
 }) satisfies GetStaticPaths;
 ---
 
-<Layout title="">
+<Layout title="Project Details">
   <Project client:only="react" />
 </Layout>
+
+<style>
+	/* prevent a flash of scrollbar when navigating to this page, as it always has a scrollbar */
+	/* not super important but improves the lighthouse score from like 70 to 100 lol */
+	:global(html) {
+		overflow-y: scroll;
+	}
+</style>

@@ -137,11 +137,16 @@ impl<E: RustEmbed + Send + Sync> Endpoint for EmbeddedFilesEndpoint<E> {
 
                 // otherwise, return 200 with etag hash
                 let body: Vec<u8> = content.data.into();
-                let mime = mime_guess::from_path(path).first_or_octet_stream();
-                Ok(Response::builder()
-                    .header(header::CONTENT_TYPE, mime.as_ref())
-                    .header(header::ETAG, hash)
-                    .body(body))
+                let mime = mime_guess::from_path(&path).first_or_octet_stream();
+
+                let mut builder =
+                    Response::builder().header(header::CONTENT_TYPE, mime.as_ref()).header(header::ETAG, hash);
+
+                if path.starts_with("_astro/") {
+                    builder = builder.header(header::CACHE_CONTROL, "public, max-age=604800, immutable");
+                }
+
+                Ok(builder.body(body))
             }
             None => Err(StatusCode::NOT_FOUND.into()),
         }

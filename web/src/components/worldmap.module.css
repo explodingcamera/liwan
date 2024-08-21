@@ -19,6 +19,7 @@
   stroke: var(--pico-card-background-color);
   stroke-width: 1;
   transition: fill 0.3s, opacity 0.3s;
+  outline: none;
 
   fill: hsl(
     90,

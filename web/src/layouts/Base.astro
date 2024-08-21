@@ -7,14 +7,15 @@ import { ViewTransitions } from "astro:transitions";
 type Props = { title: string; hideFooter?: boolean };
 ---
 
-<html lang="en">
+<html lang="en" transition:animate="none">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="robots" content="noindex" />
+    <meta name="description" content="Liwan Web Analytics Dashboard" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <ViewTransitions />
-    <title>{Astro.props.title}</title>
+    <title>{Astro.props.title} | Liwan</title>
   </head>
   <body>
     <slot />

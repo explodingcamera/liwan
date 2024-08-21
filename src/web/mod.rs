@@ -65,8 +65,7 @@ pub(crate) async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result
         .appending("X-XSS-Protection", "1; mode=block")
         .appending("Content-Security-Policy", "default-src 'self' data: 'unsafe-inline'")
         .appending("Referrer-Policy", "same-origin")
-        .appending("Feature-Policy", "geolocation 'none'; microphone 'none'; camera 'none'")
-        .appending("Permissions-Policy", "geolocation=(), microphone=(), camera=(), interest-cohort=()");
+        .appending("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
 
     let api_router = Route::new()
         .nest_no_strip("/event", handle_events)

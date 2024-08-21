@@ -27,7 +27,8 @@ export default defineConfig({
 						template: (dependencies) => JSON.stringify(dependencies),
 					},
 				},
-			}),
+				// biome-ignore lint/suspicious/noExplicitAny: type is correct
+			}) as any,
 		],
 	},
 	integrations: [react()],

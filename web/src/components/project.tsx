@@ -37,21 +37,23 @@ export const Project = () => {
 
 	return (
 		<div className={styles.project}>
-			<ProjectOverview
-				project={data}
-				metric={metric}
-				setMetric={setMetric}
-				rangeName={dateRange}
-				graphClassName={styles.graph}
-				renderHeader={(props) => <ProjectHeader {...props} range={dateRange} setRange={setDateRange} />}
-			/>
-			<div className={styles.tables}>
-				<DimensionTabsCard project={data} dimensions={["url", "fqdn"]} metric={metric} range={range} />
-				<DimensionCard project={data} dimension={"referrer"} metric={metric} range={range} />
-				<GeoCard project={data} metric={metric} range={range} />
-				<DimensionTabsCard project={data} dimensions={["platform", "browser"]} metric={metric} range={range} />
-				<DimensionCard project={data} dimension={"mobile"} metric={metric} range={range} />
-			</div>
+			<Suspense fallback={null}>
+				<ProjectOverview
+					project={data}
+					metric={metric}
+					setMetric={setMetric}
+					rangeName={dateRange}
+					graphClassName={styles.graph}
+					renderHeader={(props) => <ProjectHeader {...props} range={dateRange} setRange={setDateRange} />}
+				/>
+				<div className={styles.tables}>
+					<DimensionTabsCard project={data} dimensions={["url", "fqdn"]} metric={metric} range={range} />
+					<DimensionCard project={data} dimension={"referrer"} metric={metric} range={range} />
+					<GeoCard project={data} metric={metric} range={range} />
+					<DimensionTabsCard project={data} dimensions={["platform", "browser"]} metric={metric} range={range} />
+					<DimensionCard project={data} dimension={"mobile"} metric={metric} range={range} />
+				</div>
+			</Suspense>
 		</div>
 	);
 };
