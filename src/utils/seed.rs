@@ -20,7 +20,7 @@ const CITIES: &[(&str, &str)] = &[
     ("Sydney", "AU"),
 ];
 
-pub(crate) fn random_events(
+pub fn random_events(
     time_range: (DateTime<Utc>, DateTime<Utc>),
     entity_id: &str,
     fqdn: &str,

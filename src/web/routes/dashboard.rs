@@ -59,7 +59,7 @@ struct DimensionTableRow {
     icon: Option<String>,
 }
 
-pub(crate) struct DashboardAPI;
+pub struct DashboardAPI;
 
 #[OpenApi]
 impl DashboardAPI {

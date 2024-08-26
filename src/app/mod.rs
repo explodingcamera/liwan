@@ -1,8 +1,8 @@
 mod core;
 mod db;
 
-pub(crate) mod models;
-pub(crate) use core::reports;
+pub mod models;
+pub use core::reports;
 
 use crate::config::Config;
 
@@ -12,23 +12,23 @@ use eyre::Result;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::sync::Arc;
 
-pub(crate) type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
-pub(crate) type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
-pub(crate) type SqlitePool = r2d2::Pool<SqliteConnectionManager>;
+pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
+pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
+pub type SqlitePool = r2d2::Pool<SqliteConnectionManager>;
 
 #[derive(Clone)]
-pub(crate) struct Liwan {
+pub struct Liwan {
     events_pool: r2d2::Pool<DuckdbConnectionManager>,
 
-    pub(crate) events: core::events::LiwanEvents,
-    pub(crate) users: core::users::LiwanUsers,
-    pub(crate) sessions: core::sessions::LiwanSessions,
-    pub(crate) onboarding: core::onboarding::LiwanOnboarding,
-    pub(crate) entities: core::entities::LiwanEntities,
-    pub(crate) projects: core::projects::LiwanProjects,
-    pub(crate) geoip: Option<core::geoip::LiwanGeoIP>,
+    pub events: core::events::LiwanEvents,
+    pub users: core::users::LiwanUsers,
+    pub sessions: core::sessions::LiwanSessions,
+    pub onboarding: core::onboarding::LiwanOnboarding,
+    pub entities: core::entities::LiwanEntities,
+    pub projects: core::projects::LiwanProjects,
+    pub geoip: Option<core::geoip::LiwanGeoIP>,
 
-    pub(crate) config: Arc<Config>,
+    pub config: Arc<Config>,
 }
 
 #[rustfmt::skip]
@@ -40,7 +40,7 @@ mod embedded {
 const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 
 impl Liwan {
-    pub(crate) fn try_new(config: Config) -> Result<Self> {
+    pub fn try_new(config: Config) -> Result<Self> {
         tracing::debug!("Initializing app");
         let folder = std::path::Path::new(&config.data_dir);
         if !folder.exists() {
@@ -68,18 +68,39 @@ impl Liwan {
         })
     }
 
-    pub(crate) fn events_conn(&self) -> Result<DuckDBConn> {
+    pub fn new_memory(config: Config) -> Result<Self> {
+        tracing::debug!("Initializing app in memory");
+        let conn_app = db::init_sqlite_mem(embedded::app::migrations::runner())?;
+        let conn_events = db::init_duckdb_mem(embedded::events::migrations::runner())?;
+
+        Ok(Self {
+            #[cfg(feature = "geoip")]
+            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?,
+
+            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
+            onboarding: LiwanOnboarding::try_new(conn_app.clone())?,
+            sessions: LiwanSessions::new(conn_app.clone()),
+            entities: LiwanEntities::new(conn_app.clone()),
+            projects: LiwanProjects::new(conn_app.clone()),
+            users: LiwanUsers::new(conn_app),
+
+            events_pool: conn_events,
+            config: config.into(),
+        })
+    }
+
+    pub fn events_conn(&self) -> Result<DuckDBConn> {
         Ok(self.events_pool.get()?)
     }
 
-    pub(crate) fn run_background_tasks(&self) {
+    pub fn run_background_tasks(&self) {
         core::geoip::keep_updated(self.geoip.clone());
     }
 }
 
 #[cfg(debug_assertions)]
 impl Liwan {
-    pub(crate) fn seed_database(&self) -> Result<()> {
+    pub fn seed_database(&self) -> Result<()> {
         use models::UserRole;
         use rand::Rng;
 

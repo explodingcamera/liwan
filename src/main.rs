@@ -1,12 +1,7 @@
-pub(crate) mod app;
-pub(crate) mod cli;
-pub(crate) mod config;
-pub(crate) mod utils;
-pub(crate) mod web;
-
-use app::{models::Event, Liwan};
-use config::Config;
 use eyre::Result;
+
+use liwan::app::{models::Event, Liwan};
+use liwan::{cli, config::Config, web};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main(flavor = "multi_thread")]

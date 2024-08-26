@@ -2,22 +2,17 @@ use crate::app::SqlitePool;
 use eyre::Result;
 
 #[derive(Clone)]
-pub(crate) struct LiwanSessions {
+pub struct LiwanSessions {
     pool: SqlitePool,
 }
 
 impl LiwanSessions {
-    pub(crate) fn new(pool: SqlitePool) -> Self {
+    pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     /// Create a new session
-    pub(crate) fn create(
-        &self,
-        session_id: &str,
-        username: &str,
-        expires_at: chrono::DateTime<chrono::Utc>,
-    ) -> Result<()> {
+    pub fn create(&self, session_id: &str, username: &str, expires_at: chrono::DateTime<chrono::Utc>) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("insert into sessions (id, username, expires_at) values (?, ?, ?)")?;
         stmt.execute(rusqlite::params![session_id, username, expires_at])?;
@@ -26,7 +21,7 @@ impl LiwanSessions {
 
     /// Get the username associated with a session ID, if the session is still valid.
     /// Returns None if the session is expired
-    pub(crate) fn get(&self, session_id: &str) -> Result<Option<String>> {
+    pub fn get(&self, session_id: &str) -> Result<Option<String>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("select username, expires_at from sessions where id = ?")?;
         let (username, expires_at): (String, chrono::DateTime<chrono::Utc>) =
@@ -38,7 +33,7 @@ impl LiwanSessions {
     }
 
     /// Delete a session
-    pub(crate) fn delete(&self, session_id: &str) -> Result<()> {
+    pub fn delete(&self, session_id: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("update sessions set expires_at = ? where id = ?")?;
         stmt.execute(rusqlite::params![chrono::Utc::now(), session_id])?;

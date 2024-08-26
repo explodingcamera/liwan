@@ -6,17 +6,17 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub(crate) struct LiwanEntities {
+pub struct LiwanEntities {
     pool: SqlitePool,
 }
 
 impl LiwanEntities {
-    pub(crate) fn new(pool: SqlitePool) -> Self {
+    pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     /// Get all entities
-    pub(crate) fn all(&self) -> Result<Vec<models::Entity>> {
+    pub fn all(&self) -> Result<Vec<models::Entity>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare("select id, display_name from entities")?;
         let entities = stmt
@@ -25,7 +25,7 @@ impl LiwanEntities {
     }
 
     /// Create a new entity
-    pub(crate) fn create(&self, entity: &models::Entity, initial_projects: &[String]) -> Result<()> {
+    pub fn create(&self, entity: &models::Entity, initial_projects: &[String]) -> Result<()> {
         if !validate::is_valid_id(&entity.id) {
             bail!("invalid entity ID");
         }
@@ -47,7 +47,7 @@ impl LiwanEntities {
     }
 
     /// Update an entity
-    pub(crate) fn update(&self, entity: &models::Entity) -> Result<models::Entity> {
+    pub fn update(&self, entity: &models::Entity) -> Result<models::Entity> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("update entities set display_name = ? where id = ?")?;
         stmt.execute(rusqlite::params![entity.display_name, entity.id])?;
@@ -55,7 +55,7 @@ impl LiwanEntities {
     }
 
     /// Update an entity's projects
-    pub(crate) fn update_projects(&self, entity_id: &str, project_ids: &[String]) -> Result<()> {
+    pub fn update_projects(&self, entity_id: &str, project_ids: &[String]) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![entity_id])?;
@@ -70,7 +70,7 @@ impl LiwanEntities {
     }
 
     /// Delete an entity (does not remove associated events)
-    pub(crate) fn delete(&self, id: &str) -> Result<()> {
+    pub fn delete(&self, id: &str) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from entities where id = ?", rusqlite::params![id])?;
@@ -80,7 +80,7 @@ impl LiwanEntities {
     }
 
     /// Get all projects associated with an entity
-    pub(crate) fn projects(&self, entity_id: &str) -> Result<Vec<models::Project>> {
+    pub fn projects(&self, entity_id: &str) -> Result<Vec<models::Project>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
             "select p.id, p.display_name, p.public, p.secret from projects p join project_entities pe on p.id = pe.project_id where pe.entity_id = ?",
@@ -97,7 +97,7 @@ impl LiwanEntities {
     }
 
     /// Check if an entity exists
-    pub(crate) fn exists(&self, id: &str) -> Result<bool> {
+    pub fn exists(&self, id: &str) -> Result<bool> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("select 1 from entities where id = ? limit 1")?;
         Ok(stmt.exists([id])?)

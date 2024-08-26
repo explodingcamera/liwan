@@ -6,7 +6,7 @@ use rusqlite::{Connection, Error as RqlError};
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
-pub(crate) struct RqlConnection<T: DerefMut<Target = Connection>>(pub(crate) T);
+pub struct RqlConnection<T: DerefMut<Target = Connection>>(pub T);
 impl<T: DerefMut<Target = Connection>> From<T> for RqlConnection<T> {
     fn from(conn: T) -> Self {
         RqlConnection(conn)

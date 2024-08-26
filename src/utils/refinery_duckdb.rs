@@ -7,7 +7,7 @@ use refinery_core::{
 };
 use std::ops::DerefMut;
 
-pub(crate) struct DuckDBConnection<T: DerefMut<Target = duckdb::Connection>>(pub(crate) T);
+pub struct DuckDBConnection<T: DerefMut<Target = duckdb::Connection>>(pub T);
 impl<T: DerefMut<Target = duckdb::Connection>> From<T> for DuckDBConnection<T> {
     fn from(conn: T) -> Self {
         DuckDBConnection(conn)

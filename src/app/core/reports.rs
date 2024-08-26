@@ -16,9 +16,9 @@ use poem_openapi::{Enum, Object};
 // const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
 
 #[derive(Object)]
-pub(crate) struct DateRange {
-    pub(crate) start: Timestamp,
-    pub(crate) end: Timestamp,
+pub struct DateRange {
+    pub start: Timestamp,
+    pub end: Timestamp,
 }
 
 impl Display for DateRange {
@@ -28,7 +28,7 @@ impl Display for DateRange {
 }
 
 impl DateRange {
-    pub(crate) fn prev(&self) -> DateRange {
+    pub fn prev(&self) -> DateRange {
         let duration = self.end - self.start;
         DateRange { start: self.start - duration, end: self.start }
     }
@@ -36,7 +36,7 @@ impl DateRange {
 
 #[derive(Debug, Enum)]
 #[oai(rename_all = "snake_case")]
-pub(crate) enum Metric {
+pub enum Metric {
     Views,
     Sessions,
     UniqueVisitors,
@@ -46,7 +46,7 @@ pub(crate) enum Metric {
 
 #[derive(Debug, Enum)]
 #[oai(rename_all = "snake_case")]
-pub(crate) enum Dimension {
+pub enum Dimension {
     Url,
     Fqdn,
     Path,
@@ -60,7 +60,7 @@ pub(crate) enum Dimension {
 
 #[derive(Enum, Debug)]
 #[oai(rename_all = "snake_case")]
-pub(crate) enum FilterType {
+pub enum FilterType {
     Equal,
     NotEqual,
     Contains,
@@ -68,21 +68,21 @@ pub(crate) enum FilterType {
     IsNull,
 }
 
-pub(crate) type ReportGraph = Vec<u64>;
-pub(crate) type ReportTable = BTreeMap<String, u64>;
+pub type ReportGraph = Vec<u64>;
+pub type ReportTable = BTreeMap<String, u64>;
 
 #[derive(Object, Clone, Debug, Default)]
 #[oai(rename_all = "camelCase")]
-pub(crate) struct ReportStats {
-    pub(crate) total_views: u64,
-    pub(crate) total_sessions: u64,
-    pub(crate) unique_visitors: u64,
-    pub(crate) avg_views_per_session: u64, // 3 decimal places
+pub struct ReportStats {
+    pub total_views: u64,
+    pub total_sessions: u64,
+    pub unique_visitors: u64,
+    pub avg_views_per_session: u64, // 3 decimal places
 }
 
 #[derive(Object, Debug)]
 #[oai(rename_all = "camelCase")]
-pub(crate) struct DimensionFilter {
+pub struct DimensionFilter {
     dimension: Dimension,
     filter_type: FilterType,
     value: String,
@@ -101,7 +101,7 @@ fn metric_sql(metric: &Metric) -> Result<String> {
     }.to_owned())
 }
 
-pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
+pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     if entities.is_empty() {
         return Ok(0);
     }
@@ -133,7 +133,7 @@ pub(crate) fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64
 //     convert = r#"{format!("{:?}:{}:{}:{:?}:{:?}:{}", entities, event, range, filters, metric, data_points)}"#,
 //     result = true
 // )]
-pub(crate) fn overall_report(
+pub fn overall_report(
     conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
@@ -227,7 +227,7 @@ pub(crate) fn overall_report(
 //     convert = r#"{format!("{:?}:{}:{}:{:?}", entities, event, range, filters)}"#,
 //     result = true
 // )]
-pub(crate) fn overall_stats(
+pub fn overall_stats(
     conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,
@@ -300,7 +300,7 @@ pub(crate) fn overall_stats(
 //     convert = r#"{format!("{:?}:{}:{}:{:?}:{:?}:{:?}", entities, event, range, dimension, filters, metric)}"#,
 //     result = true
 // )]
-pub(crate) fn dimension_report(
+pub fn dimension_report(
     conn: &DuckDBConn,
     entities: &[impl AsRef<str> + Debug],
     event: &str,

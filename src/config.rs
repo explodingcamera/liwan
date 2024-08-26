@@ -29,31 +29,37 @@ fn default_data_dir() -> String {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct Config {
+pub struct Config {
     #[serde(default = "default_base")]
-    pub(crate) base_url: String,
+    pub base_url: String,
 
     #[serde(default = "default_port")]
-    pub(crate) port: u16,
+    pub port: u16,
 
     #[serde(default = "default_data_dir")]
-    pub(crate) data_dir: String,
+    pub data_dir: String,
 
-    pub(crate) geoip: Option<GeoIpConfig>,
+    pub geoip: Option<GeoIpConfig>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self { base_url: default_base(), port: default_port(), data_dir: default_data_dir(), geoip: None }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct GeoIpConfig {
-    pub(crate) maxmind_db_path: Option<String>,
-    pub(crate) maxmind_account_id: Option<String>,
-    pub(crate) maxmind_license_key: Option<String>,
-    pub(crate) maxmind_edition: Option<String>,
+pub struct GeoIpConfig {
+    pub maxmind_db_path: Option<String>,
+    pub maxmind_account_id: Option<String>,
+    pub maxmind_license_key: Option<String>,
+    pub maxmind_edition: Option<String>,
 }
 
-pub(crate) static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
+pub static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
 
 impl Config {
-    pub(crate) fn load(path: Option<String>) -> Result<Self> {
+    pub fn load(path: Option<String>) -> Result<Self> {
         tracing::debug!(path = ?path, "loading config");
 
         let path = path.or_else(|| std::env::var("LIWAN_CONFIG").ok());
@@ -71,7 +77,7 @@ impl Config {
         });
 
         let config: Config = Figment::new()
-            .merge(Toml::file("liwan.config.toml".to_string()))
+            .merge(Toml::file("liwan.config.toml"))
             .merge(Toml::file(path.unwrap_or("liwan.config.toml".to_string())))
             .merge(Env::raw().filter_map(|key| match key {
                 k if !k.starts_with("LIWAN_") => None,
@@ -89,7 +95,7 @@ impl Config {
         Ok(config)
     }
 
-    pub(crate) fn secure(&self) -> bool {
+    pub fn secure(&self) -> bool {
         self.base_url.starts_with("https")
     }
 }

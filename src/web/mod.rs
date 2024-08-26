@@ -7,7 +7,7 @@ use crate::app::Liwan;
 use routes::{dashboard_service, event_service};
 use webext::{catch_error, EmbeddedFilesEndpoint, PoemErrExt};
 
-pub(crate) use session::SessionUser;
+pub use session::SessionUser;
 
 use colored::Colorize;
 use crossbeam::channel::Sender;
@@ -19,7 +19,7 @@ use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
 use poem::middleware::{AddData, Compression, CookieJarManager, Cors, SetHeader};
 use poem::web::CompressionAlgo;
-use poem::{EndpointExt, Route, Server};
+use poem::{EndpointExt, IntoEndpoint, Route, Server};
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -49,10 +49,7 @@ fn save_spec() -> Result<()> {
     Ok(())
 }
 
-pub(crate) async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result<()> {
-    #[cfg(debug_assertions)]
-    save_spec()?;
-
+pub fn create_router(app: Liwan, events: Sender<Event>) -> impl IntoEndpoint {
     let handle_events =
         event_service().with(Cors::new().allow_origin("*").allow_method("POST").allow_credentials(false));
 
@@ -72,7 +69,7 @@ pub(crate) async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result
         .nest("/dashboard", dashboard_service().with(CookieJarManager::new()))
         .catch_all_error(catch_error);
 
-    let router = Route::new()
+    Route::new()
         .nest("/api", api_router)
         .at("/script.js", serve_script)
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
@@ -80,8 +77,14 @@ pub(crate) async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result
         .with(AddData::new(events))
         .with(CookieJarManager::new())
         .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]))
-        .with(headers);
+        .with(headers)
+}
 
+pub async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result<()> {
+    #[cfg(debug_assertions)]
+    save_spec()?;
+
+    let router = create_router(app.clone(), events.clone());
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
     if let Some(onboarding) = app.onboarding.token()? {

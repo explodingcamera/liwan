@@ -8,17 +8,17 @@ use crate::{
 use eyre::{bail, Result};
 
 #[derive(Clone)]
-pub(crate) struct LiwanUsers {
+pub struct LiwanUsers {
     pool: SqlitePool,
 }
 
 impl LiwanUsers {
-    pub(crate) fn new(pool: SqlitePool) -> Self {
+    pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     /// Check if a users password is correct
-    pub(crate) fn check_login(&self, username: &str, password: &str) -> Result<bool> {
+    pub fn check_login(&self, username: &str, password: &str) -> Result<bool> {
         let username = username.to_lowercase();
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare("select password_hash from users where username = ?")?;
@@ -27,7 +27,7 @@ impl LiwanUsers {
     }
 
     /// Get a user by username
-    pub(crate) fn get(&self, username: &str) -> Result<models::User> {
+    pub fn get(&self, username: &str) -> Result<models::User> {
         let username = username.to_lowercase();
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare("select username, password_hash, role, projects from users where username = ?")?;
@@ -42,7 +42,7 @@ impl LiwanUsers {
     }
 
     /// Get all users
-    pub(crate) fn all(&self) -> Result<Vec<models::User>> {
+    pub fn all(&self) -> Result<Vec<models::User>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare("select username, password_hash, role, projects from users")?;
         let users = stmt.query_map([], |row| {
@@ -56,13 +56,7 @@ impl LiwanUsers {
     }
 
     /// Create a new user
-    pub(crate) fn create(
-        &self,
-        username: &str,
-        password: &str,
-        role: models::UserRole,
-        projects: &[&str],
-    ) -> Result<()> {
+    pub fn create(&self, username: &str, password: &str, role: models::UserRole, projects: &[&str]) -> Result<()> {
         if !validate::is_valid_username(username) {
             bail!("invalid username");
         }
@@ -76,7 +70,7 @@ impl LiwanUsers {
     }
 
     /// Update a user
-    pub(crate) fn update(&self, username: &str, role: models::UserRole, projects: &[String]) -> Result<()> {
+    pub fn update(&self, username: &str, role: models::UserRole, projects: &[String]) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("update users set role = ?, projects = ? where username = ?")?;
         stmt.execute([&role.to_string(), &projects.join(","), username])?;
@@ -84,7 +78,7 @@ impl LiwanUsers {
     }
 
     /// Update a user's password
-    pub(crate) fn update_password(&self, username: &str, password: &str) -> Result<()> {
+    pub fn update_password(&self, username: &str, password: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let password_hash = hash_password(password)?;
         let mut stmt = conn.prepare_cached("update users set password_hash = ? where username = ?")?;
@@ -93,7 +87,7 @@ impl LiwanUsers {
     }
 
     /// Delete a user
-    pub(crate) fn delete(&self, username: &str) -> Result<()> {
+    pub fn delete(&self, username: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("delete from users where username = ?")?;
         stmt.execute([username])?;

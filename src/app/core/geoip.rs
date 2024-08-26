@@ -22,13 +22,13 @@ const BASE_URL: &str = "https://updates.maxmind.com";
 const METADATA_ENDPOINT: &str = "/geoip/updates/metadata?edition_id=";
 const DOWNLOAD_ENDPOINT: &str = "/geoip/databases/";
 
-pub(crate) struct LookupResult {
+pub struct LookupResult {
     pub city: Option<String>,
     pub country_code: Option<String>,
 }
 
 #[derive(Clone)]
-pub(crate) struct LiwanGeoIP {
+pub struct LiwanGeoIP {
     pool: SqlitePool,
     reader: Arc<ShardedLock<Option<maxminddb::Reader<Vec<u8>>>>>,
 
@@ -39,7 +39,7 @@ pub(crate) struct LiwanGeoIP {
 }
 
 impl LiwanGeoIP {
-    pub(crate) fn try_new(config: crate::config::Config, pool: SqlitePool) -> Result<Option<Self>> {
+    pub fn try_new(config: crate::config::Config, pool: SqlitePool) -> Result<Option<Self>> {
         let Some(geoip) = &config.geoip else {
             tracing::trace!("GeoIP support disabled, skipping...");
             return Ok(None);
@@ -74,7 +74,7 @@ impl LiwanGeoIP {
     }
 
     // Lookup the IP address in the GeoIP database
-    pub(crate) fn lookup(&self, ip: &IpAddr) -> Result<LookupResult> {
+    pub fn lookup(&self, ip: &IpAddr) -> Result<LookupResult> {
         let reader = self.reader.read().map_err(|_| eyre::eyre!("Failed to acquire GeoIP reader lock"))?;
         let reader = reader.as_ref().ok_or_eyre("GeoIP database not found")?;
         let lookup: maxminddb::geoip2::City = reader.lookup(*ip)?;
@@ -84,7 +84,7 @@ impl LiwanGeoIP {
     }
 
     // Check for updates and download the latest database if available
-    pub(crate) async fn check_for_updates(&self) -> Result<()> {
+    pub async fn check_for_updates(&self) -> Result<()> {
         if self.downloading.swap(true, Ordering::Acquire) {
             return Ok(());
         }
@@ -144,7 +144,7 @@ impl LiwanGeoIP {
     }
 }
 
-pub(crate) fn keep_updated(geoip: Option<LiwanGeoIP>) {
+pub fn keep_updated(geoip: Option<LiwanGeoIP>) {
     let Some(geoip) = geoip else { return };
 
     tokio::task::spawn(async move {

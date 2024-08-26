@@ -8,13 +8,13 @@ use rust_embed::RustEmbed;
 use serde::Serialize;
 use serde_json::json;
 
-pub(crate) async fn catch_error(err: poem::Error) -> impl IntoResponse {
+pub async fn catch_error(err: poem::Error) -> impl IntoResponse {
     Json(json!({ "status": "error", "message": err.to_string(), "code": err.status().as_u16()}))
         .with_status(err.status())
 }
 
 #[rustfmt::skip]
-pub(crate) trait PoemErrExt<T> {
+pub trait PoemErrExt<T> {
     fn http_err(self, message: &str, status: StatusCode) -> poem::Result<T>;
     fn http_status(self, status: StatusCode) -> poem::Result<T>;
 }
@@ -61,30 +61,30 @@ impl<T, E: Display> PoemErrExt<T> for Result<T, E> {
     }
 }
 
-pub(crate) struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
+pub struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
 
 impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         EmbeddedFilesEndpoint(PhantomData)
     }
 }
 
-pub(crate) type ApiResult<T> = poem::Result<T, poem::Error>;
+pub type ApiResult<T> = poem::Result<T, poem::Error>;
 
 #[derive(Object, Serialize)]
-pub(crate) struct StatusResponse {
+pub struct StatusResponse {
     status: String,
     message: Option<String>,
 }
 
 #[derive(ApiResponse)]
-pub(crate) enum EmptyResponse {
+pub enum EmptyResponse {
     #[oai(status = 200)]
     Ok(poem_openapi::payload::Json<StatusResponse>),
 }
 
 impl EmptyResponse {
-    pub(crate) fn ok() -> ApiResult<Self> {
+    pub fn ok() -> ApiResult<Self> {
         Ok(EmptyResponse::Ok(poem_openapi::payload::Json(StatusResponse { status: "ok".to_string(), message: None })))
     }
 }

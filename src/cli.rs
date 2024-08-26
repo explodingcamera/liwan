@@ -8,26 +8,26 @@ use eyre::Result;
 
 #[derive(FromArgs)]
 /// liwan - lightweight web analytics
-pub(crate) struct Args {
+pub struct Args {
     #[argh(option)]
     /// path to the configuration file
-    pub(crate) config: Option<String>,
+    pub config: Option<String>,
 
     #[argh(option, default = "tracing::Level::INFO")]
     /// set the log level (default: INFO)
-    pub(crate) log_level: tracing::Level,
+    pub log_level: tracing::Level,
 
     #[argh(subcommand)]
-    pub(crate) cmd: Option<Command>,
+    pub cmd: Option<Command>,
 }
 
-pub(crate) fn args() -> Args {
+pub fn args() -> Args {
     argh::from_env()
 }
 
 #[derive(FromArgs)]
 #[argh(subcommand)]
-pub(crate) enum Command {
+pub enum Command {
     GenerateConfig(GenConfig),
     UpdatePassword(UpdatePassword),
     AddUser(AddUser),
@@ -40,12 +40,12 @@ pub(crate) enum Command {
 #[derive(FromArgs)]
 #[argh(subcommand, name = "seed-database")]
 /// Seed the database with some test data
-pub(crate) struct SeedDatabase {}
+pub struct SeedDatabase {}
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "generate-config")]
 /// Save a default configuration file to `liwan.config.toml`
-pub(crate) struct GenConfig {
+pub struct GenConfig {
     #[argh(option, short = 'o')]
     /// the path to write the configuration file to
     output: Option<String>,
@@ -54,7 +54,7 @@ pub(crate) struct GenConfig {
 #[derive(FromArgs)]
 #[argh(subcommand, name = "update-password")]
 /// Update a user's password
-pub(crate) struct UpdatePassword {
+pub struct UpdatePassword {
     #[argh(positional)]
     /// the username of the user to update
     username: String,
@@ -67,12 +67,12 @@ pub(crate) struct UpdatePassword {
 #[derive(FromArgs)]
 #[argh(subcommand, name = "users")]
 /// List all registered users
-pub(crate) struct ListUsers {}
+pub struct ListUsers {}
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "add-user")]
 /// Create a new user
-pub(crate) struct AddUser {
+pub struct AddUser {
     #[argh(positional)]
     /// the username of the new user
     username: String,
@@ -86,7 +86,7 @@ pub(crate) struct AddUser {
     admin: bool,
 }
 
-pub(crate) fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
+pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
     config.geoip = None; // disable GeoIP support in CLI
     let app = Liwan::try_new(config)?;
 

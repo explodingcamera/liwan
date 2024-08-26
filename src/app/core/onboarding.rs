@@ -6,12 +6,12 @@ use eyre::Result;
 use crate::{app::SqlitePool, utils::hash::onboarding_token};
 
 #[derive(Clone)]
-pub(crate) struct LiwanOnboarding {
+pub struct LiwanOnboarding {
     token: Arc<ShardedLock<Option<String>>>,
 }
 
 impl LiwanOnboarding {
-    pub(crate) fn try_new(pool: SqlitePool) -> Result<Self> {
+    pub fn try_new(pool: SqlitePool) -> Result<Self> {
         let onboarding = {
             tracing::debug!("Checking if an onboarding token needs to be generated");
             let conn = pool.get()?;
@@ -23,7 +23,7 @@ impl LiwanOnboarding {
     }
 
     /// Get the onboarding token, if it exists
-    pub(crate) fn token(&self) -> Result<Option<String>> {
+    pub fn token(&self) -> Result<Option<String>> {
         Ok(self
             .token
             .read()
@@ -33,7 +33,7 @@ impl LiwanOnboarding {
     }
 
     /// Clear the onboarding token to prevent it from being used again
-    pub(crate) fn clear(&self) -> Result<()> {
+    pub fn clear(&self) -> Result<()> {
         let mut onboarding =
             self.token.write().map_err(|_| eyre::eyre!("Failed to acquire onboarding token write lock"))?;
         *onboarding = None;

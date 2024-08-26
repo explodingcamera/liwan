@@ -6,10 +6,18 @@ rust-version="1.80"
 repository="https://github.com/explodingcamera/liwan"
 license="(AGPL-3.0-only AND Apache-2.0 AND MIT) OR LicenseRef-Liwan"
 
+[lib]
+path="src/lib.rs"
+
+[[bin]]
+name="liwan"
+path="src/main.rs"
+
 [dependencies]
 tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
 tokio-util={version="0.7", features=["io"]}
 futures-util="0.3"
+
 
 # encoding
 hex={version="0.4"}
@@ -60,7 +68,8 @@ refinery-core="0.8"
 maxminddb={version="0.24", optional=true}
 
 [dev-dependencies]
-figment={version="0.10", features=["toml", "env", "test"]}
+figment={version="*", features=["test"]}
+poem={version="*", features=["test"]}
 
 [features]
 default=["geoip"]

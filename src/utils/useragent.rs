@@ -9,18 +9,18 @@ thread_local! {
     });
 }
 
-pub(crate) fn parse(header: &str) -> Client {
+pub fn parse(header: &str) -> Client {
     let mut client = PARSER.with(|p| p.parse(header));
     client.os.family = client.os.family.replace("Mac OS X", "macOS").replace("Other", "Unknown").into();
     client
 }
 
-pub(crate) fn is_bot(client: &Client) -> bool {
+pub fn is_bot(client: &Client) -> bool {
     client.device.family == "Spider"
 }
 
 static MOBILE_OS: [&str; 2] = ["iOS", "Android"]; // good enough for 99% of cases
-pub(crate) fn is_mobile(client: &Client) -> bool {
+pub fn is_mobile(client: &Client) -> bool {
     MOBILE_OS.contains(&&*client.os.family)
 }
 

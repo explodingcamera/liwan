@@ -12,14 +12,14 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub(crate) struct LiwanEvents {
+pub struct LiwanEvents {
     duckdb: DuckDBPool,
     sqlite: SqlitePool,
     daily_salt: Arc<ShardedLock<(String, chrono::DateTime<chrono::Utc>)>>,
 }
 
 impl LiwanEvents {
-    pub(crate) fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool) -> Result<Self> {
+    pub fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool) -> Result<Self> {
         let daily_salt: (String, chrono::DateTime<chrono::Utc>) = {
             tracing::debug!("Loading daily salt");
             sqlite.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
@@ -30,7 +30,7 @@ impl LiwanEvents {
     }
 
     /// Get the daily salt, generating a new one if the current one is older than 24 hours
-    pub(crate) async fn get_salt(&self) -> Result<String> {
+    pub async fn get_salt(&self) -> Result<String> {
         let (salt, updated_at) = {
             let salt = self.daily_salt.read().map_err(|_| eyre::eyre!("Failed to acquire read lock"))?;
             salt.clone()
@@ -55,7 +55,7 @@ impl LiwanEvents {
     }
 
     /// Append events in batch
-    pub(crate) fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
+    pub fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
         let conn = self.duckdb.get()?;
         let mut appender = conn.appender("events")?;
         for event in events {
@@ -66,7 +66,7 @@ impl LiwanEvents {
     }
 
     /// Start processing events from the given channel. Blocks until the channel is closed.
-    pub(crate) fn process(&self, events: Receiver<Event>) -> Result<()> {
+    pub fn process(&self, events: Receiver<Event>) -> Result<()> {
         loop {
             match events.recv() {
                 Ok(event) => {

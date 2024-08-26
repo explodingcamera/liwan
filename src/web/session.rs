@@ -5,9 +5,9 @@ use crate::app::models::User;
 use poem::web::cookie::{Cookie, SameSite};
 use poem::FromRequest;
 
-pub(crate) const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
+pub const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 
-pub(crate) static PUBLIC_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
+pub static PUBLIC_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
     let mut public_cookie = Cookie::named("liwan-username");
     public_cookie.set_max_age(MAX_SESSION_AGE);
     public_cookie.set_http_only(false);
@@ -16,7 +16,7 @@ pub(crate) static PUBLIC_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
     public_cookie
 });
 
-pub(crate) static SESSION_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
+pub static SESSION_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
     let mut session_cookie = Cookie::named("liwan-session");
     session_cookie.set_max_age(MAX_SESSION_AGE);
     session_cookie.set_http_only(true);
@@ -25,8 +25,8 @@ pub(crate) static SESSION_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
     session_cookie
 });
 
-pub(crate) struct SessionId(pub(crate) String);
-pub(crate) struct SessionUser(pub(crate) User);
+pub struct SessionId(pub String);
+pub struct SessionUser(pub User);
 
 impl<'a> FromRequest<'a> for SessionId {
     async fn from_request(req: &'a poem::Request, _body: &mut poem::RequestBody) -> poem::Result<Self> {

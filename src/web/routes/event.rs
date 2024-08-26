@@ -1,6 +1,6 @@
 use crate::app::{models::Event, Liwan};
 use crate::utils::hash::{hash_ip, visitor_id};
-use crate::utils::referrer::process_referer;
+use crate::utils::referrer::{process_referer, Referrer};
 use crate::utils::useragent;
 use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
 
@@ -27,7 +27,7 @@ thread_local! {
     static EXISTING_ENTITIES: RefCell<TimedCache<String, String>> = TimedCache::with_lifespan(60 * 60).into(); // 1 hour
 }
 
-pub(crate) struct EventApi;
+pub struct EventApi;
 #[OpenApi]
 impl EventApi {
     #[oai(path = "/event", method = "post")]
@@ -44,8 +44,10 @@ impl EventApi {
             return EmptyResponse::ok();
         }
 
-        let Ok(referrer) = process_referer(event.referrer.as_deref()) else {
-            return EmptyResponse::ok();
+        let referrer = match process_referer(event.referrer.as_deref()) {
+            Referrer::Fqdn(fqdn) => Some(fqdn),
+            Referrer::Unknown(r) => r,
+            Referrer::Spammer => return EmptyResponse::ok(),
         };
 
         if !EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_get(&event.entity_id).is_some()) {

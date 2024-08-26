@@ -11,7 +11,7 @@ use poem_openapi::param::Path;
 use poem_openapi::payload::{Json, Response};
 use poem_openapi::{Object, OpenApi};
 
-pub(crate) struct AdminAPI;
+pub struct AdminAPI;
 
 #[derive(Debug, Object, Clone)]
 struct CreateUserRequest {
@@ -69,23 +69,23 @@ struct CreateProjectRequest {
 
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
-pub(crate) struct ProjectResponse {
-    pub(crate) id: String,
-    pub(crate) display_name: String,
-    pub(crate) entities: Vec<ProjectEntity>,
-    pub(crate) public: bool,
+pub struct ProjectResponse {
+    pub id: String,
+    pub display_name: String,
+    pub entities: Vec<ProjectEntity>,
+    pub public: bool,
 }
 
 #[derive(Object)]
-pub(crate) struct ProjectsResponse {
-    pub(crate) projects: Vec<ProjectResponse>,
+pub struct ProjectsResponse {
+    pub projects: Vec<ProjectResponse>,
 }
 
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
-pub(crate) struct ProjectEntity {
-    pub(crate) id: String,
-    pub(crate) display_name: String,
+pub struct ProjectEntity {
+    pub id: String,
+    pub display_name: String,
 }
 
 #[derive(Object)]

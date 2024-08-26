@@ -1,43 +1,43 @@
 #[derive(Debug, Clone)]
-pub(crate) struct Event {
-    pub(crate) entity_id: String,
-    pub(crate) visitor_id: String,
-    pub(crate) event: String,
-    pub(crate) created_at: chrono::DateTime<chrono::Utc>,
-    pub(crate) fqdn: Option<String>,
-    pub(crate) path: Option<String>,
-    pub(crate) referrer: Option<String>,
-    pub(crate) platform: Option<String>,
-    pub(crate) browser: Option<String>,
-    pub(crate) mobile: Option<bool>,
-    pub(crate) country: Option<String>,
-    pub(crate) city: Option<String>,
+pub struct Event {
+    pub entity_id: String,
+    pub visitor_id: String,
+    pub event: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub fqdn: Option<String>,
+    pub path: Option<String>,
+    pub referrer: Option<String>,
+    pub platform: Option<String>,
+    pub browser: Option<String>,
+    pub mobile: Option<bool>,
+    pub country: Option<String>,
+    pub city: Option<String>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Project {
-    pub(crate) id: String,
-    pub(crate) display_name: String,
-    pub(crate) public: bool,
-    pub(crate) secret: Option<String>, // enable public access with password protection
+pub struct Project {
+    pub id: String,
+    pub display_name: String,
+    pub public: bool,
+    pub secret: Option<String>, // enable public access with password protection
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Entity {
-    pub(crate) id: String,
-    pub(crate) display_name: String,
+pub struct Entity {
+    pub id: String,
+    pub display_name: String,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct User {
-    pub(crate) username: String,
-    pub(crate) role: UserRole,
-    pub(crate) projects: Vec<String>,
+pub struct User {
+    pub username: String,
+    pub role: UserRole,
+    pub projects: Vec<String>,
 }
 
 #[derive(Debug, Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
 #[oai(rename_all = "snake_case")]
-pub(crate) enum UserRole {
+pub enum UserRole {
     #[serde(rename = "admin")]
     Admin,
     #[serde(rename = "user")]
@@ -59,7 +59,7 @@ impl TryFrom<String> for UserRole {
 
 impl UserRole {
     #[allow(clippy::inherent_to_string)]
-    pub(crate) fn to_string(self) -> String {
+    pub fn to_string(self) -> String {
         match self {
             UserRole::Admin => "admin".to_string(),
             UserRole::User => "user".to_string(),
@@ -67,6 +67,7 @@ impl UserRole {
     }
 }
 
+#[macro_export]
 macro_rules! event_params {
     ($event:expr) => {
         duckdb::params![
@@ -86,6 +87,6 @@ macro_rules! event_params {
     };
 }
 
-pub(crate) use event_params;
+pub use event_params;
 use poem_openapi::Enum;
 use serde::{Deserialize, Serialize};
