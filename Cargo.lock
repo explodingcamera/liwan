@@ -1695,6 +1695,7 @@ dependencies = [
  "cached",
  "chrono",
  "colored",
+ "cookie",
  "crossbeam",
  "duckdb",
  "eyre",

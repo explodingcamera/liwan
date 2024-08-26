@@ -70,6 +70,7 @@ maxminddb={version="0.24", optional=true}
 [dev-dependencies]
 figment={version="*", features=["test"]}
 poem={version="*", features=["test"]}
+cookie={version="*"}
 
 [features]
 default=["geoip"]

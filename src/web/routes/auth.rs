@@ -12,26 +12,26 @@ use poem::web::{cookie::CookieJar, Data};
 use poem::{Endpoint, EndpointExt};
 use poem_openapi::payload::{Json, Response};
 use poem_openapi::{Object, OpenApi};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tower::limit::RateLimitLayer;
 
-#[derive(Deserialize, Object)]
-struct LoginRequest {
-    username: String,
-    password: String,
+#[derive(Serialize, Object)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
 }
 
-#[derive(Deserialize, Object)]
-struct SetupRequest {
-    token: String,
-    username: String,
-    password: String,
+#[derive(Deserialize, Serialize, Object)]
+pub struct SetupRequest {
+    pub token: String,
+    pub username: String,
+    pub password: String,
 }
 
-#[derive(Object)]
-struct MeResponse {
-    username: String,
-    role: UserRole,
+#[derive(Object, Serialize)]
+pub struct MeResponse {
+    pub username: String,
+    pub role: UserRole,
 }
 
 fn login_rate_limit(ep: impl Endpoint + 'static) -> impl Endpoint {

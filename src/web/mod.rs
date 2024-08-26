@@ -1,6 +1,6 @@
-mod routes;
-mod session;
-mod webext;
+pub mod routes;
+pub mod session;
+pub mod webext;
 
 use crate::app::models::Event;
 use crate::app::Liwan;

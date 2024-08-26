@@ -1,7 +1,7 @@
-mod admin;
-mod auth;
-mod dashboard;
-mod event;
+pub mod admin;
+pub mod auth;
+pub mod dashboard;
+pub mod event;
 
 pub use admin::AdminAPI;
 pub use auth::AuthApi;
