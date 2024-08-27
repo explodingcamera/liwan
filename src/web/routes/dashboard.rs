@@ -4,6 +4,7 @@ use crate::utils::validate::{self, can_access_project};
 use crate::web::session::SessionUser;
 use crate::web::webext::{http_bail, ApiResult, PoemErrExt};
 
+use maxminddb::geoip2::city;
 use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::param::Path;
@@ -169,6 +170,7 @@ impl DashboardAPI {
                         .split_at_checked(2)
                         .map(|(a, b)| (Some(a.to_string()), Some(b.to_string())))
                         .unwrap_or((None, None));
+                    let city = city.filter(|city| !city.is_empty());
                     data.push(DimensionTableRow { dimension_value: key, value, display_name: city, icon: country });
                 }
                 _ => {

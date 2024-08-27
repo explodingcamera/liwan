@@ -52,11 +52,11 @@ fn save_spec() -> Result<()> {
 }
 
 pub fn create_router(app: Liwan, events: Sender<Event>) -> impl IntoEndpoint {
-    let handle_events =
-        event_service().with(Cors::new().allow_origin("*").allow_method("POST").allow_credentials(false));
+    let handle_events = event_service().with(Cors::new().allow_method("POST").allow_credentials(false));
 
     let serve_script = EmbeddedFileEndpoint::<Script>::new("script.min.js")
-        .with(Cors::new().allow_origin("*").allow_method("GET").allow_credentials(false));
+        .with(Cors::new().allow_method("GET").allow_credentials(false))
+        .with(SetHeader::new().appending("Content-Type", "application/javascript"));
 
     let headers = SetHeader::new()
         .appending("X-Frame-Options", "DENY")

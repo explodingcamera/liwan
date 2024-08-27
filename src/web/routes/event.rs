@@ -12,6 +12,7 @@ use poem::web::{headers, Data, RealIp, TypedHeader};
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
 use std::cell::RefCell;
+use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
 #[derive(Object)]
@@ -66,12 +67,14 @@ impl EventApi {
         };
 
         let (country, city) = match (&app.geoip, ip) {
-            (Some(geoip), Some(ip)) => match geoip.lookup(&ip) {
+            (Some(geoip), Some(ip)) => match geoip.lookup(&IpAddr::V4(Ipv4Addr::new(46, 114, 18, 156))) {
                 Ok(lookup) => (lookup.country_code, lookup.city),
                 Err(_) => (None, None),
             },
             _ => (None, None),
         };
+
+        tracing::error!("country: {:?}, city: {:?}", country, city);
 
         let event = Event {
             visitor_id,

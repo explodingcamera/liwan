@@ -201,7 +201,7 @@ export const ProjectOverview = ({
 							title="Total Views"
 							value={stats?.stats.totalViews}
 							prevValue={stats?.statsPrev.totalViews}
-							metric={metric}
+							metric={"views"}
 							onSelect={() => setMetric("views")}
 							selected={metric === "views"}
 						/>
@@ -210,7 +210,7 @@ export const ProjectOverview = ({
 							title="Total Sessions"
 							value={stats?.stats.totalSessions}
 							prevValue={stats?.statsPrev.totalSessions}
-							metric={metric}
+							metric={"sessions"}
 							onSelect={() => setMetric("sessions")}
 							selected={metric === "sessions"}
 						/>
@@ -218,7 +218,7 @@ export const ProjectOverview = ({
 							title="Unique Visitors"
 							value={stats?.stats.uniqueVisitors}
 							prevValue={stats?.statsPrev.uniqueVisitors}
-							metric={metric}
+							metric={"unique_visitors"}
 							onSelect={() => setMetric("unique_visitors")}
 							selected={metric === "unique_visitors"}
 						/>
@@ -226,7 +226,7 @@ export const ProjectOverview = ({
 							title="Avg. Views Per Session"
 							value={stats?.stats.avgViewsPerSession}
 							prevValue={stats?.statsPrev.avgViewsPerSession}
-							metric={metric}
+							metric={"avg_views_per_session"}
 							onSelect={() => setMetric("avg_views_per_session")}
 							selected={metric === "avg_views_per_session"}
 						/>

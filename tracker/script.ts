@@ -48,14 +48,15 @@ let entity: string | null = null;
 let referrer: string | null = null;
 
 if (typeof document !== "undefined") {
-	scriptEl = document.currentScript as HTMLScriptElement;
+	scriptEl = document.querySelector(`script[src^="${import.meta.url}"]`);
 	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && `${new URL(scriptEl.src).origin}/api/event`);
 	entity = scriptEl?.getAttribute("data-entity") || null;
 	referrer = document.referrer;
 }
 
 const LOCALHOST_REGEX = /^localhost$|^127(\.[0-9]+){0,2}\.[0-9]+$|^\[::1?\]$/;
-const ignoreEvent = (reason: string) => console.info(`[liwan]: ignoring event: ${reason}`);
+const log = (message: string) => console.info(`[liwan]: ${message}`);
+const ignore = (reason: string) => log(`Ignoring event: ${reason}`);
 
 /**
  * Sends an event to the Liwan API.
@@ -80,10 +81,9 @@ const ignoreEvent = (reason: string) => console.info(`[liwan]: ignoring event: $
 export async function event(name = "pageview", options?: EventOptions) {
 	if (typeof window === "undefined" && !options?.endpoint)
 		return Promise.reject(new Error("endpoint is required in server-side environments"));
-	if (typeof localStorage !== "undefined" && localStorage.getItem("disable-liwan"))
-		return ignoreEvent("localStorage flag");
-	if (LOCALHOST_REGEX.test(location.hostname) || location.protocol === "file:") return ignoreEvent("localhost");
-	if (!endpoint && !options?.endpoint) return ignoreEvent("no endpoint");
+	if (typeof localStorage !== "undefined" && localStorage.getItem("disable-liwan")) return ignore("localStorage flag");
+	if (LOCALHOST_REGEX.test(location.hostname) || location.protocol === "file:") return ignore("localhost");
+	if (!endpoint && !options?.endpoint) return ignore("no endpoint");
 
 	// biome-ignore lint/style/noNonNullAssertion: we know that endpoint is not null
 	return fetch((options?.endpoint || endpoint)!, {
@@ -96,7 +96,7 @@ export async function event(name = "pageview", options?: EventOptions) {
 			url: options?.url || `${location.origin}${location.pathname}`,
 		}),
 	}).then((response) => {
-		if (!response.ok) console.error("[liwan]: failed to send event: ", response);
+		if (!response.ok) log(`Failed to send event: ${response.statusText}`);
 		return { status: response.status };
 	});
 }

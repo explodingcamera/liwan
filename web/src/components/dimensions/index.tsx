@@ -239,7 +239,7 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 		<>
 			{countryCodeToFlag(value.icon || "XX")}
 			&nbsp;
-			{value.displayName ?? value.dimensionValue ?? "Unknown"}
+			{value.displayName ?? "Unknown"}
 		</>
 	),
 	referrer: (value) => (

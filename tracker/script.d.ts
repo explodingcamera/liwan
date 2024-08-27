@@ -24,6 +24,13 @@ declare module "script" {
          * Required in server-side environments.
          */
         endpoint?: string;
+        /**
+         * The entity that the event is associated with.
+         *
+         * If not provided, the `data-entity` attribute will be used.
+         * Required for custom events.
+         */
+        entity?: string;
     };
     /**
      * Sends an event to the Liwan API.
