@@ -1,6 +1,8 @@
 declare global {
 	interface Window {
 		__liwan_loaded?: boolean;
+		// biome-ignore lint/suspicious/noExplicitAny:
+		navigation?: any;
 	}
 }
 
@@ -110,15 +112,30 @@ const trackPageviews = () => {
 		event("pageview");
 	};
 
-	if (window.history.pushState) {
+	if (window.navigation) {
+		// best case scenario, we can listen for navigation events
+		// sadly this is not available on firefox
+		window.navigation.addEventListener("navigate", () => page());
+	} else {
+		// duplicate navigation events don't matter
+		// as we check if the page has changed above
+
+		// try to intercept history.pushState, but it's not always possible
 		window.history.pushState = new Proxy(window.history.pushState, {
 			apply: (target, thisArg, argArray) => {
 				target.apply(thisArg, argArray);
 				page();
 			},
 		});
+
+		// popstate is pretty buggy
 		window.addEventListener("popstate", page);
+
+		// astro copies history.pushState, so we need to listen for astro:page-load
+		document.addEventListener("astro:page-load", () => page());
 	}
+
+	// initial pageview
 	page();
 };
 

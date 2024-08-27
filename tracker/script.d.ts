@@ -2,6 +2,7 @@ declare module "script" {
     global {
         interface Window {
             __liwan_loaded?: boolean;
+            navigation?: any;
         }
     }
     export type EventOptions = {
