@@ -40,6 +40,10 @@ pub struct Config {
     pub geoip: Option<GeoIpConfig>,
 }
 
+pub fn default_maxmind_edition() -> Option<String> {
+    Some("GeoLite2-City".to_string())
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self { base_url: default_base(), port: default_port(), data_dir: default_data_dir(), geoip: None }
@@ -49,9 +53,31 @@ impl Default for Config {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeoIpConfig {
     pub maxmind_db_path: Option<String>,
+    #[serde(deserialize_with = "deserialize_option_string_from_number")]
     pub maxmind_account_id: Option<String>,
     pub maxmind_license_key: Option<String>,
+    #[serde(default = "default_maxmind_edition")]
     pub maxmind_edition: Option<String>,
+}
+
+pub fn deserialize_option_string_from_number<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrNumber {
+        String(String),
+        Number(i64),
+        Float(f64),
+    }
+
+    match Option::<StringOrNumber>::deserialize(deserializer)? {
+        Some(StringOrNumber::String(s)) => Ok(Some(s)),
+        Some(StringOrNumber::Number(i)) => Ok(Some(i.to_string())),
+        Some(StringOrNumber::Float(f)) => Ok(Some(f.to_string())),
+        None => Ok(None),
+    }
 }
 
 pub static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
@@ -81,7 +107,7 @@ impl Config {
             .merge(Env::raw().filter_map(|key| match key {
                 k if !k.starts_with("LIWAN_") => None,
                 k if k.starts_with("LIWAN_MAXMIND_") => Some(format!("geoip.maxmind_{}", &k[14..]).into()),
-                k => Some(k[6..].as_str().to_lowercase().replace("_", ".").into()),
+                k => Some(k[6..].as_str().to_lowercase().into()),
             }))
             .extract()?;
 
@@ -155,6 +181,39 @@ mod test {
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
             assert_eq!(config.port, 9042);
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_default_geoip() {
+        Jail::expect_with(|jail| {
+            jail.create_file(
+                "liwan3.config.toml",
+                r#"
+                base_url = "http://localhost:8081"
+                data_dir = "./liwan-test-data"
+                [geoip]
+                maxmind_db_path = "test2"
+            "#,
+            )?;
+
+            let config = Config::load(Some("liwan3.config.toml".into())).expect("failed to load config");
+            assert_eq!(config.geoip.unwrap().maxmind_edition, Some("GeoLite2-City".to_string()));
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_env() {
+        Jail::expect_with(|jail| {
+            jail.set_env("LIWAN_DATA_DIR", "/data");
+            jail.set_env("LIWAN_BASE_URL", "https://example.com");
+            jail.set_env("LIWAN_MAXMIND_ACCOUNT_ID", 123);
+            let config = Config::load(None).expect("failed to load config");
+            assert_eq!(config.data_dir, "/data");
+            assert_eq!(config.base_url, "https://example.com");
+            assert_eq!(config.geoip.unwrap().maxmind_account_id, Some("123".to_string()));
             Ok(())
         });
     }

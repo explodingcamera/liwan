@@ -74,7 +74,7 @@ export type EventOptions = {
  * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
  */
 export function event(
-  name?: string,
+  name?: string, // = "pageview"
   options?: EventOptions
 ): Promise<void | {
   status: number;

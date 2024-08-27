@@ -142,7 +142,8 @@ impl LiwanGeoIP {
             let reader = maxminddb::Reader::open_readfile(self.path.clone())?;
             *self.reader.write().unwrap() = Some(reader);
 
-            tracing::info!(path = ?self.path, "GeoIP database updated successfully");
+            let path = std::fs::canonicalize(&self.path)?;
+            tracing::info!(path = ?path, "GeoIP database updated successfully");
         }
 
         self.downloading.store(false, Ordering::Release);
@@ -234,6 +235,5 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
         }
     }
 
-    tracing::info!(file = ?file, "GeoIP database downloaded successfully");
     Ok(file)
 }
