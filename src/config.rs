@@ -53,14 +53,14 @@ impl Default for Config {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeoIpConfig {
     pub maxmind_db_path: Option<String>,
-    #[serde(deserialize_with = "deserialize_option_string_from_number")]
+    #[serde(default, deserialize_with = "deserialize_string_from_number")]
     pub maxmind_account_id: Option<String>,
     pub maxmind_license_key: Option<String>,
     #[serde(default = "default_maxmind_edition")]
     pub maxmind_edition: Option<String>,
 }
 
-pub fn deserialize_option_string_from_number<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+pub fn deserialize_string_from_number<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -72,11 +72,10 @@ where
         Float(f64),
     }
 
-    match Option::<StringOrNumber>::deserialize(deserializer)? {
-        Some(StringOrNumber::String(s)) => Ok(Some(s)),
-        Some(StringOrNumber::Number(i)) => Ok(Some(i.to_string())),
-        Some(StringOrNumber::Float(f)) => Ok(Some(f.to_string())),
-        None => Ok(None),
+    match StringOrNumber::deserialize(deserializer)? {
+        StringOrNumber::String(s) => Ok(Some(s)),
+        StringOrNumber::Number(i) => Ok(Some(i.to_string())),
+        StringOrNumber::Float(f) => Ok(Some(f.to_string())),
     }
 }
 
@@ -199,7 +198,10 @@ mod test {
             )?;
 
             let config = Config::load(Some("liwan3.config.toml".into())).expect("failed to load config");
-            assert_eq!(config.geoip.unwrap().maxmind_edition, Some("GeoLite2-City".to_string()));
+            assert_eq!(config.geoip.clone().unwrap().maxmind_edition, Some("GeoLite2-City".to_string()));
+            assert_eq!(config.geoip.unwrap().maxmind_db_path, Some("test2".to_string()));
+            assert_eq!(config.base_url, "http://localhost:8081");
+            assert_eq!(config.data_dir, "./liwan-test-data");
             Ok(())
         });
     }
