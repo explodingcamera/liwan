@@ -13,7 +13,6 @@ use colored::Colorize;
 use crossbeam::channel::Sender;
 use eyre::{Context, Result};
 use rust_embed::RustEmbed;
-use std::path::Path;
 
 use poem::endpoint::EmbeddedFileEndpoint;
 use poem::listener::TcpListener;
@@ -29,7 +28,10 @@ struct Files;
 #[folder = "./tracker"]
 struct Script;
 
+#[cfg(debug_assertions)]
 fn save_spec() -> Result<()> {
+    use std::path::Path;
+
     let path = Path::new("./web/src/api/dashboard.ts");
     if path.exists() {
         let spec = serde_json::to_string(&serde_json::from_str::<serde_json::Value>(&dashboard_service().spec())?)?
@@ -88,7 +90,7 @@ pub async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result<()> {
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
     if let Some(onboarding) = app.onboarding.token()? {
-        let get_started = format!("http://localhost:{}/setup?t={}", app.config.port, onboarding).underline().bold();
+        let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding).underline().bold();
         let command = "liwan --help".bold();
         tracing::info!("{}", "It looks like you're running Liwan for the first time!".white());
         tracing::info!("{}", format!("You can get started by visiting: {get_started}").white());

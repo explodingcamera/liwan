@@ -88,14 +88,15 @@ pub struct AddUser {
 
 pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
     config.geoip = None; // disable GeoIP support in CLI
-    let app = Liwan::try_new(config)?;
 
     match cmd {
         Command::UpdatePassword(update) => {
+            let app = Liwan::try_new(config)?;
             app.users.update_password(&update.username, &update.password)?;
             println!("Password updated for user {}", update.username);
         }
         Command::Users(_) => {
+            let app = Liwan::try_new(config)?;
             let users = app.users.all()?;
             if users.is_empty() {
                 println!("{}", "No users found".bold());
@@ -109,6 +110,7 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
             }
         }
         Command::AddUser(add) => {
+            let app = Liwan::try_new(config)?;
             app.users.create(
                 &add.username,
                 &add.password,
@@ -130,6 +132,7 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
         }
         #[cfg(debug_assertions)]
         Command::SeedDatabase(_) => {
+            let app = Liwan::try_new(config)?;
             app.seed_database()?;
             println!("Database seeded with test data");
         }

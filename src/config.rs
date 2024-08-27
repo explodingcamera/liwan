@@ -16,12 +16,10 @@ fn default_port() -> u16 {
 fn default_data_dir() -> String {
     #[cfg(target_family = "unix")]
     {
-        if std::path::Path::new("~/.local/share").exists() {
-            return "~/.local/share/liwan/data".to_string();
-        }
+        let home = std::env::var("HOME").ok().unwrap_or_else(|| "/root".to_string());
         std::env::var("XDG_DATA_HOME")
-            .map(|home| format!("{}/liwan/data", home))
-            .unwrap_or_else(|_| "./liwan-data".to_string())
+            .map(|data_home| format!("{data_home}/liwan/data"))
+            .unwrap_or_else(|_| format!("{home}/.local/share/liwan/data"))
     }
 
     #[cfg(not(target_family = "unix"))]
@@ -64,21 +62,22 @@ impl Config {
 
         let path = path.or_else(|| std::env::var("LIWAN_CONFIG").ok());
 
-        #[cfg(target_family = "unix")]
-        let path = path.or_else(|| match std::env::var("XDG_CONFIG_HOME") {
-            Ok(home) => Some(format!("{}/liwan/config.toml", home)),
-            Err(_) => {
-                if std::path::Path::new("~/.config").exists() {
-                    Some("~/.config/liwan/config.toml".to_string())
-                } else {
-                    None
-                }
-            }
-        });
-
-        let config: Config = Figment::new()
+        let mut config = Figment::new()
             .merge(Toml::file("liwan.config.toml"))
-            .merge(Toml::file(path.unwrap_or("liwan.config.toml".to_string())))
+            .merge(Toml::file(path.unwrap_or("liwan.config.toml".to_string())));
+
+        #[cfg(target_family = "unix")]
+        {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+            let config_dir = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{home}/.config"));
+
+            config = config
+                .join(Toml::file(format!("{config_dir}/liwan/config.toml")))
+                .join(Toml::file(format!("{config_dir}/liwan/liwan.config.toml")))
+                .join(Toml::file(format!("{config_dir}/liwan.config.toml")))
+        }
+
+        let config: Config = config
             .merge(Env::raw().filter_map(|key| match key {
                 k if !k.starts_with("LIWAN_") => None,
                 k if k.starts_with("LIWAN_MAXMIND_") => Some(format!("geoip.maxmind_{}", &k[14..]).into()),

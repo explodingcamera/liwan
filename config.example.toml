@@ -5,7 +5,7 @@ base_url="http://localhost:9042"
 port=9042
 
 # # Folder to store the database in (Will be created if it doesn't exist)
-# # defaults to ./.local/share/liwan/data (or $XDG_DATA_HOME/liwan/data) on linux/macos
+# # defaults to $HOME/.local/share/liwan/data on linux/macos
 # # defaults to ./liwan-data on other platforms
 # data_dir="./liwan-data"
 

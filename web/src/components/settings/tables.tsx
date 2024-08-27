@@ -149,7 +149,7 @@ const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
 				onClick={() => {
 					navigator.clipboard
 						.writeText(
-							`<script type="module" data-entity=${entity.id} src="${window.location.origin}/script.js"></script>`,
+							`<script type="module" data-entity="${entity.id}" src="${window.location.origin}/script.js"></script>`,
 						)
 						.then(() => createToast("Snippet copied to clipboard", "info"))
 						.catch(() => createToast("Failed to copy snippet to clipboard", "error"));

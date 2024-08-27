@@ -299,7 +299,7 @@ export const CreateProject = () => {
 			<form onSubmit={handleSubmit}>
 				<label>
 					Project ID <small>(This cannot be changed later)</small>
-					<input required pattern="^[A-Za-z0-9_\-]{1,15}$" name="id" type="text" placeholder="my-project" />
+					<input required pattern="^[A-Za-z0-9_\-.]{1,40}$" name="id" type="text" placeholder="my-project" />
 				</label>
 				<label>
 					Project Name <small>(Used in the dashboard)</small>
@@ -462,7 +462,7 @@ export const CreateEntity = () => {
 			<form onSubmit={handleSubmit}>
 				<label>
 					Entity ID <small>(This cannot be changed later)</small>
-					<input required pattern="^[A-Za-z0-9_\-]{1,15}$" name="id" type="text" placeholder="my-website" />
+					<input required pattern="^[A-Za-z0-9_\-.]{1,40}$" name="id" type="text" placeholder="my-website" />
 				</label>
 				<label>
 					Entity Name <small>(Used in the dashboard)</small>
@@ -669,7 +669,7 @@ export const CreateUser = () => {
 					Username <small>(This cannot be changed later)</small>
 					<input
 						required
-						pattern="^[A-Za-z0-9_\-]{1,15}$"
+						pattern="^[A-Za-z0-9_\-]{1,20}$"
 						name="username"
 						type="text"
 						placeholder="MyUsername"

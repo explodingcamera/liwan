@@ -45,6 +45,12 @@ impl LiwanGeoIP {
             return Ok(None);
         };
 
+        if geoip.maxmind_account_id.is_none() && geoip.maxmind_license_key.is_none() && geoip.maxmind_db_path.is_none()
+        {
+            tracing::trace!("GeoIP support disabled, skipping...");
+            return Ok(None);
+        }
+
         let edition = geoip.maxmind_edition.as_deref().unwrap_or("GeoLite2-City");
         let default_path = PathBuf::from(config.data_dir.clone()).join(format!("./geoip/{}.mmdb", edition));
         let path = geoip.maxmind_db_path.as_ref().map(PathBuf::from).unwrap_or(default_path);
