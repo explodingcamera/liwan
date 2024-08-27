@@ -17,7 +17,7 @@
   }
 
   > h1 {
-    font-size: 1.7rem;
+    font-size: 1.4rem;
     margin: 0;
     align-items: first baseline;
   }
@@ -34,6 +34,10 @@ div.graph {
   gap: 1rem;
   row-gap: 1rem;
   margin: 0 -0.4rem;
+
+  @media (max-width: 40rem) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .geoCard.geoCard {
@@ -73,6 +77,37 @@ div.graph {
     > div {
       padding: 1rem;
       padding-left: 0;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    grid-column: span 1;
+    flex-direction: column;
+    .geoTable,
+    .geoMap {
+      width: 100%;
+    }
+
+    .geoMap {
+      &::after {
+        top: unset;
+        width: 100%;
+        left: 0;
+        height: 2rem;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          var(--pico-card-background-color)
+        );
+      }
+    }
+
+    .geoTable {
+      padding: 1rem;
+      padding-top: 0;
+      > div {
+        padding: 0;
+      }
     }
   }
 }

@@ -39,6 +39,7 @@
 .header {
   display: flex;
   justify-content: space-between;
+  margin-bottom: 1rem;
 
   a {
     cursor: pointer;
@@ -160,7 +161,7 @@ button.stat {
   &[data-active="true"] {
     h2 {
       text-decoration: underline;
-      font-weight: 500;
+      font-weight: 600;
     }
     h2,
     h3 {

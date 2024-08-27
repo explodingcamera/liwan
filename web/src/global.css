@@ -3,7 +3,9 @@
 @import "react-tooltip/dist/react-tooltip.css" layer(tooltip);
 
 @layer pico {
-  :root {
+  :root[data-theme="dark"] {
+    --pico-background-color: #0a0c10;
+    --pico-card-background-color: #141a1d;
   }
 
   @media only screen and (prefers-color-scheme: dark) {

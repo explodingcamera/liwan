@@ -1,5 +1,6 @@
-.tooltipContainer {
-  all: unset;
+.tooltipContainer.tooltipContainer {
+  padding: 0;
+  background: none;
 }
 
 .worldmap {

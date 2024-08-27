@@ -110,12 +110,13 @@ const trackPageviews = () => {
 		event("pageview");
 	};
 
-	if (history.pushState) {
-		const originalPushState = history.pushState;
-		history.pushState = (...args: Parameters<typeof history.pushState>) => {
-			originalPushState(...args);
-			page();
-		};
+	if (window.history.pushState) {
+		window.history.pushState = new Proxy(window.history.pushState, {
+			apply: (target, thisArg, argArray) => {
+				target.apply(thisArg, argArray);
+				page();
+			},
+		});
 		window.addEventListener("popstate", page);
 	}
 	page();

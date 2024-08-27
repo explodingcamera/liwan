@@ -63,6 +63,12 @@ impl<T, E: Display> PoemErrExt<T> for Result<T, E> {
 
 pub struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
 
+impl<E: RustEmbed + Send + Sync> Default for EmbeddedFilesEndpoint<E> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
     pub fn new() -> Self {
         EmbeddedFilesEndpoint(PhantomData)

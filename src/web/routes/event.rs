@@ -74,6 +74,10 @@ impl EventApi {
             _ => (None, None),
         };
 
+        let path = url.path().to_string();
+        let path = if path.len() > 1 && path.ends_with('/') { path.trim_end_matches('/').to_string() } else { path };
+        let fqdn = url.host().unwrap_or_default().to_string();
+
         let event = Event {
             visitor_id,
             referrer,
@@ -83,8 +87,8 @@ impl EventApi {
             created_at: chrono::Utc::now(),
             entity_id: event.entity_id,
             event: event.name,
-            fqdn: url.host().unwrap_or_default().to_string().into(),
-            path: url.path().to_string().into(),
+            fqdn: fqdn.into(),
+            path: path.into(),
             mobile: Some(useragent::is_mobile(&client)),
             platform: client.os.family.to_string().into(),
         };

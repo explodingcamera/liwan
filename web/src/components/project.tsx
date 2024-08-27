@@ -1,5 +1,5 @@
 import styles from "./project.module.css";
-import "./worldmap.module.css";
+import _map from "./worldmap.module.css";
 
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { LockIcon } from "lucide-react";

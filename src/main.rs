@@ -17,8 +17,8 @@ async fn main() -> Result<()> {
     }
 
     let app = Liwan::try_new(config)?;
-
     app.run_background_tasks();
+
     tokio::select! {
         res = web::start_webserver(app.clone(), s) => res,
         res = tokio::task::spawn_blocking(move || app.clone().events.process(r)) => res?
