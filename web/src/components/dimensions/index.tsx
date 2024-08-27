@@ -232,21 +232,21 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 		<>
 			{countryCodeToFlag(value.dimensionValue)}
 			&nbsp;
-			{value.displayName ?? value.dimensionValue ?? "Unknown"}
+			{value.displayName || value.dimensionValue || "Unknown"}
 		</>
 	),
 	city: (value) => (
 		<>
 			{countryCodeToFlag(value.icon || "XX")}
 			&nbsp;
-			{value.displayName ?? "Unknown"}
+			{value.displayName || "Unknown"}
 		</>
 	),
 	referrer: (value) => (
 		<>
 			<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
 			&nbsp;
-			{value.displayName ?? value.dimensionValue ?? "Unknown"}
+			{value.displayName || value.dimensionValue || "Unknown"}
 		</>
 	),
 	path: (value) => value.dimensionValue,
