@@ -100,7 +100,7 @@ impl AuthApi {
         session_id: Option<SessionId>,
     ) -> ApiResult<EmptyResponse> {
         if let Some(session_id) = session_id {
-            app.sessions.delete(&session_id.0).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+            let _ = app.sessions.delete(&session_id.0);
         }
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();

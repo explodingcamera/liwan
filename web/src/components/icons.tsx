@@ -89,7 +89,7 @@ export const ReferrerIcon = ({ referrer, icon, ...props }: { referrer: string; i
 		return <SearchIcon {...props} />;
 	}
 
-	<Favicon {...props} fqdn={referrer} />;
+	return <Favicon {...props} fqdn={referrer} />;
 };
 
 export const Favicon = ({
