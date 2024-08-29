@@ -97,9 +97,11 @@ impl AuthApi {
         &self,
         Data(app): Data<&Liwan>,
         cookies: &CookieJar,
-        SessionId(session_id): SessionId,
+        session_id: Option<SessionId>,
     ) -> ApiResult<EmptyResponse> {
-        app.sessions.delete(&session_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        if let Some(session_id) = session_id {
+            app.sessions.delete(&session_id.0).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
         public_cookie.set_secure(app.config.secure());

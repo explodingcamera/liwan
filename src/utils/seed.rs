@@ -5,7 +5,7 @@ use rand::Rng;
 use crate::app::models::Event;
 
 const PATHS: &[&str] = &["/", "/about", "/contact", "/pricing", "/blog", "/login", "/signup"];
-const REFERRERS: &[&str] = &["", "google.com", "twitter.com", "facebook.com", "github.com"];
+const REFERRERS: &[&str] = &["", "google.com", "twitter.com", "liwan.dev", "example.com"];
 const PLATFORMS: &[&str] = &["", "Windows", "macOS", "Linux", "Android", "iOS"];
 const BROWSERS: &[&str] = &["", "Chrome", "Firefox", "Safari", "Edge", "Opera"];
 const CITIES: &[(&str, &str)] = &[
