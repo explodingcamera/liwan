@@ -50,7 +50,11 @@ impl Liwan {
 
         tracing::debug!("Initializing databases");
         let conn_app = db::init_sqlite(&folder.join("liwan-app.sqlite"), embedded::app::migrations::runner())?;
-        let conn_events = db::init_duckdb(&folder.join("liwan-events.duckdb"), embedded::events::migrations::runner())?;
+        let conn_events = db::init_duckdb(
+            &folder.join("liwan-events.duckdb"),
+            config.duckdb.clone(),
+            embedded::events::migrations::runner(),
+        )?;
 
         Ok(Self {
             #[cfg(feature = "geoip")]

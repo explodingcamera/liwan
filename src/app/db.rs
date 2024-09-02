@@ -1,3 +1,4 @@
+use crate::config::DuckdbConfig;
 use crate::utils::refinery_duckdb::DuckDBConnection;
 use crate::utils::refinery_sqlite::RqlConnection;
 
@@ -9,6 +10,7 @@ use std::path::PathBuf;
 
 pub(super) fn init_duckdb(
     path: &PathBuf,
+    duckdb_config: Option<DuckdbConfig>,
     mut migrations_runner: Runner,
 ) -> Result<r2d2::Pool<DuckdbConnectionManager>> {
     let conn = DuckdbConnectionManager::file(path)?;
@@ -22,6 +24,16 @@ pub(super) fn init_duckdb(
         conn.pragma_update(None, "autoinstall_known_extensions", &"false")?;
         conn.pragma_update(None, "autoload_known_extensions", &"false")?;
         conn.pragma_update(None, "enable_fsst_vectors", &"true")?;
+
+        if let Some(duckdb_config) = duckdb_config {
+            if let Some(memory_limit) = duckdb_config.memory_limit {
+                conn.pragma_update(None, "memory_limit", &memory_limit)?;
+            }
+
+            if let Some(threads) = duckdb_config.threads {
+                conn.pragma_update(None, "threads", &threads.to_string())?;
+            }
+        }
     }
 
     Ok(pool)

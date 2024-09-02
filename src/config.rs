@@ -3,6 +3,7 @@ use figment::providers::{Env, Format, Toml};
 use figment::Figment;
 use poem::http::Uri;
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU16;
 use std::str::FromStr;
 
 fn default_base() -> String {
@@ -38,6 +39,8 @@ pub struct Config {
     pub data_dir: String,
 
     pub geoip: Option<GeoIpConfig>,
+
+    pub duckdb: Option<DuckdbConfig>,
 }
 
 pub fn default_maxmind_edition() -> Option<String> {
@@ -46,7 +49,7 @@ pub fn default_maxmind_edition() -> Option<String> {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { base_url: default_base(), port: default_port(), data_dir: default_data_dir(), geoip: None }
+        Self { base_url: default_base(), port: default_port(), data_dir: default_data_dir(), geoip: None, duckdb: None }
     }
 }
 
@@ -58,6 +61,12 @@ pub struct GeoIpConfig {
     pub maxmind_license_key: Option<String>,
     #[serde(default = "default_maxmind_edition")]
     pub maxmind_edition: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DuckdbConfig {
+    pub memory_limit: Option<String>,
+    pub threads: Option<NonZeroU16>,
 }
 
 pub fn deserialize_string_from_number<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
@@ -106,6 +115,7 @@ impl Config {
             .merge(Env::raw().filter_map(|key| match key {
                 k if !k.starts_with("LIWAN_") => None,
                 k if k.starts_with("LIWAN_MAXMIND_") => Some(format!("geoip.maxmind_{}", &k[14..]).into()),
+                k if k.starts_with("LIWAN_DUCKDB_") => Some(format!("duckdb.{}", &k[13..]).into()),
                 k => Some(k[6..].as_str().to_lowercase().into()),
             }))
             .extract()?;
@@ -145,6 +155,8 @@ mod test {
             jail.set_env("LIWAN_MAXMIND_EDITION", "test");
             jail.set_env("LIWAN_GEOIP_MAXMIND_EDITION", "test2");
             jail.set_env("GEOIP_MAXMIND_EDITION", "test3");
+            jail.set_env("LIWAN_DUCKDB_MEMORY_LIMIT", "2GB");
+            jail.set_env("LIWAN_DUCKDB_THREADS", 4);
 
             jail.set_env("LIWAN_MAXMIND_LICENSE_KEY", "test");
             jail.set_env("LIWAN_MAXMIND_ACCOUNT_ID", "test");
@@ -159,6 +171,8 @@ mod test {
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
             assert_eq!(config.port, 9042);
+            assert_eq!(config.duckdb.as_ref().unwrap().memory_limit, Some("2GB".to_string()));
+            assert_eq!(config.duckdb.as_ref().unwrap().threads, Some(NonZeroU16::new(4).unwrap()));
             Ok(())
         });
     }

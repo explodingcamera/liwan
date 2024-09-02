@@ -20,3 +20,8 @@ port=9042
 # # If you don't want to automatically download the database, you can specify a path to a local file
 # # Otherwise, the database will be downloaded automatically and stored in the data_dir
 # maxmind_db_path="./GeoLite2-City.mmdb"
+
+[duckdb]
+# See https://liwan.dev/guides/duckdb
+# threads=2
+# memory_limit=2G
