@@ -1,5 +1,5 @@
 import * as Tabs from "@radix-ui/react-tabs";
-import { FullscreenIcon, LinkIcon, ZoomIn } from "lucide-react";
+import { FullscreenIcon, LinkIcon, SquareArrowOutUpRightIcon, ZoomIn } from "lucide-react";
 import styles from "./dimensions.module.css";
 
 import {
@@ -247,9 +247,27 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 			<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
 			&nbsp;
 			{value.displayName || value.dimensionValue || "Unknown"}
+			{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
+				<>
+					&nbsp;
+					<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer">
+						<SquareArrowOutUpRightIcon size={16} />
+					</a>
+				</>
+			)}
 		</>
 	),
 	path: (value) => value.dimensionValue,
+};
+
+const isValidFqdn = (fqdn: string) => {
+	if (!fqdn.includes(".")) return false;
+	try {
+		new URL(`https://${fqdn}`);
+		return true;
+	} catch {
+		return false;
+	}
 };
 
 const DimensionLabel = ({ dimension, value }: { dimension: Dimension; value: DimensionTableRow }) =>

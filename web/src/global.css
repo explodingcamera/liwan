@@ -2,30 +2,43 @@
 @import "@picocss/pico/css/pico.lime.min.css" layer(pico);
 @import "react-tooltip/dist/react-tooltip.css" layer(tooltip);
 
-@layer pico {
-  :root[data-theme="dark"] {
-    --pico-background-color: #0a0c10;
-    --pico-card-background-color: #141a1d;
-  }
+:root {
+  --pico-background-color: #f7f8ff;
+  --card-background-base: 0deg 0% 100%;
+  --card-background: hsl(var(--card-background-base));
+}
 
-  @media only screen and (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --pico-background-color: #0a0c10;
-      --pico-card-background-color: #141a1d;
-    }
+:root[data-theme="dark"] {
+  --pico-background-color: #0a0c10;
+  --card-background-base: 200deg 18.37% 9.6%;
+}
+
+@media only screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pico-background-color: #0a0c10;
+    --card-background-base: 200deg 18.37% 9.6%;
   }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  --pico-font-weight: 600;
 }
 
 .full {
   min-height: 100%;
 }
-
+/* 
 body {
   --bg-gradient-color: oklab(0.51 -0.1 0 / 0.1);
   background: linear-gradient(215deg, var(--bg-gradient-color), transparent 50%),
     radial-gradient(var(--bg-gradient-color), transparent 40%) no-repeat -60vw -40vh /90vw
       300vh;
-}
+} */
 
 h1,
 h2,
@@ -47,4 +60,8 @@ h6 {
 
 article {
   border-radius: 1rem;
+}
+
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
 }

@@ -207,14 +207,6 @@ export const ProjectOverview = ({
 						/>
 
 						<Stat
-							title="Total Sessions"
-							value={stats?.stats.totalSessions}
-							prevValue={stats?.statsPrev.totalSessions}
-							metric={"sessions"}
-							onSelect={() => setMetric("sessions")}
-							selected={metric === "sessions"}
-						/>
-						<Stat
 							title="Unique Visitors"
 							value={stats?.stats.uniqueVisitors}
 							prevValue={stats?.statsPrev.uniqueVisitors}
@@ -222,6 +214,16 @@ export const ProjectOverview = ({
 							onSelect={() => setMetric("unique_visitors")}
 							selected={metric === "unique_visitors"}
 						/>
+
+						<Stat
+							title="Total Sessions"
+							value={stats?.stats.totalSessions}
+							prevValue={stats?.statsPrev.totalSessions}
+							metric={"sessions"}
+							onSelect={() => setMetric("sessions")}
+							selected={metric === "sessions"}
+						/>
+
 						<Stat
 							title="Avg. Views Per Session"
 							value={stats?.stats.avgViewsPerSession}
@@ -278,7 +280,9 @@ export const LiveVisitorCount = ({ count }: { count: number }) => {
 
 const formatPercent = (value: number) => {
 	if (value === -1) return "∞";
-	return value.toFixed(1).replace(/\.0$/, "") || "0";
+	if (value >= 10000 || value <= -10000) return `${(value / 100).toFixed(0)}x`;
+	if (value >= 1000 || value <= -1000) return `${value.toFixed(0).replace(/\.0$/, "") || "0"}%`;
+	return `${value.toFixed(1).replace(/\.0$/, "") || "0"}%`;
 };
 
 export const Stat = ({
@@ -308,7 +312,7 @@ export const Stat = ({
 			<h3>
 				{formatMetricVal(metric, value)}
 				<span style={{ color }} className={styles.change}>
-					{icon} {formatPercent(changePercent)}%
+					{icon} {formatPercent(changePercent)}
 				</span>
 			</h3>
 		</button>

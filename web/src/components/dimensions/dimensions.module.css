@@ -1,10 +1,9 @@
 .card {
   padding: 1rem;
   padding-bottom: 0.6rem;
-  background-color: var(--pico-form-element-background-color);
   border-radius: var(--pico-border-radius);
-  background: var(--pico-card-background-color);
   box-shadow: var(--pico-card-box-shadow);
+  background-color: var(--card-background);
   display: flex;
   flex-direction: column;
 }
@@ -72,6 +71,11 @@
   gap: 1rem;
   color: var(--pico-h5-color);
   margin-bottom: 1rem;
+
+  > div:first-of-type {
+    font-weight: 600;
+    color: var(--pico-color);
+  }
 }
 
 .dimensionTable {
