@@ -62,7 +62,10 @@ pub fn create_router(app: Liwan, events: Sender<Event>) -> impl IntoEndpoint {
         .appending("X-Frame-Options", "DENY")
         .appending("X-Content-Type-Options", "nosniff")
         .appending("X-XSS-Protection", "1; mode=block")
-        .appending("Content-Security-Policy", "default-src 'self' data: 'unsafe-inline'; img-src https://*")
+        .appending(
+            "Content-Security-Policy",
+            "default-src 'self' data: 'unsafe-inline'; img-src 'self' data: https://*",
+        )
         .appending("Referrer-Policy", "same-origin")
         .appending("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
 
