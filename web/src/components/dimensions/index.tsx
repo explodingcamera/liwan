@@ -1,5 +1,5 @@
 import * as Tabs from "@radix-ui/react-tabs";
-import { FullscreenIcon, LinkIcon, SquareArrowOutUpRightIcon, ZoomIn } from "lucide-react";
+import { LinkIcon, SquareArrowOutUpRightIcon, ZoomIn } from "lucide-react";
 import styles from "./dimensions.module.css";
 
 import {
@@ -14,10 +14,9 @@ import {
 	useDimension,
 } from "../../api";
 
-import { cls } from "../../utils";
-import { Dialog } from "../dialog";
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
 import { countryCodeToFlag, formatFullUrl, formatHost, getHref, tryParseUrl } from "./utils";
+import { DetailsModal } from "./modal";
 
 export const cardStyles = styles.card;
 
@@ -120,67 +119,6 @@ export const DimensionTable = ({
 	);
 };
 
-const DetailsModal = ({
-	project,
-	dimension,
-	metric,
-	range,
-}: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange }) => {
-	const { data, biggest, order, isLoading } = useDimension({ project, dimension, metric, range });
-
-	return (
-		<Dialog
-			title={`${dimensionNames[dimension]} - ${metricNames[metric]}`}
-			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${metricNames[metric]}`}
-			hideTitle
-			hideDescription
-			showClose
-			className={styles.detailsModal}
-			trigger={() => (
-				<button
-					type="button"
-					className={cls(styles.showMore, (data?.length ?? 0) === 0 && styles.showMoreHidden)}
-					onClick={() => console.log("show more")}
-				>
-					<ZoomIn size={16} />
-					Show details
-				</button>
-			)}
-		>
-			<div className={styles.dimensionTable} style={{ "--count": data?.length } as React.CSSProperties}>
-				<div className={styles.dimensionHeader}>
-					<div>{dimensionNames[dimension]}</div>
-					<div>{metricNames[metric]}</div>
-				</div>
-				{data?.map((d) => {
-					return (
-						<div
-							key={d.dimensionValue}
-							style={{ order: order?.indexOf(d.dimensionValue) }}
-							className={styles.dimensionRow}
-						>
-							<DimensionValueBar value={d.value} biggest={biggest}>
-								<DimensionLabel dimension={dimension} value={d} />
-							</DimensionValueBar>
-							<div>{formatMetricVal(metric, d.value)}</div>
-						</div>
-					);
-				})}
-				{isLoading && data?.length === 0 && (
-					<div className={styles.dimensionEmpty}>
-						<div>Loading...</div>
-					</div>
-				)}
-				{!isLoading && data?.length === 0 && (
-					<div className={styles.dimensionEmpty}>
-						<div>No data available</div>
-					</div>
-				)}
-			</div>
-		</Dialog>
-	);
-};
-
 const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.ReactNode> = {
 	platform: (value) => (
 		<>
@@ -250,7 +188,7 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 			{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
 				<>
 					&nbsp;
-					<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer">
+					<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
 						<SquareArrowOutUpRightIcon size={16} />
 					</a>
 				</>
@@ -270,10 +208,10 @@ const isValidFqdn = (fqdn: string) => {
 	}
 };
 
-const DimensionLabel = ({ dimension, value }: { dimension: Dimension; value: DimensionTableRow }) =>
+export const DimensionLabel = ({ dimension, value }: { dimension: Dimension; value: DimensionTableRow }) =>
 	dimensionLabels[dimension](value);
 
-const DimensionValueBar = ({
+export const DimensionValueBar = ({
 	value,
 	biggest,
 	children,

@@ -67,3 +67,7 @@ article {
 html body[data-scroll-locked] {
   margin-right: 0 !important;
 }
+
+[type="search"] {
+  --pico-border-radius: 0.7rem;
+}

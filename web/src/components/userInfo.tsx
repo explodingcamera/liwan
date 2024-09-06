@@ -33,17 +33,17 @@ export const LoginButton = () => {
 				</li>
 				<li>
 					{/* biome-ignore lint/a11y/useValidAnchor: */}
-					<button
-						type="button"
+					<a
+						href="#"
 						onClick={() => {
 							api["/api/dashboard/auth/logout"].post().then(() => {
-								// window.location.href = "/";
+								window.location.href = "/";
 							});
 						}}
 					>
 						<LogOutIcon size="16" />
 						Logout
-					</button>
+					</a>
 				</li>
 			</ul>
 		</details>

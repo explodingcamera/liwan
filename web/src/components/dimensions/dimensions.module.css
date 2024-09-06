@@ -116,6 +116,11 @@
   margin-bottom: 0.2rem;
 }
 
+.external {
+  display: flex;
+  align-items: center;
+}
+
 .dimensionEmpty {
   flex: 1;
   display: flex;
