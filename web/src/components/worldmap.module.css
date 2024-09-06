@@ -10,10 +10,6 @@
   > svg {
     flex: 1;
   }
-
-  :global(.react-tooltip) {
-    z-index: 10;
-  }
 }
 
 .geo {

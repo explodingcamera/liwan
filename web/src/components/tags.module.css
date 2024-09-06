@@ -141,8 +141,6 @@
   max-height: 12.5rem;
   overflow-y: auto;
 
-  --pico-border-color: 
-
   margin-top: var(--pico-outline-width);
   border: var(--pico-border-width) solid var(--pico-dropdown-border-color);
   border-radius: var(--pico-border-radius);
