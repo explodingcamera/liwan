@@ -1,7 +1,33 @@
-# liwan - Lightweight Web Analytics
+<br/>
 
-> [!WARNING]
-> This project is still in the early stages of development and not ready to be used.
+<div align="center">
+    <a href=""><img  src="./web/public/favicon.svg" width="100px"></a>
+    <h2>
+        <a href="https://liwan.dev">liwan.dev</a> - Easy & privacy-first web analytics
+    </h2>
+    <div>
+
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/explodingcamera/liwan/test.yaml?style=flat-square)
+![GitHub Release](https://img.shields.io/github/v/release/explodingcamera/liwan?style=flat-square)
+[![Container](https://img.shields.io/badge/Container-ghcr.io%2Fexplodingcamera%2Fliwan%3Aedge-blue?style=flat-square)](https://github.com/explodingcamera/liwan/pkgs/container/liwan)
+</div>
+
+</div>
+
+## Features
+
+- **Quick setup**\
+  Quickly get started with Liwan with a single, self-contained binary . No database or complex setup required. The tracking script is a single line of code that works with any website and less than 1KB in size.
+- **Privacy first**\
+  Liwan respects your users’ privacy by default. No cookies, no cross-site tracking, no persistent identifiers. All data is stored on your server.
+- **Lightweight**\
+  You can run Liwan on a cheap VPS, your old mac mini, or even a Raspberry Pi. Written in Rust and using tokio for async I/O, Liwan is fast and efficient.
+- **Open source**\
+  Fully open source. You can change, extend, and contribute to the codebase. If you’re interested in commercial licensing, please get in touch at hi@liwan.dev.
+- **Accurate data**\
+  Get accurate data about your website’s visitors, page views, referrers, and more. Liwan detects bots and crawlers and filters them out by default.
+- **Real-time analytics**\
+  See your website’s traffic in real-time. Liwan updates the dashboard automatically as new visitors come in.
 
 ## License
 
