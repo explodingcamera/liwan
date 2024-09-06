@@ -49,7 +49,9 @@ impl EventApi {
             Referrer::Unknown(r) => r,
             Referrer::Spammer => return EmptyResponse::ok(),
         };
-        let referrer = referrer.filter(|r| !r.is_empty());
+
+        let referrer = referrer.map(|r| r.trim_start_matches("www.").to_string()); // remove www. prefix
+        let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
 
         if !EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_get(&event.entity_id).is_some()) {
             if !app.entities.exists(&event.entity_id).http_status(StatusCode::INTERNAL_SERVER_ERROR)? {

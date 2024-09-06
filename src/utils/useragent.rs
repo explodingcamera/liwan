@@ -16,7 +16,7 @@ pub fn parse(header: &str) -> Client {
 }
 
 pub fn is_bot(client: &Client) -> bool {
-    client.device.family == "Spider"
+    client.device.family == "Spider" || client.user_agent.family == "HeadlessChrome"
 }
 
 static MOBILE_OS: [&str; 2] = ["iOS", "Android"]; // good enough for 99% of cases

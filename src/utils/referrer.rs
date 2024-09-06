@@ -51,6 +51,13 @@ pub fn process_referer(referer: Option<&str>) -> Referrer {
     match referer.map(poem::http::Uri::from_str) {
         // valid referer are stripped to the FQDN
         Some(Ok(referer_uri)) => {
+            // ignore localhost / IP addresses
+            if referer_uri.host().map_or(false, |host| {
+                host == "localhost" || host.ends_with(".localhost") || host.parse::<std::net::IpAddr>().is_ok()
+            }) {
+                return Referrer::Unknown(None);
+            }
+
             let referer_fqn = referer_uri.host().unwrap_or_default();
             if is_spammer(referer_fqn) {
                 return Referrer::Spammer;
@@ -82,6 +89,12 @@ mod test {
             Referrer::Spammer,
             "Should return an error for a referer identified as a spammer"
         );
+
+        assert_eq!(process_referer(Some("google.com")), Referrer::Fqdn("google.com".to_string()));
+        assert_eq!(process_referer(Some("127.0.0.1")), Referrer::Unknown(None));
+        assert_eq!(process_referer(Some("1.1.1.1")), Referrer::Unknown(None));
+        assert_eq!(process_referer(Some("localhost")), Referrer::Unknown(None));
+        assert_eq!(process_referer(Some("asdf.localhost")), Referrer::Unknown(None));
 
         assert_eq!(
             process_referer(Some("invalid referrer")),

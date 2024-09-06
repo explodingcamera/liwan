@@ -6,17 +6,19 @@
   --pico-background-color: #f7f8ff;
   --card-background-base: 0deg 0% 100%;
   --card-background: hsl(var(--card-background-base));
+  --pico-card-box-shadow: 0px 0px 24px #15233610;
 }
 
 :root[data-theme="dark"] {
   --pico-background-color: #0a0c10;
-  --card-background-base: 200deg 18.37% 9.6%;
+  --card-background-base: 218.8 23.9% 13.9%;
+  /* --pico-card-box-shadow: 0 0 0.5rem 0.1rem hsla(0, 0%, 0%, 0.1); */
 }
 
 @media only screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --pico-background-color: #0a0c10;
-    --card-background-base: 200deg 18.37% 9.6%;
+    --card-background-base: 218.8 23.9% 13.9%;
   }
 }
 

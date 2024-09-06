@@ -10,7 +10,7 @@
   align-items: center;
   gap: 1rem;
   width: 100%;
-  padding-bottom: .5rem;
+  padding-bottom: 0.5rem;
 
   a {
     cursor: pointer;
@@ -24,8 +24,13 @@
 }
 
 div.graph {
-  height: 18rem;
-  margin-bottom: 1rem;
+  height: 20rem;
+
+  border-radius: var(--pico-border-radius);
+  box-shadow: var(--pico-card-box-shadow);
+  background-color: var(--card-background);
+  padding: 2rem 0 1rem 0;
+  margin: 0 -0.4rem;
 }
 
 .tables {
@@ -60,7 +65,7 @@ div.graph {
       content: "";
       position: absolute;
       --direction: right;
-      background:  linear-gradient(
+      background: linear-gradient(
         to var(--direction),
         hsla(var(--card-background-base) / 0) 0%,
         hsla(var(--card-background-base) / 0.018) 9.5%,
@@ -79,7 +84,7 @@ div.graph {
         hsla(var(--card-background-base) / 0.988) 92%,
         hsl(var(--card-background-base)) 100%
       );
- 
+
       right: 0;
       top: 0;
       bottom: 0;

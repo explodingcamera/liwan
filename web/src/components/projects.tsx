@@ -95,6 +95,8 @@ export const Projects = () => {
 							metric={metric}
 							setMetric={setMetric}
 							rangeName={dateRange}
+							className={styles.projectCard}
+							graphClassName={styles.projectsGraph}
 							detailsElement={() => (
 								<a href={`/p/${project.id}`} aria-label="View project details">
 									<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
@@ -139,6 +141,7 @@ export const ProjectOverview = ({
 	setMetric,
 	rangeName,
 	detailsElement,
+	className,
 	graphClassName = "",
 	renderHeader = defaultHeader,
 }: {
@@ -147,6 +150,7 @@ export const ProjectOverview = ({
 	setMetric: (value: Metric) => void;
 	rangeName: RangeName;
 	detailsElement?: () => JSX.Element;
+	className?: string;
 	graphClassName?: string;
 	renderHeader?: (props: { stats?: StatsResponse; project: ProjectResponse; className?: string }) => JSX.Element;
 }) => {
@@ -191,7 +195,10 @@ export const ProjectOverview = ({
 	const chartData = graph?.data ? toDataPoints(graph.data, range, metric) : [];
 
 	return (
-		<div className={styles.project} data-loading={isLoadingStats || isLoadingGraph || isErrorStats || isErrorGraph}>
+		<div
+			className={cls(styles.project, className)}
+			data-loading={isLoadingStats || isLoadingGraph || isErrorStats || isErrorGraph}
+		>
 			{(isErrorStats || isErrorGraph) && <h1 className={styles.error}>Failed to load data</h1>}
 			<div className={styles.statsContainer}>
 				<div className={styles.stats}>

@@ -46,6 +46,25 @@
   }
 }
 
+.projectCard {
+  border-radius: var(--pico-border-radius);
+  box-shadow: var(--pico-card-box-shadow);
+  background-color: var(--card-background);
+  padding: 1rem;
+  margin: 0 -0.4rem;
+  margin-bottom: 1rem;
+
+  > div {
+    --card-background: var(--pico-form-element-border-color);
+  }
+
+  .projectsGraph {
+    padding: 0;
+    margin: 0;
+    margin: 0 -1rem;
+  }
+}
+
 details.selectRange {
   width: 10rem;
 
@@ -116,6 +135,9 @@ details.selectRange {
 .stats {
   align-items: center;
   > div {
+    position: relative;
+    z-index: 1;
+
     display: flex;
     gap: 0.7rem;
     @media (max-width: 768px) {
@@ -157,11 +179,7 @@ details.selectRange {
 }
 
 .graph {
-  height: 12rem;
-  margin-top: -0.5rem;
-  margin-left: -1.9rem;
-  margin-right: -2rem;
-  margin-bottom: 3rem;
+  height: 14rem;
 }
 
 button.stat {
@@ -170,20 +188,45 @@ button.stat {
   margin: 0;
   font-size: 0.8rem;
   min-width: 7.5rem;
-  padding: 0.4rem 0.6rem 0.3rem 0.6rem;
+  padding: 0.5rem 0.6rem 0.3rem 0.6rem;
   margin-left: -0.5rem;
   transition: background-color 0.2s ease;
   border-radius: var(--pico-border-radius);
   user-select: none;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--pico-border-radius);
+    background-color: var(--card-background);
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
 
   &[data-active="true"] {
-    background-color: var(--card-background);
-    box-shadow: var(--pico-card-box-shadow);
+    &::before {
+      box-shadow: var(--pico-card-box-shadow);
+      opacity: 1;
+      transform: scale(1);
+    }
 
     h2,
     h2,
     h3 {
       color: var(--pico-h1-color);
+    }
+  }
+
+  &:hover:not([data-active="true"]) {
+    &::before {
+      opacity: 0.5;
     }
   }
 
