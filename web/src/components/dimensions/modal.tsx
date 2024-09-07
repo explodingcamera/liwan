@@ -2,12 +2,11 @@ import { ZoomInIcon } from "lucide-react";
 import fuzzysort from "fuzzysort";
 import styles from "./dimensions.module.css";
 
-import { cls } from "../../utils";
+import { cls, formatMetricVal } from "../../utils";
 import { Dialog } from "../dialog";
 import { DimensionLabel, DimensionValueBar } from ".";
 import {
 	dimensionNames,
-	formatMetricVal,
 	metricNames,
 	useDimension,
 	type DateRange,
@@ -16,7 +15,7 @@ import {
 	type Metric,
 	type ProjectResponse,
 } from "../../api";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 
 export const DetailsModal = ({
 	project,

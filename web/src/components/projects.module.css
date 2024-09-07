@@ -8,6 +8,22 @@
 .project {
   position: relative;
 
+  .graph {
+    padding: 0;
+    margin: 0;
+    height: 14rem;
+    margin: 0 -1rem;
+  }
+
+  .projectHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    --pico-card-background-color: var(--pico-form-element-border-color);
+  }
+
   .stats,
   .graph {
     opacity: 1;
@@ -43,213 +59,5 @@
 
   a {
     cursor: pointer;
-  }
-}
-
-.projectCard {
-  border-radius: var(--pico-border-radius);
-  box-shadow: var(--pico-card-box-shadow);
-  background-color: var(--card-background);
-  padding: 1rem;
-  margin: 0 -0.4rem;
-  margin-bottom: 1rem;
-
-  > div {
-    --card-background: var(--pico-form-element-border-color);
-  }
-
-  .projectsGraph {
-    padding: 0;
-    margin: 0;
-    margin: 0 -1rem;
-  }
-}
-
-details.selectRange {
-  width: 10rem;
-
-  .selected {
-    font-weight: 700;
-    color: var(--pico-h1-color);
-    text-decoration: underline;
-  }
-
-  summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    --pico-form-element-spacing-vertical: 0.5rem;
-    --pico-form-element-spacing-horizontal: 0.6rem;
-  }
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-.statsContainer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  /* background-color: var(--card-background);
-  padding: 0.5rem 1rem;
-  padding-right: 0.5rem;
-  border-top-left-radius: var(--pico-border-radius);
-  border-top-right-radius: var(--pico-border-radius);
-  box-shadow: var(--pico-card-box-shadow); */
-  margin-bottom: 1rem;
-
-  > a {
-    padding: 1rem 0.2rem 1rem 1rem;
-    opacity: 0.6;
-    transition: opacity 0.2s ease;
-  }
-
-  > a:hover {
-    opacity: 1;
-  }
-
-  @media (max-width: 768px) {
-    > a {
-      display: none;
-    }
-  }
-
-  > div {
-    flex: 1;
-  }
-
-  details {
-    margin-bottom: 0;
-  }
-}
-
-.stats {
-  align-items: center;
-  > div {
-    position: relative;
-    z-index: 1;
-
-    display: flex;
-    gap: 0.7rem;
-    @media (max-width: 768px) {
-      flex-wrap: wrap;
-    }
-  }
-}
-
-.statsHeader {
-  font-size: 1rem;
-  margin-bottom: 0.7rem;
-  align-items: center;
-  display: flex;
-
-  a {
-    all: unset;
-    cursor: pointer;
-  }
-
-  > span.online {
-    margin-left: 0.2rem;
-    > svg {
-      margin-right: 0.2rem;
-    }
-
-    .pulse {
-      position: absolute;
-      animation: pulse 2s infinite;
-    }
-
-    line-height: normal;
-    margin-left: 0.5rem;
-    display: inline-flex;
-    gap: 0.2rem;
-    align-items: center;
-    font-size: 0.8rem;
-    font-weight: 500;
-  }
-}
-
-.graph {
-  height: 14rem;
-}
-
-button.stat {
-  all: unset;
-  cursor: pointer;
-  margin: 0;
-  font-size: 0.8rem;
-  min-width: 7.5rem;
-  padding: 0.5rem 0.6rem 0.3rem 0.6rem;
-  margin-left: -0.5rem;
-  transition: background-color 0.2s ease;
-  border-radius: var(--pico-border-radius);
-  user-select: none;
-  position: relative;
-
-  &::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: var(--pico-border-radius);
-    background-color: var(--card-background);
-    opacity: 0;
-    transform: scale(0.95);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-  }
-
-  &[data-active="true"] {
-    &::before {
-      box-shadow: var(--pico-card-box-shadow);
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    h2,
-    h2,
-    h3 {
-      color: var(--pico-h1-color);
-    }
-  }
-
-  &:hover:not([data-active="true"]) {
-    &::before {
-      opacity: 0.5;
-    }
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 500;
-    display: inline-flex;
-    gap: 1rem;
-    align-items: center;
-    color: var(--pico-h5-color);
-  }
-
-  h2 {
-    color: var(--pico-h4-color);
-    margin: 0;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-bottom: 0.3rem;
-  }
-
-  span.change {
-    font-size: 0.8rem;
-    font-weight: 500;
   }
 }

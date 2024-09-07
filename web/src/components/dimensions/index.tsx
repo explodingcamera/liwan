@@ -9,7 +9,6 @@ import {
 	type Metric,
 	type ProjectResponse,
 	dimensionNames,
-	formatMetricVal,
 	metricNames,
 	useDimension,
 } from "../../api";
@@ -17,6 +16,7 @@ import {
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
 import { countryCodeToFlag, formatFullUrl, formatHost, getHref, tryParseUrl } from "./utils";
 import { DetailsModal } from "./modal";
+import { formatMetricVal } from "../../utils";
 
 export const cardStyles = styles.card;
 
@@ -32,13 +32,13 @@ export const DimensionCard = ({
 	range: DateRange;
 }) => {
 	return (
-		<div className={styles.card}>
+		<article className={styles.card}>
 			<div className={styles.dimensionHeader}>
 				<div>{dimensionNames[dimension]}</div>
 				<div>{metricNames[metric]}</div>
 			</div>
 			<DimensionTable project={project} dimension={dimension} metric={metric} range={range} />
-		</div>
+		</article>
 	);
 };
 
@@ -49,9 +49,9 @@ export const DimensionTabsCard = ({
 	dimensions,
 }: { project: ProjectResponse; dimensions: Dimension[]; metric: Metric; range: DateRange }) => {
 	return (
-		<div className={styles.card}>
+		<article className={styles.card}>
 			<DimensionTabs project={project} dimensions={dimensions} metric={metric} range={range} />
-		</div>
+		</article>
 	);
 };
 

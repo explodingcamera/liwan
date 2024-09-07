@@ -8,8 +8,6 @@ import {
 	useQuery as _useQuery,
 } from "@tanstack/react-query";
 
-// get the username cookie or undefined if not set
-export const getUsername = () => document.cookie.match(/username=(.*?)(;|$)/)?.[1];
 export const queryClient = new QueryClient();
 export const useMutation: typeof _useMutation = (options, c) => _useMutation(options, c || queryClient);
 

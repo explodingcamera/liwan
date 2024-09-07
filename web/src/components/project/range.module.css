@@ -1,0 +1,21 @@
+details.selectRange {
+  width: 10rem;
+
+  a {
+    cursor: pointer;
+  }
+
+  .selected {
+    font-weight: 700;
+    color: var(--pico-h1-color);
+    text-decoration: underline;
+  }
+
+  summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    --pico-form-element-spacing-vertical: 0.5rem;
+    --pico-form-element-spacing-horizontal: 0.6rem;
+  }
+}

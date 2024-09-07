@@ -1,11 +1,8 @@
 .card {
-  padding: 1rem;
   padding-bottom: 0.6rem;
-  border-radius: var(--pico-border-radius);
-  box-shadow: var(--pico-card-box-shadow);
-  background-color: var(--card-background);
   display: flex;
   flex-direction: column;
+  margin-bottom: 0;
 }
 
 .tabs {

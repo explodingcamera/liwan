@@ -1,23 +1,16 @@
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense } from "react";
 import styles from "./projects.module.css";
 
 import { useLocalStorage } from "@uidotdev/usehooks";
-import { ChevronRightIcon, CircleIcon, LockIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 
-import {
-	type Metric,
-	type ProjectResponse,
-	type StatsResponse,
-	api,
-	formatMetricVal,
-	metricNames,
-	useMe,
-	useQuery,
-} from "../api";
-import { type RangeName, rangeNames, resolveRange } from "../api/ranges";
-import { getUsername } from "../api/utils";
-import { cls } from "../utils";
-import { LineGraph, toDataPoints } from "./graph";
+import { type Metric, type ProjectResponse, api, metricNames, useMe, useProjectData, useQuery } from "../api";
+import type { RangeName } from "../api/ranges";
+import { cls, getUsername } from "../utils";
+import { LineGraph } from "./graph";
+import { SelectRange } from "./project/range";
+import { SelectMetrics } from "./project/metric";
+import { ProjectHeader } from "./project/project";
 
 const signedIn = getUsername();
 
@@ -62,6 +55,7 @@ export const Projects = () => {
 				<h1>Failed to load data</h1>
 			</div>
 		);
+
 	if (projects.length === 0 && signedIn) return <NoProjects />;
 	if (projects.length === 0 && !signedIn)
 		return (
@@ -78,250 +72,43 @@ export const Projects = () => {
 		<div className={styles.projects}>
 			<div className={styles.header}>
 				<h1>Dashboard</h1>
-				<SelectRange
-					onSelect={(name: RangeName) => {
-						setDateRange(name);
-					}}
-					range={dateRange}
-				/>
+				<SelectRange onSelect={(name: RangeName) => setDateRange(name)} range={dateRange} />
 			</div>
 
 			<Suspense>
-				{projects.map((project) => {
-					return (
-						<ProjectOverview
-							key={project.id}
-							project={project}
-							metric={metric}
-							setMetric={setMetric}
-							rangeName={dateRange}
-							className={styles.projectCard}
-							graphClassName={styles.projectsGraph}
-							detailsElement={() => (
-								<a href={`/p/${project.id}`} aria-label="View project details">
-									<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
-								</a>
-							)}
-						/>
-					);
-				})}
+				{projects.map((project) => (
+					<Project key={project.id} project={project} metric={metric} setMetric={setMetric} rangeName={dateRange} />
+				))}
 			</Suspense>
 		</div>
 	);
 };
 
-export const SelectRange = ({ onSelect, range }: { onSelect: (name: RangeName) => void; range: RangeName }) => {
-	const detailsRef = useRef<HTMLDetailsElement>(null);
-
-	const handleSelect = (name: RangeName) => () => {
-		if (detailsRef.current) detailsRef.current.open = false;
-		onSelect(name);
-	};
-
-	return (
-		<details ref={detailsRef} className={cls("dropdown", styles.selectRange)}>
-			<summary>{rangeNames[range]}</summary>
-			<ul>
-				{Object.entries(rangeNames).map(([key, value]) => (
-					<li key={key}>
-						{/* biome-ignore lint/a11y/useValidAnchor: this is fine */}
-						<a className={key === range ? styles.selected : ""} onClick={handleSelect(key as RangeName)}>
-							{value}
-						</a>
-					</li>
-				))}
-			</ul>
-		</details>
-	);
-};
-
-export const ProjectOverview = ({
+const Project = ({
 	project,
 	metric,
 	setMetric,
 	rangeName,
-	detailsElement,
-	className,
-	graphClassName = "",
-	renderHeader = defaultHeader,
-}: {
-	project: ProjectResponse;
-	metric: Metric;
-	setMetric: (value: Metric) => void;
-	rangeName: RangeName;
-	detailsElement?: () => JSX.Element;
-	className?: string;
-	graphClassName?: string;
-	renderHeader?: (props: { stats?: StatsResponse; project: ProjectResponse; className?: string }) => JSX.Element;
-}) => {
-	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
-
-	let refetchInterval = undefined;
-	let staleTime = 1000 * 60 * 10;
-	if (rangeName === "today" || rangeName.startsWith("last")) {
-		refetchInterval = 1000 * 60;
-		staleTime = 0;
-	}
-
-	const {
-		data: stats,
-		isError: isErrorStats,
-		isLoading: isLoadingStats,
-	} = useQuery({
-		refetchInterval,
-		staleTime,
-		queryKey: ["project_stats", project.id, range],
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/stats"]
-				.post({ json: { range }, params: { project_id: project.id } })
-				.json(),
-		placeholderData: (prev) => prev,
-	});
-
-	const json = { range, metric, dataPoints };
-	const {
-		data: graph,
-		isError: isErrorGraph,
-		isLoading: isLoadingGraph,
-	} = useQuery({
-		refetchInterval,
-		staleTime,
-		queryKey: ["project_graph", project.id, range, graphRange, metric, dataPoints],
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/graph"].post({ json, params: { project_id: project.id } }).json(),
-		placeholderData: (prev) => prev,
-	});
-
-	const chartData = graph?.data ? toDataPoints(graph.data, range, metric) : [];
+}: { project: ProjectResponse; metric: Metric; setMetric: (value: Metric) => void; rangeName: RangeName }) => {
+	const { stats, graph, isLoading, isError } = useProjectData({ project, metric, rangeName });
 
 	return (
-		<div
-			className={cls(styles.project, className)}
-			data-loading={isLoadingStats || isLoadingGraph || isErrorStats || isErrorGraph}
-		>
-			{(isErrorStats || isErrorGraph) && <h1 className={styles.error}>Failed to load data</h1>}
-			<div className={styles.statsContainer}>
+		<article className={styles.project} data-loading={isLoading || isError}>
+			{isError && <h1 className={styles.error}>Failed to load data</h1>}
+			<div className={styles.projectHeader}>
 				<div className={styles.stats}>
-					{renderHeader({ stats, project, className: styles.statsHeader })}
+					<ProjectHeader project={project} stats={stats.data} />
 					<div>
-						<Stat
-							title="Total Views"
-							value={stats?.stats.totalViews}
-							prevValue={stats?.statsPrev.totalViews}
-							metric={"views"}
-							onSelect={() => setMetric("views")}
-							selected={metric === "views"}
-						/>
-
-						<Stat
-							title="Unique Visitors"
-							value={stats?.stats.uniqueVisitors}
-							prevValue={stats?.statsPrev.uniqueVisitors}
-							metric={"unique_visitors"}
-							onSelect={() => setMetric("unique_visitors")}
-							selected={metric === "unique_visitors"}
-						/>
-
-						<Stat
-							title="Total Sessions"
-							value={stats?.stats.totalSessions}
-							prevValue={stats?.statsPrev.totalSessions}
-							metric={"sessions"}
-							onSelect={() => setMetric("sessions")}
-							selected={metric === "sessions"}
-						/>
-
-						<Stat
-							title="Avg. Views Per Session"
-							value={stats?.stats.avgViewsPerSession}
-							prevValue={stats?.statsPrev.avgViewsPerSession}
-							metric={"avg_views_per_session"}
-							onSelect={() => setMetric("avg_views_per_session")}
-							selected={metric === "avg_views_per_session"}
-						/>
+						<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} />
 					</div>
 				</div>
-				{detailsElement?.()}
+				<a href={`/p/${project.id}`} aria-label="View project details">
+					<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
+				</a>
 			</div>
-			<div className={cls(graphClassName, styles.graph)}>
-				<LineGraph title={metricNames[metric]} data={chartData || []} range={graphRange} />
+			<div className={styles.graph}>
+				<LineGraph title={metricNames[metric]} data={graph.data} range={graph.range} />
 			</div>
-		</div>
-	);
-};
-
-const defaultHeader = ({
-	project,
-	stats,
-	className,
-}: {
-	stats?: StatsResponse;
-	project: ProjectResponse;
-	className?: string;
-}) => {
-	return (
-		<h1 className={className}>
-			<span>
-				{project.public ? null : (
-					<>
-						<LockIcon size={16} />
-						&nbsp;
-					</>
-				)}
-				<a href={`/p/${project.id}`}>{project.displayName}</a>&nbsp;
-			</span>
-			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
-		</h1>
-	);
-};
-
-export const LiveVisitorCount = ({ count }: { count: number }) => {
-	return (
-		<span className={styles.online}>
-			<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
-			<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
-			{formatMetricVal("unique_visitors", count)} {count === 1 ? "Current Visitor" : "Current Visitors"}
-		</span>
-	);
-};
-
-const formatPercent = (value: number) => {
-	if (value === -1) return "∞";
-	if (value >= 10000 || value <= -10000) return `${(value / 100).toFixed(0)}x`;
-	if (value >= 1000 || value <= -1000) return `${value.toFixed(0).replace(/\.0$/, "") || "0"}%`;
-	return `${value.toFixed(1).replace(/\.0$/, "") || "0"}%`;
-};
-
-export const Stat = ({
-	title,
-	value = 0,
-	prevValue = 0,
-	metric,
-	onSelect,
-	selected,
-}: {
-	title: string;
-	value?: number;
-	metric: Metric;
-	prevValue?: number;
-	decimals?: number;
-	onSelect: () => void;
-	selected: boolean;
-}) => {
-	const change = value - prevValue;
-	const changePercent = prevValue ? (change / prevValue) * 100 : value ? -1 : 0;
-	const color = change > 0 ? "#22c55e" : change < 0 ? "red" : "gray";
-	const icon = change > 0 ? <TrendingUpIcon size={14} /> : change < 0 ? <TrendingDownIcon size={14} /> : "—";
-
-	return (
-		<button type="button" onClick={onSelect} data-active={selected} className={styles.stat}>
-			<h2>{title}</h2>
-			<h3>
-				{formatMetricVal(metric, value)}
-				<span style={{ color }} className={styles.change}>
-					{icon} {formatPercent(changePercent)}
-				</span>
-			</h3>
-		</button>
+		</article>
 	);
 };

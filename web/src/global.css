@@ -5,7 +5,9 @@
 :root {
   --pico-background-color: #f7f8ff;
   --card-background-base: 0deg 0% 100%;
-  --card-background: hsl(var(--card-background-base));
+  --pico-card-background-color: hsl(var(--card-background-base));
+  --pico-block-spacing-vertical: 1rem;
+  --pico-block-spacing-horizontal: 1rem;
   --pico-card-box-shadow: 0px 0px 24px #15233610;
 }
 
@@ -62,10 +64,6 @@ h6 {
   --pico-spacing: 0.75rem;
   --pico-form-element-spacing-vertical: 0.5rem;
   --pico-form-element-spacing-horizontal: 0.6rem;
-}
-
-article {
-  border-radius: 1rem;
 }
 
 html body[data-scroll-locked] {

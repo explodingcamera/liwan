@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 import { Tooltip } from "react-tooltip";
 import geo from "../../../data/geo.json";
-import { type DimensionTableRow, type Metric, formatMetricVal, metricNames } from "../api";
+import { type DimensionTableRow, type Metric, metricNames } from "../api";
 import styles from "./worldmap.module.css";
+import { formatMetricVal } from "../utils";
 
 type Geo = {
 	name: string;

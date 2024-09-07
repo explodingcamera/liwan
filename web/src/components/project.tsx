@@ -2,90 +2,57 @@ import styles from "./project.module.css";
 import _map from "./worldmap.module.css";
 
 import { useLocalStorage } from "@uidotdev/usehooks";
-import { LockIcon } from "lucide-react";
 import { Suspense, lazy, useEffect, useState } from "react";
 
-import { api, useDimension, useQuery } from "../api";
+import { metricNames, useDimension, useProject, useProjectData, useQuery } from "../api";
 import type { DateRange, Metric, ProjectResponse, StatsResponse } from "../api";
 import { type RangeName, resolveRange } from "../api/ranges";
 
 import { cls } from "../utils";
 import { DimensionCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
-import { LiveVisitorCount, ProjectOverview, SelectRange } from "./projects";
+import { SelectRange } from "./project/range";
+import { ProjectHeader } from "./project/project";
+import { SelectMetrics } from "./project/metric";
+import { LineGraph } from "./graph";
 
 const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
 
 export const Project = () => {
-	const [projectId, setProjectId] = useState<string | null>(null);
+	const [projectId, setProjectId] = useState<string | undefined>();
 	const [dateRange, setDateRange] = useLocalStorage<RangeName>("date-range", "last7Days");
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
-		setProjectId(window?.document.location.pathname.split("/").pop() ?? null);
+		setProjectId(window?.document.location.pathname.split("/").pop());
 	}, []);
 
-	const { data, isLoading, error } = useQuery({
-		enabled: projectId !== null,
-		queryKey: ["project", projectId],
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}"].get({ params: { project_id: projectId as string } }).json(),
-	});
-
-	if (!data) return null;
-	const range = resolveRange(dateRange).range;
+	const { project, isLoading, error } = useProject(projectId);
+	const { graph, stats } = useProjectData({ project, metric, rangeName: dateRange });
+	const { range } = resolveRange(dateRange);
+	if (!project) return null;
 
 	return (
 		<div className={styles.project}>
 			<Suspense fallback={null}>
-				<ProjectOverview
-					project={data}
-					metric={metric}
-					setMetric={setMetric}
-					rangeName={dateRange}
-					graphClassName={styles.graph}
-					renderHeader={(props) => <ProjectHeader {...props} range={dateRange} setRange={setDateRange} />}
-				/>
+				<div>
+					<div className={styles.projectHeader}>
+						<ProjectHeader project={project} stats={stats.data} />
+						<SelectRange onSelect={(name: RangeName) => setDateRange(name)} range={dateRange} />
+					</div>
+					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} />
+				</div>
+				<article className={cls(cardStyles, styles.graphCard)}>
+					<LineGraph data={graph.data} title={metricNames[metric]} range={graph.range} />
+				</article>
 				<div className={styles.tables}>
-					<DimensionTabsCard project={data} dimensions={["url", "fqdn"]} metric={metric} range={range} />
-					<DimensionCard project={data} dimension={"referrer"} metric={metric} range={range} />
-					<GeoCard project={data} metric={metric} range={range} />
-					<DimensionTabsCard project={data} dimensions={["platform", "browser"]} metric={metric} range={range} />
-					<DimensionCard project={data} dimension={"mobile"} metric={metric} range={range} />
+					<DimensionTabsCard project={project} dimensions={["url", "fqdn"]} metric={metric} range={range} />
+					<DimensionCard project={project} dimension={"referrer"} metric={metric} range={range} />
+					<GeoCard project={project} metric={metric} range={range} />
+					<DimensionTabsCard project={project} dimensions={["platform", "browser"]} metric={metric} range={range} />
+					<DimensionCard project={project} dimension={"mobile"} metric={metric} range={range} />
 				</div>
 			</Suspense>
-		</div>
-	);
-};
-
-const ProjectHeader = ({
-	project,
-	stats,
-	range,
-	setRange,
-	className,
-}: {
-	stats?: StatsResponse;
-	project: ProjectResponse;
-	range: RangeName;
-	setRange: (range: RangeName) => void;
-	className?: string;
-}) => {
-	return (
-		<div className={styles.projectHeader}>
-			<h1 className={className}>
-				<span>
-					{project.public ? null : (
-						<>
-							<LockIcon size={16} />
-							&nbsp;
-						</>
-					)}
-					<a href={`/p/${project.id}`}>{project.displayName}</a>&nbsp;
-				</span>
-				<LiveVisitorCount count={stats?.currentVisitors || 0} />
-			</h1>
-			<SelectRange range={range} onSelect={setRange} />
 		</div>
 	);
 };
@@ -99,7 +66,7 @@ const GeoCard = ({ project, metric, range }: { project: ProjectResponse; metric:
 	});
 
 	return (
-		<div className={cls(cardStyles, styles.geoCard)} data-full-width="true">
+		<article className={cls(cardStyles, styles.geoCard)} data-full-width="true">
 			<div className={styles.geoMap}>
 				<Suspense fallback={null}>
 					<WorldMap data={data ?? []} metric={metric} />
@@ -108,6 +75,6 @@ const GeoCard = ({ project, metric, range }: { project: ProjectResponse; metric:
 			<div className={styles.geoTable}>
 				<DimensionTabs dimensions={["country", "city"]} project={project} metric={metric} range={range} />
 			</div>
-		</div>
+		</article>
 	);
 };

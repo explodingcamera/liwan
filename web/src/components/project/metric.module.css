@@ -1,0 +1,88 @@
+.metrics {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.7rem;
+
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+
+    button.metric {
+      width: 50%;
+    }
+  }
+}
+
+button.metric {
+  all: unset;
+  cursor: pointer;
+  margin: 0;
+  font-size: 0.8rem;
+  min-width: 7rem;
+  padding: 0.5rem 0.8rem 0.3rem 0.6rem;
+  margin-left: -0.4rem;
+  transition: background-color 0.2s ease;
+  border-radius: var(--pico-border-radius);
+  user-select: none;
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
+
+  &::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--pico-border-radius);
+    background-color: var(--pico-card-background-color);
+    opacity: 0;
+    transform: scale(0.97);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  &[data-active="true"] {
+    &::before {
+      box-shadow: var(--pico-card-box-shadow);
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    h2,
+    h2,
+    h3 {
+      color: var(--pico-h1-color);
+    }
+  }
+
+  &:hover:not([data-active="true"]) {
+    &::before {
+      opacity: 0.5;
+    }
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 500;
+    display: inline-flex;
+    gap: 1rem;
+    align-items: center;
+    color: var(--pico-h5-color);
+  }
+
+  h2 {
+    color: var(--pico-h4-color);
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+  }
+
+  span.change {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+}
