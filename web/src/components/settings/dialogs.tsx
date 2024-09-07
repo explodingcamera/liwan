@@ -4,7 +4,6 @@ import { Dialog } from "../dialog";
 import { type Tag, Tags } from "../tags";
 import styles from "./dialogs.module.css";
 
-import { InfoIcon } from "lucide-react";
 import {
 	type EntityResponse,
 	type ProjectResponse,

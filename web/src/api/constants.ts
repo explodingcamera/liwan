@@ -1,4 +1,4 @@
-import type { Dimension, Metric } from ".";
+import type { Dimension, Metric } from "./types";
 
 export const metricNames: Record<Metric, string> = {
 	views: "Total Views",

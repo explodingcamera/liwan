@@ -4,8 +4,8 @@ import _map from "./worldmap.module.css";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { Suspense, lazy, useEffect, useState } from "react";
 
-import { metricNames, useDimension, useProject, useProjectData, useQuery } from "../api";
-import type { DateRange, Metric, ProjectResponse, StatsResponse } from "../api";
+import { metricNames, useDimension, useProject, useProjectData } from "../api";
+import type { DateRange, Metric, ProjectResponse } from "../api";
 import { type RangeName, resolveRange } from "../api/ranges";
 
 import { cls } from "../utils";

@@ -1,5 +1,3 @@
-import type { DateRange } from ".";
-
 import {
 	addHours,
 	differenceInDays,
@@ -13,6 +11,8 @@ import {
 	subDays,
 	subMonths,
 } from "date-fns";
+
+import type { DateRange } from "./types";
 import type { GraphRange } from "../components/graph/graph";
 
 export const rangeNames = {

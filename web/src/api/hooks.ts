@@ -1,7 +1,10 @@
 import { useMemo } from "react";
-import { queryClient, useQuery } from "./query";
-import { api, type DateRange, type Dimension, type DimensionTableRow, type Metric, type ProjectResponse } from ".";
+
 import { toDataPoints } from "../components/graph";
+import type { DateRange, Dimension, DimensionTableRow, Metric, ProjectResponse } from "./types";
+
+import { api } from ".";
+import { queryClient, useQuery } from "./query";
 import { resolveRange, type RangeName } from "./ranges";
 
 export const useMe = () => {

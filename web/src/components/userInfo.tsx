@@ -1,8 +1,8 @@
 import styles from "./userInfo.module.css";
 
 import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
-import { api } from "../api";
 import { cls, getUsername } from "../utils";
+import { api } from "../api";
 
 export const LoginButton = () => {
 	const username = getUsername();

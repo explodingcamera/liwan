@@ -1,5 +1,5 @@
 import { differenceInSeconds } from "date-fns";
-import "./graph.module.css";
+import _graph from "./graph.module.css";
 
 import { lazy } from "react";
 import type { Metric } from "../../api";

@@ -1,8 +1,8 @@
 import { useId } from "react";
 import styles from "./tags.module.css";
 
-import { ReactTags, type TagSelected, type TagSuggestion } from "react-tag-autocomplete";
 export type { Tag } from "react-tag-autocomplete";
+import { ReactTags, type TagSelected, type TagSuggestion } from "react-tag-autocomplete";
 
 export const Tags = ({
 	onAdd,

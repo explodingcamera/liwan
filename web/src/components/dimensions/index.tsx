@@ -14,7 +14,7 @@ import {
 } from "../../api";
 
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
-import { countryCodeToFlag, formatFullUrl, formatHost, getHref, tryParseUrl } from "./utils";
+import { countryCodeToFlag, formatFullUrl, formatHost, getHref, tryParseUrl } from "../../utils";
 import { DetailsModal } from "./modal";
 import { formatMetricVal } from "../../utils";
 
