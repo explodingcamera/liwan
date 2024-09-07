@@ -35,7 +35,7 @@
       z-index: 0;
       margin-bottom: 0.5rem;
 
-      a {
+      /* a {
         padding: 0.5rem 0.6rem 0.3rem 0.6rem;
         margin-left: -0.4rem;
         margin-top: -0.4rem;
@@ -49,9 +49,9 @@
             transform: scale(1);
           }
         }
-      }
+      } */
 
-      a::before {
+      /* a::before {
         content: "";
         position: absolute;
         inset: 0;
@@ -61,7 +61,7 @@
         opacity: 0;
         transform: scale(0.95);
         transition: opacity 0.2s ease, transform 0.2s ease;
-      }
+      } */
     }
   }
 
@@ -90,7 +90,6 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  margin-left: 0.1rem;
 
   h1,
   details {

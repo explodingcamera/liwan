@@ -4,11 +4,6 @@
   align-items: center;
   display: flex;
 
-  a {
-    all: unset;
-    cursor: pointer;
-  }
-
   > span.online {
     margin-left: 0.2rem;
     > svg {

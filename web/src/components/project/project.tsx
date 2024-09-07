@@ -3,6 +3,7 @@ import { CircleIcon, LockIcon } from "lucide-react";
 
 import { formatMetricVal } from "../../utils";
 import type { ProjectResponse, StatsResponse } from "../../api";
+import { CardLink } from "../card";
 
 export const ProjectHeader = ({
 	project,
@@ -14,15 +15,10 @@ export const ProjectHeader = ({
 	return (
 		<h1 className={styles.statsHeader}>
 			<span>
-				<a href={`/p/${project.id}`}>
-					{project.public ? null : (
-						<>
-							<LockIcon size={16} />
-							&nbsp;
-						</>
-					)}
+				<CardLink href={`/p/${project.id}`}>
 					{project.displayName}
-				</a>
+					{project.public ? null : <LockIcon size={16} />}
+				</CardLink>
 				&nbsp;
 			</span>
 			{stats && <LiveVisitorCount count={stats.currentVisitors} />}

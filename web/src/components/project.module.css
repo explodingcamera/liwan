@@ -9,7 +9,6 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.2rem;
-  margin-left: 0.1rem;
   flex-wrap: wrap;
   gap: 1rem;
 
@@ -25,7 +24,6 @@
 }
 
 .projectStats {
-  margin: 0 0.4rem;
 }
 
 .tables {

@@ -3,6 +3,7 @@ import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 
 import type { Metric, StatsResponse } from "../../api";
 import { cls, formatMetricVal, formatPercent } from "../../utils";
+import { CardButton } from "../card";
 
 export const SelectMetrics = ({
 	data,
@@ -75,7 +76,7 @@ export const SelectMetric = ({
 	const icon = change > 0 ? <TrendingUpIcon size={14} /> : change < 0 ? <TrendingDownIcon size={14} /> : "—";
 
 	return (
-		<button type="button" onClick={onSelect} data-active={selected} className={styles.metric}>
+		<CardButton onClick={onSelect} active={selected} className={styles.metric}>
 			<h2>{title}</h2>
 			<h3>
 				{formatMetricVal(metric, value)}
@@ -83,6 +84,6 @@ export const SelectMetric = ({
 					{icon} {formatPercent(changePercent)}
 				</span>
 			</h3>
-		</button>
+		</CardButton>
 	);
 };
