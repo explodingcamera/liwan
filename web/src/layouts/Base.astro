@@ -1,6 +1,7 @@
 ---
 import "@fontsource-variable/figtree";
 import "../global.css";
+import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 
 import { ViewTransitions } from "astro:transitions";
 
@@ -22,6 +23,7 @@ type Props = { title: string; hideFooter?: boolean };
     {
       !Astro.props.hideFooter && (
         <footer class="container-fluid footer">
+          <ThemeSwitcher />
           <small>
             Powered by&nbsp;
             <a href="https://liwan.dev" target="_blank" class="secondary">
@@ -39,6 +41,9 @@ type Props = { title: string; hideFooter?: boolean };
       footer {
         max-width: 60rem;
         padding: 1rem 2rem;
+        display: flex;
+        gap: .5rem;
+        
         small {
           display: inline-flex;
           flex-wrap: wrap;

@@ -1,5 +1,4 @@
 ---
-import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 import { LoginButton } from "../components/userInfo.tsx";
 import Base from "./Base.astro";
 
@@ -23,9 +22,7 @@ const { title } = Astro.props;
       </ul>
       <ul>
         <li class="login"><LoginButton client:only="react" /></li>
-        <li class="theme">
-          <ThemeSwitcher />
-        </li>
+    
       </ul>
     </nav>
   </header>
@@ -41,10 +38,6 @@ const { title } = Astro.props;
 
   nav {
     height: 3rem;
-  }
-
-  .login {
-    padding-right: 0.2rem;
   }
 
   .theme {
@@ -66,7 +59,8 @@ const { title } = Astro.props;
   }
 
   header {
-    padding-top: 1rem;
+    padding-top: 2rem;
     padding-bottom: 0;
   }
 </style>
+

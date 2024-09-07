@@ -9,6 +9,7 @@
   --pico-block-spacing-vertical: 1rem;
   --pico-block-spacing-horizontal: 1rem;
   --pico-card-box-shadow: 0px 0px 24px #15233610;
+  --pico-dropdown-background-color: #ffffff81;
 
   --pico-form-element-active-border-color: var(--pico-secondary-hover);
   --pico-form-element-focus-color: var(--pico-secondary-hover);
@@ -17,6 +18,7 @@
 :root[data-theme="dark"] {
   --pico-background-color: #0a0c10;
   --card-background-base: 218.8 23.9% 13.9%;
+  --pico-dropdown-background-color: #181c25d4;
   /* --pico-card-box-shadow: 0 0 0.5rem 0.1rem hsla(0, 0%, 0%, 0.1); */
 }
 
@@ -24,6 +26,7 @@
   :root:not([data-theme="light"]) {
     --pico-background-color: #0a0c10;
     --card-background-base: 218.8 23.9% 13.9%;
+    --pico-dropdown-background-color: #181c25d4;
   }
 }
 
@@ -81,4 +84,31 @@ html body[data-scroll-locked] {
 [type="reset"],
 [type="submit"] {
   margin-bottom: 0;
+}
+
+hr {
+  background-color: var(--pico-form-element-border-color);
+  height: 1px;
+  border: 0;
+}
+
+details.dropdown.right summary + ul {
+  left: unset;
+  right: 0;
+  transform: translateX(4px) translateY(-2px);
+  min-width: 11rem;
+}
+
+details.dropdown summary + ul {
+  backdrop-filter: blur(3px);
+}
+
+details.dropdown summary + ul li:has(hr) {
+  &::before {
+    display: none;
+  }
+
+  hr {
+    margin: 0;
+  }
 }
