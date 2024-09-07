@@ -7,35 +7,68 @@
 
 .project {
   position: relative;
+  padding: 0;
 
   .graph {
-    padding: 0;
-    margin: 0;
     height: 14rem;
-    margin: 0 -1rem;
+    margin: 0;
+    padding: 1rem;
+    padding-top: 0;
+    padding-left: 0.5rem;
+    padding-right: 0;
+    margin-top: 0.5rem;
+    margin-right: -0.5rem;
   }
 
   .projectHeader {
+    padding: 1rem;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+    flex-direction: column;
 
     --pico-card-background-color: var(--pico-form-element-border-color);
+
+    .projectTitle {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      z-index: 0;
+      margin-bottom: 0.5rem;
+
+      a {
+        padding: 0.5rem 0.6rem 0.3rem 0.6rem;
+        margin-left: -0.4rem;
+        margin-top: -0.4rem;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+
+        &:hover {
+          &::before {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+      }
+
+      a::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-color: var(--pico-card-background-color);
+        border-radius: 0.5rem;
+        z-index: -1;
+        opacity: 0;
+        transform: scale(0.95);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+    }
   }
 
   .stats,
   .graph {
     opacity: 1;
     transition: opacity 0.2s ease;
-  }
-
-  &[data-loading="true"] {
-    .stats,
-    .graph {
-      opacity: 0.3;
-      pointer-events: none;
-    }
   }
 
   .error {
@@ -55,9 +88,56 @@
 .header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
+  margin-left: 0.1rem;
+
+  h1,
+  details {
+    margin: 0;
+  }
 
   a {
     cursor: pointer;
+  }
+}
+
+.AccordionTrigger {
+  all: unset;
+  display: flex;
+  cursor: pointer;
+  padding: 1rem;
+  margin: -1rem;
+  transition: transform 300ms cubic-bezier(0.87, 0, 0.13, 1);
+}
+.AccordionTrigger[data-state="open"] {
+  transform: rotate(180deg);
+}
+
+.AccordionContent {
+  overflow: hidden;
+}
+.AccordionContent[data-state="open"] {
+  animation: slideDown 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.AccordionContent[data-state="closed"] {
+  animation: slideUp 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
   }
 }

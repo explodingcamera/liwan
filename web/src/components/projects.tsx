@@ -2,15 +2,16 @@ import { Suspense } from "react";
 import styles from "./projects.module.css";
 
 import { useLocalStorage } from "@uidotdev/usehooks";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 
 import { type Metric, type ProjectResponse, api, metricNames, useMe, useProjectData, useQuery } from "../api";
 import type { RangeName } from "../api/ranges";
-import { cls, getUsername } from "../utils";
+import { getUsername } from "../utils";
 import { LineGraph } from "./graph";
 import { SelectRange } from "./project/range";
 import { SelectMetrics } from "./project/metric";
 import { ProjectHeader } from "./project/project";
+import * as Accordion from "@radix-ui/react-accordion";
 
 const signedIn = getUsername();
 
@@ -40,11 +41,13 @@ const NoProjects = () => {
 export const Projects = () => {
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["projects"],
+
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
 
 	const [dateRange, setDateRange] = useLocalStorage<RangeName>("date-range", "last7Days");
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
+	const [hiddenProjects, setHiddenProjects] = useLocalStorage<string[]>("hiddenProjects", []);
 
 	const projects = data?.projects || [];
 
@@ -76,9 +79,20 @@ export const Projects = () => {
 			</div>
 
 			<Suspense>
-				{projects.map((project) => (
-					<Project key={project.id} project={project} metric={metric} setMetric={setMetric} rangeName={dateRange} />
-				))}
+				<Accordion.Root
+					className="AccordionRoot"
+					type="multiple"
+					onValueChange={(visible) =>
+						setHiddenProjects(projects.map((p) => p.id).filter((id) => !visible.includes(id)))
+					}
+					value={projects.map((p) => p.id).filter((id) => !hiddenProjects.includes(id))}
+				>
+					{projects.map((project) => (
+						<Accordion.Item key={project.id} value={project.id}>
+							<Project project={project} metric={metric} setMetric={setMetric} rangeName={dateRange} />
+						</Accordion.Item>
+					))}
+				</Accordion.Root>
 			</Suspense>
 		</div>
 	);
@@ -93,22 +107,23 @@ const Project = ({
 	const { stats, graph, isLoading, isError } = useProjectData({ project, metric, rangeName });
 
 	return (
-		<article className={styles.project} data-loading={isLoading || isError}>
-			{isError && <h1 className={styles.error}>Failed to load data</h1>}
+		<article className={styles.project} data-loading={isLoading || isError} data-error={isError}>
 			<div className={styles.projectHeader}>
-				<div className={styles.stats}>
+				<div className={styles.projectTitle}>
 					<ProjectHeader project={project} stats={stats.data} />
-					<div>
-						<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} />
-					</div>
+					<Accordion.Trigger className={styles.AccordionTrigger} aria-label="Toggle details">
+						<ChevronDownIcon size={30} strokeWidth={4} color="var(--pico-h1-color)" />
+					</Accordion.Trigger>
 				</div>
-				<a href={`/p/${project.id}`} aria-label="View project details">
-					<ChevronRightIcon size={25} strokeWidth={4} color="var(--pico-h1-color)" />
-				</a>
+				<div>
+					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} />
+				</div>
 			</div>
-			<div className={styles.graph}>
-				<LineGraph title={metricNames[metric]} data={graph.data} range={graph.range} />
-			</div>
+			<Accordion.AccordionContent className={styles.AccordionContent}>
+				<div className={styles.graph}>
+					<LineGraph title={metricNames[metric]} data={graph.data} range={graph.range} />
+				</div>
+			</Accordion.AccordionContent>
 		</article>
 	);
 };

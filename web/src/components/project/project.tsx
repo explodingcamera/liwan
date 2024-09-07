@@ -14,13 +14,16 @@ export const ProjectHeader = ({
 	return (
 		<h1 className={styles.statsHeader}>
 			<span>
-				{project.public ? null : (
-					<>
-						<LockIcon size={16} />
-						&nbsp;
-					</>
-				)}
-				<a href={`/p/${project.id}`}>{project.displayName}</a>&nbsp;
+				<a href={`/p/${project.id}`}>
+					{project.public ? null : (
+						<>
+							<LockIcon size={16} />
+							&nbsp;
+						</>
+					)}
+					{project.displayName}
+				</a>
+				&nbsp;
 			</span>
 			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
 		</h1>

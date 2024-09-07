@@ -30,6 +30,9 @@ export const Tags = ({
 				</label>
 			)}
 			<ReactTags
+				onFocus={() => {
+					console.log("focus");
+				}}
 				id={id}
 				onAdd={onAdd}
 				onDelete={onDelete}

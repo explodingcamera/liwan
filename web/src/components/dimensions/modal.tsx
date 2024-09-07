@@ -11,7 +11,6 @@ import {
 	useDimension,
 	type DateRange,
 	type Dimension,
-	type DimensionTableRow,
 	type Metric,
 	type ProjectResponse,
 } from "../../api";
@@ -41,6 +40,7 @@ export const DetailsModal = ({
 			hideDescription
 			showClose
 			className={styles.detailsModal}
+			autoOverflow
 			trigger={() => (
 				<button type="button" className={cls(styles.showMore, (data?.length ?? 0) === 0 && styles.showMoreHidden)}>
 					<ZoomInIcon size={16} />
@@ -61,7 +61,6 @@ export const DetailsModal = ({
 					className={styles.search}
 				/>
 				{results?.map((d) => {
-					const row = d as DimensionTableRow;
 					return (
 						<div
 							key={d.dimensionValue}
@@ -69,7 +68,7 @@ export const DetailsModal = ({
 							className={styles.dimensionRow}
 						>
 							<DimensionValueBar value={d.value} biggest={biggest}>
-								<DimensionLabel dimension={dimension} value={row} />
+								<DimensionLabel dimension={dimension} value={d} />
 							</DimensionValueBar>
 							<div>{formatMetricVal(metric, d.value)}</div>
 						</div>

@@ -9,7 +9,6 @@
   border: var(--pico-border-width) solid var(--pico-border-color);
   border-radius: var(--pico-border-radius);
   background-color: var(--pico-form-element-background-color);
-  box-shadow: var(--pico-box-shadow);
   color: var(--pico-color);
   font-weight: var(--pico-font-weight);
   transition: background-color var(--pico-transition),
@@ -21,7 +20,7 @@
 }
 
 .react-tags.is-active {
-  --pico-border-color: var(--pico-form-element-active-border-color);
+  --pico-border-color: var(--pico-secondary-inverse);
   --pico-outline-width: 0.0625rem;
   --pico-box-shadow: 0 0 0 var(--pico-outline-width)
     var(--pico-form-element-focus-color);
@@ -134,27 +133,20 @@
 .react-tags__listbox {
   position: absolute;
   z-index: 1;
-  top: calc(100% + 5px);
+  top: calc(100% + 0.2rem);
   /* Negate the border width on the container */
   left: -1px;
   right: -1px;
   max-height: 12.5rem;
   overflow-y: auto;
 
-  margin-top: var(--pico-outline-width);
-  border: var(--pico-border-width) solid var(--pico-dropdown-border-color);
   border-radius: var(--pico-border-radius);
-  background-color: var(--pico-dropdown-background-color);
-  background-color: var(--pico-background-color);
-  box-shadow: var(--pico-dropdown-box-shadow);
+  background-color: var(--pico-form-element-background-color);
   color: var(--pico-dropdown-color);
-
-  padding-top: 0.1rem;
-  padding-bottom: 0.4rem;
+  border: var(--pico-border-width) solid var(--pico-border-color);
 }
 
 .react-tags__listbox-option {
-  margin-top: calc(var(--pico-form-element-spacing-vertical) * 0.5);
   padding: calc(var(--pico-form-element-spacing-vertical) * 0.5)
     var(--pico-form-element-spacing-horizontal);
 }
@@ -165,7 +157,7 @@
 }
 
 .react-tags__listbox-option:not([aria-disabled="true"]).is-active {
-  background: var(--pico-primary-hover);
+  background: var(--pico-border-color);
   color: var(--pico-contrast-inverse);
 }
 

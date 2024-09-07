@@ -145,7 +145,7 @@ export const EditProjectEntities = ({ project, trigger }: { project: ProjectResp
 			onOpenChange={() => reset()}
 			title={`Edit Entities: ${project.displayName}`}
 			description="Edit the entities associated with this project."
-			// hideDescription
+			hideDescription
 			trigger={role === "admin" && trigger}
 		>
 			<form onSubmit={handleSubmit}>

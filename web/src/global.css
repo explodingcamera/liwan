@@ -9,6 +9,9 @@
   --pico-block-spacing-vertical: 1rem;
   --pico-block-spacing-horizontal: 1rem;
   --pico-card-box-shadow: 0px 0px 24px #15233610;
+
+  --pico-form-element-active-border-color: var(--pico-secondary-hover);
+  --pico-form-element-focus-color: var(--pico-secondary-hover);
 }
 
 :root[data-theme="dark"] {
@@ -72,4 +75,10 @@ html body[data-scroll-locked] {
 
 [type="search"] {
   --pico-border-radius: 0.7rem;
+}
+
+[type="button"],
+[type="reset"],
+[type="submit"] {
+  margin-bottom: 0;
 }

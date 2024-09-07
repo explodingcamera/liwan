@@ -40,8 +40,10 @@
   max-width: 25rem;
   max-height: 85vh;
   padding: 1rem;
-  padding-bottom: 0.5rem;
   animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.autoOverflow {
   overflow-y: auto;
 }
 

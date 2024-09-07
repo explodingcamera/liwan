@@ -14,6 +14,7 @@ export type DialogProps = {
 	className?: string;
 	showClose?: boolean;
 	hideTitle?: boolean;
+	autoOverflow?: boolean;
 };
 
 export const Dialog = ({
@@ -26,6 +27,7 @@ export const Dialog = ({
 	className,
 	showClose,
 	hideTitle,
+	autoOverflow,
 }: DialogProps) => {
 	return (
 		<Dia.Root onOpenChange={onOpenChange}>
@@ -41,7 +43,7 @@ export const Dialog = ({
 				)}
 
 				<Dia.Content asChild>
-					<article className={cls(styles.content, className)}>
+					<article className={cls(styles.content, className, autoOverflow && styles.autoOverflow)}>
 						<Dia.Title className={styles.title} hidden={hideTitle}>
 							{title}
 						</Dia.Title>

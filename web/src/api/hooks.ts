@@ -116,6 +116,7 @@ export const useProjectData = ({
 		refetchInterval,
 		staleTime,
 		queryKey: ["project_stats", project?.id, range],
+
 		enabled: project !== undefined,
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/stats"]

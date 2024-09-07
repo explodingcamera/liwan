@@ -3,6 +3,7 @@
   z-index: 1;
   display: flex;
   gap: 0.7rem;
+  margin-bottom: -0.4rem;
 
   @media (max-width: 768px) {
     flex-wrap: wrap;

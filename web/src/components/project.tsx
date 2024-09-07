@@ -40,7 +40,7 @@ export const Project = () => {
 						<ProjectHeader project={project} stats={stats.data} />
 						<SelectRange onSelect={(name: RangeName) => setDateRange(name)} range={dateRange} />
 					</div>
-					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} />
+					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} className={styles.projectStats} />
 				</div>
 				<article className={cls(cardStyles, styles.graphCard)}>
 					<LineGraph data={graph.data} title={metricNames[metric]} range={graph.range} />
