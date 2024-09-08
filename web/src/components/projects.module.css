@@ -21,7 +21,7 @@
   }
 
   .projectHeader {
-    padding: 1rem;
+    padding: 0.7rem;
     display: flex;
     justify-content: space-between;
     flex-direction: column;
@@ -31,37 +31,10 @@
     .projectTitle {
       display: flex;
       justify-content: space-between;
+      align-items: flex-start;
       position: relative;
       z-index: 0;
-      margin-bottom: 0.5rem;
-
-      /* a {
-        padding: 0.5rem 0.6rem 0.3rem 0.6rem;
-        margin-left: -0.4rem;
-        margin-top: -0.4rem;
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-
-        &:hover {
-          &::before {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-      } */
-
-      /* a::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-color: var(--pico-card-background-color);
-        border-radius: 0.5rem;
-        z-index: -1;
-        opacity: 0;
-        transform: scale(0.95);
-        transition: opacity 0.2s ease, transform 0.2s ease;
-      } */
+      margin-bottom: 0.4rem;
     }
   }
 
@@ -105,8 +78,8 @@
   all: unset;
   display: flex;
   cursor: pointer;
-  padding: 1rem;
-  margin: -1rem;
+  padding: 0.9rem;
+  margin: -1.1rem;
   transition: transform 300ms cubic-bezier(0.87, 0, 0.13, 1);
 }
 .AccordionTrigger[data-state="open"] {

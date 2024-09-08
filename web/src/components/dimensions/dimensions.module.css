@@ -40,7 +40,7 @@
   padding-bottom: 0.5rem;
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.4rem;
 
   &:hover {
     &::after {
@@ -58,7 +58,7 @@
     opacity: 0.09;
     z-index: -1;
     transition: width 0.3s ease-in-out, opacity 0.1s ease-in-out;
-    border-radius: 1rem;
+    border-radius: 10px;
   }
 }
 

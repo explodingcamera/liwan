@@ -891,6 +891,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_more"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
+dependencies = [
+ "derive_more-impl",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
+ "unicode-xid",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1488,9 +1509,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.9.0"
+version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
+checksum = "187674a687eed5fe42285b40c6291f9a01517d415fad1c3cbc6a9f778af7fcd4"
 
 [[package]]
 name = "ipnetwork"
@@ -2098,9 +2119,9 @@ checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
 
 [[package]]
 name = "poem"
-version = "3.0.4"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1ba1c27f8f89e1bccdda0c680f72790545a11a8d8555819472f5839d7a8ca9d"
+checksum = "e5419c612a492fce4961c521dca0c2249b5c48dc46eb5c8048063843f37a711d"
 dependencies = [
  "async-compression",
  "base64 0.22.1",
@@ -2123,7 +2144,7 @@ dependencies = [
  "pin-project-lite",
  "poem-derive",
  "priority-queue",
- "quick-xml 0.36.1",
+ "quick-xml",
  "rand",
  "regex",
  "rfc7239",
@@ -2148,9 +2169,9 @@ dependencies = [
 
 [[package]]
 name = "poem-derive"
-version = "3.0.4"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a62fea1692d80a000126f9b28d865012a160b80000abb53ccf152b428222c155"
+checksum = "cdfed15c1102d2a9a51b9f1aba945628c72ccb52fc5d3e4ad4ffbbd222e11821"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -2160,21 +2181,21 @@ dependencies = [
 
 [[package]]
 name = "poem-openapi"
-version = "5.0.3"
+version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6f4ac688d8b83fbbc8de929dee207d345600a6b3af315927e92dba26a023103"
+checksum = "165d365156f4635b11480cb3d93b9569bb598cd0ee1065ea01dc2b2ed63f06c2"
 dependencies = [
  "base64 0.22.1",
  "bytes 1.7.1",
  "chrono",
- "derive_more",
+ "derive_more 1.0.0",
  "futures-util",
  "indexmap",
  "mime",
  "num-traits",
  "poem",
  "poem-openapi-derive",
- "quick-xml 0.32.0",
+ "quick-xml",
  "regex",
  "serde",
  "serde_json",
@@ -2186,9 +2207,9 @@ dependencies = [
 
 [[package]]
 name = "poem-openapi-derive"
-version = "5.0.3"
+version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0812a8f13ac63020d1274d80ea2229e858ed0118a2d9537744465995e0913375"
+checksum = "678e2b9d58cc070cfbbc3e5da49d90b41071766d42da9b53a85ed1a4c6cd8ab5"
 dependencies = [
  "darling",
  "http",
@@ -2312,16 +2333,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.32.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d3a6e5838b60e0e8fa7a43f22ade549a37d61f8bdbe636d0d7816191de969c2"
-dependencies = [
- "memchr",
- "serde",
 ]
 
 [[package]]
@@ -3454,7 +3465,7 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4c9e1c3f893758f154004195fc2d2c52fbda462df725220ceaef830ac29affa"
 dependencies = [
- "derive_more",
+ "derive_more 0.99.18",
  "lazy_static",
  "regex",
  "serde",
@@ -3506,6 +3517,12 @@ name = "unicode-width"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0336d538f7abc86d282a4189614dfaa90810dfc2c6f6427eaf88e16311dd225d"
+
+[[package]]
+name = "unicode-xid"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "229730647fbc343e3a80e463c1db7f78f3855d3f3739bee0dda773c9a037c90a"
 
 [[package]]
 name = "universal-hash"

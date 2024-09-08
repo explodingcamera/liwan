@@ -123,14 +123,12 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 	platform: (value) => (
 		<>
 			<OSIcon os={value.dimensionValue} size={24} />
-			&nbsp;
 			{value.dimensionValue}
 		</>
 	),
 	browser: (value) => (
 		<>
 			<BrowserIcon browser={value.dimensionValue} size={24} />
-			&nbsp;
 			{value.dimensionValue}
 		</>
 	),
@@ -140,7 +138,6 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 		return (
 			<>
 				<LinkIcon size={16} />
-				&nbsp;
 				<a target="_blank" rel="noreferrer" href={getHref(url)}>
 					{formatFullUrl(url)}
 				</a>
@@ -152,7 +149,6 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 		return (
 			<>
 				<LinkIcon size={16} />
-				&nbsp;
 				<a target="_blank" rel="noreferrer" href={getHref(url)}>
 					{formatHost(url)}
 				</a>
@@ -162,32 +158,27 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 	mobile: (value) => (
 		<>
 			<MobileDeviceIcon isMobile={value.dimensionValue === "true"} size={24} />
-			&nbsp;
 			{value.dimensionValue === "true" ? "Mobile" : "Desktop"}
 		</>
 	),
 	country: (value) => (
 		<>
-			{countryCodeToFlag(value.dimensionValue)}
-			&nbsp;
+			<span>{countryCodeToFlag(value.dimensionValue)}</span>
 			{value.displayName || value.dimensionValue || "Unknown"}
 		</>
 	),
 	city: (value) => (
 		<>
-			{countryCodeToFlag(value.icon || "XX")}
-			&nbsp;
+			<span>{countryCodeToFlag(value.icon || "XX")}</span>
 			{value.displayName || "Unknown"}
 		</>
 	),
 	referrer: (value) => (
 		<>
 			<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
-			&nbsp;
 			{value.displayName || value.dimensionValue || "Unknown"}
 			{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
 				<>
-					&nbsp;
 					<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
 						<SquareArrowOutUpRightIcon size={16} />
 					</a>

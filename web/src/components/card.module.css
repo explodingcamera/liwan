@@ -8,13 +8,12 @@ a.card {
   z-index: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
 
   margin: 0;
-  padding: 0.3rem 0.4rem 0.3rem 0.5rem;
+  padding: 0.3rem 0.4rem 0.2rem 0.4rem;
 
   transition: background-color 0.2s ease;
-  border-radius: var(--pico-border-radius);
 
   &::before {
     content: "";
@@ -24,10 +23,10 @@ a.card {
     left: 0;
     right: 0;
     bottom: 0;
-    border-radius: var(--pico-border-radius);
+    border-radius: calc(var(--pico-border-radius) - 3px);
     background-color: var(--pico-card-background-color);
     box-shadow: var(--pico-card-box-shadow);
-    opacity: 0.8;
+    opacity: 0;
     transition: opacity 0.2s ease;
   }
 

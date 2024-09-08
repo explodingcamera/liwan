@@ -12,7 +12,6 @@ import { SelectRange } from "./project/range";
 import { SelectMetrics } from "./project/metric";
 import { ProjectHeader } from "./project/project";
 import * as Accordion from "@radix-ui/react-accordion";
-import { CardButton } from "./card";
 
 const signedIn = getUsername();
 
@@ -116,9 +115,7 @@ const Project = ({
 						<ChevronDownIcon size={35} strokeWidth={2} color="var(--pico-h1-color)" />
 					</Accordion.Trigger>
 				</div>
-				<div>
-					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} />
-				</div>
+				<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} />
 			</div>
 			<Accordion.AccordionContent className={styles.AccordionContent}>
 				<div className={styles.graph}>

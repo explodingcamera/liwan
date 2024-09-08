@@ -16,8 +16,8 @@ export const ProjectHeader = ({
 		<h1 className={styles.statsHeader}>
 			<span>
 				<CardLink href={`/p/${project.id}`}>
-					{project.displayName}
 					{project.public ? null : <LockIcon size={16} />}
+					{project.displayName}
 				</CardLink>
 				&nbsp;
 			</span>
