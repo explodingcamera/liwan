@@ -1,0 +1,12 @@
+[advisories]
+ignore=[]
+informational_warnings=["unsound"]
+severity_threshold="low"
+
+[target]
+arch=["x86_64", "aarch64"]
+os=["linux", "windows", "apple"]
+
+[yanked]
+enabled=true
+update_index=true
