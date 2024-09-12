@@ -13,6 +13,7 @@ use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
 use std::cell::RefCell;
 use std::str::FromStr;
+use time::OffsetDateTime;
 
 #[derive(Object)]
 struct EventRequest {
@@ -86,7 +87,7 @@ impl EventApi {
             country,
             city,
             browser: client.user_agent.family.to_string().into(),
-            created_at: chrono::Utc::now(),
+            created_at: OffsetDateTime::now_utc(),
             entity_id: event.entity_id,
             event: event.name,
             fqdn: fqdn.into(),

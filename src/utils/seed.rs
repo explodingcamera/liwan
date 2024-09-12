@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-use chrono::{DateTime, Utc};
 use rand::Rng;
+use time::OffsetDateTime;
 
 use crate::app::models::Event;
 
@@ -21,7 +21,7 @@ const CITIES: &[(&str, &str)] = &[
 ];
 
 pub fn random_events(
-    time_range: (DateTime<Utc>, DateTime<Utc>),
+    time_range: (OffsetDateTime, OffsetDateTime),
     entity_id: &str,
     fqdn: &str,
     count: usize,
@@ -63,14 +63,14 @@ pub fn random_events(
     })
 }
 
-fn random_date(min: DateTime<Utc>, max: DateTime<Utc>, scale: f64) -> DateTime<Utc> {
+fn random_date(min: OffsetDateTime, max: OffsetDateTime, scale: f64) -> OffsetDateTime {
     let mut rng = rand::thread_rng();
     let uniform_random: f64 = rng.gen();
     let weighted_random = (uniform_random.powf(1.0 - scale)).min(1.0);
     let duration = max - min;
-    let duration_seconds = duration.num_seconds() as f64;
+    let duration_seconds = duration.as_seconds_f64();
     let weighted_duration_seconds = duration_seconds * weighted_random;
-    let weighted_duration = chrono::Duration::seconds(weighted_duration_seconds as i64);
+    let weighted_duration = time::Duration::seconds(weighted_duration_seconds as i64);
     min + weighted_duration
 }
 

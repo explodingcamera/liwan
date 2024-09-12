@@ -27,26 +27,33 @@ serde_json={version="1.0"}
 md-5="0.10"
 
 # utils
+cached="0.53"
 argh={version="0.1"}
 eyre={version="0.6"}
 rand={version="0.8"}
-chrono={version="0.4", features=["serde"]}
-time={version="0.3"} # need both chrono and time for compatibility with dependencies
+time={version="0.3"}
 itertools={version="0.13"}
 colored={version="2.1"}
 figment={version="0.10", features=["toml", "env"]}
 sha3={version="0.10"}
 argon2={version="0.5"}
 crossbeam="0.8"
-cached="0.53"
 tracing="0.1"
 tracing-subscriber={version="0.3", features=["env-filter"]}
 async-compression="0.4.12"
 tokio-tar={package="krata-tokio-tar", version="0.4.0"}
 
 # web
-poem={version="3.0", features=["embed", "session", "cookie", "compression", "tower-compat"]}
-poem-openapi={version="5.0", features=["chrono"]}
+poem={version="3.1", default-features=false, features=[
+    "time",
+    "embed",
+    "session",
+    "cookie",
+    "compression",
+    "tower-compat",
+]}
+
+poem-openapi={version="5.0", default-features=false, features=["time"]}
 tower={version="0.5", default-features=false, features=["limit"]}
 uaparser="0.6"
 mime_guess={version="2.0"}
@@ -59,8 +66,12 @@ reqwest={version="0.12", default-features=false, features=[
 ]}
 
 # database
-duckdb={version="1.0", features=["bundled", "chrono", "r2d2"]}
-rusqlite={version="0.32", features=["bundled", "chrono"]}
+duckdb={version="1.0", git="https://github.com/explodingcamera/duckdb-rs", features=[
+    "bundled",
+    "time",
+    "r2d2",
+]}
+rusqlite={version="0.32", features=["bundled", "time"]}
 r2d2={version="0.8"}
 r2d2_sqlite="0.25.0"
 refinery={version="0.8"}

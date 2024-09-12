@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use eyre::Result;
 use refinery::{error::WrapMigrationError, Migration};
 use refinery_core::{
@@ -34,8 +33,7 @@ impl<T: DerefMut<Target = duckdb::Connection>> Query<Vec<Migration>> for DuckDBC
             .query_map([], |row| {
                 let version = row.get(0)?;
                 let name: String = row.get(1)?;
-                let applied_on: DateTime<Utc> = row.get(2)?;
-                let applied_on = time::OffsetDateTime::from_unix_timestamp(applied_on.timestamp()).unwrap();
+                let applied_on: time::OffsetDateTime = row.get(2)?;
                 let checksum: u64 = row.get(3)?;
                 Ok(Migration::applied(version, name, applied_on, checksum))
             })?

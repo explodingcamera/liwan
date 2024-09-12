@@ -78,7 +78,7 @@ impl AuthApi {
         }
 
         let session_id = session_token();
-        let expires = chrono::Utc::now() + MAX_SESSION_AGE;
+        let expires = time::OffsetDateTime::now_utc() + MAX_SESSION_AGE;
         app.sessions.create(&session_id, &params.username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut public_cookie = PUBLIC_COOKIE.clone();

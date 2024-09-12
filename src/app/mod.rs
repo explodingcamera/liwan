@@ -11,6 +11,7 @@ use duckdb::DuckdbConnectionManager;
 use eyre::Result;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::sync::Arc;
+use time::OffsetDateTime;
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
@@ -132,8 +133,8 @@ impl Liwan {
             )?;
         }
 
-        let start = chrono::Utc::now().checked_sub_signed(chrono::Duration::days(365)).unwrap();
-        let end = chrono::Utc::now();
+        let start = OffsetDateTime::now_utc().checked_sub(time::Duration::days(365)).unwrap();
+        let end = OffsetDateTime::now_utc();
         for (entity_id, display_name, fqdn, project_ids) in entities.iter() {
             self.entities.create(
                 &models::Entity { id: entity_id.to_string(), display_name: display_name.to_string() },

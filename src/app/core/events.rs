@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crossbeam::{channel::Receiver, sync::ShardedLock};
 use eyre::{bail, Result};
+use time::OffsetDateTime;
 
 use crate::{
     app::{
@@ -15,12 +16,12 @@ use crate::{
 pub struct LiwanEvents {
     duckdb: DuckDBPool,
     sqlite: SqlitePool,
-    daily_salt: Arc<ShardedLock<(String, chrono::DateTime<chrono::Utc>)>>,
+    daily_salt: Arc<ShardedLock<(String, OffsetDateTime)>>,
 }
 
 impl LiwanEvents {
     pub fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool) -> Result<Self> {
-        let daily_salt: (String, chrono::DateTime<chrono::Utc>) = {
+        let daily_salt: (String, OffsetDateTime) = {
             tracing::debug!("Loading daily salt");
             sqlite.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
                 Ok((row.get(0)?, row.get(1)?))
@@ -37,10 +38,10 @@ impl LiwanEvents {
         };
 
         // if the salt is older than 24 hours, replace it with a new one (utils::generate_salt)
-        if chrono::Utc::now() - updated_at > chrono::Duration::hours(24) {
+        if (OffsetDateTime::now_utc() - updated_at) > time::Duration::hours(24) {
             tracing::debug!("Daily salt expired, generating a new one");
             let new_salt = generate_salt();
-            let now = chrono::Utc::now();
+            let now = OffsetDateTime::now_utc();
             let conn = self.sqlite.get()?;
             conn.execute("update salts set salt = ?, updated_at = ? where id = 1", rusqlite::params![&new_salt, now])?;
 

@@ -1,12 +1,13 @@
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Display};
 
-use crate::utils::{validate, TimeExt};
-use crate::{app::DuckDBConn, utils::Timestamp};
+use crate::app::DuckDBConn;
+use crate::utils::validate;
 use duckdb::params;
 use eyre::Result;
 use itertools::Itertools;
 use poem_openapi::{Enum, Object};
+use time::OffsetDateTime;
 
 // TODO: more fine-grained caching (e.g. don't cache for short durations/ending in now)
 // use cached::proc_macro::cached;
@@ -17,8 +18,8 @@ use poem_openapi::{Enum, Object};
 
 #[derive(Object)]
 pub struct DateRange {
-    pub start: Timestamp,
-    pub end: Timestamp,
+    pub start: OffsetDateTime,
+    pub end: OffsetDateTime,
 }
 
 impl Display for DateRange {
@@ -204,8 +205,7 @@ pub fn overall_report(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params =
-        params![range.start.to_time(), range.end.to_time(), data_points, data_points, event, range.end.to_time()];
+    let params = params![range.start, range.end, data_points, data_points, event, range.end];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
@@ -280,7 +280,7 @@ pub fn overall_stats(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start.to_time(), range.end.to_time(), event];
+    let params = params![range.start, range.end, event];
 
     let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
         Ok(ReportStats {
@@ -365,7 +365,7 @@ pub fn dimension_report(
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start.to_time(), range.end.to_time(), event];
+    let params = params![range.start, range.end, event];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {

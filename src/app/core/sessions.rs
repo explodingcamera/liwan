@@ -1,5 +1,6 @@
 use crate::app::SqlitePool;
 use eyre::Result;
+use time::OffsetDateTime;
 
 #[derive(Clone)]
 pub struct LiwanSessions {
@@ -12,7 +13,7 @@ impl LiwanSessions {
     }
 
     /// Create a new session
-    pub fn create(&self, session_id: &str, username: &str, expires_at: chrono::DateTime<chrono::Utc>) -> Result<()> {
+    pub fn create(&self, session_id: &str, username: &str, expires_at: OffsetDateTime) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("insert into sessions (id, username, expires_at) values (?, ?, ?)")?;
         stmt.execute(rusqlite::params![session_id, username, expires_at])?;
@@ -24,9 +25,9 @@ impl LiwanSessions {
     pub fn get(&self, session_id: &str) -> Result<Option<String>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("select username, expires_at from sessions where id = ?")?;
-        let (username, expires_at): (String, chrono::DateTime<chrono::Utc>) =
+        let (username, expires_at): (String, OffsetDateTime) =
             stmt.query_row([session_id], |row| Ok((row.get("username")?, row.get("expires_at")?)))?;
-        if expires_at < chrono::Utc::now() {
+        if expires_at < OffsetDateTime::now_utc() {
             return Ok(None);
         }
         Ok(Some(username))
@@ -36,7 +37,7 @@ impl LiwanSessions {
     pub fn delete(&self, session_id: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("update sessions set expires_at = ? where id = ?")?;
-        stmt.execute(rusqlite::params![chrono::Utc::now(), session_id])?;
+        stmt.execute(rusqlite::params![OffsetDateTime::now_utc(), session_id])?;
         Ok(())
     }
 }
