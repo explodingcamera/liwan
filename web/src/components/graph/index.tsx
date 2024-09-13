@@ -15,6 +15,6 @@ export const toDataPoints = (data: number[], range: { start: number; end: number
 	const step = differenceInSeconds(range.end, range.start) / data.length;
 	return data.map((value, i) => ({
 		x: new Date(range.start + i * step * 1000 + 1000),
-		y: metric === "avg_views_per_session" ? value / 1000 : value,
+		y: value,
 	}));
 };

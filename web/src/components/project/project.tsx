@@ -31,7 +31,7 @@ export const LiveVisitorCount = ({ count }: { count: number }) => {
 		<span className={styles.online}>
 			<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
 			<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
-			{formatMetricVal("unique_visitors", count)} {count === 1 ? "Current Visitor" : "Current Visitors"}
+			{formatMetricVal(count)} {count === 1 ? "Current Visitor" : "Current Visitors"}
 		</span>
 	);
 };

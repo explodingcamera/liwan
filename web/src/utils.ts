@@ -11,21 +11,16 @@ export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | Cl
 // get the username cookie or undefined if not set
 export const getUsername = () => document.cookie.match(/username=(.*?)(;|$)/)?.[1];
 
-export const formatMetricVal = (metric: Metric, value: number) => {
-	let res = value;
-	if (metric === "avg_views_per_session") {
-		res = value / 1000;
+export const formatMetricVal = (value: number) => {
+	if (value >= 1000) {
+		return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
 	}
 
-	if (res >= 1000) {
-		return `${(res / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+	if (value >= 1000000) {
+		return `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
 	}
 
-	if (res >= 1000000) {
-		return `${(res / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
-	}
-
-	return res.toFixed(1).replace(/\.0$/, "") || "0";
+	return value.toFixed(1).replace(/\.0$/, "") || "0";
 };
 
 export const formatPercent = (value: number) => {

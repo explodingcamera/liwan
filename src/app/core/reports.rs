@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
 use crate::utils::validate;
+use crate::web::routes::dashboard::GraphValue;
 use duckdb::params;
 use eyre::Result;
 use itertools::Itertools;
@@ -24,11 +25,11 @@ pub struct DateRange {
 
 impl DateRange {
     pub fn start(&self) -> OffsetDateTime {
-        OffsetDateTime::from_unix_timestamp(self.start as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
+        OffsetDateTime::from_unix_timestamp((self.start / 1000) as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
     }
 
     pub fn end(&self) -> OffsetDateTime {
-        OffsetDateTime::from_unix_timestamp(self.end as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
+        OffsetDateTime::from_unix_timestamp((self.end / 1000) as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
     }
 
     pub fn prev(&self) -> DateRange {
@@ -77,7 +78,7 @@ pub enum FilterType {
     IsNull,
 }
 
-pub type ReportGraph = Vec<u64>;
+pub type ReportGraph = Vec<GraphValue>;
 pub type ReportTable = BTreeMap<String, u64>;
 
 #[derive(Object, Clone, Debug, Default)]
@@ -86,7 +87,7 @@ pub struct ReportStats {
     pub total_views: u64,
     pub total_sessions: u64,
     pub unique_visitors: u64,
-    pub avg_views_per_session: u64, // 3 decimal places
+    pub avg_views_per_session: f64,
 }
 
 #[derive(Object, Debug)]
@@ -152,7 +153,7 @@ pub fn overall_report(
     metric: &Metric,
 ) -> Result<ReportGraph> {
     if entities.is_empty() {
-        return Ok(vec![0; data_points as usize]);
+        return Ok(vec![GraphValue::U64(0); data_points as usize]);
     }
 
     // recheck the validity of the entity IDs to be super sure there's no SQL injection
@@ -217,14 +218,14 @@ pub fn overall_report(
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
-            let report_graph = rows.collect::<Result<Vec<u64>, duckdb::Error>>()?;
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(GraphValue::U64(row.get(1)?)))?;
+            let report_graph = rows.collect::<Result<Vec<GraphValue>, duckdb::Error>>()?;
             Ok(report_graph)
         }
         Metric::AvgViewsPerSession => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
-            let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
-            Ok(report_graph.iter().map(|v| (v * 1000.0).round() as u64).collect())
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(GraphValue::F64(row.get(1)?)))?;
+            let report_graph = rows.collect::<Result<Vec<GraphValue>, duckdb::Error>>()?;
+            Ok(report_graph)
         }
     }
 }
@@ -295,7 +296,7 @@ pub fn overall_stats(
             total_views: row.get(0)?,
             total_sessions: row.get(1)?,
             unique_visitors: row.get(2)?,
-            avg_views_per_session: (row.get::<_, Option<f64>>(3)?.unwrap_or(0.0) * 1000.0).round() as u64,
+            avg_views_per_session: row.get::<_, Option<f64>>(3)?.unwrap_or(0.0),
         })
     })?;
 

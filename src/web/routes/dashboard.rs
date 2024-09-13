@@ -8,11 +8,17 @@ use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::param::Path;
 use poem_openapi::payload::Json;
-use poem_openapi::{Object, OpenApi};
+use poem_openapi::{Object, OpenApi, Union};
+
+#[derive(Union, Debug, PartialEq, Clone, Copy)]
+pub enum GraphValue {
+    U64(u64),
+    F64(f64),
+}
 
 #[derive(Object)]
 struct GraphResponse {
-    data: Vec<u64>,
+    data: Vec<GraphValue>,
 }
 
 #[derive(Object)]

@@ -79,7 +79,7 @@ export const SelectMetric = ({
 		<CardButton onClick={onSelect} active={selected} className={styles.metric}>
 			<h2>{title}</h2>
 			<h3>
-				{formatMetricVal(metric, value)}
+				{formatMetricVal(value)}
 				<span style={{ color }} className={styles.change}>
 					{icon} {formatPercent(changePercent)}
 				</span>

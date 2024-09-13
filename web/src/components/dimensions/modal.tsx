@@ -70,7 +70,7 @@ export const DetailsModal = ({
 							<DimensionValueBar value={d.value} biggest={biggest}>
 								<DimensionLabel dimension={dimension} value={d} />
 							</DimensionValueBar>
-							<div>{formatMetricVal(metric, d.value)}</div>
+							<div>{formatMetricVal(d.value)}</div>
 						</div>
 					);
 				})}

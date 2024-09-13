@@ -4,6 +4,7 @@ import styles from "./graph.module.css";
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
 import { addMonths } from "date-fns";
 import type { DataPoint } from ".";
+import { formatMetricVal } from "../../utils";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 
@@ -22,12 +23,13 @@ const formatDate = (date: Date, range: GraphRange = "day") => {
 
 const Tooltip = (props: SliceTooltipProps & { title: string; range: GraphRange }) => {
 	const point = props.slice.points[0].data;
+	const value = point.y.valueOf() as number;
 
 	return (
 		<div data-theme="dark" className={styles.tooltip}>
 			<h2>{props.title}</h2>
 			<h3>
-				<span>{formatDate(new Date(point.x), props.range)}</span> {point.y.toString()}
+				<span>{formatDate(new Date(point.x), props.range)}</span> {formatMetricVal(value)}
 			</h3>
 		</div>
 	);
