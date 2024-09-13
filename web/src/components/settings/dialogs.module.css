@@ -8,6 +8,11 @@
   transform: translateY(-100%);
 }
 
+.new {
+  padding: 0.4rem 0.5rem;
+  height: fit-content;
+}
+
 .danger {
   --pico-background-color: var(--pico-del-color);
   --pico-border-color: var(--pico-del-color);

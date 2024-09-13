@@ -6,6 +6,10 @@
   white-space: nowrap;
 }
 
+.container {
+  overflow-x: auto;
+}
+
 .table {
   th {
     div.icon {

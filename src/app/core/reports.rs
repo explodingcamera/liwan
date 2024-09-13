@@ -18,20 +18,28 @@ use time::OffsetDateTime;
 
 #[derive(Object)]
 pub struct DateRange {
-    pub start: OffsetDateTime,
-    pub end: OffsetDateTime,
+    pub start: u64,
+    pub end: u64,
+}
+
+impl DateRange {
+    pub fn start(&self) -> OffsetDateTime {
+        OffsetDateTime::from_unix_timestamp(self.start as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
+    }
+
+    pub fn end(&self) -> OffsetDateTime {
+        OffsetDateTime::from_unix_timestamp(self.end as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
+    }
+
+    pub fn prev(&self) -> DateRange {
+        let duration = self.end - self.start;
+        DateRange { start: self.start - duration, end: self.start }
+    }
 }
 
 impl Display for DateRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} - {}", self.start, self.end)
-    }
-}
-
-impl DateRange {
-    pub fn prev(&self) -> DateRange {
-        let duration = self.end - self.start;
-        DateRange { start: self.start - duration, end: self.start }
     }
 }
 
@@ -205,7 +213,7 @@ pub fn overall_report(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start, range.end, data_points, data_points, event, range.end];
+    let params = params![range.start(), range.end(), data_points, data_points, event, range.end()];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
@@ -280,7 +288,7 @@ pub fn overall_stats(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start, range.end, event];
+    let params = params![range.start(), range.end(), event];
 
     let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
         Ok(ReportStats {
@@ -365,7 +373,7 @@ pub fn dimension_report(
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start, range.end, event];
+    let params = params![range.start(), range.end(), event];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {

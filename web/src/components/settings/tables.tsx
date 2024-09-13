@@ -1,19 +1,9 @@
 import { Fragment, useRef } from "react";
 import styles from "./tables.module.css";
 
-import {
-	AppWindowIcon,
-	EditIcon,
-	EllipsisVerticalIcon,
-	RectangleEllipsisIcon,
-	ShieldIcon,
-	TagIcon,
-	TrashIcon,
-	UserIcon,
-	WholeWordIcon,
-} from "lucide-react";
+import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, TrashIcon } from "lucide-react";
 import { type Column, Table } from "../table";
-import { DeleteDialog, EditEntity, EditPassword, EditProject, EditProjectEntities, EditUser } from "./dialogs";
+import { DeleteDialog, EditEntity, EditPassword, EditProject, EditUser } from "./dialogs";
 
 import {
 	type EntityResponse,
@@ -54,17 +44,6 @@ const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
 	}
 
 	const options: DropdownOptions = {
-		entities: (close) => (
-			<EditProjectEntities
-				project={project}
-				trigger={
-					<button type="button" onClick={close}>
-						<AppWindowIcon size={18} />
-						Assign Entities
-					</button>
-				}
-			/>
-		),
 		edit: (close) => (
 			<EditProject
 				project={project}
@@ -98,27 +77,27 @@ export const ProjectsTable = () => {
 	const columns: Column<(typeof projects)[number]>[] = [
 		{
 			id: "displayName",
-			icon: <TagIcon size={18} />,
+			// icon: <TagIcon size={18} />,
 			header: "Name",
 			render: (row) => <span>{row.displayName}</span>,
 			nowrap: true,
 		},
 		{
 			id: "id",
-			icon: <WholeWordIcon size={18} />,
+			// icon: <WholeWordIcon size={18} />,
 			header: "ID",
 			render: (row) => <i>{row.id}</i>,
 			nowrap: true,
 		},
 		{
 			id: "public",
-			icon: <ShieldIcon size={18} />,
+			// icon: <ShieldIcon size={18} />,
 			header: "Visibility",
 			render: (row) => <>{row.public ? "Public" : "Private"}</>,
 		},
 		{
 			id: "entities",
-			icon: <AppWindowIcon size={18} />,
+			// icon: <AppWindowIcon size={18} />,
 			header: "Entities",
 			render: (row) => (
 				<>
@@ -194,21 +173,21 @@ export const EntitiesTable = () => {
 	const columns: Column<(typeof entities)[number]>[] = [
 		{
 			id: "displayName",
-			icon: <TagIcon size={18} />,
+			// icon: <TagIcon size={18} />,
 			header: "Name",
 			render: (row) => <span>{row.displayName}</span>,
 			nowrap: true,
 		},
 		{
 			id: "id",
-			icon: <WholeWordIcon size={18} />,
+			// icon: <WholeWordIcon size={18} />,
 			header: "ID",
 			render: (row) => <i>{row.id}</i>,
 			nowrap: true,
 		},
 		{
 			id: "projects",
-			icon: <AppWindowIcon size={18} />,
+			// icon: <AppWindowIcon size={18} />,
 			header: "Projects",
 			render: (row) => (
 				<>
@@ -285,14 +264,14 @@ export const UsersTable = () => {
 		{
 			id: "username",
 			header: "Username",
-			icon: <UserIcon size={18} />,
+			// icon: <UserIcon size={18} />,
 			render: (row) => <span>{row.username}</span>,
 			nowrap: true,
 		},
 		{
 			id: "role",
 			header: "Role",
-			icon: <ShieldIcon size={18} />,
+			// icon: <ShieldIcon size={18} />,
 			render: (row) => row.role,
 			full: true,
 		},
