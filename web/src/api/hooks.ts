@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import { toDataPoints } from "../components/graph";
-import type { DateRange, Dimension, DimensionTableRow, Metric, ProjectResponse } from "./types";
+import type { DateRange, Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "./types";
 
 import { api } from ".";
 import { queryClient, useQuery } from "./query";
@@ -56,10 +56,12 @@ export const useDimension = ({
 	dimension,
 	metric,
 	range,
+	filters,
 }: {
 	project: ProjectResponse;
 	dimension: Dimension;
 	metric: Metric;
+	filters: DimensionFilter[];
 	range: DateRange;
 }): {
 	data: DimensionTableRow[] | undefined;
@@ -70,13 +72,14 @@ export const useDimension = ({
 } => {
 	const { data, isLoading, error } = useQuery({
 		placeholderData: (prev) => prev,
-		queryKey: ["dimension", project.id, dimension, metric, range],
+		queryKey: ["dimension", project.id, dimension, metric, range, filters],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/dimension"]
 				.post({
 					params: { project_id: project.id },
 					json: {
 						dimension,
+						filters,
 						metric,
 						range,
 					},
@@ -94,10 +97,12 @@ export const useProjectData = ({
 	project,
 	metric,
 	rangeName = "last7Days",
+	filters = [],
 }: {
 	project?: ProjectResponse;
 	metric: Metric;
 	rangeName?: RangeName;
+	filters?: DimensionFilter[];
 }) => {
 	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
 
@@ -115,17 +120,16 @@ export const useProjectData = ({
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		queryKey: ["project_stats", project?.id, range],
+		queryKey: ["project_stats", project?.id, range, metric, filters],
 
 		enabled: project !== undefined,
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/stats"]
-				.post({ json: { range }, params: { project_id: project?.id ?? "" } })
+				.post({ json: { range, filters }, params: { project_id: project?.id ?? "" } })
 				.json(),
 		placeholderData: (prev) => prev,
 	});
 
-	const json = { range, metric, dataPoints };
 	const {
 		data: graph,
 		isError: isErrorGraph,
@@ -136,7 +140,9 @@ export const useProjectData = ({
 		enabled: project !== undefined,
 		queryKey: ["project_graph", project?.id, range, graphRange, metric, dataPoints],
 		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/graph"].post({ json, params: { project_id: project?.id ?? "" } }).json(),
+			api["/api/dashboard/project/{project_id}/graph"]
+				.post({ json: { range, metric, dataPoints, filters }, params: { project_id: project?.id ?? "" } })
+				.json(),
 		placeholderData: (prev) => prev,
 	});
 
@@ -156,6 +162,9 @@ export const useProjectData = ({
 		isError: isErrorStats || isErrorGraph,
 	};
 };
+
+export type ProjectDataGraph = ReturnType<typeof useProjectData>["graph"];
+export type ProjectDataStats = ReturnType<typeof useProjectData>["stats"];
 
 export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });
 export const invalidateEntities = () => queryClient.invalidateQueries({ queryKey: ["entities"] });

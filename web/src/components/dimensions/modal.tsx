@@ -15,27 +15,23 @@ import {
 	type ProjectResponse,
 } from "../../api";
 import { useDeferredValue, useMemo, useState } from "react";
+import type { ProjectQuery } from "../project";
 
-export const DetailsModal = ({
-	project,
-	dimension,
-	metric,
-	range,
-}: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange }) => {
-	const { data, biggest, order, isLoading } = useDimension({ project, dimension, metric, range });
+export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query: ProjectQuery }) => {
+	const { data, biggest, order, isLoading } = useDimension({ dimension, ...query });
 
-	const [query, setQuery] = useState("");
-	const deferredQuery = useDeferredValue(query);
+	const [filter, setFilter] = useState("");
+	const deferredFilter = useDeferredValue(filter);
 
 	const results = useMemo(() => {
-		if (!deferredQuery || !data) return data;
-		return fuzzysort.go(deferredQuery, data, { keys: ["displayName", "dimensionValue", "value"] }).map((r) => r.obj);
-	}, [deferredQuery, data]);
+		if (!deferredFilter || !data) return data;
+		return fuzzysort.go(deferredFilter, data, { keys: ["displayName", "dimensionValue", "value"] }).map((r) => r.obj);
+	}, [deferredFilter, data]);
 
 	return (
 		<Dialog
-			title={`${dimensionNames[dimension]} - ${metricNames[metric]}`}
-			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${metricNames[metric]}`}
+			title={`${dimensionNames[dimension]} - ${metricNames[query.metric]}`}
+			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${metricNames[query.metric]}`}
 			hideTitle
 			hideDescription
 			showClose
@@ -51,13 +47,13 @@ export const DetailsModal = ({
 			<div className={styles.dimensionTable} style={{ "--count": data?.length } as React.CSSProperties}>
 				<div className={styles.dimensionHeader}>
 					<div>{dimensionNames[dimension]}</div>
-					<div>{metricNames[metric]}</div>
+					<div>{metricNames[query.metric]}</div>
 				</div>
 				<input
 					type="search"
 					placeholder="Search..."
-					value={query}
-					onChange={(e) => setQuery(e.target.value)}
+					value={filter}
+					onChange={(e) => setFilter(e.target.value)}
 					className={styles.search}
 				/>
 				{results?.map((d) => {

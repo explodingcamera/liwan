@@ -17,50 +17,37 @@ import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
 import { countryCodeToFlag, formatFullUrl, formatHost, getHref, tryParseUrl } from "../../utils";
 import { DetailsModal } from "./modal";
 import { formatMetricVal } from "../../utils";
+import type { ProjectQuery } from "../project";
 
 export const cardStyles = styles.card;
 
 export const DimensionCard = ({
-	project,
 	dimension,
-	metric,
-	range,
+	query,
 }: {
-	project: ProjectResponse;
 	dimension: Dimension;
-	metric: Metric;
-	range: DateRange;
+	query: ProjectQuery;
 }) => {
 	return (
 		<article className={styles.card}>
 			<div className={styles.dimensionHeader}>
 				<div>{dimensionNames[dimension]}</div>
-				<div>{metricNames[metric]}</div>
+				<div>{metricNames[query.metric]}</div>
 			</div>
-			<DimensionTable project={project} dimension={dimension} metric={metric} range={range} />
+			<DimensionTable dimension={dimension} query={query} />
 		</article>
 	);
 };
 
-export const DimensionTabsCard = ({
-	project,
-	metric,
-	range,
-	dimensions,
-}: { project: ProjectResponse; dimensions: Dimension[]; metric: Metric; range: DateRange }) => {
+export const DimensionTabsCard = ({ dimensions, query }: { dimensions: Dimension[]; query: ProjectQuery }) => {
 	return (
 		<article className={styles.card}>
-			<DimensionTabs project={project} dimensions={dimensions} metric={metric} range={range} />
+			<DimensionTabs dimensions={dimensions} query={query} />
 		</article>
 	);
 };
 
-export const DimensionTabs = ({
-	project,
-	metric,
-	range,
-	dimensions,
-}: { project: ProjectResponse; dimensions: Dimension[]; metric: Metric; range: DateRange }) => {
+export const DimensionTabs = ({ dimensions, query }: { dimensions: Dimension[]; query: ProjectQuery }) => {
 	return (
 		<Tabs.Root className={styles.tabs} defaultValue={dimensions[0]}>
 			<Tabs.List className={styles.tabsList}>
@@ -69,11 +56,11 @@ export const DimensionTabs = ({
 						{dimensionNames[value]}
 					</Tabs.Trigger>
 				))}
-				<div>{metricNames[metric]}</div>
+				<div>{metricNames[query.metric]}</div>
 			</Tabs.List>
 			{dimensions.map((dimension) => (
 				<Tabs.Content key={dimension} value={dimension} className={styles.tabsContent}>
-					<DimensionTable dimension={dimension} metric={metric} range={range} project={project} noHeader />
+					<DimensionTable dimension={dimension} noHeader query={query} />
 				</Tabs.Content>
 			))}
 		</Tabs.Root>
@@ -81,12 +68,10 @@ export const DimensionTabs = ({
 };
 
 export const DimensionTable = ({
-	project,
 	dimension,
-	metric,
-	range,
-}: { project: ProjectResponse; dimension: Dimension; metric: Metric; range: DateRange; noHeader?: boolean }) => {
-	const { data, biggest, order, isLoading } = useDimension({ project, dimension, metric, range });
+	query,
+}: { dimension: Dimension; noHeader?: boolean; query: ProjectQuery }) => {
+	const { data, biggest, order, isLoading } = useDimension({ dimension, ...query });
 
 	const dataTruncated = data?.slice(0, 6);
 	return (
@@ -114,7 +99,7 @@ export const DimensionTable = ({
 					</div>
 				)}
 			</div>
-			<DetailsModal project={project} dimension={dimension} metric={metric} range={range} />
+			<DetailsModal dimension={dimension} query={query} />
 		</>
 	);
 };
@@ -178,11 +163,9 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 			<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
 			{value.displayName || value.dimensionValue || "Unknown"}
 			{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
-				<>
-					<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
-						<SquareArrowOutUpRightIcon size={16} />
-					</a>
-				</>
+				<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
+					<SquareArrowOutUpRightIcon size={16} />
+				</a>
 			)}
 		</>
 	),

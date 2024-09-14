@@ -84,7 +84,7 @@ export const WorldMap = ({
 					<div className={styles.tooltip} data-theme="dark">
 						<h2>{metricNames[metric]}</h2>
 						<h3>
-							{currentGeo.name} <span>{formatMetricVal(metric, countries.get(currentGeo.iso) ?? 0)}</span>
+							{currentGeo.name} <span>{formatMetricVal(countries.get(currentGeo.iso) ?? 0)}</span>
 						</h3>
 					</div>
 				)}

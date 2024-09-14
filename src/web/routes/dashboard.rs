@@ -1,4 +1,4 @@
-use crate::app::reports::{self, DateRange, Dimension, Metric, ReportStats};
+use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, Metric, ReportStats};
 use crate::app::Liwan;
 use crate::utils::validate::{self, can_access_project};
 use crate::web::session::SessionUser;
@@ -24,12 +24,14 @@ struct GraphResponse {
 #[derive(Object)]
 struct StatsRequest {
     range: DateRange,
+    filters: Vec<DimensionFilter>,
 }
 
 #[derive(Object)]
 #[oai(rename_all = "camelCase")]
 struct GraphRequest {
     range: DateRange,
+    filters: Vec<DimensionFilter>,
     data_points: u32,
     metric: Metric,
 }
@@ -46,6 +48,7 @@ struct StatsResponse {
 #[oai(rename_all = "camelCase")]
 struct DimensionRequest {
     range: DateRange,
+    filters: Vec<DimensionFilter>,
     metric: Metric,
     dimension: Dimension,
 }
@@ -89,9 +92,16 @@ impl DashboardAPI {
         }
 
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-        let report =
-            reports::overall_report(&conn, &entities, "pageview", &req.range, req.data_points, &[], &req.metric)
-                .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let report = reports::overall_report(
+            &conn,
+            &entities,
+            "pageview",
+            &req.range,
+            req.data_points,
+            &req.filters,
+            &req.metric,
+        )
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(GraphResponse { data: report }))
     }
@@ -113,10 +123,10 @@ impl DashboardAPI {
 
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &[])
+        let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &req.filters)
             .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let stats_prev = reports::overall_stats(&conn, &entities, "pageview", &req.range.prev(), &[])
+        let stats_prev = reports::overall_stats(&conn, &entities, "pageview", &req.range.prev(), &req.filters)
             .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let online = reports::online_users(&conn, &entities).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -141,9 +151,16 @@ impl DashboardAPI {
 
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let stats =
-            reports::dimension_report(&conn, &entities, "pageview", &req.range, &req.dimension, &[], &req.metric)
-                .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let stats = reports::dimension_report(
+            &conn,
+            &entities,
+            "pageview",
+            &req.range,
+            &req.dimension,
+            &req.filters,
+            &req.metric,
+        )
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut data = Vec::new();
         for (key, value) in stats {

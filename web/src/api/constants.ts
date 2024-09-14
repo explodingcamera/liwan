@@ -1,4 +1,4 @@
-import type { Dimension, Metric } from "./types";
+import type { Dimension, DimensionFilter, Metric } from "./types";
 
 export const metricNames: Record<Metric, string> = {
 	views: "Total Views",
@@ -17,4 +17,20 @@ export const dimensionNames: Record<Dimension, string> = {
 	city: "City",
 	country: "Country",
 	fqdn: "Domain",
+};
+
+export const filterNames: Record<DimensionFilter["filterType"], string> = {
+	contains: "contains",
+	equal: "equals",
+	is_null: "is null",
+	not_contains: "does not contain",
+	not_equal: "does not equal",
+};
+
+export const filterNamesCapitalized: Record<DimensionFilter["filterType"], string> = {
+	contains: "Contains",
+	equal: "Equals",
+	is_null: "Is Null",
+	not_contains: "Does Not Contain",
+	not_equal: "Does Not Equal",
 };

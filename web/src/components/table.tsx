@@ -29,7 +29,7 @@ export const Table = <T extends { id: string }>({
 										{col.header ?? null}
 									</div>
 								) : (
-									col.header ?? null
+									(col.header ?? null)
 								)}
 							</th>
 						))}

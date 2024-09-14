@@ -11,6 +11,16 @@
 		"clientKind": "git",
 		"defaultBranch": "main"
 	},
+	"linter": {
+		"rules": {
+			"suspicious": {
+				"noArrayIndexKey": "off"
+			},
+			"a11y": {
+				"useSemanticElements": "off"
+			}
+		}
+	},
 	"files": {
 		"ignore": ["**/node_modules/*", "**/api/dashboard.ts"]
 	}
