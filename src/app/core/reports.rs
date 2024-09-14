@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display};
 use crate::app::DuckDBConn;
 use crate::utils::validate;
 use crate::web::routes::dashboard::GraphValue;
-use duckdb::params;
+use duckdb::{params_from_iter, ToSql};
 use eyre::Result;
 use itertools::Itertools;
 use poem_openapi::{Enum, Object};
@@ -98,8 +98,51 @@ pub struct DimensionFilter {
     value: String,
 }
 
-fn filter_sql(_filters: &[DimensionFilter]) -> Result<String> {
-    Ok(String::new())
+fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, Vec<Box<dyn ToSql>>)> {
+    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
+
+    if filters.is_empty() {
+        return Ok(("".to_owned(), params));
+    }
+
+    let filter_clauses = filters
+        .iter()
+        .map(|filter| {
+            let filter_value = match filter.filter_type {
+                FilterType::Equal => {
+                    params.push(Box::new(filter.value.clone()));
+                    " = ?"
+                }
+                FilterType::NotEqual => {
+                    params.push(Box::new(filter.value.clone()));
+                    " != ?"
+                }
+                FilterType::Contains => {
+                    params.push(Box::new(filter.value.clone()));
+                    " like ?"
+                }
+                FilterType::NotContains => {
+                    params.push(Box::new(filter.value.clone()));
+                    " not like ?"
+                }
+                FilterType::IsNull => " is null",
+            };
+
+            match filter.dimension {
+                Dimension::Url => format!("concat(fqdn, path) {}", filter_value),
+                Dimension::Path => format!("path {}", filter_value),
+                Dimension::Fqdn => format!("fqdn {}", filter_value),
+                Dimension::Referrer => format!("referrer {}", filter_value),
+                Dimension::Platform => format!("platform {}", filter_value),
+                Dimension::Browser => format!("browser {}", filter_value),
+                Dimension::Mobile => format!("mobile::text {}", filter_value),
+                Dimension::Country => format!("country {}", filter_value),
+                Dimension::City => format!("city {}", filter_value),
+            }
+        })
+        .join(" and ");
+
+    Ok((format!("and ({})", filter_clauses), params))
 }
 
 fn metric_sql(metric: &Metric) -> Result<String> {
@@ -116,23 +159,18 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
         return Ok(0);
     }
 
-    // recheck the validity of the entity IDs to be super sure there's no SQL injection
-    if !entities.iter().all(|entity| validate::is_valid_id(entity)) {
-        return Err(eyre::eyre!("Invalid entity ID"));
-    }
-    let entities_list = entities.iter().map(|entity| format!("'{entity}'")).join(", ");
-
+    let vars = repeat_vars(entities.len());
     let query = format!(
         "--sql
             select count(distinct visitor_id) from events
             where
-                entity_id in ({entities_list}) and
+                entity_id in ({vars}) and
                 created_at >= (now()::timestamp - (interval 5 minute));
     "
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let rows = stmt.query_map([], |row| row.get(0))?;
+    let rows = stmt.query_map(params_from_iter(entities), |row| row.get(0))?;
     let online_users = rows.collect::<Result<Vec<u64>, duckdb::Error>>()?;
     Ok(online_users[0])
 }
@@ -145,7 +183,7 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
 // )]
 pub fn overall_report(
     conn: &DuckDBConn,
-    entities: &[impl AsRef<str> + Debug],
+    entities: &[String],
     event: &str,
     range: &DateRange,
     data_points: u32,
@@ -156,14 +194,21 @@ pub fn overall_report(
         return Ok(vec![GraphValue::U64(0); data_points as usize]);
     }
 
-    // recheck the validity of the entity IDs to be super sure there's no SQL injection
-    if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
-        return Err(eyre::eyre!("Invalid entity ID"));
-    }
+    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
 
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity.as_ref())).join(", ");
-    let filters_clause = filter_sql(filters)?;
-    let metric_column = metric_sql(metric)?;
+    let (filters_sql, filters_params) = filter_sql(filters)?;
+    let metric_sql = metric_sql(metric)?;
+
+    let entity_vars = repeat_vars(entities.len());
+
+    params.push(Box::new(range.start()));
+    params.push(Box::new(range.end()));
+    params.push(Box::new(data_points));
+    params.push(Box::new(data_points));
+    params.push(Box::new(event));
+    params.extend(entities.iter().map(|entity| Box::new(entity.clone()) as Box<dyn ToSql>));
+    params.extend(filters_params);
+    params.push(Box::new(range.end()));
 
     let query = format!("--sql
         with
@@ -189,13 +234,13 @@ pub fn overall_report(
                     event = ?::text and
                     created_at >= params.start_time and
                     created_at <= params.end_time and
-                    entity_id in ({entities_list})
-                    {filters_clause}
+                    entity_id in ({entity_vars})
+                    {filters_sql}
             ),
             event_bins as (
                 select
                     bin_start,
-                    {metric_column} as metric_value
+                    {metric_sql} as metric_value
                 from
                     time_bins tb
                     left join session_data sd
@@ -214,7 +259,6 @@ pub fn overall_report(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start(), range.end(), data_points, data_points, event, range.end()];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
@@ -238,7 +282,7 @@ pub fn overall_report(
 // )]
 pub fn overall_stats(
     conn: &DuckDBConn,
-    entities: &[impl AsRef<str> + Debug],
+    entities: &[String],
     event: &str,
     range: &DateRange,
     filters: &[DimensionFilter],
@@ -247,17 +291,21 @@ pub fn overall_stats(
         return Ok(ReportStats::default());
     }
 
-    // recheck the validity of the entity IDs to be super sure there's no SQL injection
-    if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
-        return Err(eyre::eyre!("Invalid entity ID"));
-    }
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity.as_ref())).join(", ");
-    let filters_clause = filter_sql(filters)?;
+    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
+
+    let entity_vars = repeat_vars(entities.len());
+    let (filters_sql, filters_params) = filter_sql(filters)?;
 
     let metric_total = metric_sql(&Metric::Views)?;
     let metric_sessions = metric_sql(&Metric::Sessions)?;
     let metric_unique_visitors = metric_sql(&Metric::UniqueVisitors)?;
     let metric_avg_views_per_visitor = metric_sql(&Metric::AvgViewsPerSession)?;
+
+    params.push(Box::new(range.start()));
+    params.push(Box::new(range.end()));
+    params.push(Box::new(event));
+    params.extend(entities.iter().map(|entity| Box::new(entity) as Box<dyn ToSql>));
+    params.extend(filters_params);
 
     let query = format!("--sql
         with
@@ -276,9 +324,9 @@ pub fn overall_stats(
                     event = ?::text and
                     created_at >= params.start_time and
                     created_at <= params.end_time and
-                    entity_id in ({entities_list})
-                    {filters_clause}
-            )
+                    entity_id in ({entity_vars})
+                    {filters_sql}
+            ) 
         select
             {metric_total} as total_views,
             {metric_sessions} as total_sessions,
@@ -289,8 +337,6 @@ pub fn overall_stats(
     ");
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start(), range.end(), event];
-
     let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
         Ok(ReportStats {
             total_views: row.get(0)?,
@@ -323,8 +369,10 @@ pub fn dimension_report(
         return Err(eyre::eyre!("Invalid entity ID"));
     }
 
-    let entities_list = entities.iter().map(|entity| format!("'{}'", entity.as_ref())).join(", ");
-    let filters_clause = filter_sql(filters)?;
+    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
+    let entity_vars = repeat_vars(entities.len());
+    let (filters_sql, filters_params) = filter_sql(filters)?;
+
     let metric_column = metric_sql(metric)?;
     let (dimension_column, group_by_columns) = match dimension {
         Dimension::Url => ("concat(fqdn, path)", "fqdn, path"),
@@ -337,6 +385,12 @@ pub fn dimension_report(
         Dimension::Country => ("country", "country"),
         Dimension::City => ("concat(country, city)", "country, city"),
     };
+
+    params.push(Box::new(range.start()));
+    params.push(Box::new(range.end()));
+    params.push(Box::new(event));
+    params.extend(entities.iter().map(|entity| Box::new(entity.as_ref()) as Box<dyn ToSql>));
+    params.extend(filters_params);
 
     let query = format!("--sql
         with
@@ -356,8 +410,8 @@ pub fn dimension_report(
                     sd.event = ?::text and
                     sd.created_at >= params.start_time and
                     sd.created_at <= params.end_time and
-                    sd.entity_id in ({entities_list})
-                    {filters_clause}
+                    sd.entity_id in ({entity_vars})
+                    {filters_sql}
                 group by
                     {group_by_columns}, visitor_id, created_at
             )
@@ -374,11 +428,10 @@ pub fn dimension_report(
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let params = params![range.start(), range.end(), event];
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
-            let rows = stmt.query_map(params, |row| {
+            let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: u64 = row.get(1)?;
                 Ok((dimension_value, total_metric))
@@ -387,7 +440,7 @@ pub fn dimension_report(
             Ok(report_table)
         }
         Metric::AvgViewsPerSession => {
-            let rows = stmt.query_map(params, |row| {
+            let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: f64 = row.get(1)?;
                 Ok((dimension_value, (total_metric * 1000.0).round() as u64))
@@ -396,4 +449,12 @@ pub fn dimension_report(
             Ok(report_table)
         }
     }
+}
+
+fn repeat_vars(count: usize) -> String {
+    assert_ne!(count, 0);
+    let mut s = "?,".repeat(count);
+    // Remove trailing comma
+    s.pop();
+    s
 }

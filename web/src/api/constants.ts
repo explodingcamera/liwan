@@ -21,10 +21,10 @@ export const dimensionNames: Record<Dimension, string> = {
 
 export const filterNames: Record<DimensionFilter["filterType"], string> = {
 	contains: "contains",
-	equal: "equals",
+	equal: "is",
 	is_null: "is null",
 	not_contains: "does not contain",
-	not_equal: "does not equal",
+	not_equal: "is not",
 };
 
 export const filterNamesCapitalized: Record<DimensionFilter["filterType"], string> = {
