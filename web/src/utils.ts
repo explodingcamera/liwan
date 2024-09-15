@@ -1,6 +1,6 @@
-import type { Metric } from "./api";
-
 type ClassName = string | undefined | null | false;
+
+export const capitalizeAll = (str: string) => str.replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
 
 export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | ClassName[])[]) =>
 	[class1, ...classes.flat()]

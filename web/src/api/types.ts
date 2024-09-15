@@ -8,6 +8,19 @@ export type Dimension = OASModel<DashboardSpec, "Dimension">;
 export type DimensionFilter = OASModel<DashboardSpec, "DimensionFilter">;
 export type DimensionTableRow = OASModel<DashboardSpec, "DimensionTableRow">;
 export type FilterType = OASModel<DashboardSpec, "FilterType">;
+
+export const dimensions = [
+	"platform",
+	"browser",
+	"url",
+	"path",
+	"mobile",
+	"referrer",
+	"city",
+	"country",
+	"fqdn",
+] as const satisfies Dimension[];
+
 export const filterTypes = [
 	"contains",
 	"equal",

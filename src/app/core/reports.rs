@@ -45,7 +45,7 @@ pub enum Metric {
     AvgViewsPerSession,
 }
 
-#[derive(Debug, Enum, Clone, Copy)]
+#[derive(Debug, Enum, Clone, Copy, PartialEq)]
 #[oai(rename_all = "snake_case")]
 pub enum Dimension {
     Url,
@@ -59,14 +59,19 @@ pub enum Dimension {
     City,
 }
 
-#[derive(Enum, Debug, Clone, Copy)]
+#[derive(Enum, Debug, Clone, Copy, PartialEq)]
 #[oai(rename_all = "snake_case")]
 pub enum FilterType {
+    // Generic filters
+    IsNull,
+
+    // String filters
     Equal,
     Contains,
     StartsWith,
     EndsWith,
-    IsNull,
+
+    // Boolean filters
     IsTrue,
     IsFalse,
 }
@@ -147,6 +152,18 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
                 (None, FilterType::IsFalse, true) => "is not false".into(),
                 _ => bail!("Invalid filter type for value"),
             };
+
+            if filter.dimension == Dimension::Mobile
+                && !(filter.filter_type == FilterType::IsFalse || filter.filter_type == FilterType::IsTrue)
+            {
+                bail!("Invalid filter type for boolean dimension");
+            }
+
+            if filter.dimension != Dimension::Mobile
+                && (filter.filter_type == FilterType::IsFalse || filter.filter_type == FilterType::IsTrue)
+            {
+                bail!("Invalid filter type for string dimension");
+            }
 
             Ok(match filter.dimension {
                 Dimension::Url => format!("concat(fqdn, path) {}", filter_value),
