@@ -1,0 +1,42 @@
+form.password {
+  display: flex;
+  flex-direction: column;
+  align-items: self-start;
+  --pico-spacing: 0.4rem;
+  label {
+    width: 100%;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+}
+
+.header {
+  display: flex;
+  background-color: var(--pico-background-color);
+  border-radius: var(--pico-border-radius);
+  padding: 1rem;
+  align-items: center;
+  gap: 0.5rem;
+
+  h2 {
+    font-size: 1.3rem;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--pico-text-color-secondary);
+  }
+}
+
+.container {
+  flex: 1;
+  article {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+}

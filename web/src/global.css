@@ -112,3 +112,16 @@ details.dropdown summary + ul li:has(hr) {
     margin: 0;
   }
 }
+
+td,
+th {
+  background: unset;
+}
+
+.loading-spinner {
+  flex: 1;
+  background-image: var(--pico-icon-loading);
+  background-size: 1.5em auto;
+  background-repeat: no-repeat;
+  background-position: center;
+}

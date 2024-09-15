@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import styles from "./table.module.css";
 
 export type Column<T> = {
@@ -12,10 +13,18 @@ export type Column<T> = {
 export const Table = <T extends { id: string }>({
 	rows,
 	columns,
+	isLoading,
 }: {
 	rows: T[];
 	columns: Column<T>[];
+	isLoading: boolean;
 }) => {
+	// prevent hydration mismatch
+	const [loading, setLoading] = useState(true);
+	useEffect(() => setLoading(isLoading), [isLoading]);
+
+	if (loading) return <div className={"loading-spinner"} />;
+
 	return (
 		<div className={styles.container}>
 			<table className={styles.table}>

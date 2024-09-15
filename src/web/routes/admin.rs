@@ -178,7 +178,7 @@ impl AdminAPI {
         Data(app): Data<&Liwan>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
-        if session_user.role != UserRole::Admin {
+        if session_user.role != UserRole::Admin || username != session_user.username {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 

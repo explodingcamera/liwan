@@ -117,7 +117,7 @@ export const ProjectsTable = () => {
 		},
 	];
 
-	return <Table columns={columns} rows={projects} />;
+	return <Table columns={columns} rows={projects} isLoading={isLoading} />;
 };
 
 const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
@@ -207,7 +207,7 @@ export const EntitiesTable = () => {
 		},
 	];
 
-	return <Table columns={columns} rows={entities} />;
+	return <Table columns={columns} rows={entities} isLoading={isLoading} />;
 };
 
 const UserDropdown = ({ user }: { user: UserResponse }) => {
@@ -281,5 +281,5 @@ export const UsersTable = () => {
 		},
 	];
 
-	return <Table columns={columns} rows={rows} />;
+	return <Table columns={columns} rows={rows} isLoading={isLoading} />;
 };

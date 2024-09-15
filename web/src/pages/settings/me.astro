@@ -1,0 +1,8 @@
+---
+import { MyAccount } from "../../components/settings/me";
+import Settings from "../../layouts/Settings.astro";
+---
+
+<Settings title="Users" noContainer>
+    <MyAccount client:load />
+</Settings>

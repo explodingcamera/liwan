@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
-use crate::utils::validate;
 use crate::web::routes::dashboard::GraphValue;
 use duckdb::{params_from_iter, ToSql};
 use eyre::Result;
@@ -364,11 +363,6 @@ pub fn dimension_report(
     filters: &[DimensionFilter],
     metric: &Metric,
 ) -> Result<ReportTable> {
-    // recheck the validity of the entity IDs to be super sure there's no SQL injection
-    if !entities.iter().all(|entity| validate::is_valid_id(entity.as_ref())) {
-        return Err(eyre::eyre!("Invalid entity ID"));
-    }
-
     let mut params: Vec<Box<dyn ToSql>> = Vec::new();
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;

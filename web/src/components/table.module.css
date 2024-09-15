@@ -7,10 +7,25 @@
 }
 
 .container {
-  overflow-x: auto;
+  margin-top: 0.5rem;
+  animation: tableLoad 0.3s ease;
+}
+
+@keyframes tableLoad {
+  from {
+    opacity: 0;
+    transform: translateY(0.2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .table {
+  background: var(--pico-background-color);
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 0;
   th {
     div.icon {
       display: inline-flex;

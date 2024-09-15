@@ -9,5 +9,5 @@ import Settings from "../../layouts/Settings.astro";
     <h1>Users</h1>
     <CreateUser client:only="react" />
   </nav>
-  <UsersTable client:only="react" />
+  <UsersTable client:load />
 </Settings>

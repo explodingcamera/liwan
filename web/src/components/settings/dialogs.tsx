@@ -157,7 +157,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 			<form onSubmit={handleSubmit}>
 				<label>
 					Project Name <small>(Used in the dashboard)</small>
-					<input required name="displayName" type="text" defaultValue={project.displayName} />
+					<input required name="displayName" type="text" defaultValue={project.displayName} autoComplete="off" />
 				</label>
 				<Tags
 					labelText="Associated Entities"
@@ -241,11 +241,18 @@ export const CreateProject = () => {
 			<form onSubmit={handleSubmit}>
 				<label>
 					Project ID <small>(This cannot be changed later)</small>
-					<input required pattern="^[A-Za-z0-9_\-.]{1,40}$" name="id" type="text" placeholder="my-project" />
+					<input
+						required
+						pattern="^[A-Za-z0-9_\-.]{1,40}$"
+						name="id"
+						type="text"
+						placeholder="my-project"
+						autoComplete="off"
+					/>
 				</label>
 				<label>
 					Project Name <small>(Used in the dashboard)</small>
-					<input required name="displayName" type="text" placeholder="My Project" />
+					<input required name="displayName" type="text" placeholder="My Project" autoComplete="off" />
 				</label>
 				<label>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
@@ -333,7 +340,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 			<form onSubmit={handleSubmit}>
 				<label>
 					Entity Name <small>(Used in the dashboard)</small>
-					<input required name="displayName" type="text" defaultValue={entity.displayName} />
+					<input required name="displayName" type="text" defaultValue={entity.displayName} autoComplete="off" />
 				</label>
 				<Tags
 					labelText="Associated Projects"
@@ -404,11 +411,18 @@ export const CreateEntity = () => {
 			<form onSubmit={handleSubmit}>
 				<label>
 					Entity ID <small>(This cannot be changed later)</small>
-					<input required pattern="^[A-Za-z0-9_\-.]{1,40}$" name="id" type="text" placeholder="my-website" />
+					<input
+						required
+						pattern="^[A-Za-z0-9_\-.]{1,40}$"
+						name="id"
+						type="text"
+						placeholder="my-website"
+						autoComplete="off"
+					/>
 				</label>
 				<label>
 					Entity Name <small>(Used in the dashboard)</small>
-					<input required name="displayName" type="text" placeholder="My Website" />
+					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
 				</label>
 				<Tags
 					labelText="Add to Projects"

@@ -17,5 +17,14 @@ export function useQuery<
 	TData = TQueryFnData,
 	TQueryKey extends QueryKey = QueryKey,
 >(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, c?: QueryClient): UseQueryResult<TData, TError> {
-	return _useQuery(options, c || queryClient);
+	return _useQuery(
+		{
+			enabled(query) {
+				if (typeof window === "undefined") return false;
+				return typeof options.enabled === "function" ? options.enabled(query) : (options.enabled ?? true);
+			},
+			...options,
+		},
+		c || queryClient,
+	);
 }

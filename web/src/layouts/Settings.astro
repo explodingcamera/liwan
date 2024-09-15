@@ -1,81 +1,174 @@
 ---
+import { CodeIcon, TablePropertiesIcon, UserIcon, UsersIcon } from "lucide-react";
 import Layout from "./Layout.astro";
 
 type Props = {
 	title: string;
+	noContainer?: boolean;
 };
 
 const path = Astro.url.pathname;
-const { title } = Astro.props;
+const { title, noContainer } = Astro.props;
 ---
 
 <Layout {title}>
   <div class="settings">
-    <ul class="sidebar">
-      <li>
-        <a
-          data-active={path.startsWith("/settings/projects") ? "true" : "false"}
-          class="secondary"
-          href="/settings/projects">Projects</a
-        >
-      </li>
-      <li>
-        <a
-          data-active={path.startsWith("/settings/entities") ? "true" : "false"}
-          class="secondary"
-          href="/settings/entities">Entities</a
-        >
-      </li>
-      <li>
-        <a
-          data-active={path.startsWith("/settings/users") ? "true" : "false"}
-          class="secondary"
-          href="/settings/users">Users</a
-        >
-      </li>
-    </ul>
-    <div class="content">
-      <slot />
-    </div>
+    <aside class="mobile">
+      <select name="select" aria-label="Select a page" id="select-settings-page">
+        <optgroup label="General">
+          <option selected={path.startsWith("/settings/me") ? true: undefined} value="/settings/me">My Account</option>
+        </optgroup>
+        <optgroup label="Admin">
+          <option selected={path.startsWith("/settings/projects") ? true: undefined} value="/settings/projects">Projects</option>
+          <option selected={path.startsWith("/settings/entities") ? true: undefined} value="/settings/entities">Entities</option>
+          <option selected={path.startsWith("/settings/users") ? true: undefined} value="/settings/users">Users</option>
+        </optgroup>
+      </select>
+    </aside>
+    <aside class="desktop">
+      <h3>General</h3>
+      <ul class="sidebar">
+        <li>
+          <a
+            data-active={path.startsWith("/settings/me") ? "true" : "false"}
+            class="secondary"
+            href="/settings/me">
+            <UserIcon size="20" />
+            My Account</a
+          >
+        </li>
+      </ul>
+      <h3>Admin</h3>
+      <ul class="sidebar">
+        <li>
+          <a
+            data-active={path.startsWith("/settings/projects") ? "true" : "false"}
+            class="secondary"
+            href="/settings/projects">
+            <TablePropertiesIcon size="20" />
+            Projects</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/entities") ? "true" : "false"}
+            class="secondary"
+            href="/settings/entities">
+              <CodeIcon size="20" />
+            Entities</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/users") ? "true" : "false"}
+            class="secondary"
+            href="/settings/users">
+              <UsersIcon size="20" />
+            Users</a
+          >
+        </li>
+      </ul>
+    </aside>
+    {
+      noContainer ? <slot/> : <article class="content">
+        <slot />
+      </article>
+    }
   </div>
 </Layout>
 
+<script>
+import { navigate } from "astro:transitions/client";
+
+function handleSelectChange(event: Event) {
+  navigate((event.currentTarget as HTMLSelectElement).value);
+}
+
+document.addEventListener('astro:page-load', () => {
+  document
+    .getElementById("select-settings-page")?.addEventListener("change", handleSelectChange);
+});
+</script>
+
 <style>
-  .settings {
+  .settings :global(nav) {
     display: flex;
-    margin-top: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .5rem;
+    min-height: 2.4rem;
   }
 
-  .content {
-    width: 100%;
+  .settings :global(h1) {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+    
+  .settings {
+    display: flex;
+    height: 100%;
+    margin-top: 1rem;
+  }
+ 
+  .settings :global(.content), .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 
-    > :global(nav) {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+
+    
+  }
+
+  aside {
+    display: flex;
+    flex-direction: column;
+    width: 12rem;
+    gap: .4rem;
+    margin-right: 2rem;
+
+    h3 {
+      margin: 0;
+      margin-left: 0.3rem;
+      margin-top: 0.2rem;
+      font-size: 1.1rem;
     }
   }
 
   .sidebar {
     margin: 0;
     padding: 0;
-    padding-right: 3rem;
     display: flex;
     flex-direction: column;
-    gap: 0.32rem;
+    gap: 0.3rem;
+    margin-bottom: 1rem; 
 
     li {
       list-style: none;
+      margin: 0;
+      padding: 0;
     }
 
     a {
       text-decoration: none;
       transition: all 0.2s;
+      border-radius: var(--pico-border-radius);
+      padding: 0.2rem 0.4rem;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
     }
 
     a[data-active="true"] {
-      text-decoration: underline;
       color: var(--pico-h1-color);
+      background: var(--pico-card-background-color);
+      box-shadow: var(--pico-card-box-shadow);
+    }
+
+    a:hover {
+      color: var(--pico-h1-color);
+      background: var(--pico-card-background-color);
+      box-shadow: var(--pico-card-box-shadow);
     }
   }
 
@@ -83,20 +176,20 @@ const { title } = Astro.props;
     padding: 20px;
   }
 
+  .mobile {
+    display: none;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
   @media (max-width: 768px) {
+    .mobile {
+      display: block;
+    }
+    .desktop {
+      display: none;
+    }
     .settings {
       flex-direction: column;
-    }
-
-    .sidebar {
-      padding-right: 0;
-      flex-direction: row;
-      gap: 1rem;
-      margin-bottom: 2rem;
-
-      li {
-        font-size: 1.4rem;
-      }
     }
   }
 </style>

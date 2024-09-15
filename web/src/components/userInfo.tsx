@@ -25,12 +25,12 @@ export const LoginButton = () => {
 				{username}
 			</summary>
 			<ul>
-				{/* <li>
+				<li>
 					<a href="/settings/me">
 						<UserIcon size="16" />
 						My Account
 					</a>
-				</li> */}
+				</li>
 				<li>
 					<a href="/settings">
 						<SettingsIcon size="16" />

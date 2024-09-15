@@ -11,6 +11,18 @@
 .new {
   padding: 0.4rem 0.5rem;
   height: fit-content;
+  animation: newLoad 0.4s ease;
+}
+
+@keyframes newLoad {
+  from {
+    opacity: 0;
+    transform: translateY(0.2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .danger {
