@@ -1,6 +1,14 @@
 import styles from "./filter.module.css";
 import { SearchIcon, XIcon } from "lucide-react";
-import { dimensionNames, filterNames, filterNamesCapitalized, type DimensionFilter } from "../../api";
+import {
+	capitalizeAll,
+	dimensionNames,
+	filterNames,
+	filterNamesInverted,
+	filterTypes,
+	type DimensionFilter,
+	type FilterType,
+} from "../../api";
 import { Dialog } from "../dialog";
 import { cls } from "../../utils";
 import { useRef, useState } from "react";
@@ -18,7 +26,9 @@ export const SelectFilters = ({
 				<article className={cls(styles.filter)} key={i}>
 					<div className={styles.filterField}>
 						<span>{dimensionNames[filter.dimension]}</span>
-						<span className={styles.filterType}>{filterNames[filter.filterType]}</span>
+						<span className={styles.filterType}>
+							{filter.inversed ? filterNamesInverted[filter.filterType] : filterNames[filter.filterType]}
+						</span>
 						{filter.filterType === "is_null" ? null : <span className={styles.filterValue}>{filter.value}</span>}
 					</div>
 					<button type="button" onClick={() => onChange(value.filter((_, j) => i !== j))} className={styles.remove}>
@@ -40,15 +50,16 @@ const FilterDialog = ({
 }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const [dimension, setDimension] = useState<keyof typeof dimensionNames>("url");
-	const [filterType, setFilterType] = useState<DimensionFilter["filterType"]>("equal");
+	const [filterType, setFilterType] = useState<FilterType | `${FilterType}-inverted`>("equal");
 	const [value, setValue] = useState("");
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		onAdd({
 			dimension,
-			filterType,
-			value,
+			inversed: filterType.endsWith("-inverted"),
+			filterType: filterType.replace("-inverted", "") as FilterType,
+			value: value.length ? value : undefined,
 		});
 		setDimension("url");
 		setFilterType("equal");
@@ -56,10 +67,7 @@ const FilterDialog = ({
 		closeRef.current?.click();
 	};
 
-	const dimensions = Object.entries(dimensionNames).filter(([dimension]) => dimension !== "mobile") as [
-		keyof typeof dimensionNames,
-		string,
-	][];
+	const dimensions = Object.entries(dimensionNames) as [keyof typeof dimensionNames, string][];
 
 	return (
 		<Dialog
@@ -91,12 +99,17 @@ const FilterDialog = ({
 					<select
 						name="filterType"
 						value={filterType}
-						onChange={(e) => setFilterType(e.target.value as DimensionFilter["filterType"])}
+						onChange={(e) => setFilterType(e.target.value as FilterType | `${FilterType}-inverted`)}
 					>
-						{Object.entries(filterNamesCapitalized).map(([filterType, name]) => (
-							<option key={filterType} value={filterType}>
-								{name}
-							</option>
+						{filterTypes.map((filterType) => (
+							<>
+								<option key={filterType} value={filterType}>
+									{capitalizeAll(filterNames[filterType])}
+								</option>
+								<option key={`${filterType}-inverted`} value={`${filterType}-inverted`}>
+									{capitalizeAll(filterNamesInverted[filterType])}
+								</option>
+							</>
 						))}
 					</select>
 				</label>

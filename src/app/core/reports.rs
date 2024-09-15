@@ -2,19 +2,12 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
+use crate::utils::duckdb::{repeat_vars, ParamVec};
 use crate::web::routes::dashboard::GraphValue;
-use duckdb::{params_from_iter, ToSql};
-use eyre::Result;
-use itertools::Itertools;
+use duckdb::params_from_iter;
+use eyre::{bail, Result};
 use poem_openapi::{Enum, Object};
 use time::OffsetDateTime;
-
-// TODO: more fine-grained caching (e.g. don't cache for short durations/ending in now)
-// use cached::proc_macro::cached;
-// use cached::SizedCache;
-// const CACHE_SIZE_OVERALL_STATS: usize = 512;
-// const CACHE_SIZE_OVERALL_REPORTS: usize = 512;
-// const CACHE_SIZE_DIMENSION_REPORTS: usize = 512;
 
 #[derive(Object)]
 pub struct DateRange {
@@ -43,17 +36,16 @@ impl Display for DateRange {
     }
 }
 
-#[derive(Debug, Enum)]
+#[derive(Debug, Enum, Clone, Copy)]
 #[oai(rename_all = "snake_case")]
 pub enum Metric {
     Views,
     Sessions,
     UniqueVisitors,
     AvgViewsPerSession,
-    // AvgDuration,
 }
 
-#[derive(Debug, Enum)]
+#[derive(Debug, Enum, Clone, Copy)]
 #[oai(rename_all = "snake_case")]
 pub enum Dimension {
     Url,
@@ -67,14 +59,16 @@ pub enum Dimension {
     City,
 }
 
-#[derive(Enum, Debug)]
+#[derive(Enum, Debug, Clone, Copy)]
 #[oai(rename_all = "snake_case")]
 pub enum FilterType {
     Equal,
-    NotEqual,
     Contains,
-    NotContains,
+    StartsWith,
+    EndsWith,
     IsNull,
+    IsTrue,
+    IsFalse,
 }
 
 pub type ReportGraph = Vec<GraphValue>;
@@ -92,13 +86,27 @@ pub struct ReportStats {
 #[derive(Object, Debug)]
 #[oai(rename_all = "camelCase")]
 pub struct DimensionFilter {
+    /// The dimension to filter by
     dimension: Dimension,
+
+    /// The type of filter to apply
+    /// Note that some filters may not be applicable to all dimensions
     filter_type: FilterType,
-    value: String,
+
+    /// Whether to invert the filter (e.g. not equal, not contains)
+    /// Defaults to false
+    inversed: Option<bool>,
+
+    /// Whether to filter by the strict value (case-sensitive, exact match)
+    strict: Option<bool>,
+
+    /// The value to filter by
+    /// For `FilterType::IsNull` this should be `None`
+    value: Option<String>,
 }
 
-fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, Vec<Box<dyn ToSql>>)> {
-    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
+fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
+    let mut params = ParamVec::new();
 
     if filters.is_empty() {
         return Ok(("".to_owned(), params));
@@ -107,27 +115,40 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, Vec<Box<dyn ToSql>
     let filter_clauses = filters
         .iter()
         .map(|filter| {
-            let filter_value = match filter.filter_type {
-                FilterType::Equal => {
-                    params.push(Box::new(filter.value.clone()));
-                    " = ?"
+            let filter_value = match (filter.value.clone(), filter.filter_type, filter.inversed.unwrap_or(false)) {
+                (Some(value), filter_type, inversed) => {
+                    params.push(value);
+
+                    let strict = filter.strict.unwrap_or(false);
+
+                    let sql = match (filter_type, strict) {
+                        (FilterType::Equal, false) => "ilike ?",
+                        (FilterType::Equal, true) => "like ?",
+                        (FilterType::Contains, false) => "ilike '%' || ? || '%'",
+                        (FilterType::Contains, true) => "like '%' || ? || '%'",
+                        (FilterType::StartsWith, false) => "ilike ? || '%'",
+                        (FilterType::StartsWith, true) => "like ? || '%'",
+                        (FilterType::EndsWith, false) => "ilike '%' || ?",
+                        (FilterType::EndsWith, true) => "like '%' || ?",
+                        _ => bail!("Invalid filter type for value"),
+                    };
+
+                    if inversed {
+                        format!("not {}", sql)
+                    } else {
+                        sql.to_owned()
+                    }
                 }
-                FilterType::NotEqual => {
-                    params.push(Box::new(filter.value.clone()));
-                    " != ?"
-                }
-                FilterType::Contains => {
-                    params.push(Box::new(filter.value.clone()));
-                    " like ?"
-                }
-                FilterType::NotContains => {
-                    params.push(Box::new(filter.value.clone()));
-                    " not like ?"
-                }
-                FilterType::IsNull => " is null",
+                (None, FilterType::IsNull, false) => "is null".into(),
+                (None, FilterType::IsNull, true) => "is not null".into(),
+                (None, FilterType::IsTrue, false) => "is true".into(),
+                (None, FilterType::IsTrue, true) => "is not true".into(),
+                (None, FilterType::IsFalse, false) => "is false".into(),
+                (None, FilterType::IsFalse, true) => "is not false".into(),
+                _ => bail!("Invalid filter type for value"),
             };
 
-            match filter.dimension {
+            Ok(match filter.dimension {
                 Dimension::Url => format!("concat(fqdn, path) {}", filter_value),
                 Dimension::Path => format!("path {}", filter_value),
                 Dimension::Fqdn => format!("fqdn {}", filter_value),
@@ -137,11 +158,11 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, Vec<Box<dyn ToSql>
                 Dimension::Mobile => format!("mobile::text {}", filter_value),
                 Dimension::Country => format!("country {}", filter_value),
                 Dimension::City => format!("city {}", filter_value),
-            }
+            })
         })
-        .join(" and ");
+        .collect::<Result<Vec<String>>>()?;
 
-    Ok((format!("and ({})", filter_clauses), params))
+    Ok((format!("and ({})", filter_clauses.join(" and ")), params))
 }
 
 fn metric_sql(metric: &Metric) -> Result<String> {
@@ -174,12 +195,6 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     Ok(online_users[0])
 }
 
-// #[cached(
-//     ty = "SizedCache<String, ReportGraph>",
-//     create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_REPORTS)}",
-//     convert = r#"{format!("{:?}:{}:{}:{:?}:{:?}:{}", entities, event, range, filters, metric, data_points)}"#,
-//     result = true
-// )]
 pub fn overall_report(
     conn: &DuckDBConn,
     entities: &[String],
@@ -193,21 +208,21 @@ pub fn overall_report(
         return Ok(vec![GraphValue::U64(0); data_points as usize]);
     }
 
-    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
+    let mut params = ParamVec::new();
 
     let (filters_sql, filters_params) = filter_sql(filters)?;
     let metric_sql = metric_sql(metric)?;
 
     let entity_vars = repeat_vars(entities.len());
 
-    params.push(Box::new(range.start()));
-    params.push(Box::new(range.end()));
-    params.push(Box::new(data_points));
-    params.push(Box::new(data_points));
-    params.push(Box::new(event));
-    params.extend(entities.iter().map(|entity| Box::new(entity.clone()) as Box<dyn ToSql>));
-    params.extend(filters_params);
-    params.push(Box::new(range.end()));
+    params.push(range.start());
+    params.push(range.end());
+    params.push(data_points);
+    params.push(data_points);
+    params.push(event);
+    params.extend(entities);
+    params.extend_from_params(filters_params);
+    params.push(range.end());
 
     let query = format!("--sql
         with
@@ -273,12 +288,6 @@ pub fn overall_report(
     }
 }
 
-// #[cached(
-//     ty = "SizedCache<String, ReportStats>",
-//     create = "{ SizedCache::with_size(CACHE_SIZE_OVERALL_STATS)}",
-//     convert = r#"{format!("{:?}:{}:{}:{:?}", entities, event, range, filters)}"#,
-//     result = true
-// )]
 pub fn overall_stats(
     conn: &DuckDBConn,
     entities: &[String],
@@ -290,7 +299,7 @@ pub fn overall_stats(
         return Ok(ReportStats::default());
     }
 
-    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
+    let mut params = ParamVec::new();
 
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;
@@ -300,11 +309,11 @@ pub fn overall_stats(
     let metric_unique_visitors = metric_sql(&Metric::UniqueVisitors)?;
     let metric_avg_views_per_visitor = metric_sql(&Metric::AvgViewsPerSession)?;
 
-    params.push(Box::new(range.start()));
-    params.push(Box::new(range.end()));
-    params.push(Box::new(event));
-    params.extend(entities.iter().map(|entity| Box::new(entity) as Box<dyn ToSql>));
-    params.extend(filters_params);
+    params.push(range.start());
+    params.push(range.end());
+    params.push(event);
+    params.extend(entities);
+    params.extend_from_params(filters_params);
 
     let query = format!("--sql
         with
@@ -348,22 +357,16 @@ pub fn overall_stats(
     Ok(result)
 }
 
-// #[cached(
-//     ty = "SizedCache<String, ReportTable>",
-//     create = "{ SizedCache::with_size(CACHE_SIZE_DIMENSION_REPORTS)}",
-//     convert = r#"{format!("{:?}:{}:{}:{:?}:{:?}:{:?}", entities, event, range, dimension, filters, metric)}"#,
-//     result = true
-// )]
 pub fn dimension_report(
     conn: &DuckDBConn,
-    entities: &[impl AsRef<str> + Debug],
+    entities: &[String],
     event: &str,
     range: &DateRange,
     dimension: &Dimension,
     filters: &[DimensionFilter],
     metric: &Metric,
 ) -> Result<ReportTable> {
-    let mut params: Vec<Box<dyn ToSql>> = Vec::new();
+    let mut params = ParamVec::new();
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
@@ -380,11 +383,11 @@ pub fn dimension_report(
         Dimension::City => ("concat(country, city)", "country, city"),
     };
 
-    params.push(Box::new(range.start()));
-    params.push(Box::new(range.end()));
-    params.push(Box::new(event));
-    params.extend(entities.iter().map(|entity| Box::new(entity.as_ref()) as Box<dyn ToSql>));
-    params.extend(filters_params);
+    params.push(range.start());
+    params.push(range.end());
+    params.push(event);
+    params.extend(entities);
+    params.extend_from_params(filters_params);
 
     let query = format!("--sql
         with
@@ -443,12 +446,4 @@ pub fn dimension_report(
             Ok(report_table)
         }
     }
-}
-
-fn repeat_vars(count: usize) -> String {
-    assert_ne!(count, 0);
-    let mut s = "?,".repeat(count);
-    // Remove trailing comma
-    s.pop();
-    s
 }

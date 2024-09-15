@@ -7,6 +7,16 @@ export type DateRange = OASModel<DashboardSpec, "DateRange">;
 export type Dimension = OASModel<DashboardSpec, "Dimension">;
 export type DimensionFilter = OASModel<DashboardSpec, "DimensionFilter">;
 export type DimensionTableRow = OASModel<DashboardSpec, "DimensionTableRow">;
+export type FilterType = OASModel<DashboardSpec, "FilterType">;
+export const filterTypes = [
+	"contains",
+	"equal",
+	"is_null",
+	"ends_with",
+	"is_false",
+	"is_true",
+	"starts_with",
+] as const satisfies FilterType[];
 
 export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
 export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;

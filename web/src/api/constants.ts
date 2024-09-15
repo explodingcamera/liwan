@@ -23,14 +23,20 @@ export const filterNames: Record<DimensionFilter["filterType"], string> = {
 	contains: "contains",
 	equal: "is",
 	is_null: "is null",
-	not_contains: "does not contain",
-	not_equal: "is not",
+	ends_with: "ends with",
+	is_false: "is false",
+	is_true: "is true",
+	starts_with: "starts with",
 };
 
-export const filterNamesCapitalized: Record<DimensionFilter["filterType"], string> = {
-	contains: "Contains",
-	equal: "Equals",
-	is_null: "Is Null",
-	not_contains: "Does Not Contain",
-	not_equal: "Does Not Equal",
+export const filterNamesInverted: Record<DimensionFilter["filterType"], string> = {
+	contains: "does not contain",
+	equal: "is not",
+	is_null: "is not null",
+	ends_with: "does not end with",
+	is_false: "is not false",
+	is_true: "is not true",
+	starts_with: "does not start with",
 };
+
+export const capitalizeAll = (str: string) => str.replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());

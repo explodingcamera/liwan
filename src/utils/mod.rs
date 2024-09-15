@@ -1,3 +1,4 @@
+pub mod duckdb;
 pub mod geo;
 pub mod hash;
 pub mod referrer;
