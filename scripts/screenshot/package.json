@@ -1,0 +1,9 @@
+{
+	"name": "screenshot",
+	"module": "index.ts",
+	"type": "module",
+	"devDependencies": {
+		"@types/bun": "latest",
+		"capture-website": "^4.1.0"
+	}
+}

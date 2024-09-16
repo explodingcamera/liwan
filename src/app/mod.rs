@@ -11,7 +11,6 @@ use duckdb::DuckdbConnectionManager;
 use eyre::Result;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::sync::Arc;
-use time::OffsetDateTime;
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
@@ -108,6 +107,7 @@ impl Liwan {
     pub fn seed_database(&self) -> Result<()> {
         use models::UserRole;
         use rand::Rng;
+        use time::OffsetDateTime;
 
         let entities = vec![
             ("entity-1", "Entity 1", "example.com", vec!["public-project".to_string(), "private-project".to_string()]),

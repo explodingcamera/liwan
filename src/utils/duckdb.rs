@@ -1,10 +1,11 @@
 use duckdb::ToSql;
 
+#[derive(Default)]
 pub struct ParamVec<'a>(Vec<Box<dyn ToSql + 'a>>);
 
 impl<'a> ParamVec<'a> {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self::default()
     }
 
     pub fn push<T: ToSql + 'a>(&mut self, value: T) {

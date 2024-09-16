@@ -3,15 +3,21 @@
 <div align="center">
     <a href=""><img  src="./web/public/favicon.svg" width="100px"></a>
     <h2>
-        <a href="https://liwan.dev">liwan.dev</a> - Easy & privacy-first web analytics
+        <a href="https://liwan.dev">liwan.dev</a> - Easy & Privacy-First Web Analytics
     </h2>
     <div>
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/explodingcamera/liwan/test.yaml?style=flat-square)
 ![GitHub Release](https://img.shields.io/github/v/release/explodingcamera/liwan?style=flat-square)
 [![Container](https://img.shields.io/badge/Container-ghcr.io%2Fexplodingcamera%2Fliwan%3Aedge-blue?style=flat-square)](https://github.com/explodingcamera/liwan/pkgs/container/liwan)
+
 </div>
 
+</div>
+
+<div align="center">
+<a href="https://demo.liwan.dev/p/liwan.dev"><img width="45%" src="./data/images/liwan-desktop-dark.png" /></a>&nbsp;&nbsp;&nbsp;
+<a href="https://demo.liwan.dev/p/liwan.dev"><img width="45%" src="./data/images/liwan-desktop.png" /></a>
 </div>
 
 ## Features
@@ -23,7 +29,7 @@
 - **Lightweight**\
   You can run Liwan on a cheap VPS, your old mac mini, or even a Raspberry Pi. Written in Rust and using tokio for async I/O, Liwan is fast and efficient.
 - **Open source**\
-  Fully open source. You can change, extend, and contribute to the codebase. If you’re interested in commercial licensing, please get in touch at hi@liwan.dev.
+  Fully open source. You can change, extend, and contribute to the codebase.
 - **Accurate data**\
   Get accurate data about your website’s visitors, page views, referrers, and more. Liwan detects bots and crawlers and filters them out by default.
 - **Real-time analytics**\

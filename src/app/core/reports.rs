@@ -77,7 +77,7 @@ pub enum FilterType {
 }
 
 pub type ReportGraph = Vec<GraphValue>;
-pub type ReportTable = BTreeMap<String, u64>;
+pub type ReportTable = BTreeMap<String, GraphValue>;
 
 #[derive(Object, Clone, Debug, Default)]
 #[oai(rename_all = "camelCase")]
@@ -448,18 +448,18 @@ pub fn dimension_report(
             let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: u64 = row.get(1)?;
-                Ok((dimension_value, total_metric))
+                Ok((dimension_value, GraphValue::U64(total_metric)))
             })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, u64>, duckdb::Error>>()?;
+            let report_table = rows.collect::<Result<BTreeMap<String, GraphValue>, duckdb::Error>>()?;
             Ok(report_table)
         }
         Metric::AvgViewsPerSession => {
             let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 let total_metric: f64 = row.get(1)?;
-                Ok((dimension_value, (total_metric * 1000.0).round() as u64))
+                Ok((dimension_value, GraphValue::F64(total_metric)))
             })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, u64>, duckdb::Error>>()?;
+            let report_table = rows.collect::<Result<BTreeMap<String, GraphValue>, duckdb::Error>>()?;
             Ok(report_table)
         }
     }

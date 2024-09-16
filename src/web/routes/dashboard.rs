@@ -63,7 +63,7 @@ struct DimensionResponse {
 #[oai(rename_all = "camelCase")]
 struct DimensionTableRow {
     dimension_value: String,
-    value: u64,
+    value: GraphValue,
     display_name: Option<String>,
     icon: Option<String>,
 }
