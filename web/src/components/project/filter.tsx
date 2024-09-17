@@ -132,7 +132,7 @@ const FilterDialog = ({
 
 		onAdd({
 			dimension,
-			inversed: filter.invertable && data.get("inverted") === "on",
+			inversed: filter.invertable && data.get("show-matches") === "inverted",
 			filterType: data.get("filterType") as FilterType,
 			value: data.get("value") as string,
 		});
@@ -180,13 +180,13 @@ const FilterDialog = ({
 						</label>
 						{filter.invertable && (
 							<div className={styles.inverted}>
-								<fieldset name="test">
+								<fieldset>
 									<label>
-										<input defaultChecked type="radio" aria-invalid="false" />
+										<input name="show-matches" defaultChecked value="default" type="radio" aria-invalid="false" />
 										Show Matches
 									</label>
 									<label>
-										<input type="radio" name="inverted" aria-invalid="true" />
+										<input name="show-matches" type="radio" value="inverted" aria-invalid="true" />
 										Exclude Matches
 									</label>
 								</fieldset>

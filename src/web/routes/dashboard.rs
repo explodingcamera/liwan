@@ -8,17 +8,11 @@ use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::param::Path;
 use poem_openapi::payload::Json;
-use poem_openapi::{Object, OpenApi, Union};
-
-#[derive(Union, Debug, PartialEq, Clone, Copy)]
-pub enum GraphValue {
-    U64(u64),
-    F64(f64),
-}
+use poem_openapi::{Object, OpenApi};
 
 #[derive(Object)]
 struct GraphResponse {
-    data: Vec<GraphValue>,
+    data: Vec<f64>,
 }
 
 #[derive(Object)]
@@ -63,7 +57,7 @@ struct DimensionResponse {
 #[oai(rename_all = "camelCase")]
 struct DimensionTableRow {
     dimension_value: String,
-    value: GraphValue,
+    value: f64,
     display_name: Option<String>,
     icon: Option<String>,
 }

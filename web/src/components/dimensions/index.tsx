@@ -14,40 +14,56 @@ import {
 } from "../../api";
 
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
-import { countryCodeToFlag, formatFullUrl, formatHost, getHref, tryParseUrl } from "../../utils";
+import { countryCodeToFlag, formatFullUrl, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
 import { DetailsModal } from "./modal";
 import { formatMetricVal } from "../../utils";
 import type { ProjectQuery } from "../project";
 
 export const cardStyles = styles.card;
 
-export const DimensionCard = ({
-	dimension,
-	query,
-}: {
+type DimensionProps = {
 	dimension: Dimension;
 	query: ProjectQuery;
-}) => {
+	onSelect: (value: DimensionTableRow) => void;
+};
+
+export const DimensionCard = (props: DimensionProps) => {
 	return (
 		<article className={styles.card}>
 			<div className={styles.dimensionHeader}>
-				<div>{dimensionNames[dimension]}</div>
-				<div>{metricNames[query.metric]}</div>
+				<div>{dimensionNames[props.dimension]}</div>
+				<div>{metricNames[props.query.metric]}</div>
 			</div>
-			<DimensionTable dimension={dimension} query={query} />
+			<DimensionTable {...props} />
 		</article>
 	);
 };
 
-export const DimensionTabsCard = ({ dimensions, query }: { dimensions: Dimension[]; query: ProjectQuery }) => {
+export const DimensionTabsCard = ({
+	dimensions,
+	query,
+	onSelect,
+}: {
+	dimensions: Dimension[];
+	query: ProjectQuery;
+	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
+}) => {
 	return (
 		<article className={styles.card}>
-			<DimensionTabs dimensions={dimensions} query={query} />
+			<DimensionTabs dimensions={dimensions} query={query} onSelect={onSelect} />
 		</article>
 	);
 };
 
-export const DimensionTabs = ({ dimensions, query }: { dimensions: Dimension[]; query: ProjectQuery }) => {
+export const DimensionTabs = ({
+	dimensions,
+	query,
+	onSelect,
+}: {
+	dimensions: Dimension[];
+	query: ProjectQuery;
+	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
+}) => {
 	return (
 		<Tabs.Root className={styles.tabs} defaultValue={dimensions[0]}>
 			<Tabs.List className={styles.tabsList}>
@@ -60,18 +76,15 @@ export const DimensionTabs = ({ dimensions, query }: { dimensions: Dimension[]; 
 			</Tabs.List>
 			{dimensions.map((dimension) => (
 				<Tabs.Content key={dimension} value={dimension} className={styles.tabsContent}>
-					<DimensionTable dimension={dimension} noHeader query={query} />
+					<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
 				</Tabs.Content>
 			))}
 		</Tabs.Root>
 	);
 };
 
-export const DimensionTable = ({
-	dimension,
-	query,
-}: { dimension: Dimension; noHeader?: boolean; query: ProjectQuery }) => {
-	const { data, biggest, order, isLoading } = useDimension({ dimension, ...query });
+export const DimensionTable = (props: DimensionProps) => {
+	const { data, biggest, order, isLoading } = useDimension({ dimension: props.dimension, ...props.query });
 
 	const dataTruncated = data?.slice(0, 6);
 	return (
@@ -85,7 +98,7 @@ export const DimensionTable = ({
 							className={styles.dimensionRow}
 						>
 							<DimensionValueBar value={d.value} biggest={biggest}>
-								<DimensionLabel dimension={dimension} value={d} />
+								<DimensionLabel dimension={props.dimension} value={d} onSelect={props.onSelect} />
 							</DimensionValueBar>
 							<div>{formatMetricVal(d.value)}</div>
 						</div>
@@ -99,69 +112,90 @@ export const DimensionTable = ({
 					</div>
 				)}
 			</div>
-			<DetailsModal dimension={dimension} query={query} />
+			<DetailsModal {...props} />
 		</>
 	);
 };
 
-const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.ReactNode> = {
-	platform: (value) => (
+const DimensionValueButton = ({
+	children,
+	onSelect,
+}: {
+	children: React.ReactNode;
+	onSelect: () => void;
+}) => (
+	<button type="button" className={styles.dimensionItemSelect} onClick={onSelect}>
+		{children}
+	</button>
+);
+
+const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: () => void) => React.ReactNode> = {
+	platform: (value, onSelect) => (
 		<>
 			<OSIcon os={value.dimensionValue} size={24} />
-			{value.dimensionValue}
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
 		</>
 	),
-	browser: (value) => (
+	browser: (value, onSelect) => (
 		<>
 			<BrowserIcon browser={value.dimensionValue} size={24} />
-			{value.dimensionValue}
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
 		</>
 	),
-	url: (value) => {
+	url: (value, onSelect) => {
 		const url = tryParseUrl(value.dimensionValue);
 
 		return (
 			<>
 				<LinkIcon size={16} />
-				<a target="_blank" rel="noreferrer" href={getHref(url)}>
-					{formatFullUrl(url)}
+				<DimensionValueButton onSelect={onSelect}>{formatPath(url)}</DimensionValueButton>
+				<a href={getHref(url)} target="_blank" rel="noreferrer" className={styles.external}>
+					<SquareArrowOutUpRightIcon size={16} />
 				</a>
+				{typeof url !== "string" && <span className={styles.hostname}>{formatHost(url)}</span>}
 			</>
 		);
 	},
-	fqdn: (value) => {
+	fqdn: (value, onSelect) => {
 		const url = tryParseUrl(value.dimensionValue);
 		return (
 			<>
 				<LinkIcon size={16} />
-				<a target="_blank" rel="noreferrer" href={getHref(url)}>
-					{formatHost(url)}
+				<DimensionValueButton onSelect={onSelect}>{formatHost(url)}</DimensionValueButton>
+				<a href={getHref(url)} target="_blank" rel="noreferrer" className={styles.external}>
+					<SquareArrowOutUpRightIcon size={16} />
 				</a>
 			</>
 		);
 	},
-	mobile: (value) => (
+	mobile: (value, onSelect) => (
 		<>
 			<MobileDeviceIcon isMobile={value.dimensionValue === "true"} size={24} />
-			{value.dimensionValue === "true" ? "Mobile" : "Desktop"}
+			<DimensionValueButton onSelect={onSelect}>
+				{value.dimensionValue === "true" ? "Mobile" : "Desktop"}
+			</DimensionValueButton>
 		</>
 	),
-	country: (value) => (
+	country: (value, onSelect) => (
 		<>
 			<span>{countryCodeToFlag(value.dimensionValue)}</span>
-			{value.displayName || value.dimensionValue || "Unknown"}
+			<DimensionValueButton onSelect={onSelect}>
+				{value.displayName || value.dimensionValue || "Unknown"}
+			</DimensionValueButton>
 		</>
 	),
-	city: (value) => (
+	city: (value, onSelect) => (
 		<>
 			<span>{countryCodeToFlag(value.icon || "XX")}</span>
-			{value.displayName || "Unknown"}
+			<DimensionValueButton onSelect={onSelect}>{value.displayName || "Unknown"}</DimensionValueButton>
 		</>
 	),
-	referrer: (value) => (
+	referrer: (value, onSelect) => (
 		<>
 			<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
-			{value.displayName || value.dimensionValue || "Unknown"}
+			<DimensionValueButton onSelect={onSelect}>
+				{value.displayName || value.dimensionValue || "Unknown"}
+			</DimensionValueButton>
 			{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
 				<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
 					<SquareArrowOutUpRightIcon size={16} />
@@ -169,7 +203,12 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow) => React.Rea
 			)}
 		</>
 	),
-	path: (value) => value.dimensionValue,
+	path: (value, onSelect) => (
+		<>
+			<LinkIcon size={16} />
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
+		</>
+	),
 };
 
 const isValidFqdn = (fqdn: string) => {
@@ -182,8 +221,12 @@ const isValidFqdn = (fqdn: string) => {
 	}
 };
 
-export const DimensionLabel = ({ dimension, value }: { dimension: Dimension; value: DimensionTableRow }) =>
-	dimensionLabels[dimension](value);
+export const DimensionLabel = ({
+	dimension,
+	value,
+	onSelect,
+}: { dimension: Dimension; value: DimensionTableRow; onSelect: (value: DimensionTableRow) => void }) =>
+	dimensionLabels[dimension](value, () => onSelect(value));
 
 export const DimensionValueBar = ({
 	value,

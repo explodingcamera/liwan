@@ -5,7 +5,7 @@ import { useLocalStorage } from "@uidotdev/usehooks";
 import { Suspense, lazy, useEffect, useState } from "react";
 
 import { metricNames, useDimension, useProject, useProjectData } from "../api";
-import type { DimensionFilter, DateRange, Metric, ProjectResponse } from "../api";
+import type { DimensionFilter, DateRange, Metric, ProjectResponse, DimensionTableRow, Dimension } from "../api";
 import { type RangeName, resolveRange } from "../api/ranges";
 
 import { cls } from "../utils";
@@ -43,6 +43,49 @@ export const Project = () => {
 
 	const query = { metric, range, filters, project };
 
+	const toggleFilter = (filter: DimensionFilter) => {
+		const index = filters.findIndex((f) => f.dimension === filter.dimension && f.filterType === filter.filterType);
+		if (index === -1) {
+			setFilters([...filters, filter]);
+		} else {
+			setFilters(filters.filter((_, i) => i !== index));
+		}
+	};
+
+	const onSelectDimRow = (value: DimensionTableRow, dimension: Dimension) => {
+		let filter: DimensionFilter = {
+			dimension,
+			filterType: "equal",
+			value: value.dimensionValue,
+		};
+
+		if (dimension === "city") {
+			// remove the first two characters from the dimension value
+			// which are the country code
+			filter = {
+				dimension: "city",
+				filterType: "equal",
+				value: value.dimensionValue.slice(2),
+			};
+		}
+
+		if (dimension === "mobile") {
+			filter = {
+				dimension: "mobile",
+				filterType: value.dimensionValue === "true" ? "is_true" : "is_false",
+			};
+		}
+
+		if (value.dimensionValue === "Unknown") {
+			filter = {
+				dimension,
+				filterType: "is_null",
+			};
+		}
+
+		toggleFilter(filter);
+	};
+
 	return (
 		<div className={styles.project}>
 			<Suspense fallback={null}>
@@ -58,18 +101,24 @@ export const Project = () => {
 					<LineGraph data={graph.data} title={metricNames[metric]} range={graph.range} />
 				</article>
 				<div className={styles.tables}>
-					<DimensionTabsCard dimensions={["url", "fqdn"]} query={query} />
-					<DimensionCard dimension={"referrer"} query={query} />
-					<GeoCard query={query} />
-					<DimensionTabsCard dimensions={["platform", "browser"]} query={query} />
-					<DimensionCard dimension={"mobile"} query={query} />
+					<DimensionTabsCard dimensions={["url", "fqdn"]} query={query} onSelect={onSelectDimRow} />
+					<DimensionCard dimension={"referrer"} query={query} onSelect={(v) => onSelectDimRow(v, "referrer")} />
+					<GeoCard query={query} onSelect={onSelectDimRow} />
+					<DimensionTabsCard dimensions={["platform", "browser"]} query={query} onSelect={onSelectDimRow} />
+					<DimensionCard dimension={"mobile"} query={query} onSelect={(v) => onSelectDimRow(v, "mobile")} />
 				</div>
 			</Suspense>
 		</div>
 	);
 };
 
-const GeoCard = ({ query }: { query: ProjectQuery }) => {
+const GeoCard = ({
+	query,
+	onSelect,
+}: {
+	query: ProjectQuery;
+	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
+}) => {
 	const { data } = useDimension({
 		dimension: "country",
 		...query,
@@ -83,7 +132,7 @@ const GeoCard = ({ query }: { query: ProjectQuery }) => {
 				</Suspense>
 			</div>
 			<div className={styles.geoTable}>
-				<DimensionTabs dimensions={["country", "city"]} query={query} />
+				<DimensionTabs dimensions={["country", "city"]} query={query} onSelect={onSelect} />
 			</div>
 		</article>
 	);

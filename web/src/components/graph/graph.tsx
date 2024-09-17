@@ -81,7 +81,6 @@ export const LineGraph = ({
 			pointLabelYOffset={-12}
 			enableSlices="x"
 			sliceTooltip={(props) => <Tooltip {...props} title={title} range={range} />}
-			enableTouchCrosshair={true}
 			defs={[
 				{
 					colors: [

@@ -52,6 +52,11 @@ export const formatFullUrl = (url: string | URL) => {
 	return `${url.hostname}${url.pathname}${url.search}`;
 };
 
+export const formatPath = (url: string | URL) => {
+	if (typeof url === "string") return url;
+	return url.pathname;
+};
+
 export const getHref = (url: string | URL) => {
 	if (typeof url === "string") {
 		if (!url.startsWith("http")) return `https://${url}`;

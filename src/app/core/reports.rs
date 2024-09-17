@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
 use crate::utils::duckdb::{repeat_vars, ParamVec};
-use crate::web::routes::dashboard::GraphValue;
 use duckdb::params_from_iter;
 use eyre::{bail, Result};
 use poem_openapi::{Enum, Object};
@@ -76,8 +75,8 @@ pub enum FilterType {
     IsFalse,
 }
 
-pub type ReportGraph = Vec<GraphValue>;
-pub type ReportTable = BTreeMap<String, GraphValue>;
+pub type ReportGraph = Vec<f64>;
+pub type ReportTable = BTreeMap<String, f64>;
 
 #[derive(Object, Clone, Debug, Default)]
 #[oai(rename_all = "camelCase")]
@@ -222,7 +221,7 @@ pub fn overall_report(
     metric: &Metric,
 ) -> Result<ReportGraph> {
     if entities.is_empty() {
-        return Ok(vec![GraphValue::U64(0); data_points as usize]);
+        return Ok(vec![0.; data_points as usize]);
     }
 
     let mut params = ParamVec::new();
@@ -293,13 +292,13 @@ pub fn overall_report(
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(GraphValue::U64(row.get(1)?)))?;
-            let report_graph = rows.collect::<Result<Vec<GraphValue>, duckdb::Error>>()?;
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(row.get(1)?))?;
+            let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
             Ok(report_graph)
         }
         Metric::AvgViewsPerSession => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(GraphValue::F64(row.get(1)?)))?;
-            let report_graph = rows.collect::<Result<Vec<GraphValue>, duckdb::Error>>()?;
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(row.get(1)?))?;
+            let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
             Ok(report_graph)
         }
     }
@@ -447,19 +446,17 @@ pub fn dimension_report(
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
             let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
-                let total_metric: u64 = row.get(1)?;
-                Ok((dimension_value, GraphValue::U64(total_metric)))
+                Ok((dimension_value, row.get(1)?))
             })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, GraphValue>, duckdb::Error>>()?;
+            let report_table = rows.collect::<Result<BTreeMap<String, f64>, duckdb::Error>>()?;
             Ok(report_table)
         }
         Metric::AvgViewsPerSession => {
             let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
-                let total_metric: f64 = row.get(1)?;
-                Ok((dimension_value, GraphValue::F64(total_metric)))
+                Ok((dimension_value, row.get(1)?))
             })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, GraphValue>, duckdb::Error>>()?;
+            let report_table = rows.collect::<Result<BTreeMap<String, f64>, duckdb::Error>>()?;
             Ok(report_table)
         }
     }

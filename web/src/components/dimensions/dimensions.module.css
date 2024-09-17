@@ -118,6 +118,26 @@
   align-items: center;
 }
 
+.hostname {
+  opacity: 0.7;
+  font-size: 0.6rem;
+}
+
+.dimensionItemSelect {
+  all: unset;
+  position: relative;
+  color: var(--pico-h2-color);
+
+  &:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--pico-h4-color);
+    text-decoration-style: dotted;
+    text-decoration-thickness: 0.1rem;
+  }
+
+  cursor: pointer;
+}
+
 .dimensionEmpty {
   flex: 1;
   display: flex;
