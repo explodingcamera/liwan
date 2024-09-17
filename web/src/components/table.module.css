@@ -9,6 +9,8 @@
 .container {
   margin-top: 0.5rem;
   animation: tableLoad 0.3s ease;
+  overflow-x: auto;
+  height: 100%;
 }
 
 @keyframes tableLoad {
