@@ -32,7 +32,7 @@ export const LoginButton = () => {
 					</a>
 				</li>
 				<li>
-					<a href="/settings">
+					<a href="/settings/projects">
 						<SettingsIcon size="16" />
 						Admin
 					</a>

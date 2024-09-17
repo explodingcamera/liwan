@@ -36,7 +36,7 @@ h3,
 h4,
 h5,
 h6 {
-  --pico-font-weight: 600;
+  --pico-font-weight: 500;
 }
 
 .full {
@@ -60,7 +60,7 @@ h3,
 h4,
 h5,
 h6 {
-  --pico-font-family: "Figtree Variable", system-ui, "Segoe UI", Roboto, Oxygen,
+  --pico-font-family: "Outfit Variable", system-ui, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, Helvetica, Arial, "Helvetica Neue", sans-serif,
     var(--pico-font-family-emoji);
 }

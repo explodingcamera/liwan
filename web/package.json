@@ -11,7 +11,7 @@
 	"dependencies": {
 		"@astrojs/react": "^3.6.2",
 		"@explodingcamera/css": "^0.0.4",
-		"@fontsource-variable/figtree": "^5.1.0",
+		"@fontsource-variable/outfit": "^5.1.0",
 		"@icons-pack/react-simple-icons": "^10.0.0",
 		"@nivo/line": "^0.87.0",
 		"@picocss/pico": "^2.0.6",
@@ -37,14 +37,10 @@
 		"@types/react": "^18.3.7",
 		"@types/react-dom": "^18.3.0",
 		"@types/react-simple-maps": "^3.0.6",
-		"astro": "^4.15.6",
+		"astro": "^4.15.7",
 		"bun-types": "^1.1.27",
 		"rollup-plugin-license": "^3.5.2",
 		"typescript": "^5.6.2"
 	},
-	"trustedDependencies": [
-		"@biomejs/biome",
-		"esbuild",
-		"sharp"
-	]
+	"trustedDependencies": ["@biomejs/biome", "esbuild", "sharp"]
 }
