@@ -5,19 +5,19 @@ import styles from "./dimensions.module.css";
 import { cls, formatMetricVal } from "../../utils";
 import { Dialog } from "../dialog";
 import { DimensionLabel, DimensionValueBar } from ".";
-import {
-	dimensionNames,
-	metricNames,
-	useDimension,
-	type DateRange,
-	type Dimension,
-	type Metric,
-	type ProjectResponse,
-} from "../../api";
+import { dimensionNames, metricNames, useDimension, type Dimension, type DimensionTableRow } from "../../api";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { ProjectQuery } from "../project";
 
-export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query: ProjectQuery }) => {
+export const DetailsModal = ({
+	dimension,
+	query,
+	onSelect,
+}: {
+	dimension: Dimension;
+	query: ProjectQuery;
+	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
+}) => {
 	const { data, biggest, order, isLoading } = useDimension({ dimension, ...query });
 
 	const [filter, setFilter] = useState("");
@@ -64,7 +64,7 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 							className={styles.dimensionRow}
 						>
 							<DimensionValueBar value={d.value} biggest={biggest}>
-								<DimensionLabel dimension={dimension} value={d} />
+								<DimensionLabel dimension={dimension} value={d} onSelect={() => onSelect(d, dimension)} />
 							</DimensionValueBar>
 							<div>{formatMetricVal(d.value)}</div>
 						</div>

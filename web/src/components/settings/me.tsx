@@ -48,6 +48,22 @@ export const MyAccount = () => {
 				</div>
 			</article>
 			<article>
+				<h2>Snippet code</h2>
+				<p>
+					You can copy the tracking snippet for a specific entity <a href="/settings/entities">here</a>, use the{" "}
+					<a href="https://npmjs.com/package/liwan-tracker">liwan-tracker</a> npm package, or use the following code:
+				</p>
+				<code>
+					<span className={styles.tag}>{"<script"}</span> type="module" data-entity="
+					<span className={styles.entity}>YOUR_ENTITY_ID</span>" src="
+					{window.location.origin}/script.js"
+					<span className={styles.tag}>
+						{">"}
+						{"</script>"}
+					</span>
+				</code>
+			</article>
+			<article>
 				<form className={styles.password} onSubmit={handleSubmit} ref={formRef}>
 					<h2>Update Password</h2>
 					<label>

@@ -13,6 +13,15 @@
 
   --pico-form-element-active-border-color: var(--pico-secondary-hover);
   --pico-form-element-focus-color: var(--pico-secondary-hover);
+  --pico-border-radius: 0.7rem;
+  --pico-spacing: 0.75rem;
+  --pico-form-element-spacing-vertical: 0.5rem;
+  --pico-form-element-spacing-horizontal: 0.6rem;
+
+  --pico-font-family: "Outfit Variable", system-ui, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, Helvetica, Arial, "Helvetica Neue", sans-serif,
+    var(--pico-font-family-emoji);
+  --pico-font-family-sans-serif: var(--pico-font-family);
 }
 
 :root[data-theme="dark"] {
@@ -39,41 +48,16 @@ h6 {
   --pico-font-weight: 500;
 }
 
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
+
 .full {
   min-height: 100%;
 }
 
 .react-tooltip {
   z-index: 10;
-}
-/* 
-body {
-  --bg-gradient-color: oklab(0.51 -0.1 0 / 0.1);
-  background: linear-gradient(215deg, var(--bg-gradient-color), transparent 50%),
-    radial-gradient(var(--bg-gradient-color), transparent 40%) no-repeat -60vw -40vh /90vw
-      300vh;
-} */
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  --pico-font-family: "Outfit Variable", system-ui, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, Helvetica, Arial, "Helvetica Neue", sans-serif,
-    var(--pico-font-family-emoji);
-}
-
-:root {
-  --pico-border-radius: 0.7rem;
-  --pico-spacing: 0.75rem;
-  --pico-form-element-spacing-vertical: 0.5rem;
-  --pico-form-element-spacing-horizontal: 0.6rem;
-}
-
-html body[data-scroll-locked] {
-  margin-right: 0 !important;
 }
 
 [type="search"] {

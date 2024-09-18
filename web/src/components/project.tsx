@@ -1,20 +1,20 @@
 import styles from "./project.module.css";
 import _map from "./worldmap.module.css";
 
-import { useLocalStorage } from "@uidotdev/usehooks";
 import { Suspense, lazy, useEffect, useState } from "react";
+import { useLocalStorage } from "@uidotdev/usehooks";
 
+import { type RangeName, resolveRange } from "../api/ranges";
 import { metricNames, useDimension, useProject, useProjectData } from "../api";
 import type { DimensionFilter, DateRange, Metric, ProjectResponse, DimensionTableRow, Dimension } from "../api";
-import { type RangeName, resolveRange } from "../api/ranges";
 
 import { cls } from "../utils";
-import { DimensionCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
+import { LineGraph } from "./graph";
 import { SelectRange } from "./project/range";
 import { ProjectHeader } from "./project/project";
 import { SelectMetrics } from "./project/metric";
-import { LineGraph } from "./graph";
 import { SelectFilters } from "./project/filter";
+import { DimensionCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
 
 const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
 

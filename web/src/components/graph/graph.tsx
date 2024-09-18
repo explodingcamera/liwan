@@ -5,6 +5,7 @@ import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
 import { addMonths } from "date-fns";
 import type { DataPoint } from ".";
 import { formatMetricVal } from "../../utils";
+import { useWindowSize } from "@uidotdev/usehooks";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 
@@ -47,11 +48,19 @@ export const LineGraph = ({
 	const max = useMemo(() => Math.max(...data.map((d) => d.y)), [data]);
 	const yCount = 5;
 
+	const size = useWindowSize();
+	let xCount = Math.min(data.length, 8);
+	if (size.width && size.width < 1000) {
+		xCount = Math.min(data.length, 6);
+	} else if (size.width && size.width < 600) {
+		xCount = Math.min(data.length, 4);
+	}
+
 	return (
 		<ResponsiveLine
 			data={[{ data, id: "data", color: "hsl(0, 70%, 50%)" }]}
 			margin={{ top: 10, right: 40, bottom: 30, left: 40 }}
-			xScale={data.length > 14 ? { type: "time" } : { type: "point" }}
+			xScale={{ type: "time" }}
 			yScale={{
 				type: "linear",
 				nice: true,
@@ -68,6 +77,7 @@ export const LineGraph = ({
 			axisBottom={{
 				legend: "",
 				format: (value: Date) => formatDate(value, range),
+				tickValues: xCount,
 			}}
 			axisLeft={{
 				legend: "",

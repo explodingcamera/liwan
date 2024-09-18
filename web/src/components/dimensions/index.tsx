@@ -1,20 +1,11 @@
 import * as Tabs from "@radix-ui/react-tabs";
-import { LinkIcon, SquareArrowOutUpRightIcon, ZoomIn } from "lucide-react";
+import { LinkIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
-import {
-	type DateRange,
-	type Dimension,
-	type DimensionTableRow,
-	type Metric,
-	type ProjectResponse,
-	dimensionNames,
-	metricNames,
-	useDimension,
-} from "../../api";
+import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
 
 import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
-import { countryCodeToFlag, formatFullUrl, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
+import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
 import { DetailsModal } from "./modal";
 import { formatMetricVal } from "../../utils";
 import type { ProjectQuery } from "../project";
@@ -85,11 +76,15 @@ export const DimensionTabs = ({
 
 export const DimensionTable = (props: DimensionProps) => {
 	const { data, biggest, order, isLoading } = useDimension({ dimension: props.dimension, ...props.query });
-
 	const dataTruncated = data?.slice(0, 6);
+
 	return (
 		<>
-			<div className={styles.dimensionTable} style={{ "--count": 6 } as React.CSSProperties}>
+			<div
+				className={cls(styles.dimensionTable, isLoading && styles.loading)}
+				style={{ "--count": 6 } as React.CSSProperties}
+			>
+				{isLoading && <div className={cls("loading-spinner", styles.spinner)} />}
 				{dataTruncated?.map((d) => {
 					return (
 						<div

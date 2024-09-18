@@ -138,7 +138,7 @@ export const useProjectData = ({
 		refetchInterval,
 		staleTime,
 		enabled: project !== undefined,
-		queryKey: ["project_graph", project?.id, range, graphRange, metric, dataPoints],
+		queryKey: ["project_graph", project?.id, range, graphRange, metric, filters, dataPoints],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
 				.post({ json: { range, metric, dataPoints, filters }, params: { project_id: project?.id ?? "" } })

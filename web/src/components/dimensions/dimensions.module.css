@@ -15,6 +15,7 @@
   .tabsList > button {
     all: unset;
     cursor: pointer;
+    user-select: none;
 
     &[aria-selected="true"] {
       text-decoration: underline;
@@ -80,6 +81,19 @@
   display: flex;
   flex-direction: column;
   min-height: calc(var(--count) * (2.1rem + 0.2rem));
+  position: relative;
+
+  .spinner {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+  }
+
+  &.loading {
+    .dimensionRow {
+      opacity: 0.2;
+    }
+  }
 }
 
 .showMore {
@@ -127,6 +141,7 @@
   all: unset;
   position: relative;
   color: var(--pico-h2-color);
+  padding: 0.5rem 0;
 
   &:hover {
     text-decoration: underline;

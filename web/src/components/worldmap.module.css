@@ -19,9 +19,9 @@
   outline: none;
 
   fill: hsl(
-    90,
-    calc(0% + 60% * var(--percent) * var(--percent)),
-    calc(40% + 1% * var(--percent))
+    94,
+    calc(0% + 80% * var(--percent) * var(--percent)),
+    calc(40% + 4% * var(--percent))
   );
 
   &:hover {

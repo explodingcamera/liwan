@@ -6,10 +6,6 @@ form.password {
   label {
     width: 100%;
   }
-
-  h2 {
-    font-size: 1.2rem;
-  }
 }
 
 .header {
@@ -38,5 +34,23 @@ form.password {
     display: flex;
     flex-direction: column;
     width: 100%;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  code {
+    font-size: 0.9rem;
+    background-color: var(--pico-background-color);
+    padding: 1rem 1rem;
+    border-radius: var(--pico-border-radius);
+
+    .tag {
+      color: var(--pico-primary-background);
+    }
+    .entity {
+      color: var(--pico-secondary-inverse);
+    }
   }
 }
