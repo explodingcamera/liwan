@@ -25,7 +25,7 @@
 		"fets": "^0.8.3",
 		"fuzzysort": "^3.0.2",
 		"lightningcss": "^1.27.0",
-		"lucide-react": "^0.441.0",
+		"lucide-react": "^0.445.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"react-simple-maps": "^3.0.0",
@@ -33,13 +33,13 @@
 		"react-tooltip": "^5.28.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.9.1",
-		"@types/react": "^18.3.7",
+		"@biomejs/biome": "1.9.2",
+		"@types/react": "^18.3.8",
 		"@types/react-dom": "^18.3.0",
 		"@types/react-simple-maps": "^3.0.6",
-		"astro": "^4.15.7",
-		"bun-types": "^1.1.27",
-		"rollup-plugin-license": "^3.5.2",
+		"astro": "^4.15.9",
+		"bun-types": "^1.1.29",
+		"rollup-plugin-license": "^3.5.3",
 		"typescript": "^5.6.2"
 	},
 	"trustedDependencies": ["@biomejs/biome", "esbuild", "sharp"]
