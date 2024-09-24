@@ -18,6 +18,10 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 <!-- ## [Unreleased] -->
 
+## **Liwan v0.1.1** - 2024-09-24
+
+This release just drops some of the duckdb indexes to improve performance and reduce the database size.
+
 ## **Liwan v0.1.0** - 2024-09-18
 
 This is the first full release of the Liwan! 🎉
