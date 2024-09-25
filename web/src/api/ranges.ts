@@ -44,9 +44,10 @@ export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: num
 		return { range: { start, end }, dataPoints: hours + 1, graphRange: "hour" };
 	},
 	yesterday: () => {
-		const end = startOfDay(new Date());
-		const start = subDays(end, 1);
-		return { range: { start: start.getTime(), end: addHours(end, 1).getTime() }, dataPoints: 25, graphRange: "hour" };
+		const now = new Date();
+		const start = addHours(startOfDay(subDays(now, 1)), 1).getTime();
+		const end = addHours(endOfDay(subDays(now, 1)), 1).getTime();
+		return { range: { start: start, end }, dataPoints: 24, graphRange: "hour" };
 	},
 	last7Days: () => ({ range: lastXDays(7), dataPoints: 7, graphRange: "day" }),
 	last30Days: () => ({ range: lastXDays(30), dataPoints: 30, graphRange: "day" }),
