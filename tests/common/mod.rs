@@ -27,5 +27,5 @@ pub fn cookies(res: &TestResponse) -> Vec<cookie::Cookie<'static>> {
 }
 
 pub fn cookie_header(cookies: &[Cookie]) -> String {
-    cookies.iter().map(|cookie| cookie.to_string()).collect::<Vec<_>>().join("; ")
+    cookies.iter().map(ToString::to_string).collect::<Vec<_>>().join("; ")
 }

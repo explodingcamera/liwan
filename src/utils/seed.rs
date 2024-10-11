@@ -78,9 +78,7 @@ fn random_el<T>(slice: &[T], scale: f64) -> &T {
     let mut rng = rand::thread_rng();
     let len = slice.len();
 
-    if len == 0 {
-        panic!("Cannot choose from an empty slice");
-    }
+    assert!(len != 0, "Cannot choose from an empty slice");
 
     let uniform_random: f64 = rng.gen();
     let weighted_random = (uniform_random.powf(1.0 - scale)).min(1.0);

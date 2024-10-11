@@ -78,7 +78,7 @@ pub fn create_router(app: Liwan, events: Sender<Event>) -> impl IntoEndpoint {
         .nest("/api", api_router)
         .at("/script.js", serve_script)
         .nest("/", EmbeddedFilesEndpoint::<Files>::new())
-        .with(AddData::new(app.clone()))
+        .with(AddData::new(app))
         .with(AddData::new(events))
         .with(CookieJarManager::new())
         .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]))

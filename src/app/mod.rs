@@ -61,7 +61,7 @@ impl Liwan {
             geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?,
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
-            onboarding: LiwanOnboarding::try_new(conn_app.clone())?,
+            onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
@@ -82,7 +82,7 @@ impl Liwan {
             geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?,
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
-            onboarding: LiwanOnboarding::try_new(conn_app.clone())?,
+            onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
@@ -117,16 +117,16 @@ impl Liwan {
         let projects = [("public-project", "Public Project", true), ("private-project", "Private Project", false)];
         let users = [("admin", "admin", UserRole::Admin), ("user", "user", UserRole::User)];
 
-        for (username, password, role) in users.iter() {
-            self.users.create(username, password, *role, &[])?;
+        for (username, password, role) in users {
+            self.users.create(username, password, role, &[])?;
         }
 
-        for (project_id, display_name, public) in projects.iter() {
+        for (project_id, display_name, public) in projects {
             self.projects.create(
                 &models::Project {
                     id: project_id.to_string(),
                     display_name: display_name.to_string(),
-                    public: *public,
+                    public,
                     secret: None,
                 },
                 &[],
@@ -135,10 +135,10 @@ impl Liwan {
 
         let start = OffsetDateTime::now_utc().checked_sub(time::Duration::days(365)).unwrap();
         let end = OffsetDateTime::now_utc();
-        for (entity_id, display_name, fqdn, project_ids) in entities.iter() {
+        for (entity_id, display_name, fqdn, project_ids) in entities {
             self.entities.create(
                 &models::Entity { id: entity_id.to_string(), display_name: display_name.to_string() },
-                project_ids,
+                &project_ids,
             )?;
             let events = crate::utils::seed::random_events(
                 (start, end),

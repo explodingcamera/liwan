@@ -52,8 +52,8 @@ impl LiwanGeoIP {
         }
 
         let edition = geoip.maxmind_edition.as_deref().unwrap_or("GeoLite2-City");
-        let default_path = PathBuf::from(config.data_dir.clone()).join(format!("./geoip/{}.mmdb", edition));
-        let path = geoip.maxmind_db_path.as_ref().map(PathBuf::from).unwrap_or(default_path);
+        let default_path = PathBuf::from(config.data_dir.clone()).join(format!("./geoip/{edition}.mmdb"));
+        let path = geoip.maxmind_db_path.as_ref().map_or(default_path, PathBuf::from);
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -84,8 +84,8 @@ impl LiwanGeoIP {
         let reader = self.reader.read().map_err(|_| eyre::eyre!("Failed to acquire GeoIP reader lock"))?;
         let reader = reader.as_ref().ok_or_eyre("GeoIP database not found")?;
         let lookup: maxminddb::geoip2::City = reader.lookup(*ip)?;
-        let city = lookup.city.and_then(|city| city.names.and_then(|names| names.get("en").map(|s| s.to_string())));
-        let country_code = lookup.country.and_then(|country| country.iso_code.map(|s| s.to_string()));
+        let city = lookup.city.and_then(|city| city.names.and_then(|names| names.get("en").map(|s| (*s).to_string())));
+        let country_code = lookup.country.and_then(|country| country.iso_code.map(ToString::to_string));
         Ok(LookupResult { city, country_code })
     }
 
@@ -103,10 +103,7 @@ impl LiwanGeoIP {
         let db_md5 = if db_exists { file_md5(&self.path)? } else { String::new() };
 
         let mut update = false;
-        if !db_exists {
-            tracing::info!("GeoIP database doesn't exist, attempting to download...");
-            update = true;
-        } else {
+        if db_exists {
             match get_latest_md5(&maxmind_edition, &maxmind_account_id, &maxmind_license_key).await {
                 Ok(latest_md5) => {
                     if latest_md5 != db_md5 {
@@ -118,6 +115,9 @@ impl LiwanGeoIP {
                     tracing::warn!(error = ?e, "Failed to get latest MaxMind database MD5 hash, skipping update");
                 }
             };
+        } else {
+            tracing::info!("GeoIP database doesn't exist, attempting to download...");
+            update = true;
         }
 
         if update {
@@ -175,7 +175,7 @@ pub fn keep_updated(geoip: Option<LiwanGeoIP>) {
 }
 
 async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> Result<String> {
-    let url = format!("{}{}{}", BASE_URL, METADATA_ENDPOINT, edition);
+    let url = format!("{BASE_URL}{METADATA_ENDPOINT}{edition}");
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
@@ -204,7 +204,7 @@ fn file_md5(path: &Path) -> Result<String> {
 }
 
 async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str) -> Result<PathBuf> {
-    let url = format!("{}{}{}/download?suffix=tar.gz", BASE_URL, DOWNLOAD_ENDPOINT, edition);
+    let url = format!("{BASE_URL}{DOWNLOAD_ENDPOINT}{edition}/download?suffix=tar.gz");
 
     let client = reqwest::Client::new();
     let response = client.get(url).basic_auth(account_id, Some(license_key)).send().await?.error_for_status()?;

@@ -11,7 +11,7 @@ pub struct LiwanOnboarding {
 }
 
 impl LiwanOnboarding {
-    pub fn try_new(pool: SqlitePool) -> Result<Self> {
+    pub fn try_new(pool: &SqlitePool) -> Result<Self> {
         let onboarding = {
             tracing::debug!("Checking if an onboarding token needs to be generated");
             let conn = pool.get()?;

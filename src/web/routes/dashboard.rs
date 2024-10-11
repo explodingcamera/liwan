@@ -184,8 +184,7 @@ impl DashboardAPI {
                     let (country, city) = key
                         .clone()
                         .split_at_checked(2)
-                        .map(|(a, b)| (Some(a.to_string()), Some(b.to_string())))
-                        .unwrap_or((None, None));
+                        .map_or((None, None), |(a, b)| (Some(a.to_string()), Some(b.to_string())));
                     let city = city.filter(|city| !city.is_empty());
                     data.push(DimensionTableRow { dimension_value: key, value, display_name: city, icon: country });
                 }

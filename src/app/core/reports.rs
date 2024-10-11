@@ -113,7 +113,7 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
     let mut params = ParamVec::new();
 
     if filters.is_empty() {
-        return Ok(("".to_owned(), params));
+        return Ok((String::new(), params));
     }
 
     let filter_clauses = filters
@@ -138,7 +138,7 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
                     };
 
                     if inversed {
-                        format!("not {}", sql)
+                        format!("not {sql}")
                     } else {
                         sql.to_owned()
                     }
@@ -165,15 +165,15 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
             }
 
             Ok(match filter.dimension {
-                Dimension::Url => format!("concat(fqdn, path) {}", filter_value),
-                Dimension::Path => format!("path {}", filter_value),
-                Dimension::Fqdn => format!("fqdn {}", filter_value),
-                Dimension::Referrer => format!("referrer {}", filter_value),
-                Dimension::Platform => format!("platform {}", filter_value),
-                Dimension::Browser => format!("browser {}", filter_value),
-                Dimension::Mobile => format!("mobile::text {}", filter_value),
-                Dimension::Country => format!("country {}", filter_value),
-                Dimension::City => format!("city {}", filter_value),
+                Dimension::Url => format!("concat(fqdn, path) {filter_value}"),
+                Dimension::Path => format!("path {filter_value}"),
+                Dimension::Fqdn => format!("fqdn {filter_value}"),
+                Dimension::Referrer => format!("referrer {filter_value}"),
+                Dimension::Platform => format!("platform {filter_value}"),
+                Dimension::Browser => format!("browser {filter_value}"),
+                Dimension::Mobile => format!("mobile::text {filter_value}"),
+                Dimension::Country => format!("country {filter_value}"),
+                Dimension::City => format!("city {filter_value}"),
             })
         })
         .collect::<Result<Vec<String>>>()?;
@@ -181,13 +181,13 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
     Ok((format!("and ({})", filter_clauses.join(" and ")), params))
 }
 
-fn metric_sql(metric: &Metric) -> Result<String> {
-    Ok(match metric {
+fn metric_sql(metric: Metric) -> String {
+    match metric {
         Metric::Views => "count(sd.created_at)",
         Metric::UniqueVisitors => "count(distinct sd.visitor_id)",
         Metric::Sessions => "count(distinct sd.visitor_id || '-' || date_trunc('minute', timestamp 'epoch' + interval '1 second' * cast(floor(extract(epoch from created_at) / 1800) * 1800 as bigint)))",
         Metric::AvgViewsPerSession => "count(sd.created_at) / count(distinct sd.visitor_id)",
-    }.to_owned())
+    }.to_owned()
 }
 
 pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
@@ -227,7 +227,7 @@ pub fn overall_report(
     let mut params = ParamVec::new();
 
     let (filters_sql, filters_params) = filter_sql(filters)?;
-    let metric_sql = metric_sql(metric)?;
+    let metric_sql = metric_sql(*metric);
 
     let entity_vars = repeat_vars(entities.len());
 
@@ -292,12 +292,12 @@ pub fn overall_report(
 
     match metric {
         Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(row.get(1)?))?;
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
             let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
             Ok(report_graph)
         }
         Metric::AvgViewsPerSession => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| Ok(row.get(1)?))?;
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
             let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
             Ok(report_graph)
         }
@@ -320,10 +320,10 @@ pub fn overall_stats(
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
-    let metric_total = metric_sql(&Metric::Views)?;
-    let metric_sessions = metric_sql(&Metric::Sessions)?;
-    let metric_unique_visitors = metric_sql(&Metric::UniqueVisitors)?;
-    let metric_avg_views_per_visitor = metric_sql(&Metric::AvgViewsPerSession)?;
+    let metric_total = metric_sql(Metric::Views);
+    let metric_sessions = metric_sql(Metric::Sessions);
+    let metric_unique_visitors = metric_sql(Metric::UniqueVisitors);
+    let metric_avg_views_per_visitor = metric_sql(Metric::AvgViewsPerSession);
 
     params.push(range.start());
     params.push(range.end());
@@ -386,7 +386,7 @@ pub fn dimension_report(
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
-    let metric_column = metric_sql(metric)?;
+    let metric_column = metric_sql(*metric);
     let (dimension_column, group_by_columns) = match dimension {
         Dimension::Url => ("concat(fqdn, path)", "fqdn, path"),
         Dimension::Path => ("path", "path"),

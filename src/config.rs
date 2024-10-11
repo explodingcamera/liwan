@@ -19,8 +19,7 @@ fn default_data_dir() -> String {
     {
         let home = std::env::var("HOME").ok().unwrap_or_else(|| "/root".to_string());
         std::env::var("XDG_DATA_HOME")
-            .map(|data_home| format!("{data_home}/liwan/data"))
-            .unwrap_or_else(|_| format!("{home}/.local/share/liwan/data"))
+            .map_or_else(|_| format!("{home}/.local/share/liwan/data"), |data_home| format!("{data_home}/liwan/data"))
     }
 
     #[cfg(not(target_family = "unix"))]
@@ -43,6 +42,7 @@ pub struct Config {
     pub duckdb: Option<DuckdbConfig>,
 }
 
+#[must_use]
 pub fn default_maxmind_edition() -> Option<String> {
     Some("GeoLite2-City".to_string())
 }
@@ -108,7 +108,7 @@ impl Config {
             config = config
                 .join(Toml::file(format!("{config_dir}/liwan/config.toml")))
                 .join(Toml::file(format!("{config_dir}/liwan/liwan.config.toml")))
-                .join(Toml::file(format!("{config_dir}/liwan.config.toml")))
+                .join(Toml::file(format!("{config_dir}/liwan.config.toml")));
         }
 
         let config: Config = config
