@@ -12,6 +12,11 @@ pub struct Event {
     pub mobile: Option<bool>,
     pub country: Option<String>,
     pub city: Option<String>,
+    pub utm_source: Option<String>,
+    pub utm_medium: Option<String>,
+    pub utm_campaign: Option<String>,
+    pub utm_content: Option<String>,
+    pub utm_term: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +88,11 @@ macro_rules! event_params {
             $event.mobile,
             $event.country,
             $event.city,
+            $event.utm_source,
+            $event.utm_medium,
+            $event.utm_campaign,
+            $event.utm_content,
+            $event.utm_term
         ]
     };
 }

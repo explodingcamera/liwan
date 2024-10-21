@@ -4,13 +4,9 @@ use crossbeam::{channel::Receiver, sync::ShardedLock};
 use eyre::{bail, Result};
 use time::OffsetDateTime;
 
-use crate::{
-    app::{
-        models::{event_params, Event},
-        DuckDBPool, SqlitePool, EVENT_BATCH_INTERVAL,
-    },
-    utils::hash::generate_salt,
-};
+use crate::app::models::{event_params, Event};
+use crate::app::{DuckDBPool, SqlitePool, EVENT_BATCH_INTERVAL};
+use crate::utils::hash::generate_salt;
 
 #[derive(Clone)]
 pub struct LiwanEvents {

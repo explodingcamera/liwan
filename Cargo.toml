@@ -2,7 +2,7 @@
 name="liwan"
 version="0.1.1"
 edition="2021"
-rust-version="1.80"
+rust-version="1.82"
 repository="https://github.com/explodingcamera/liwan"
 license="AGPL-3.0-only OR LicenseRef-Liwan"
 publish=false
@@ -48,7 +48,6 @@ tracing-subscriber={version="0.3", features=["env-filter"]}
 poem={version="3.1", default-features=false, features=[
     "time",
     "embed",
-    "session",
     "cookie",
     "compression",
     "tower-compat",

@@ -1,9 +1,7 @@
 use eyre::{bail, Result};
 
-use crate::{
-    app::{models, SqlitePool},
-    utils::validate,
-};
+use crate::app::{models, SqlitePool};
+use crate::utils::validate;
 
 #[derive(Clone)]
 pub struct LiwanEntities {
