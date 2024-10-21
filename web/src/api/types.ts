@@ -19,6 +19,11 @@ export const dimensions = [
 	"city",
 	"country",
 	"fqdn",
+	"utm_campaign",
+	"utm_content",
+	"utm_medium",
+	"utm_source",
+	"utm_term",
 ] as const satisfies Dimension[];
 
 export const filterTypes = [

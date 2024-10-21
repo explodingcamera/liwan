@@ -56,6 +56,11 @@ pub enum Dimension {
     Mobile,
     Country,
     City,
+    UtmSource,
+    UtmMedium,
+    UtmCampaign,
+    UtmContent,
+    UtmTerm,
 }
 
 #[derive(Enum, Debug, Clone, Copy, PartialEq)]
@@ -174,6 +179,11 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
                 Dimension::Mobile => format!("mobile::text {filter_value}"),
                 Dimension::Country => format!("country {filter_value}"),
                 Dimension::City => format!("city {filter_value}"),
+                Dimension::UtmSource => format!("utm_source {filter_value}"),
+                Dimension::UtmMedium => format!("utm_medium {filter_value}"),
+                Dimension::UtmCampaign => format!("utm_campaign {filter_value}"),
+                Dimension::UtmContent => format!("utm_content {filter_value}"),
+                Dimension::UtmTerm => format!("utm_term {filter_value}"),
             })
         })
         .collect::<Result<Vec<String>>>()?;
@@ -401,6 +411,11 @@ pub fn dimension_report(
         Dimension::Mobile => ("mobile::text", "mobile"),
         Dimension::Country => ("country", "country"),
         Dimension::City => ("concat(country, city)", "country, city"),
+        Dimension::UtmSource => ("utm_source", "utm_source"),
+        Dimension::UtmMedium => ("utm_medium", "utm_medium"),
+        Dimension::UtmCampaign => ("utm_campaign", "utm_campaign"),
+        Dimension::UtmContent => ("utm_content", "utm_content"),
+        Dimension::UtmTerm => ("utm_term", "utm_term"),
     };
 
     params.push(range.start());

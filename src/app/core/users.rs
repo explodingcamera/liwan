@@ -1,10 +1,6 @@
-use crate::{
-    app::{models, SqlitePool},
-    utils::{
-        hash::{hash_password, verify_password},
-        validate,
-    },
-};
+use crate::app::{models, SqlitePool};
+use crate::utils::hash::{hash_password, verify_password};
+use crate::utils::validate;
 use eyre::{bail, Result};
 
 #[derive(Clone)]

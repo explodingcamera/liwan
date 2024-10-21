@@ -2109,7 +2109,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fef0e102c6b811e0e01928eed4872b3ff63917f37dc2dab39a93db55f25d314d"
 dependencies = [
  "async-compression",
- "base64 0.22.1",
  "bytes 1.7.2",
  "chrono",
  "cookie",
@@ -2128,9 +2127,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "poem-derive",
- "priority-queue",
  "quick-xml",
- "rand",
  "regex",
  "rfc7239",
  "rust-embed",
@@ -2239,17 +2236,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77957b295656769bb8ad2b6a6b09d897d94f05c41b069aede1fcdaa675eaea04"
 dependencies = [
  "zerocopy",
-]
-
-[[package]]
-name = "priority-queue"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "714c75db297bc88a63783ffc6ab9f830698a6705aa0201416931759ef4c8183d"
-dependencies = [
- "autocfg",
- "equivalent",
- "indexmap",
 ]
 
 [[package]]
