@@ -19,6 +19,11 @@ const CITIES: &[(&str, &str)] = &[
     ("Tokyo", "JP"),
     ("Sydney", "AU"),
 ];
+const UTM_CAMPAIGNS: &[&str] = &["", "summer_sale", "black_friday", "christmas", "new_year"];
+const UTM_CONTENTS: &[&str] = &["", "banner", "sidebar", "footer", "popup"];
+const UTM_MEDIUMS: &[&str] = &["", "cpc", "organic", "referral", "email"];
+const UTM_SOURCES: &[&str] = &["", "google", "bing", "facebook", "twitter"];
+const UTM_TERMS: &[&str] = &["", "liwan", "analytics", "tracking", "web"];
 
 pub fn random_events(
     time_range: (OffsetDateTime, OffsetDateTime),
@@ -59,6 +64,11 @@ pub fn random_events(
             referrer: if referrer.is_empty() { None } else { Some(referrer.to_string()) },
             path: Some(path.to_string()),
             visitor_id: random_el(&visitor_ids, 0.7).to_string(),
+            utm_campaign: Some(random_el(UTM_CAMPAIGNS, 0.5).to_string()),
+            utm_content: Some(random_el(UTM_CONTENTS, 0.5).to_string()),
+            utm_medium: Some(random_el(UTM_MEDIUMS, 0.5).to_string()),
+            utm_source: Some(random_el(UTM_SOURCES, 0.5).to_string()),
+            utm_term: Some(random_el(UTM_TERMS, 0.5).to_string()),
         })
     })
 }

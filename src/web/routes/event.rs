@@ -21,6 +21,16 @@ struct EventRequest {
     name: String,
     url: String,
     referrer: Option<String>,
+    utm: Option<Utm>,
+}
+
+#[derive(Object)]
+struct Utm {
+    source: Option<String>,
+    content: Option<String>,
+    medium: Option<String>,
+    campaign: Option<String>,
+    term: Option<String>,
 }
 
 thread_local! {
@@ -94,6 +104,11 @@ impl EventApi {
             path: path.into(),
             mobile: Some(useragent::is_mobile(&client)),
             platform: client.os.family.to_string().into(),
+            utm_campaign: event.utm.as_ref().and_then(|u| u.campaign.clone()),
+            utm_content: event.utm.as_ref().and_then(|u| u.content.clone()),
+            utm_medium: event.utm.as_ref().and_then(|u| u.medium.clone()),
+            utm_source: event.utm.as_ref().and_then(|u| u.source.clone()),
+            utm_term: event.utm.as_ref().and_then(|u| u.term.clone()),
         };
 
         let _ = events.try_send(event);

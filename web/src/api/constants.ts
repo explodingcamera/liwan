@@ -17,6 +17,11 @@ export const dimensionNames: Record<Dimension, string> = {
 	city: "City",
 	country: "Country",
 	fqdn: "Domain",
+	utm_campaign: "UTM Campaign",
+	utm_content: "UTM Content",
+	utm_medium: "UTM Medium",
+	utm_source: "UTM Source",
+	utm_term: "UTM Term",
 };
 
 export const filterNames: Record<DimensionFilter["filterType"], string> = {

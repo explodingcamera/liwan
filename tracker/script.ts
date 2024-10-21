@@ -10,6 +10,7 @@ type Payload = {
 	name: string;
 	url: string;
 	referrer?: string;
+	utm?: { campaign?: string; content?: string; medium?: string; source?: string; term?: string };
 };
 
 export type EventOptions = {
@@ -86,6 +87,7 @@ export async function event(name = "pageview", options?: EventOptions) {
 	if (typeof localStorage !== "undefined" && localStorage.getItem("disable-liwan")) return ignore("localStorage flag");
 	if (LOCALHOST_REGEX.test(location.hostname) || location.protocol === "file:") return ignore("localhost");
 	if (!endpoint && !options?.endpoint) return ignore("no endpoint");
+	const utm = new URLSearchParams(location.search);
 
 	// biome-ignore lint/style/noNonNullAssertion: we know that endpoint is not null
 	return fetch((options?.endpoint || endpoint)!, {
@@ -96,6 +98,13 @@ export async function event(name = "pageview", options?: EventOptions) {
 			name,
 			referrer: options?.referrer || referrer,
 			url: options?.url || `${location.origin}${location.pathname}`,
+			utm: {
+				campaign: utm.get("utm_campaign"),
+				content: utm.get("utm_content"),
+				medium: utm.get("utm_medium"),
+				source: utm.get("utm_source"),
+				term: utm.get("utm_term"),
+			},
 		}),
 	}).then((response) => {
 		if (!response.ok) log(`Failed to send event: ${response.statusText}`);

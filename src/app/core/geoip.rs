@@ -1,14 +1,10 @@
 #![allow(dead_code)]
 
-use std::{
-    collections::HashMap,
-    net::IpAddr,
-    path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
+use std::collections::HashMap;
+use std::net::IpAddr;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crate::app::SqlitePool;
 use crossbeam::sync::ShardedLock;
