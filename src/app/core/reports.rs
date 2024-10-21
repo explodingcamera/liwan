@@ -382,6 +382,10 @@ pub fn dimension_report(
     filters: &[DimensionFilter],
     metric: &Metric,
 ) -> Result<ReportTable> {
+    if entities.is_empty() {
+        return Ok(BTreeMap::new());
+    }
+
     let mut params = ParamVec::new();
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;

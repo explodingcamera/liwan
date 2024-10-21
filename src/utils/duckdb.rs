@@ -29,6 +29,8 @@ impl<'a> IntoIterator for ParamVec<'a> {
     }
 }
 
+/// # Panics
+/// Panics if `count` is 0 - this needs to be handled by the caller
 pub fn repeat_vars(count: usize) -> String {
     assert_ne!(count, 0);
     let mut s = "?,".repeat(count);
