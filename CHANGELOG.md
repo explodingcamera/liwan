@@ -20,18 +20,18 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### 🚀 Features
 
-- **UTM parameters**: Added support for UTM parameters. You can filter and search by UTM source, medium, campaign, content, and term.
+- **UTM parameters**: Added support for UTM parameters. You can filter and search by UTM source, medium, campaign, content, and term. ([#13](https://github.com/explodingcamera/liwan/pull/13))
 
 ### 🐛 Bug Fixes
 
-- Fixed a potential panic when entities are not found in the database (https://github.com/explodingcamera/liwan/commit/31405a721dc5c5493098e211927281cca7816fec)
-- Fixed issues with the `Yesterday` Date Range (https://github.com/explodingcamera/liwan/commit/76278b579c5fe1557bf1c184542ed6ed2aba57cd)
+- Fixed a potential panic when entities are not found in the database ([`31405a72`](https://github.com/explodingcamera/liwan/commit/31405a721dc5c5493098e211927281cca7816fec))
+- Fixed issues with the `Yesterday` Date Range ([`76278b57`](https://github.com/explodingcamera/liwan/commit/76278b579c5fe1557bf1c184542ed6ed2aba57cd))
 
 ## **Liwan v0.1.1** - 2024-09-24
 
 ### ⚡ Performance
 
-- **Database indexes**: Removed all unnecessary indexes to improve performance and reduce disk usage (https://github.com/explodingcamera/liwan/commit/6191a72f08e8659237bc6c22139bde94432f66bb)
+- **Database indexes**: Removed all unnecessary indexes to improve performance and reduce disk usage ([`6191a72f`](https://github.com/explodingcamera/liwan/commit/6191a72f08e8659237bc6c22139bde94432f66bb))
 
 ## **Liwan v0.1.0** - 2024-09-18
 
