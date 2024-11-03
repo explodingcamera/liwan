@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![warn(rust_2018_idioms)]
+
 use eyre::Result;
 
 use liwan::app::{models::Event, Liwan};
