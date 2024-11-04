@@ -14,7 +14,7 @@ import { SelectRange } from "./project/range";
 import { ProjectHeader } from "./project/project";
 import { SelectMetrics } from "./project/metric";
 import { SelectFilters } from "./project/filter";
-import { DimensionCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
+import { DimensionCard, DimensionDropdownCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
 
 const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
 
@@ -102,7 +102,11 @@ export const Project = () => {
 				</article>
 				<div className={styles.tables}>
 					<DimensionTabsCard dimensions={["url", "fqdn"]} query={query} onSelect={onSelectDimRow} />
-					<DimensionCard dimension={"referrer"} query={query} onSelect={(v) => onSelectDimRow(v, "referrer")} />
+					<DimensionDropdownCard
+						dimensions={["referrer", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]}
+						query={query}
+						onSelect={onSelectDimRow}
+					/>
 					<GeoCard query={query} onSelect={onSelectDimRow} />
 					<DimensionTabsCard dimensions={["platform", "browser"]} query={query} onSelect={onSelectDimRow} />
 					<DimensionCard dimension={"mobile"} query={query} onSelect={(v) => onSelectDimRow(v, "mobile")} />
