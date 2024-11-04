@@ -1,5 +1,5 @@
 import * as Tabs from "@radix-ui/react-tabs";
-import { LinkIcon, SquareArrowOutUpRightIcon } from "lucide-react";
+import { ArrowDownIcon, LinkIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
 import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
@@ -9,6 +9,7 @@ import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } 
 import { DetailsModal } from "./modal";
 import { formatMetricVal } from "../../utils";
 import type { ProjectQuery } from "../project";
+import { useState } from "react";
 
 export const cardStyles = styles.card;
 
@@ -43,6 +44,67 @@ export const DimensionTabsCard = ({
 		<article className={styles.card}>
 			<DimensionTabs dimensions={dimensions} query={query} onSelect={onSelect} />
 		</article>
+	);
+};
+
+export const DimensionDropdownCard = ({
+	dimensions,
+	query,
+	onSelect,
+}: {
+	dimensions: Dimension[];
+	query: ProjectQuery;
+	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
+}) => {
+	return (
+		<article className={styles.card}>
+			<DimensionDropdown dimensions={dimensions} query={query} onSelect={onSelect} />
+		</article>
+	);
+};
+
+export const DimensionDropdown = ({
+	dimensions,
+	query,
+	onSelect,
+}: {
+	dimensions: Dimension[];
+	query: ProjectQuery;
+	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
+}) => {
+	const [selectedDimension, setSelectedDimension] = useState(dimensions[0]);
+
+	return (
+		<Tabs.Root
+			className={styles.tabs}
+			value={selectedDimension}
+			onValueChange={(value) => setSelectedDimension(value as Dimension)}
+		>
+			<Tabs.List className={styles.tabsList}>
+				<select
+					className={styles.dimensionSelect}
+					value={selectedDimension}
+					onChange={(e) => setSelectedDimension(e.target.value as Dimension)}
+				>
+					{dimensions.map((dimension) => (
+						<option key={dimension} value={dimension}>
+							{dimensionNames[dimension]}
+						</option>
+					))}
+				</select>
+				{/* {Object.entries(dimensions).map(([key, value]) => (
+					<Tabs.Trigger key={key} value={value}>
+						{dimensionNames[value]}
+					</Tabs.Trigger>
+				))} */}
+				<div>{metricNames[query.metric]}</div>
+			</Tabs.List>
+			{dimensions.map((dimension) => (
+				<Tabs.Content key={dimension} value={dimension} className={styles.tabsContent}>
+					<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
+				</Tabs.Content>
+			))}
+		</Tabs.Root>
 	);
 };
 
@@ -125,6 +187,36 @@ const DimensionValueButton = ({
 );
 
 const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: () => void) => React.ReactNode> = {
+	utm_campaign: (value, onSelect) => (
+		<>
+			<PinIcon size={24} />
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+		</>
+	),
+	utm_content: (value, onSelect) => (
+		<>
+			<PinIcon size={24} />
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+		</>
+	),
+	utm_medium: (value, onSelect) => (
+		<>
+			<PinIcon size={24} />
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+		</>
+	),
+	utm_source: (value, onSelect) => (
+		<>
+			<PinIcon size={24} />
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+		</>
+	),
+	utm_term: (value, onSelect) => (
+		<>
+			<PinIcon size={24} />
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+		</>
+	),
 	platform: (value, onSelect) => (
 		<>
 			<OSIcon os={value.dimensionValue} size={24} />

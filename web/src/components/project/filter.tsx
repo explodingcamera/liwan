@@ -75,6 +75,26 @@ const filters = {
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
+	utm_campaign: {
+		invertable: true,
+		filterTypes: ["equal", "contains"],
+	},
+	utm_content: {
+		invertable: true,
+		filterTypes: ["equal", "contains"],
+	},
+	utm_medium: {
+		invertable: true,
+		filterTypes: ["equal", "contains"],
+	},
+	utm_source: {
+		invertable: true,
+		filterTypes: ["equal", "contains"],
+	},
+	utm_term: {
+		invertable: true,
+		filterTypes: ["equal", "contains"],
+	},
 	mobile: {
 		custom: true,
 		displayValue: (filter: DimensionFilter) => (filter.filterType === "is_true" ? "Mobile" : "Desktop"),
