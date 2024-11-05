@@ -1,11 +1,20 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import styles from "./projects.module.css";
 
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { ChevronDownIcon } from "lucide-react";
 
-import { type Metric, type ProjectResponse, api, metricNames, useMe, useProjectData, useQuery } from "../api";
-import type { RangeName } from "../api/ranges";
+import {
+	type DateRange,
+	type Metric,
+	type ProjectResponse,
+	api,
+	metricNames,
+	useMe,
+	useProjectData,
+	useQuery,
+} from "../api";
+import { deserializeRange, type RangeName } from "../api/ranges";
 import { getUsername } from "../utils";
 import { LineGraph } from "./graph";
 import { SelectRange } from "./project/range";
@@ -45,9 +54,10 @@ export const Projects = () => {
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
 
-	const [dateRange, setDateRange] = useLocalStorage<RangeName>("date-range", "last7Days");
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 	const [hiddenProjects, setHiddenProjects] = useLocalStorage<string[]>("hiddenProjects", []);
+	const [rangeString, setRangeString] = useLocalStorage<string>("date-range", "last7Days");
+	const range = useMemo(() => deserializeRange(rangeString), [rangeString]);
 
 	const projects = data?.projects || [];
 
@@ -75,7 +85,7 @@ export const Projects = () => {
 		<div className={styles.projects}>
 			<div className={styles.header}>
 				<h1>Dashboard</h1>
-				<SelectRange onSelect={(name: RangeName) => setDateRange(name)} range={dateRange} />
+				<SelectRange onSelect={(name) => setRangeString(name)} range={rangeString} />
 			</div>
 
 			<Suspense>
@@ -89,7 +99,7 @@ export const Projects = () => {
 				>
 					{projects.map((project) => (
 						<Accordion.Item key={project.id} value={project.id}>
-							<Project project={project} metric={metric} setMetric={setMetric} rangeName={dateRange} />
+							<Project project={project} metric={metric} setMetric={setMetric} range={range} />
 						</Accordion.Item>
 					))}
 				</Accordion.Root>
@@ -102,9 +112,9 @@ const Project = ({
 	project,
 	metric,
 	setMetric,
-	rangeName,
-}: { project: ProjectResponse; metric: Metric; setMetric: (value: Metric) => void; rangeName: RangeName }) => {
-	const { stats, graph, isLoading, isError } = useProjectData({ project, metric, rangeName });
+	range,
+}: { project: ProjectResponse; metric: Metric; setMetric: (value: Metric) => void; range: DateRange }) => {
+	const { stats, graph, isLoading, isError } = useProjectData({ project, metric, range });
 
 	return (
 		<article className={styles.project} data-loading={isLoading || isError} data-error={isError}>

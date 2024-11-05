@@ -5,7 +5,7 @@ import type { DateRange, Dimension, DimensionFilter, DimensionTableRow, Metric, 
 
 import { api } from ".";
 import { queryClient, useQuery } from "./query";
-import { resolveRange, type RangeName } from "./ranges";
+import { rangeDataPoints, rangeEndsToday, type RangeName } from "./ranges";
 
 export const useMe = () => {
 	const { data, isLoading } = useQuery({
@@ -96,22 +96,22 @@ export const useDimension = ({
 export const useProjectData = ({
 	project,
 	metric,
-	rangeName = "last7Days",
+	range,
 	filters = [],
 }: {
 	project?: ProjectResponse;
 	metric: Metric;
-	rangeName?: RangeName;
+	range: DateRange;
 	filters?: DimensionFilter[];
 }) => {
-	const { range, graphRange, dataPoints } = useMemo(() => resolveRange(rangeName), [rangeName]);
-
 	let refetchInterval = undefined;
 	let staleTime = 1000 * 60 * 10;
-	if (rangeName === "today" || rangeName.startsWith("last")) {
+	if (rangeEndsToday(range)) {
 		refetchInterval = 1000 * 60;
 		staleTime = 0;
 	}
+
+	const dataPoints = rangeDataPoints(range);
 
 	const {
 		data: stats,
@@ -138,7 +138,7 @@ export const useProjectData = ({
 		refetchInterval,
 		staleTime,
 		enabled: project !== undefined,
-		queryKey: ["project_graph", project?.id, range, graphRange, metric, filters, dataPoints],
+		queryKey: ["project_graph", project?.id, range, metric, filters, dataPoints],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
 				.post({ json: { range, metric, dataPoints, filters }, params: { project_id: project?.id ?? "" } })
@@ -155,7 +155,7 @@ export const useProjectData = ({
 		graph: {
 			error: isErrorGraph,
 			loading: isLoadingGraph,
-			range: graphRange,
+			range,
 			data: graph?.data ? toDataPoints(graph.data, range, metric) : [],
 		},
 		isLoading: isLoadingStats || isLoadingGraph,

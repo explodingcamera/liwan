@@ -1,5 +1,5 @@
 import * as Tabs from "@radix-ui/react-tabs";
-import { ArrowDownIcon, LinkIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
+import { LinkIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
 import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
@@ -92,11 +92,6 @@ export const DimensionDropdown = ({
 						</option>
 					))}
 				</select>
-				{/* {Object.entries(dimensions).map(([key, value]) => (
-					<Tabs.Trigger key={key} value={value}>
-						{dimensionNames[value]}
-					</Tabs.Trigger>
-				))} */}
 				<div>{metricNames[query.metric]}</div>
 			</Tabs.List>
 			{dimensions.map((dimension) => (

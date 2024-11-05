@@ -37,9 +37,6 @@ export const LoginButton = () => {
 						Admin
 					</a>
 				</li>
-				{/* <li>
-					<hr />
-				</li> */}
 				<li>
 					<a href="https://liwan.dev" target="_blank" rel="noreferrer">
 						<HelpCircle size="16" />

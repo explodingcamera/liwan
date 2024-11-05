@@ -6,6 +6,8 @@ import { addMonths } from "date-fns";
 import type { DataPoint } from ".";
 import { formatMetricVal } from "../../utils";
 import { useWindowSize } from "@uidotdev/usehooks";
+import type { DateRange } from "../../api";
+import { rangeGraphRange } from "../../api/ranges";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 
@@ -39,12 +41,13 @@ const Tooltip = (props: SliceTooltipProps & { title: string; range: GraphRange }
 export const LineGraph = ({
 	data,
 	title,
-	range = "day",
+	range,
 }: {
 	data: DataPoint[];
 	title: string;
-	range?: GraphRange;
+	range: DateRange;
 }) => {
+	const graphRange = rangeGraphRange(range);
 	const max = useMemo(() => Math.max(...data.map((d) => d.y)), [data]);
 	const yCount = 5;
 
@@ -76,7 +79,7 @@ export const LineGraph = ({
 			axisRight={null}
 			axisBottom={{
 				legend: "",
-				format: (value: Date) => formatDate(value, range),
+				format: (value: Date) => formatDate(value, graphRange),
 				tickValues: xCount,
 			}}
 			axisLeft={{
@@ -90,7 +93,7 @@ export const LineGraph = ({
 			pointLabel="data.yFormatted"
 			pointLabelYOffset={-12}
 			enableSlices="x"
-			sliceTooltip={(props) => <Tooltip {...props} title={title} range={range} />}
+			sliceTooltip={(props) => <Tooltip {...props} title={title} range={graphRange} />}
 			defs={[
 				{
 					colors: [

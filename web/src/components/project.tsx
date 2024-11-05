@@ -1,10 +1,10 @@
 import styles from "./project.module.css";
 import _map from "./worldmap.module.css";
 
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "@uidotdev/usehooks";
 
-import { type RangeName, resolveRange } from "../api/ranges";
+import { deserializeRange, type RangeName } from "../api/ranges";
 import { metricNames, useDimension, useProject, useProjectData } from "../api";
 import type { DimensionFilter, DateRange, Metric, ProjectResponse, DimensionTableRow, Dimension } from "../api";
 
@@ -28,8 +28,9 @@ export type ProjectQuery = {
 export const Project = () => {
 	const [projectId, setProjectId] = useState<string | undefined>();
 	const [filters, setFilters] = useState<DimensionFilter[]>([]);
-	const [dateRange, setDateRange] = useLocalStorage<RangeName>("date-range", "last7Days");
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
+	const [rangeString, setRangeString] = useLocalStorage<string>("date-range", "last7Days");
+	const range = useMemo(() => deserializeRange(rangeString), [rangeString]);
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -37,8 +38,7 @@ export const Project = () => {
 	}, []);
 
 	const { project } = useProject(projectId);
-	const { graph, stats } = useProjectData({ project, metric, rangeName: dateRange, filters });
-	const { range } = resolveRange(dateRange);
+	const { graph, stats } = useProjectData({ project, metric, range, filters });
 	if (!project) return null;
 
 	const query = { metric, range, filters, project };
@@ -92,7 +92,7 @@ export const Project = () => {
 				<div>
 					<div className={styles.projectHeader}>
 						<ProjectHeader project={project} stats={stats.data} />
-						<SelectRange onSelect={(name: RangeName) => setDateRange(name)} range={dateRange} />
+						<SelectRange onSelect={(name) => setRangeString(name)} range={rangeString} />
 					</div>
 					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} className={styles.projectStats} />
 					<SelectFilters value={filters} onChange={setFilters} />

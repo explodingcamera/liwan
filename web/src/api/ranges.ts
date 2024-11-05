@@ -15,6 +15,50 @@ import {
 import type { DateRange } from "./types";
 import type { GraphRange } from "../components/graph/graph";
 
+export const rangeEndsToday = (range: DateRange) => {
+	const now = new Date().getTime();
+	return startOfDay(now) === startOfDay(range.end);
+};
+
+export const rangeGraphRange = (range: DateRange): GraphRange => {
+	const days = differenceInDays(range.end, range.start);
+	if (days < 2) {
+		return "hour";
+	}
+	const months = differenceInMonths(range.end, range.start);
+	if (months < 2) {
+		return "day";
+	}
+	return "month";
+};
+
+export const rangeDataPoints = (range: DateRange): number => {
+	switch (rangeGraphRange(range)) {
+		case "hour":
+			return differenceInHours(range.end, range.start) + 1;
+		case "day":
+			return differenceInDays(range.end, range.start) + 1;
+		case "month":
+			return differenceInMonths(range.end, range.start) + 1;
+	}
+	throw new Error("unreachable");
+};
+
+export const serializeRange = (range: DateRange): string => {
+	const start = new Date(range.start);
+	const end = new Date(range.end);
+	return `${Number(start)}:${Number(end)}`;
+};
+
+export const deserializeRange = (range: string): DateRange => {
+	if (!range.includes(":")) {
+		return ranges[range as RangeName]().range;
+	}
+
+	const [start, end] = range.split(":").map(Number);
+	return { start, end };
+};
+
 export const rangeNames = {
 	today: "Today",
 	yesterday: "Yesterday",
@@ -31,8 +75,6 @@ const lastXDays = (days: number) => {
 	const start = subDays(end, days).getTime();
 	return { start, end };
 };
-
-export const resolveRange = (name: RangeName) => ranges[name]();
 
 // all rangeNames are keys of the ranges object
 export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: number; graphRange: GraphRange }> = {
