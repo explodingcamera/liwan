@@ -36,7 +36,7 @@ argon2={version="0.5"}
 argh={version="0.1"}
 eyre={version="0.6"}
 rand={version="0.8"}
-cached="0.53"
+cached="0.54"
 itertools={version="0.13"}
 time={version="0.3"}
 colored={version="2.1"}
