@@ -1,7 +1,26 @@
+.container {
+  display: flex;
+  gap: 0.2rem;
+  button {
+    display: flex;
+    background: transparent;
+    opacity: 0.6;
+    border: none;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    &:hover {
+      background-color: var(--pico-card-background-color);
+      color: var(--pico-h1-background-color);
+    }
+  }
+}
+
 details.selectRange {
   width: 10rem;
 
-  a {
+  button {
+    all: unset;
     cursor: pointer;
   }
 

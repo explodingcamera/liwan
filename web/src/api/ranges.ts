@@ -5,11 +5,13 @@ import {
 	differenceInMonths,
 	endOfDay,
 	endOfHour,
+	endOfYear,
 	startOfDay,
 	startOfMonth,
 	startOfYear,
 	subDays,
 	subMonths,
+	subYears,
 } from "date-fns";
 
 import type { DateRange } from "./types";
@@ -110,4 +112,28 @@ export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: num
 		const months = differenceInMonths(now, start);
 		return { range: { start, end: now }, dataPoints: months + 1, graphRange: "month" };
 	},
+};
+
+export const previusRange = (range: string) => {
+	if (range === "today") return "yesterday";
+	if (range === "yearToDate") {
+		const lastYear = subYears(new Date(), 1);
+		const start = startOfYear(lastYear).getTime();
+		const end = endOfYear(lastYear).getTime();
+		return serializeRange({ start, end });
+	}
+	const r = deserializeRange(range);
+	const size = r.end - r.start;
+	const start = r.start - size;
+	const end = r.end - size;
+	return serializeRange({ start: startOfDay(start).getTime(), end: endOfDay(end).getTime() });
+};
+
+export const nextRange = (range: string) => {
+	if (range === "yesterday") return "today";
+	const r = deserializeRange(range);
+	const size = r.end - r.start;
+	const start = r.start + size;
+	const end = r.end + size;
+	return serializeRange({ start: startOfDay(start).getTime(), end: endOfDay(end).getTime() });
 };
