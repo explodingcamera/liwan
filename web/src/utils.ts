@@ -12,12 +12,12 @@ export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | Cl
 export const getUsername = () => document.cookie.match(/username=(.*?)(;|$)/)?.[1];
 
 export const formatMetricVal = (value: number) => {
-	if (value >= 1000) {
-		return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+	if (value > 999999) {
+		return `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
 	}
 
-	if (value >= 1000000) {
-		return `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+	if (value > 999) {
+		return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
 	}
 
 	return value.toFixed(1).replace(/\.0$/, "") || "0";

@@ -6,23 +6,14 @@ use crate::utils::duckdb::{repeat_vars, ParamVec};
 use duckdb::params_from_iter;
 use eyre::{bail, Result};
 use poem_openapi::{Enum, Object};
-use time::OffsetDateTime;
 
 #[derive(Object)]
 pub struct DateRange {
-    pub start: u64,
-    pub end: u64,
+    pub start: time::OffsetDateTime,
+    pub end: time::OffsetDateTime,
 }
 
 impl DateRange {
-    pub fn start(&self) -> OffsetDateTime {
-        OffsetDateTime::from_unix_timestamp((self.start / 1000) as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
-    }
-
-    pub fn end(&self) -> OffsetDateTime {
-        OffsetDateTime::from_unix_timestamp((self.end / 1000) as i64).unwrap_or(OffsetDateTime::UNIX_EPOCH)
-    }
-
     pub fn prev(&self) -> DateRange {
         let duration = self.end - self.start;
         DateRange { start: self.start - duration, end: self.start }
@@ -241,14 +232,14 @@ pub fn overall_report(
 
     let entity_vars = repeat_vars(entities.len());
 
-    params.push(range.start());
-    params.push(range.end());
+    params.push(range.start);
+    params.push(range.end);
     params.push(data_points);
     params.push(data_points);
     params.push(event);
     params.extend(entities);
     params.extend_from_params(filters_params);
-    params.push(range.end());
+    params.push(range.end);
 
     let query = format!("--sql
         with
@@ -335,8 +326,8 @@ pub fn overall_stats(
     let metric_unique_visitors = metric_sql(Metric::UniqueVisitors);
     let metric_avg_views_per_visitor = metric_sql(Metric::AvgViewsPerSession);
 
-    params.push(range.start());
-    params.push(range.end());
+    params.push(range.start);
+    params.push(range.end);
     params.push(event);
     params.extend(entities);
     params.extend_from_params(filters_params);
@@ -418,8 +409,8 @@ pub fn dimension_report(
         Dimension::UtmTerm => ("utm_term", "utm_term"),
     };
 
-    params.push(range.start());
-    params.push(range.end());
+    params.push(range.start);
+    params.push(range.end);
     params.push(event);
     params.extend(entities);
     params.extend_from_params(filters_params);

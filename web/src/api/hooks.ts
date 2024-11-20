@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 
 import { toDataPoints } from "../components/graph";
-import type { DateRange, Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "./types";
+import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "./types";
 
 import { api } from ".";
 import { queryClient, useQuery } from "./query";
-import { rangeDataPoints, rangeEndsToday, type RangeName } from "./ranges";
+import type { DateRange } from "./ranges";
 
 export const useMe = () => {
 	const { data, isLoading } = useQuery({
@@ -72,7 +72,7 @@ export const useDimension = ({
 } => {
 	const { data, isLoading, error } = useQuery({
 		placeholderData: (prev) => prev,
-		queryKey: ["dimension", project.id, dimension, metric, range, filters],
+		queryKey: ["dimension", project.id, dimension, metric, range.cacheKey(), filters],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/dimension"]
 				.post({
@@ -81,7 +81,7 @@ export const useDimension = ({
 						dimension,
 						filters,
 						metric,
-						range,
+						range: range.toAPI(),
 					},
 				})
 				.json(),
@@ -106,12 +106,11 @@ export const useProjectData = ({
 }) => {
 	let refetchInterval = undefined;
 	let staleTime = 1000 * 60 * 10;
-	if (rangeEndsToday(range)) {
+	if (range.endsToday()) {
 		refetchInterval = 1000 * 60;
 		staleTime = 0;
 	}
-
-	const dataPoints = rangeDataPoints(range);
+	const dataPoints = range.getGraphDataPoints();
 
 	const {
 		data: stats,
@@ -120,12 +119,12 @@ export const useProjectData = ({
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		queryKey: ["project_stats", project?.id, range, metric, filters],
+		queryKey: ["project_stats", project?.id, range.cacheKey(), metric, filters],
 
 		enabled: project !== undefined,
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/stats"]
-				.post({ json: { range, filters }, params: { project_id: project?.id ?? "" } })
+				.post({ json: { range: range.toAPI(), filters }, params: { project_id: project?.id ?? "" } })
 				.json(),
 		placeholderData: (prev) => prev,
 	});
@@ -138,10 +137,13 @@ export const useProjectData = ({
 		refetchInterval,
 		staleTime,
 		enabled: project !== undefined,
-		queryKey: ["project_graph", project?.id, range, metric, filters, dataPoints],
+		queryKey: ["project_graph", project?.id, range.cacheKey(), metric, filters, dataPoints],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
-				.post({ json: { range, metric, dataPoints, filters }, params: { project_id: project?.id ?? "" } })
+				.post({
+					json: { range: range.toAPI(), metric, dataPoints, filters },
+					params: { project_id: project?.id ?? "" },
+				})
 				.json(),
 		placeholderData: (prev) => prev,
 	});

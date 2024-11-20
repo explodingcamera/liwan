@@ -1,139 +1,270 @@
 import {
+	addDays,
 	addHours,
+	addMonths,
+	addSeconds,
+	addWeeks,
+	addYears,
 	differenceInDays,
 	differenceInHours,
-	differenceInMonths,
+	differenceInSeconds,
+	differenceInYears,
 	endOfDay,
-	endOfHour,
+	endOfMonth,
+	endOfWeek,
 	endOfYear,
+	isEqual,
+	isSameDay,
+	isSameMonth,
+	isSameWeek,
+	isSameYear,
 	startOfDay,
 	startOfMonth,
+	startOfWeek,
 	startOfYear,
 	subDays,
 	subMonths,
+	subSeconds,
+	subWeeks,
 	subYears,
 } from "date-fns";
 
-import type { DateRange } from "./types";
 import type { GraphRange } from "../components/graph/graph";
+import { formatDateRange } from "little-date";
 
-export const rangeEndsToday = (range: DateRange) => {
-	const now = new Date().getTime();
-	return startOfDay(now) === startOfDay(range.end);
-};
+type DateRangeValue = { start: Date; end: Date };
 
-export const rangeGraphRange = (range: DateRange): GraphRange => {
-	const days = differenceInDays(range.end, range.start);
-	if (days < 2) {
-		return "hour";
+export class DateRange {
+	#value: RangeName | { start: Date; end: Date };
+	label: string;
+
+	constructor(value: RangeName | { start: Date; end: Date }) {
+		this.#value = value;
+		this.label = "";
 	}
-	const months = differenceInMonths(range.end, range.start);
-	if (months < 2) {
+
+	get value(): DateRangeValue {
+		if (typeof this.#value === "string") {
+			return ranges[this.#value as RangeName]().range;
+		}
+		return this.#value as DateRangeValue;
+	}
+
+	isCustom(): boolean {
+		return typeof this.#value !== "string";
+	}
+
+	format(): string {
+		if (typeof this.#value === "string") return wellKnownRanges[this.#value];
+		return formatDateRange(this.#value.start, this.#value.end);
+	}
+
+	cacheKey(): string {
+		return this.serialize();
+	}
+
+	serialize(): string {
+		if (typeof this.#value === "string") return this.#value;
+		return `${Number(this.#value.start)}:${Number(this.#value.end)}`;
+	}
+
+	static deserialize(range: string): DateRange {
+		if (!range.includes(":")) {
+			return new DateRange(range as RangeName);
+		}
+		const [start, end] = range.split(":").map((v) => new Date(Number(v)));
+		return new DateRange({ start, end });
+	}
+
+	endsToday(): boolean {
+		// ends today or ends in the future
+		return isEqual(endOfDay(new Date()), this.value.end) || this.value.end > new Date();
+	}
+
+	toAPI(): { start: string; end: string } {
+		const start = this.value.start.toISOString();
+		const end = this.value.end.toISOString();
+		return { start, end };
+	}
+
+	getGraphRange(): GraphRange {
+		if (differenceInDays(this.value.end, this.value.start) < 7) return "hour";
 		return "day";
 	}
-	return "month";
-};
 
-export const rangeDataPoints = (range: DateRange): number => {
-	switch (rangeGraphRange(range)) {
-		case "hour":
-			return differenceInHours(range.end, range.start) + 1;
-		case "day":
-			return differenceInDays(range.end, range.start) + 1;
-		case "month":
-			return differenceInMonths(range.end, range.start) + 1;
-	}
-	throw new Error("unreachable");
-};
-
-export const serializeRange = (range: DateRange): string => {
-	const start = new Date(range.start);
-	const end = new Date(range.end);
-	return `${Number(start)}:${Number(end)}`;
-};
-
-export const deserializeRange = (range: string): DateRange => {
-	if (!range.includes(":")) {
-		return ranges[range as RangeName]().range;
+	getAxisRange(): "hour" | "day" | "day+year" {
+		if (differenceInDays(this.value.end, this.value.start) < 1) return "hour";
+		if (differenceInYears(this.value.end, addHours(this.value.start, 1)) > 1) return "day+year";
+		return "day";
 	}
 
-	const [start, end] = range.split(":").map(Number);
-	return { start, end };
-};
+	getTooltipRange(): "hour" | "day+hour" | "day" {
+		if (differenceInDays(this.value.end, this.value.start) < 1) return "hour";
+		if (differenceInDays(this.value.end, this.value.start) < 6) return "day+hour";
+		return "day";
+	}
 
-export const rangeNames = {
+	getGraphDataPoints(): number {
+		const diff = differenceInDays(this.value.end, this.value.start);
+
+		if (diff >= 6) return diff;
+		if (diff >= 1) return differenceInHours(this.value.end, this.value.start);
+		return 24;
+	}
+
+	#isDayBeforeYesterday() {
+		return isSameDay(subDays(new Date(), 2), this.value.start) && isSameDay(subDays(new Date(), 2), this.value.end);
+	}
+
+	previous() {
+		if (this.#value === "today") return new DateRange("yesterday");
+
+		if (
+			isEqual(startOfWeek(this.value.start), this.value.start) &&
+			isEqual(endOfWeek(this.value.end), this.value.end) &&
+			isSameWeek(this.value.start, this.value.end)
+		) {
+			const start = subWeeks(this.value.start, 1);
+			const end = subWeeks(this.value.end, 1);
+			return new DateRange({ start, end });
+		}
+
+		if (
+			isEqual(startOfMonth(this.value.start), this.value.start) &&
+			isEqual(endOfMonth(this.value.end), this.value.end) &&
+			isSameMonth(this.value.start, this.value.end)
+		) {
+			const start = subMonths(this.value.start, 1);
+			const end = subMonths(this.value.end, 1);
+			return new DateRange({ start, end });
+		}
+
+		if (
+			isEqual(startOfYear(this.value.start), this.value.start) &&
+			isEqual(endOfYear(this.value.end), this.value.end) &&
+			isSameYear(this.value.start, this.value.end)
+		) {
+			const start = subYears(this.value.start, 1);
+			const end = subYears(this.value.end, 1);
+			return new DateRange({ start, end });
+		}
+
+		if (differenceInHours(this.value.end, this.value.start) < 23) {
+			const start = subSeconds(this.value.start, differenceInSeconds(this.value.end, this.value.start));
+			const end = subSeconds(this.value.end, differenceInSeconds(this.value.end, this.value.start));
+			return new DateRange({ start, end });
+		}
+
+		const size = differenceInDays(this.value.end, this.value.start);
+		const start = subDays(this.value.start, size + 1);
+		const end = subDays(this.value.end, size + 1);
+
+		return new DateRange({ start, end });
+	}
+
+	next() {
+		if (this.#value === "yesterday") return new DateRange("today");
+		if (this.#isDayBeforeYesterday()) return new DateRange("yesterday");
+
+		if (
+			isEqual(startOfWeek(this.value.start), this.value.start) &&
+			isEqual(endOfWeek(this.value.end), this.value.end) &&
+			isSameWeek(this.value.start, this.value.end)
+		) {
+			const start = addWeeks(this.value.start, 1);
+			const end = addWeeks(this.value.end, 1);
+			return new DateRange({ start, end });
+		}
+
+		if (
+			isEqual(startOfMonth(this.value.start), this.value.start) &&
+			isEqual(endOfMonth(this.value.end), this.value.end) &&
+			isSameMonth(this.value.start, this.value.end)
+		) {
+			const start = addMonths(this.value.start, 1);
+			const end = addMonths(this.value.end, 1);
+			return new DateRange({ start, end });
+		}
+
+		if (
+			isEqual(startOfYear(this.value.start), this.value.start) &&
+			isEqual(endOfYear(this.value.end), this.value.end) &&
+			isSameYear(this.value.start, this.value.end)
+		) {
+			const start = addYears(this.value.start, 1);
+			const end = addYears(this.value.end, 1);
+			return new DateRange({ start, end });
+		}
+
+		if (differenceInHours(this.value.end, this.value.start) < 23) {
+			const start = addSeconds(this.value.start, differenceInSeconds(this.value.end, this.value.start));
+			const end = addSeconds(this.value.end, differenceInSeconds(this.value.end, this.value.start));
+			return new DateRange({ start, end });
+		}
+
+		const size = differenceInDays(this.value.end, this.value.start);
+		const start = addDays(this.value.start, size + 1);
+		const end = addDays(this.value.end, size + 1);
+
+		return new DateRange({ start, end });
+	}
+}
+
+export const wellKnownRanges = {
 	today: "Today",
 	yesterday: "Yesterday",
 	last7Days: "Last 7 Days",
 	last30Days: "Last 30 Days",
 	last12Months: "Last 12 Months",
+	weekToDate: "Week to Date",
 	monthToDate: "Month to Date",
 	yearToDate: "Year to Date",
 };
-export type RangeName = keyof typeof rangeNames;
+export type RangeName = keyof typeof wellKnownRanges;
 
 const lastXDays = (days: number) => {
-	const end = endOfDay(new Date()).getTime();
-	const start = subDays(end, days).getTime();
+	const end = endOfDay(new Date());
+	const start = subDays(end, days);
 	return { start, end };
 };
 
 // all rangeNames are keys of the ranges object
-export const ranges: Record<RangeName, () => { range: DateRange; dataPoints: number; graphRange: GraphRange }> = {
+export const ranges: Record<RangeName, () => { range: { start: Date; end: Date } }> = {
 	today: () => {
 		const now = new Date();
-		const end = endOfHour(now).getTime();
-		const start = startOfDay(now).getTime();
-		const hours = differenceInHours(end, start);
-		return { range: { start, end }, dataPoints: hours + 1, graphRange: "hour" };
+		const end = endOfDay(now);
+		const start = startOfDay(now);
+		return { range: { start, end } };
 	},
 	yesterday: () => {
 		const now = new Date();
-		const start = addHours(startOfDay(subDays(now, 1)), 1).getTime();
-		const end = addHours(endOfDay(subDays(now, 1)), 1).getTime();
-		return { range: { start: start, end }, dataPoints: 24, graphRange: "hour" };
+		const start = startOfDay(subDays(now, 1));
+		const end = endOfDay(start);
+		return { range: { start: start, end } };
 	},
-	last7Days: () => ({ range: lastXDays(7), dataPoints: 7, graphRange: "day" }),
-	last30Days: () => ({ range: lastXDays(30), dataPoints: 30, graphRange: "day" }),
+	last7Days: () => ({ range: lastXDays(7) }),
+	last30Days: () => ({ range: lastXDays(30) }),
 	last12Months: () => {
-		const now = new Date().getTime();
-		const start = subMonths(now, 12).getTime();
-		return { range: { start, end: now }, dataPoints: 12, graphRange: "month" };
+		const now = new Date();
+		const start = subMonths(now, 12);
+		return { range: { start, end: now } };
+	},
+	weekToDate: () => {
+		const now = new Date();
+		const start = startOfWeek(now);
+		const end = endOfWeek(now);
+		return { range: { start, end } };
 	},
 	monthToDate: () => {
-		const now = new Date().getTime();
-		const start = startOfMonth(now).getTime();
-		const days = differenceInDays(now, start);
-		return { range: { start, end: now }, dataPoints: days, graphRange: "day" };
+		const now = new Date();
+		const start = startOfMonth(now);
+		const end = endOfMonth(now);
+		return { range: { start, end } };
 	},
 	yearToDate: () => {
-		const now = new Date().getTime();
-		const start = endOfDay(subDays(startOfYear(now), 1)).getTime() - 1000;
-		const months = differenceInMonths(now, start);
-		return { range: { start, end: now }, dataPoints: months + 1, graphRange: "month" };
+		const now = new Date();
+		const start = startOfYear(now);
+		const end = endOfYear(now);
+		return { range: { start, end: end } };
 	},
-};
-
-export const previusRange = (range: string) => {
-	if (range === "today") return "yesterday";
-	if (range === "yearToDate") {
-		const lastYear = subYears(new Date(), 1);
-		const start = startOfYear(lastYear).getTime();
-		const end = endOfYear(lastYear).getTime();
-		return serializeRange({ start, end });
-	}
-	const r = deserializeRange(range);
-	const size = r.end - r.start;
-	const start = r.start - size;
-	const end = r.end - size;
-	return serializeRange({ start: startOfDay(start).getTime(), end: endOfDay(end).getTime() });
-};
-
-export const nextRange = (range: string) => {
-	if (range === "yesterday") return "today";
-	const r = deserializeRange(range);
-	const size = r.end - r.start;
-	const start = r.start + size;
-	const end = r.end + size;
-	return serializeRange({ start: startOfDay(start).getTime(), end: endOfDay(end).getTime() });
 };

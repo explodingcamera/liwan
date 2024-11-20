@@ -3,7 +3,6 @@ import type dashboardspec from "./dashboard";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
-export type DateRange = OASModel<DashboardSpec, "DateRange">;
 export type Dimension = OASModel<DashboardSpec, "Dimension">;
 export type DimensionFilter = OASModel<DashboardSpec, "DimensionFilter">;
 export type DimensionTableRow = OASModel<DashboardSpec, "DimensionTableRow">;

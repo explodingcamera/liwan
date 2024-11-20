@@ -43,7 +43,7 @@ export const Dialog = ({
 				)}
 
 				<Dia.Content asChild>
-					<article className={cls(styles.content, className, autoOverflow && styles.autoOverflow)}>
+					<article className={cls(styles.content, autoOverflow && styles.autoOverflow, className)}>
 						<Dia.Title className={styles.title} hidden={hideTitle}>
 							{title}
 						</Dia.Title>

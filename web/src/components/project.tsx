@@ -4,9 +4,9 @@ import _map from "./worldmap.module.css";
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "@uidotdev/usehooks";
 
-import { deserializeRange, type RangeName } from "../api/ranges";
+import { DateRange } from "../api/ranges";
 import { metricNames, useDimension, useProject, useProjectData } from "../api";
-import type { DimensionFilter, DateRange, Metric, ProjectResponse, DimensionTableRow, Dimension } from "../api";
+import type { DimensionFilter, Metric, ProjectResponse, DimensionTableRow, Dimension } from "../api";
 
 import { cls } from "../utils";
 import { LineGraph } from "./graph";
@@ -29,8 +29,9 @@ export const Project = () => {
 	const [projectId, setProjectId] = useState<string | undefined>();
 	const [filters, setFilters] = useState<DimensionFilter[]>([]);
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
+
 	const [rangeString, setRangeString] = useLocalStorage<string>("date-range", "last7Days");
-	const range = useMemo(() => deserializeRange(rangeString), [rangeString]);
+	const range = useMemo(() => DateRange.deserialize(rangeString), [rangeString]);
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -92,7 +93,7 @@ export const Project = () => {
 				<div>
 					<div className={styles.projectHeader}>
 						<ProjectHeader project={project} stats={stats.data} />
-						<SelectRange onSelect={(name) => setRangeString(name)} range={rangeString} />
+						<SelectRange onSelect={(range) => setRangeString(range.serialize())} range={range} />
 					</div>
 					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} className={styles.projectStats} />
 					<SelectFilters value={filters} onChange={setFilters} />

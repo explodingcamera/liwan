@@ -1,6 +1,7 @@
 .container {
   display: flex;
   gap: 0.2rem;
+
   button {
     display: flex;
     background: transparent;
@@ -37,4 +38,8 @@ details.selectRange {
     --pico-form-element-spacing-vertical: 0.5rem;
     --pico-form-element-spacing-horizontal: 0.6rem;
   }
+}
+
+article.rangeDialog {
+  width: unset;
 }

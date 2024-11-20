@@ -4,17 +4,8 @@ import styles from "./projects.module.css";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { ChevronDownIcon } from "lucide-react";
 
-import {
-	type DateRange,
-	type Metric,
-	type ProjectResponse,
-	api,
-	metricNames,
-	useMe,
-	useProjectData,
-	useQuery,
-} from "../api";
-import { deserializeRange, type RangeName } from "../api/ranges";
+import { type Metric, type ProjectResponse, api, metricNames, useMe, useProjectData, useQuery } from "../api";
+import { DateRange } from "../api/ranges";
 import { getUsername } from "../utils";
 import { LineGraph } from "./graph";
 import { SelectRange } from "./project/range";
@@ -57,7 +48,7 @@ export const Projects = () => {
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 	const [hiddenProjects, setHiddenProjects] = useLocalStorage<string[]>("hiddenProjects", []);
 	const [rangeString, setRangeString] = useLocalStorage<string>("date-range", "last7Days");
-	const range = useMemo(() => deserializeRange(rangeString), [rangeString]);
+	const range = useMemo(() => DateRange.deserialize(rangeString), [rangeString]);
 
 	const projects = data?.projects || [];
 
@@ -85,7 +76,7 @@ export const Projects = () => {
 		<div className={styles.projects}>
 			<div className={styles.header}>
 				<h1>Dashboard</h1>
-				<SelectRange onSelect={(name) => setRangeString(name)} range={rangeString} />
+				<SelectRange onSelect={(range) => setRangeString(range.serialize())} range={range} />
 			</div>
 
 			<Suspense>
