@@ -46,6 +46,6 @@ describe("DateRange", () => {
 		const end = new Date(2024, 10, 15);
 		const range = new DateRange({ start, end });
 		expect(range.getGraphRange()).toBe("day");
-		expect(range.getGraphDataPoints()).toBe(15);
+		expect(range.getGraphDataPoints()).toBe(14);
 	});
 });

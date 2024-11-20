@@ -78,7 +78,7 @@ export class DateRange {
 
 	endsToday(): boolean {
 		// ends today or ends in the future
-		return isEqual(endOfDay(new Date()), this.value.end) || this.value.end > new Date();
+		return isEqual(endOfDay(new Date()), endOfDay(this.value.end)) || this.value.end > new Date();
 	}
 
 	toAPI(): { start: string; end: string } {
