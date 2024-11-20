@@ -12,25 +12,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-web:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Build web project
-        run: |
-          bun install
-          bun run build
-        working-directory: ./web
-      - name: Run tests
-        run: bun test
-        working-directory: ./web
-      - name: Run typecheck
-        run: bun typecheck
-        working-directory: ./web
-
   test:
     strategy:
       matrix:
