@@ -13,6 +13,7 @@ import {
 	endOfMonth,
 	endOfWeek,
 	endOfYear,
+	isAfter,
 	isEqual,
 	isSameDay,
 	isSameMonth,
@@ -134,8 +135,8 @@ export class DateRange {
 			isEqual(endOfMonth(this.value.end), this.value.end) &&
 			isSameMonth(this.value.start, this.value.end)
 		) {
-			const start = subMonths(this.value.start, 1);
-			const end = subMonths(this.value.end, 1);
+			const start = startOfMonth(subMonths(this.value.start, 1));
+			const end = endOfMonth(subMonths(this.value.end, 1));
 			return new DateRange({ start, end });
 		}
 
@@ -144,8 +145,8 @@ export class DateRange {
 			isEqual(endOfYear(this.value.end), this.value.end) &&
 			isSameYear(this.value.start, this.value.end)
 		) {
-			const start = subYears(this.value.start, 1);
-			const end = subYears(this.value.end, 1);
+			const start = startOfYear(subYears(this.value.start, 1));
+			const end = endOfYear(subYears(this.value.end, 1));
 			return new DateRange({ start, end });
 		}
 
@@ -163,6 +164,7 @@ export class DateRange {
 	}
 
 	next() {
+		if (isAfter(this.value.end, new Date())) return this;
 		if (this.#value === "yesterday") return new DateRange("today");
 		if (this.#isDayBeforeYesterday()) return new DateRange("yesterday");
 
@@ -224,7 +226,7 @@ export type RangeName = keyof typeof wellKnownRanges;
 
 const lastXDays = (days: number) => {
 	const end = endOfDay(new Date());
-	const start = subDays(end, days);
+	const start = startOfDay(subDays(end, days));
 	return { start, end };
 };
 
@@ -245,9 +247,9 @@ export const ranges: Record<RangeName, () => { range: { start: Date; end: Date }
 	last7Days: () => ({ range: lastXDays(7) }),
 	last30Days: () => ({ range: lastXDays(30) }),
 	last12Months: () => {
-		const now = new Date();
-		const start = subMonths(now, 12);
-		return { range: { start, end: now } };
+		const end = endOfMonth(new Date());
+		const start = subMonths(end, 11);
+		return { range: { start, end } };
 	},
 	weekToDate: () => {
 		const now = new Date();

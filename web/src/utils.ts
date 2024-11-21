@@ -1,3 +1,5 @@
+import type { Metric } from "./api";
+
 type ClassName = string | undefined | null | false;
 
 export const capitalizeAll = (str: string) => str.replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
@@ -11,7 +13,10 @@ export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | Cl
 // get the username cookie or undefined if not set
 export const getUsername = () => document.cookie.match(/username=(.*?)(;|$)/)?.[1];
 
-export const formatMetricVal = (value: number) => {
+export const formatMetricVal = (value: number, metric: Metric) => {
+	if (metric === "bounce_rate") return formatPercent(Math.floor(value * 1000) / 10);
+	if (metric === "avg_time_on_site") return formatDuration(value);
+
 	if (value > 999999) {
 		return `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
 	}
@@ -28,6 +33,19 @@ export const formatPercent = (value: number) => {
 	if (value >= 10000 || value <= -10000) return `${(value / 100).toFixed(0)}x`;
 	if (value >= 1000 || value <= -1000) return `${value.toFixed(0).replace(/\.0$/, "") || "0"}%`;
 	return `${value.toFixed(1).replace(/\.0$/, "") || "0"}%`;
+};
+
+export const formatDuration = (value: number) => {
+	const totalSeconds = Math.floor(value);
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const remainingSeconds = totalSeconds % 60;
+
+	if (hours > 0) {
+		return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+	}
+
+	return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 };
 
 export const tryParseUrl = (url: string) => {

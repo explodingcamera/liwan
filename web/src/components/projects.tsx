@@ -120,7 +120,7 @@ const Project = ({
 			</div>
 			<Accordion.AccordionContent className={styles.AccordionContent}>
 				<div className={styles.graph}>
-					<LineGraph title={metricNames[metric]} data={graph.data} range={graph.range} />
+					<LineGraph title={metricNames[metric]} metric={metric} data={graph.data} range={graph.range} />
 				</div>
 			</Accordion.AccordionContent>
 		</article>

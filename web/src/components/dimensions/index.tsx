@@ -152,7 +152,7 @@ export const DimensionTable = (props: DimensionProps) => {
 							<DimensionValueBar value={d.value} biggest={biggest}>
 								<DimensionLabel dimension={props.dimension} value={d} onSelect={props.onSelect} />
 							</DimensionValueBar>
-							<div>{formatMetricVal(d.value)}</div>
+							<div>{formatMetricVal(d.value, props.query.metric)}</div>
 						</div>
 					);
 				})}

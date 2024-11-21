@@ -35,20 +35,20 @@ export const SelectMetrics = ({
 				selected={metric === "unique_visitors"}
 			/>
 			<SelectMetric
-				title="Total Sessions"
-				value={data?.stats.totalSessions}
-				prevValue={data?.statsPrev.totalSessions}
-				metric={"sessions"}
-				onSelect={() => setMetric("sessions")}
-				selected={metric === "sessions"}
+				title="Avg. Time on Site"
+				value={data?.stats.avgTimeOnSite}
+				prevValue={data?.statsPrev.avgTimeOnSite}
+				metric={"avg_time_on_site"}
+				onSelect={() => setMetric("avg_time_on_site")}
+				selected={metric === "avg_time_on_site"}
 			/>
 			<SelectMetric
-				title="Avg. Views Per Session"
-				value={data?.stats.avgViewsPerSession}
-				prevValue={data?.statsPrev.avgViewsPerSession}
-				metric={"avg_views_per_session"}
-				onSelect={() => setMetric("avg_views_per_session")}
-				selected={metric === "avg_views_per_session"}
+				title="Bounce Rate"
+				value={data?.stats.bounceRate}
+				prevValue={data?.statsPrev.bounceRate}
+				metric={"bounce_rate"}
+				onSelect={() => setMetric("bounce_rate")}
+				selected={metric === "bounce_rate"}
 			/>
 		</div>
 	);
@@ -79,7 +79,7 @@ export const SelectMetric = ({
 		<CardButton onClick={onSelect} active={selected} className={styles.metric}>
 			<h2>{title}</h2>
 			<h3>
-				{formatMetricVal(value)}
+				{formatMetricVal(value, metric)}
 				<span style={{ color }} className={styles.change}>
 					{icon} {formatPercent(changePercent)}
 				</span>

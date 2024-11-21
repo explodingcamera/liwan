@@ -2,9 +2,9 @@ import type { Dimension, DimensionFilter, Metric } from "./types";
 
 export const metricNames: Record<Metric, string> = {
 	views: "Total Views",
-	sessions: "Total Sessions",
 	unique_visitors: "Unique Visitors",
-	avg_views_per_session: "Avg. Views Per Session",
+	avg_time_on_site: "Avg Time on Site",
+	bounce_rate: "Bounce Rate",
 };
 
 export const dimensionNames: Record<Dimension, string> = {

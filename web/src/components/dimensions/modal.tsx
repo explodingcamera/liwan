@@ -66,7 +66,7 @@ export const DetailsModal = ({
 							<DimensionValueBar value={d.value} biggest={biggest}>
 								<DimensionLabel dimension={dimension} value={d} onSelect={() => onSelect(d, dimension)} />
 							</DimensionValueBar>
-							<div>{formatMetricVal(d.value)}</div>
+							<div>{formatMetricVal(d.value, query.metric)}</div>
 						</div>
 					);
 				})}

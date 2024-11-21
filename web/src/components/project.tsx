@@ -99,7 +99,7 @@ export const Project = () => {
 					<SelectFilters value={filters} onChange={setFilters} />
 				</div>
 				<article className={cls(cardStyles, styles.graphCard)}>
-					<LineGraph data={graph.data} title={metricNames[metric]} range={graph.range} />
+					<LineGraph data={graph.data} metric={metric} title={metricNames[metric]} range={graph.range} />
 				</article>
 				<div className={styles.tables}>
 					<DimensionTabsCard dimensions={["url", "fqdn"]} query={query} onSelect={onSelectDimRow} />

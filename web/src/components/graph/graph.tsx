@@ -7,6 +7,7 @@ import type { DataPoint } from ".";
 import { formatMetricVal } from "../../utils";
 import { useWindowSize } from "@uidotdev/usehooks";
 import type { DateRange } from "../../api/ranges";
+import type { Metric } from "../../api";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 
@@ -27,7 +28,7 @@ const formatDate = (date: Date, range: GraphRange | "day+hour" | "day+year" = "d
 	}
 };
 
-const Tooltip = (props: SliceTooltipProps & { title: string; range: DateRange }) => {
+const Tooltip = (props: SliceTooltipProps & { title: string; range: DateRange; metric: Metric }) => {
 	const point = props.slice.points[0].data;
 	const value = point.y.valueOf() as number;
 
@@ -35,7 +36,8 @@ const Tooltip = (props: SliceTooltipProps & { title: string; range: DateRange })
 		<div data-theme="dark" className={styles.tooltip}>
 			<h2>{props.title}</h2>
 			<h3>
-				<span>{formatDate(new Date(point.x), props.range.getTooltipRange())}</span> {formatMetricVal(value)}
+				<span>{formatDate(new Date(point.x), props.range.getTooltipRange())}</span>{" "}
+				{formatMetricVal(value, props.metric)}
 			</h3>
 		</div>
 	);
@@ -45,10 +47,12 @@ export const LineGraph = ({
 	data,
 	title,
 	range,
+	metric,
 }: {
 	data: DataPoint[];
 	title: string;
 	range: DateRange;
+	metric: Metric;
 }) => {
 	const axisRange = range.getAxisRange();
 	const max = useMemo(() => Math.max(...data.map((d) => d.y)), [data]);
@@ -96,7 +100,7 @@ export const LineGraph = ({
 			pointLabel="data.yFormatted"
 			pointLabelYOffset={-12}
 			enableSlices="x"
-			sliceTooltip={(props) => <Tooltip {...props} title={title} range={range} />}
+			sliceTooltip={(props) => <Tooltip {...props} metric={metric} title={title} range={range} />}
 			defs={[
 				{
 					colors: [

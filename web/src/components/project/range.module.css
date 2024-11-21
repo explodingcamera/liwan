@@ -18,7 +18,9 @@
 }
 
 details.selectRange {
-  width: 10rem;
+  min-width: 10rem;
+  max-width: 15rem;
+  line-height: 1;
 
   button {
     all: unset;

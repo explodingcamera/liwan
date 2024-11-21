@@ -30,9 +30,9 @@ impl Display for DateRange {
 #[oai(rename_all = "snake_case")]
 pub enum Metric {
     Views,
-    Sessions,
     UniqueVisitors,
-    AvgViewsPerSession,
+    BounceRate,
+    AvgTimeOnSite,
 }
 
 #[derive(Debug, Enum, Clone, Copy, PartialEq)]
@@ -78,9 +78,9 @@ pub type ReportTable = BTreeMap<String, f64>;
 #[oai(rename_all = "camelCase")]
 pub struct ReportStats {
     pub total_views: u64,
-    pub total_sessions: u64,
     pub unique_visitors: u64,
-    pub avg_views_per_session: f64,
+    pub bounce_rate: f64,
+    pub avg_time_on_site: f64,
 }
 
 #[derive(Object, Debug)]
@@ -185,10 +185,36 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
 fn metric_sql(metric: Metric) -> String {
     match metric {
         Metric::Views => "count(sd.created_at)",
-        Metric::UniqueVisitors => "count(distinct sd.visitor_id)",
-        Metric::Sessions => "count(distinct sd.visitor_id || '-' || date_trunc('minute', timestamp 'epoch' + interval '1 second' * cast(floor(extract(epoch from created_at) / 1800) * 1800 as bigint)))",
-        Metric::AvgViewsPerSession => "count(sd.created_at) / count(distinct sd.visitor_id)",
-    }.to_owned()
+        Metric::UniqueVisitors => {
+            // Count the number of unique visitors as the number of distinct visitor IDs
+            "--sql
+            count(distinct sd.visitor_id)"
+        }
+        Metric::BounceRate => {
+            // total sessions: no time_to_next_event / time_to_next_event is null
+            // bounce sessions: time to next / time to prev are both null or both > 1800
+            "--sql
+            count(distinct sd.visitor_id)
+                filter (
+                    where
+                        (sd.time_until_next_event is null or sd.time_until_next_event > 1800) and
+                        (sd.time_since_previous_event is null or sd.time_since_previous_event > 1800)
+                )
+            /
+            count(distinct sd.visitor_id)
+                filter (
+                    where
+                        sd.time_until_next_event is null or sd.time_until_next_event > 1800
+                )
+            "
+        }
+        Metric::AvgTimeOnSite => {
+            // avg time_until_next_event where time_until_next_event <= 1800 and time_until_next_event is not null
+            "--sql
+            avg(sd.time_until_next_event) filter (where sd.time_until_next_event is not null and sd.time_until_next_event <= 1800)"
+        }
+    }
+    .to_owned()
 }
 
 pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
@@ -259,7 +285,10 @@ pub fn overall_report(
                 select
                     visitor_id,
                     created_at,
-                    coalesce(lead(created_at) over (partition by visitor_id order by created_at) - created_at, interval '0' second) as session_duration
+                    -- the time to the next event for the same visitor
+                    extract(epoch from (lead(created_at) over (partition by visitor_id order by created_at) - created_at)) as time_until_next_event,
+                    -- the time to the previous event for the same visitor
+                    extract(epoch from (created_at - lag(created_at) over (partition by visitor_id order by created_at))) as time_since_previous_event
                 from events, params
                 where
                     event = ?::text and
@@ -281,7 +310,7 @@ pub fn overall_report(
             )
         select
             tb.bin_start,
-            coalesce(eb.metric_value, 0) as metric_value
+            coalesce(eb.metric_value, 0)
         from
             time_bins tb
             left join event_bins eb on tb.bin_start = eb.bin_start
@@ -292,14 +321,15 @@ pub fn overall_report(
     let mut stmt = conn.prepare_cached(&query)?;
 
     match metric {
-        Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
+        Metric::Views | Metric::UniqueVisitors => {
             let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
             let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
             Ok(report_graph)
         }
-        Metric::AvgViewsPerSession => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get(1))?;
-            let report_graph = rows.collect::<Result<Vec<f64>, duckdb::Error>>()?;
+        Metric::AvgTimeOnSite | Metric::BounceRate => {
+            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| row.get::<_, Option<f64>>(1))?;
+            let report_graph =
+                rows.map(|r| r.map(|v| v.unwrap_or(0.0))).collect::<Result<Vec<f64>, duckdb::Error>>()?;
             Ok(report_graph)
         }
     }
@@ -322,9 +352,9 @@ pub fn overall_stats(
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
     let metric_total = metric_sql(Metric::Views);
-    let metric_sessions = metric_sql(Metric::Sessions);
     let metric_unique_visitors = metric_sql(Metric::UniqueVisitors);
-    let metric_avg_views_per_visitor = metric_sql(Metric::AvgViewsPerSession);
+    let metric_bounce_rate = metric_sql(Metric::BounceRate);
+    let metric_avg_time_on_site = metric_sql(Metric::AvgTimeOnSite);
 
     params.push(range.start);
     params.push(range.end);
@@ -343,7 +373,10 @@ pub fn overall_stats(
                 select
                     visitor_id,
                     created_at,
-                    coalesce(lead(created_at) over (partition by visitor_id order by created_at) - created_at, interval '0' second) as session_duration
+                    -- the time to the next event for the same visitor
+                    extract(epoch from (lead(created_at) over (partition by visitor_id order by created_at) - created_at)) as time_until_next_event,
+                    -- the time to the previous event for the same visitor
+                    extract(epoch from (created_at - lag(created_at) over (partition by visitor_id order by created_at))) as time_since_previous_event
                 from events, params
                 where
                     event = ?::text and
@@ -354,9 +387,9 @@ pub fn overall_stats(
             ) 
         select
             {metric_total} as total_views,
-            {metric_sessions} as total_sessions,
             {metric_unique_visitors} as unique_visitors,
-            {metric_avg_views_per_visitor} as avg_views_per_visitor,
+            {metric_bounce_rate} as bounce_rate,
+            {metric_avg_time_on_site} as avg_time_on_site
         from
             session_data sd;
     ");
@@ -365,9 +398,9 @@ pub fn overall_stats(
     let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
         Ok(ReportStats {
             total_views: row.get(0)?,
-            total_sessions: row.get(1)?,
-            unique_visitors: row.get(2)?,
-            avg_views_per_session: row.get::<_, Option<f64>>(3)?.unwrap_or(0.0),
+            unique_visitors: row.get(1)?,
+            bounce_rate: row.get::<_, Option<f64>>(2)?.unwrap_or(0.0),
+            avg_time_on_site: row.get::<_, Option<f64>>(3)?.unwrap_or(0.0),
         })
     })?;
 
@@ -427,7 +460,10 @@ pub fn dimension_report(
                     coalesce({dimension_column}, 'Unknown') as dimension_value,
                     visitor_id,
                     created_at,
-                    coalesce(lead(created_at) over (partition by visitor_id order by created_at) - created_at, interval '0' second) as session_duration
+                    -- the time to the next event for the same visitor
+                    extract(epoch from (lead(created_at) over (partition by visitor_id order by created_at) - created_at)) as time_until_next_event,
+                    -- the time to the previous event for the same visitor
+                    extract(epoch from (created_at - lag(created_at) over (partition by visitor_id order by created_at))) as time_since_previous_event
                 from events sd, params
                 where
                     sd.event = ?::text and
@@ -453,7 +489,7 @@ pub fn dimension_report(
     let mut stmt = conn.prepare_cached(&query)?;
 
     match metric {
-        Metric::Views | Metric::UniqueVisitors | Metric::Sessions => {
+        Metric::Views | Metric::UniqueVisitors => {
             let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 Ok((dimension_value, row.get(1)?))
@@ -461,7 +497,7 @@ pub fn dimension_report(
             let report_table = rows.collect::<Result<BTreeMap<String, f64>, duckdb::Error>>()?;
             Ok(report_table)
         }
-        Metric::AvgViewsPerSession => {
+        Metric::AvgTimeOnSite | Metric::BounceRate => {
             let rows = stmt.query_map(params_from_iter(params), |row| {
                 let dimension_value: String = row.get(0)?;
                 Ok((dimension_value, row.get(1)?))
