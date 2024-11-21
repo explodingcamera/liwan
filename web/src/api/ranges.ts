@@ -7,6 +7,7 @@ import {
 	addYears,
 	differenceInDays,
 	differenceInHours,
+	differenceInMonths,
 	differenceInSeconds,
 	differenceInYears,
 	endOfDay,
@@ -37,11 +38,11 @@ type DateRangeValue = { start: Date; end: Date };
 
 export class DateRange {
 	#value: RangeName | { start: Date; end: Date };
-	label: string;
+	variant?: string;
 
 	constructor(value: RangeName | { start: Date; end: Date }) {
 		this.#value = value;
-		this.label = "";
+		if (typeof value === "string") this.variant = value;
 	}
 
 	get value(): DateRangeValue {
@@ -52,10 +53,11 @@ export class DateRange {
 	}
 
 	isCustom(): boolean {
-		return typeof this.#value !== "string";
+		return typeof this.#value !== "string" && !this.variant;
 	}
 
 	format(): string {
+		if (this.variant === "allTime") return "All Time";
 		if (typeof this.#value === "string") return wellKnownRanges[this.#value];
 		return formatDateRange(this.#value.start, this.#value.end);
 	}
@@ -66,15 +68,19 @@ export class DateRange {
 
 	serialize(): string {
 		if (typeof this.#value === "string") return this.#value;
-		return `${Number(this.#value.start)}:${Number(this.#value.end)}`;
+		return `${Number(this.#value.start)}:${Number(this.#value.end)}:${this.variant}`;
 	}
 
 	static deserialize(range: string): DateRange {
 		if (!range.includes(":")) {
 			return new DateRange(range as RangeName);
 		}
-		const [start, end] = range.split(":").map((v) => new Date(Number(v)));
-		return new DateRange({ start, end });
+		const [start, end, variant] = range.split(":");
+		const dr = new DateRange({ start: new Date(Number(start)), end: new Date(Number(end)) });
+		if (variant) {
+			dr.variant = variant;
+		}
+		return dr;
 	}
 
 	endsToday(): boolean {
@@ -118,6 +124,7 @@ export class DateRange {
 	}
 
 	previous() {
+		if (this.variant === "allTime") return this;
 		if (this.#value === "today") return new DateRange("yesterday");
 
 		if (
@@ -147,6 +154,18 @@ export class DateRange {
 		) {
 			const start = startOfYear(subYears(this.value.start, 1));
 			const end = endOfYear(subYears(this.value.end, 1));
+			return new DateRange({ start, end });
+		}
+
+		if (differenceInMonths(this.value.end, this.value.start) === 12) {
+			// if (isSameDay(this.value.start, startOfMonth(this.value.start))) {
+			// 	const start = startOfMonth(subYears(this.value.start, 1));
+			// 	const end = endOfMonth(subYears(this.value.end, 1));
+			// 	return new DateRange({ start, end });
+			// }
+
+			const start = subYears(this.value.start, 1);
+			const end = subYears(this.value.end, 1);
 			return new DateRange({ start, end });
 		}
 
@@ -193,6 +212,18 @@ export class DateRange {
 			isEqual(endOfYear(this.value.end), this.value.end) &&
 			isSameYear(this.value.start, this.value.end)
 		) {
+			const start = addYears(this.value.start, 1);
+			const end = addYears(this.value.end, 1);
+			return new DateRange({ start, end });
+		}
+
+		if (differenceInMonths(this.value.end, this.value.start) === 12) {
+			// if (isSameDay(this.value.start, startOfMonth(this.value.start))) {
+			// 	const start = startOfMonth(addYears(this.value.start, 1));
+			// 	const end = endOfMonth(addYears(this.value.end, 1));
+			// 	return new DateRange({ start, end });
+			// }
+
 			const start = addYears(this.value.start, 1);
 			const end = addYears(this.value.end, 1);
 			return new DateRange({ start, end });
@@ -247,8 +278,8 @@ export const ranges: Record<RangeName, () => { range: { start: Date; end: Date }
 	last7Days: () => ({ range: lastXDays(7) }),
 	last30Days: () => ({ range: lastXDays(30) }),
 	last12Months: () => {
+		const start = startOfMonth(subYears(new Date(), 1));
 		const end = endOfMonth(new Date());
-		const start = subMonths(end, 11);
 		return { range: { start, end } };
 	},
 	weekToDate: () => {

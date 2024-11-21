@@ -211,10 +211,29 @@ fn metric_sql(metric: Metric) -> String {
         Metric::AvgTimeOnSite => {
             // avg time_until_next_event where time_until_next_event <= 1800 and time_until_next_event is not null
             "--sql
-            avg(sd.time_until_next_event) filter (where sd.time_until_next_event is not null and sd.time_until_next_event <= 1800)"
+            coalesce(avg(sd.time_until_next_event) filter (where sd.time_until_next_event is not null and sd.time_until_next_event <= 1800), 0)"
         }
     }
     .to_owned()
+}
+
+pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Option<time::OffsetDateTime>> {
+    if entities.is_empty() {
+        return Ok(None);
+    }
+
+    let vars = repeat_vars(entities.len());
+    let query = format!(
+        "--sql
+            select min(created_at) from events
+            where entity_id in ({vars});
+    "
+    );
+
+    let mut stmt = conn.prepare_cached(&query)?;
+    let rows = stmt.query_map(params_from_iter(entities), |row| row.get(0))?;
+    let earliest_timestamp = rows.collect::<Result<Vec<Option<time::OffsetDateTime>>, duckdb::Error>>()?;
+    Ok(earliest_timestamp[0])
 }
 
 pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {

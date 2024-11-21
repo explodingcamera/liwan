@@ -15,6 +15,18 @@
       color: var(--pico-h1-background-color);
     }
   }
+
+  ul {
+    li {
+      padding: 0;
+
+      button {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0.4rem var(--pico-form-element-spacing-horizontal);
+      }
+    }
+  }
 }
 
 details.selectRange {

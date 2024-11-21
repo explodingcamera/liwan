@@ -22,6 +22,7 @@
     Ubuntu, Cantarell, Helvetica, Arial, "Helvetica Neue", sans-serif,
     var(--pico-font-family-emoji);
   --pico-font-family-sans-serif: var(--pico-font-family);
+  font-variant-numeric: tabular-nums;
 }
 
 :root[data-theme="dark"] {

@@ -93,7 +93,7 @@ export const Project = () => {
 				<div>
 					<div className={styles.projectHeader}>
 						<ProjectHeader project={project} stats={stats.data} />
-						<SelectRange onSelect={(range) => setRangeString(range.serialize())} range={range} />
+						<SelectRange onSelect={(range) => setRangeString(range.serialize())} range={range} projectId={project.id} />
 					</div>
 					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} className={styles.projectStats} />
 					<SelectFilters value={filters} onChange={setFilters} />

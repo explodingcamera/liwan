@@ -66,6 +66,25 @@ pub struct DashboardAPI;
 
 #[OpenApi]
 impl DashboardAPI {
+    #[oai(path = "/project/:project_id/earliest", method = "get")]
+    async fn project_earliest_handler(
+        &self,
+        Path(project_id): Path<String>,
+        Data(app): Data<&Liwan>,
+        user: Option<SessionUser>,
+    ) -> ApiResult<Json<Option<time::OffsetDateTime>>> {
+        let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+
+        if !can_access_project(&project, user.as_ref()) {
+            http_bail!(StatusCode::NOT_FOUND, "Project not found")
+        }
+
+        let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let earliest = reports::earliest_timestamp(&conn, &entities).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        Ok(Json(earliest))
+    }
+
     #[oai(path = "/project/:project_id/graph", method = "post")]
     async fn project_graph_handler(
         &self,

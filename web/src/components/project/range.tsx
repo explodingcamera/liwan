@@ -7,12 +7,35 @@ import { cls } from "../../utils";
 import { Dialog } from "../dialog";
 import { DatePickerRange } from "../daterange";
 import { DateRange, wellKnownRanges, type RangeName } from "../../api/ranges";
+import { api, useQuery } from "../../api";
+import { endOfDay, startOfDay } from "date-fns";
 
-export const SelectRange = ({ onSelect, range }: { onSelect: (range: DateRange) => void; range: DateRange }) => {
+export const SelectRange = ({
+	onSelect,
+	range,
+	projectId,
+}: { onSelect: (range: DateRange) => void; range: DateRange; projectId?: string }) => {
 	const detailsRef = useRef<HTMLDetailsElement>(null);
 
 	const handleSelect = (range: DateRange) => () => {
 		if (detailsRef.current) detailsRef.current.open = false;
+		onSelect(range);
+	};
+
+	const allTime = useQuery({
+		queryKey: ["allTime", projectId],
+		enabled: !!projectId,
+		staleTime: 7 * 24 * 60 * 60 * 1000,
+		queryFn: () =>
+			api["/api/dashboard/project/{project_id}/earliest"].get({ params: { project_id: projectId || "" } }).json(),
+	});
+
+	const selectAllTime = async () => {
+		if (!projectId) return;
+		if (!allTime.data) return;
+		const from = new Date(allTime.data);
+		const range = new DateRange({ start: startOfDay(from), end: endOfDay(new Date()) });
+		range.variant = "allTime";
 		onSelect(range);
 	};
 
@@ -38,6 +61,17 @@ export const SelectRange = ({ onSelect, range }: { onSelect: (range: DateRange) 
 							</button>
 						</li>
 					))}
+					{projectId && allTime.data && (
+						<li>
+							<button
+								type="button"
+								className={range.variant === "allTime" ? styles.selected : ""}
+								onClick={selectAllTime}
+							>
+								All Time
+							</button>
+						</li>
+					)}
 					<li>
 						<Dialog
 							className={styles.rangeDialog}

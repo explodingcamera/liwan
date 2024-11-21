@@ -41,7 +41,6 @@ const NoProjects = () => {
 export const Projects = () => {
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["projects"],
-
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
 
