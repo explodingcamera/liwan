@@ -13,4 +13,15 @@
   input {
     margin-bottom: 0;
   }
+
+  button {
+    margin-top: 1rem;
+    width: 100%;
+  }
+
+  > div {
+    display: flex;
+    width: 100%;
+    gap: 0.5rem;
+  }
 }

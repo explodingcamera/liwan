@@ -45,12 +45,14 @@ form.password {
     background-color: var(--pico-background-color);
     padding: 1rem 1rem;
     border-radius: var(--pico-border-radius);
+    font-weight: 500;
 
     .tag {
-      color: var(--pico-primary-background);
+      color: var(--pico-primary-hover);
+      font-weight: 900;
     }
     .entity {
-      color: var(--pico-secondary-inverse);
+      font-weight: 900;
     }
   }
 }

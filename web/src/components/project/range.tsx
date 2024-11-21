@@ -18,6 +18,7 @@ export const SelectRange = ({
 	const detailsRef = useRef<HTMLDetailsElement>(null);
 
 	const handleSelect = (range: DateRange) => () => {
+		console.log("range", range, detailsRef.current);
 		if (detailsRef.current) detailsRef.current.open = false;
 		onSelect(range);
 	};
@@ -75,17 +76,22 @@ export const SelectRange = ({
 					<li>
 						<Dialog
 							className={styles.rangeDialog}
+							description="Select a custom date range."
+							hideDescription
 							trigger={
 								<button type="button" className={range.isCustom() ? styles.selected : ""}>
 									Custom
 								</button>
 							}
+							onOpenChange={(open) => {
+								if (open && detailsRef.current) detailsRef.current.open = false;
+							}}
 							title="Custom Range"
 							showClose
 							hideTitle
 							autoOverflow
 						>
-							<DatePickerRange />
+							<DatePickerRange onSelect={(range) => handleSelect(range)()} />
 						</Dialog>
 					</li>
 				</ul>
