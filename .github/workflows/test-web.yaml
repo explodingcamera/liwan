@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - "**/*.ts"
+      - "**/*.tsx"
       - "web/bun.lock"
   push:
     paths:
       - "**/*.ts"
+      - "**/*.tsx"
       - "web/bun.lock"
   workflow_dispatch:
 
