@@ -1,8 +1,8 @@
 <br/>
 
 <div align="center">
-    <a href=""><img  src="./web/public/favicon.svg" width="100px"></a>
     <h2>
+        <img float="left" src="./web/public/favicon.svg" width="16px"/>
         <a href="https://liwan.dev">liwan.dev</a> - Easy & Privacy-First Web Analytics
     </h2>
     <div>

@@ -13,6 +13,7 @@ use poem::{Endpoint, EndpointExt};
 use poem_openapi::payload::{Json, Response};
 use poem_openapi::{Object, OpenApi};
 use serde::{Deserialize, Serialize};
+use tokio::task::spawn_blocking;
 use tower::limit::RateLimitLayer;
 
 #[derive(Serialize, Object)]
@@ -73,18 +74,26 @@ impl AuthApi {
         Json(params): Json<LoginRequest>,
         cookies: &CookieJar,
     ) -> ApiResult<EmptyResponse> {
-        if !(app.users.check_login(&params.username, &params.password).unwrap_or(false)) {
+        let username = params.username.clone();
+
+        let app2 = app.clone();
+        let authorized =
+            spawn_blocking(move || app2.users.check_login(&params.username, &params.password).unwrap_or(false))
+                .await
+                .unwrap_or(false);
+
+        if !(authorized) {
             http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
         }
 
         let session_id = session_token();
         let expires = time::OffsetDateTime::now_utc() + MAX_SESSION_AGE;
-        app.sessions.create(&session_id, &params.username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        app.sessions.create(&session_id, &username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut public_cookie = PUBLIC_COOKIE.clone();
         let mut session_cookie = SESSION_COOKIE.clone();
         public_cookie.set_secure(app.config.secure());
-        public_cookie.set_value_str(params.username.clone());
+        public_cookie.set_value_str(username.clone());
         session_cookie.set_secure(app.config.secure());
         session_cookie.set_value_str(session_id);
         cookies.add(public_cookie);

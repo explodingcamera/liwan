@@ -26,6 +26,5 @@ async fn test_event() -> Result<()> {
     let res = client.post("/api/event").header(header::USER_AGENT, "test").body_json(event).send().await;
     res.assert_status_is_ok();
 
-    // TODO: hook up the event handler and test that the event is processed
     Ok(())
 }

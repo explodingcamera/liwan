@@ -9,13 +9,14 @@ use poem::web::Data;
 use poem_openapi::param::Path;
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
+use tokio::task::spawn_blocking;
 
 #[derive(Object)]
 struct GraphResponse {
     data: Vec<f64>,
 }
 
-#[derive(Object)]
+#[derive(Object, Clone)]
 struct StatsRequest {
     range: DateRange,
     filters: Vec<DimensionFilter>,
@@ -105,15 +106,20 @@ impl DashboardAPI {
         }
 
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-        let report = reports::overall_report(
-            &conn,
-            &entities,
-            "pageview",
-            &req.range,
-            req.data_points,
-            &req.filters,
-            &req.metric,
-        )
+
+        let report = spawn_blocking(move || {
+            reports::overall_report(
+                &conn,
+                &entities,
+                "pageview",
+                &req.range,
+                req.data_points,
+                &req.filters,
+                &req.metric,
+            )
+        })
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(GraphResponse { data: report }))
@@ -128,21 +134,34 @@ impl DashboardAPI {
         user: Option<SessionUser>,
     ) -> ApiResult<Json<StatsResponse>> {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
-        let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-
         if !can_access_project(&project, user.as_ref()) {
             http_bail!(StatusCode::NOT_FOUND, "Project not found")
         }
 
+        let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let (entities2, entities3) = (entities.clone(), entities.clone());
+
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let stats = reports::overall_stats(&conn, &entities, "pageview", &req.range, &req.filters)
-            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let req2 = req.clone();
+        let conn2 = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let stats_prev = reports::overall_stats(&conn, &entities, "pageview", &req.range.prev(), &req.filters)
-            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let (stats, stats_prev) = tokio::try_join!(
+            spawn_blocking(move || { reports::overall_stats(&conn, &entities, "pageview", &req.range, &req.filters) }),
+            spawn_blocking(move || {
+                reports::overall_stats(&conn2, &entities2, "pageview", &req2.range.prev(), &req2.filters)
+            })
+        )
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let online = reports::online_users(&conn, &entities).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        let (stats, stats_prev) = (
+            stats.http_status(StatusCode::INTERNAL_SERVER_ERROR)?,
+            stats_prev.http_status(StatusCode::INTERNAL_SERVER_ERROR)?,
+        );
+
+        let online =
+            reports::online_users(&app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?, &entities3)
+                .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         Ok(Json(StatsResponse { stats, stats_prev, current_visitors: online }))
     }
@@ -164,15 +183,19 @@ impl DashboardAPI {
 
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let stats = reports::dimension_report(
-            &conn,
-            &entities,
-            "pageview",
-            &req.range,
-            &req.dimension,
-            &req.filters,
-            &req.metric,
-        )
+        let stats = spawn_blocking(move || {
+            reports::dimension_report(
+                &conn,
+                &entities,
+                "pageview",
+                &req.range,
+                &req.dimension,
+                &req.filters,
+                &req.metric,
+            )
+        })
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut data = Vec::new();

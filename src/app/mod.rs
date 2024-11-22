@@ -102,11 +102,10 @@ impl Liwan {
     }
 }
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
 impl Liwan {
-    pub fn seed_database(&self) -> Result<()> {
+    pub fn seed_database(&self, count_per_entity: usize) -> Result<()> {
         use models::UserRole;
-        use rand::Rng;
         use time::OffsetDateTime;
 
         let entities = vec![
@@ -140,13 +139,10 @@ impl Liwan {
                 &models::Entity { id: entity_id.to_string(), display_name: display_name.to_string() },
                 &project_ids,
             )?;
-            let events = crate::utils::seed::random_events(
-                (start, end),
-                entity_id,
-                fqdn,
-                rand::thread_rng().gen_range(5000..20000),
-            );
+            let events = crate::utils::seed::random_events((start, end), entity_id, fqdn, count_per_entity);
+            let now = std::time::Instant::now();
             self.events.append(events)?;
+            tracing::info!("Seeded entity {} in {:?}", entity_id, now.elapsed());
         }
 
         Ok(())

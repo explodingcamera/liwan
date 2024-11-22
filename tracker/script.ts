@@ -81,7 +81,7 @@ const ignore = (reason: string) => log(`Ignoring event: ${reason}`);
  * });
  * ```
  */
-export async function event(name = "pageview", options?: EventOptions) {
+export async function event(name = "pageview", options?: EventOptions): Promise<void> {
 	if (typeof window === "undefined" && !options?.endpoint)
 		return Promise.reject(new Error("endpoint is required in server-side environments"));
 	if (typeof localStorage !== "undefined" && localStorage.getItem("disable-liwan")) return ignore("localStorage flag");
@@ -107,8 +107,10 @@ export async function event(name = "pageview", options?: EventOptions) {
 			},
 		}),
 	}).then((response) => {
-		if (!response.ok) log(`Failed to send event: ${response.statusText}`);
-		return { status: response.status };
+		if (!response.ok) {
+			log(`Failed to send event: ${response.statusText}`);
+			return Promise.reject(new Error(`Failed to send event: ${response.statusText}`));
+		}
 	});
 }
 
@@ -123,7 +125,7 @@ const trackPageviews = () => {
 
 	if (window.navigation) {
 		// best case scenario, we can listen for navigation events
-		// sadly this is not available on firefox
+		// sadly this is not available on firefox or safari
 		window.navigation.addEventListener("navigate", () => page());
 	} else {
 		// duplicate navigation events don't matter

@@ -27,13 +27,14 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### 🐛 Bug Fixes
 
-- Added more tests that fixed some smaller bugs
 - Fixed a potential panic when entities are not found in the database ([`31405a72`](https://github.com/explodingcamera/liwan/commit/31405a721dc5c5493098e211927281cca7816fec))
 - Fixed issues with the `Yesterday` Date Range ([`76278b57`](https://github.com/explodingcamera/liwan/commit/76278b579c5fe1557bf1c184542ed6ed2aba57cd))
 
 ### Other
 
 - Removed Sessions and Average Views per Session metrics. They were not accurate and were removed to avoid confusion.
+- Added more tests & improved API performance
+- Updated dependencies
 
 ## **Liwan v0.1.1** - 2024-09-24
 

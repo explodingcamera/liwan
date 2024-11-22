@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use rand::Rng;
 use time::OffsetDateTime;
 
@@ -44,6 +43,12 @@ pub fn random_events(
         generated += 1;
 
         let created_at = random_date(time_range.0, time_range.1, 0.5);
+
+        // let time_slice = time_range.1 - time_range.0;
+        // let skew_factor = 2.0;
+        // let normalized = 1.0 - (1.0 - (generated as f64 / count as f64)).powf(skew_factor);
+        // let created_at = time_range.0 + time_slice * normalized;
+
         let path = random_el(PATHS, 0.5);
         let referrer = random_el(REFERRERS, 0.5);
         let platform = random_el(PLATFORMS, -0.5);

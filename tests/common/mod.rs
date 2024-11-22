@@ -15,7 +15,7 @@ pub fn events() -> (crossbeam::channel::Sender<Event>, crossbeam::channel::Recei
 }
 
 pub use liwan::web::create_router as router;
-use poem::test::TestResponse;
+use poem::{test::TestResponse, Endpoint, IntoEndpoint};
 
 pub fn cookies(res: &TestResponse) -> Vec<cookie::Cookie<'static>> {
     res.0
@@ -28,4 +28,14 @@ pub fn cookies(res: &TestResponse) -> Vec<cookie::Cookie<'static>> {
 
 pub fn cookie_header(cookies: &[Cookie]) -> String {
     cookies.iter().map(ToString::to_string).collect::<Vec<_>>().join("; ")
+}
+
+pub async fn login<T: Endpoint>(
+    client: &poem::test::TestClient<T>,
+    username: &str,
+    password: &str,
+) -> Vec<cookie::Cookie<'static>> {
+    let login = &serde_json::json!({ "username": username, "password": password });
+    let res = client.post("/api/dashboard/auth/login").body_json(login).send().await;
+    cookies(&res)
 }

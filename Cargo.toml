@@ -85,6 +85,7 @@ cookie={version="*"}
 [features]
 default=["geoip"]
 geoip=["dep:maxminddb"]
+_enable_seeding=[]
 
 [profile.dev]
 opt-level=1
@@ -93,3 +94,8 @@ incremental=true
 [profile.release]
 lto="thin"
 strip=true
+
+[profile.dev.package.duckdb]
+inherits="release"
+[profile.dev.package.rusqlite]
+inherits="release"

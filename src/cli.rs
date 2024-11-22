@@ -32,11 +32,11 @@ pub enum Command {
     UpdatePassword(UpdatePassword),
     AddUser(AddUser),
     Users(ListUsers),
-    #[cfg(debug_assertions)]
+    #[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
     SeedDatabase(SeedDatabase),
 }
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
 #[derive(FromArgs)]
 #[argh(subcommand, name = "seed-database")]
 /// Seed the database with some test data
@@ -130,10 +130,10 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
             std::fs::write(&output, DEFAULT_CONFIG)?;
             println!("Configuration file written to liwan.config.toml");
         }
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
         Command::SeedDatabase(_) => {
             let app = Liwan::try_new(config)?;
-            app.seed_database()?;
+            app.seed_database(100000)?;
             println!("Database seeded with test data");
         }
     }

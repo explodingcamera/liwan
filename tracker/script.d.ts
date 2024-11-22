@@ -53,7 +53,5 @@ declare module "script" {
      * });
      * ```
      */
-    export function event(name?: string, options?: EventOptions): Promise<void | {
-        status: number;
-    }>;
+    export function event(name?: string, options?: EventOptions): Promise<void>;
 }

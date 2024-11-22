@@ -7,7 +7,7 @@ use duckdb::params_from_iter;
 use eyre::{bail, Result};
 use poem_openapi::{Enum, Object};
 
-#[derive(Object)]
+#[derive(Object, Debug, Clone)]
 pub struct DateRange {
     pub start: time::OffsetDateTime,
     pub end: time::OffsetDateTime,
@@ -83,7 +83,7 @@ pub struct ReportStats {
     pub avg_time_on_site: f64,
 }
 
-#[derive(Object, Debug)]
+#[derive(Object, Debug, Clone)]
 #[oai(rename_all = "camelCase")]
 pub struct DimensionFilter {
     /// The dimension to filter by
@@ -195,17 +195,9 @@ fn metric_sql(metric: Metric) -> String {
             // bounce sessions: time to next / time to prev are both null or both > 1800
             "--sql
             count(distinct sd.visitor_id)
-                filter (
-                    where
-                        (sd.time_until_next_event is null or sd.time_until_next_event > 1800) and
-                        (sd.time_since_previous_event is null or sd.time_since_previous_event > 1800)
-                )
-            /
-            count(distinct sd.visitor_id)
-                filter (
-                    where
-                        sd.time_until_next_event is null or sd.time_until_next_event > 1800
-                )
+                filter (where (sd.time_until_next_event is null or sd.time_until_next_event > 1800) and
+                             (sd.time_since_previous_event is null or sd.time_since_previous_event > 1800)) /
+            count(distinct sd.visitor_id) filter (where sd.time_until_next_event is null or sd.time_until_next_event > 1800)
             "
         }
         Metric::AvgTimeOnSite => {
@@ -311,8 +303,7 @@ pub fn overall_report(
                 from events, params
                 where
                     event = ?::text and
-                    created_at >= params.start_time and
-                    created_at <= params.end_time and
+                    created_at between params.start_time and params.end_time and
                     entity_id in ({entity_vars})
                     {filters_sql}
             ),
@@ -365,8 +356,6 @@ pub fn overall_stats(
         return Ok(ReportStats::default());
     }
 
-    let mut params = ParamVec::new();
-
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
@@ -375,6 +364,7 @@ pub fn overall_stats(
     let metric_bounce_rate = metric_sql(Metric::BounceRate);
     let metric_avg_time_on_site = metric_sql(Metric::AvgTimeOnSite);
 
+    let mut params = ParamVec::new();
     params.push(range.start);
     params.push(range.end);
     params.push(event);
@@ -399,11 +389,10 @@ pub fn overall_stats(
                 from events, params
                 where
                     event = ?::text and
-                    created_at >= params.start_time and
-                    created_at <= params.end_time and
+                    created_at between params.start_time and params.end_time and
                     entity_id in ({entity_vars})
                     {filters_sql}
-            ) 
+            )
         select
             {metric_total} as total_views,
             {metric_unique_visitors} as unique_visitors,
@@ -485,10 +474,9 @@ pub fn dimension_report(
                     extract(epoch from (created_at - lag(created_at) over (partition by visitor_id order by created_at))) as time_since_previous_event
                 from events sd, params
                 where
-                    sd.event = ?::text and
-                    sd.created_at >= params.start_time and
-                    sd.created_at <= params.end_time and
-                    sd.entity_id in ({entity_vars})
+                    event = ?::text and
+                    created_at between params.start_time and params.end_time and
+                    entity_id in ({entity_vars})
                     {filters_sql}
                 group by
                     {group_by_columns}, visitor_id, created_at

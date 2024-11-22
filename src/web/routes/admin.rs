@@ -220,8 +220,10 @@ impl AdminAPI {
             http_bail!(StatusCode::FORBIDDEN, "Forbidden")
         }
 
-        app.users
-            .create(&user.username, &user.password, user.role, &[])
+        let app = app.clone();
+        tokio::task::spawn_blocking(move || app.users.create(&user.username, &user.password, user.role, &[]))
+            .await
+            .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?
             .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()
