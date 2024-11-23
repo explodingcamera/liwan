@@ -63,10 +63,21 @@ struct DimensionTableRow {
     icon: Option<String>,
 }
 
+#[derive(Object)]
+#[oai(rename_all = "camelCase")]
+struct ConfigResponse {
+    disable_favicons: bool,
+}
+
 pub struct DashboardAPI;
 
 #[OpenApi]
 impl DashboardAPI {
+    #[oai(path = "/config", method = "get")]
+    async fn config_handler(&self, Data(app): Data<&Liwan>) -> ApiResult<Json<ConfigResponse>> {
+        Ok(Json(ConfigResponse { disable_favicons: app.config.disable_favicons }))
+    }
+
     #[oai(path = "/project/:project_id/earliest", method = "get")]
     async fn project_earliest_handler(
         &self,

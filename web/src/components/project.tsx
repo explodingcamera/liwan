@@ -30,7 +30,7 @@ export const Project = () => {
 	const [filters, setFilters] = useState<DimensionFilter[]>([]);
 	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 
-	const [rangeString, setRangeString] = useLocalStorage<string>("date-range", "yearToDate");
+	const [rangeString, setRangeString] = useLocalStorage<string>("date-range", "last7Days");
 	const range = useMemo(() => DateRange.deserialize(rangeString), [rangeString]);
 
 	useEffect(() => {

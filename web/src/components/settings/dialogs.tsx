@@ -471,7 +471,6 @@ export const EditPassword = ({ user, trigger }: { user: UserResponse; trigger: J
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
 		const { password, confirm } = Object.fromEntries(new FormData(form)) as { password: string; confirm: string };
-		console.log(password, confirm);
 
 		if (password !== confirm) {
 			confirmPasswordRef.current?.setCustomValidity("Passwords do not match");

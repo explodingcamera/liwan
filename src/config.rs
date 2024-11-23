@@ -34,6 +34,10 @@ pub struct Config {
     #[serde(default = "default_port")]
     pub port: u16,
 
+    #[serde(default)]
+    // don't load favicons from the duckduckgo api
+    pub disable_favicons: bool,
+
     #[serde(default = "default_data_dir")]
     pub data_dir: String,
 
@@ -49,7 +53,14 @@ pub fn default_maxmind_edition() -> Option<String> {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { base_url: default_base(), port: default_port(), data_dir: default_data_dir(), geoip: None, duckdb: None }
+        Self {
+            base_url: default_base(),
+            port: default_port(),
+            data_dir: default_data_dir(),
+            geoip: None,
+            duckdb: None,
+            disable_favicons: false,
+        }
     }
 }
 

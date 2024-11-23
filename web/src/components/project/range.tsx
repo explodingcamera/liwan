@@ -18,7 +18,6 @@ export const SelectRange = ({
 	const detailsRef = useRef<HTMLDetailsElement>(null);
 
 	const handleSelect = (range: DateRange) => () => {
-		console.log("range", range, detailsRef.current);
 		if (detailsRef.current) detailsRef.current.open = false;
 		onSelect(range);
 	};

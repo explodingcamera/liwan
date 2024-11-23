@@ -10,10 +10,19 @@ import type { DateRange } from "./ranges";
 export const useMe = () => {
 	const { data, isLoading } = useQuery({
 		queryKey: ["me"],
-		staleTime: 60 * 1000, // 1 minute
+		refetchOnMount: false,
 		queryFn: () => api["/api/dashboard/auth/me"].get().json(),
 	});
 	return { role: data?.role, username: data?.username, isLoading };
+};
+
+export const useConfig = () => {
+	const { data, isLoading } = useQuery({
+		queryKey: ["config"],
+		refetchOnMount: false,
+		queryFn: () => api["/api/dashboard/config"].get().json(),
+	});
+	return { config: data, isLoading };
 };
 
 export const useProjects = () => {
