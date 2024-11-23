@@ -192,18 +192,18 @@ fn metric_sql(metric: Metric) -> String {
         }
         Metric::BounceRate => {
             // total sessions: no time_to_next_event / time_to_next_event is null
-            // bounce sessions: time to next / time to prev are both null or both > 1800
+            // bounce sessions: time to next / time to prev are both null or both > interval '30 minutes'
             "--sql
             count(distinct sd.visitor_id)
-                filter (where (sd.time_until_next_event is null or sd.time_until_next_event > 1800) and
-                             (sd.time_since_previous_event is null or sd.time_since_previous_event > 1800)) /
-            count(distinct sd.visitor_id) filter (where sd.time_until_next_event is null or sd.time_until_next_event > 1800)
+                filter (where (sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes') and
+                             (sd.time_from_last_event is null or sd.time_from_last_event > interval '30 minutes')) /
+            count(distinct sd.visitor_id) filter (where sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes')
             "
         }
         Metric::AvgTimeOnSite => {
-            // avg time_until_next_event where time_until_next_event <= 1800 and time_until_next_event is not null
+            // avg time_to_next_event where time_to_next_event <= 1800 and time_to_next_event is not null
             "--sql
-            coalesce(avg(sd.time_until_next_event) filter (where sd.time_until_next_event is not null and sd.time_until_next_event <= 1800), 0)"
+            coalesce(avg(extract(epoch from sd.time_to_next_event)) filter (where sd.time_to_next_event is not null and sd.time_to_next_event <= interval '30 minutes'), 0)"
         }
     }
     .to_owned()
@@ -278,7 +278,8 @@ pub fn overall_report(
     params.extend_from_params(filters_params);
     params.push(range.end);
 
-    let query = format!("--sql
+    let query = format!(
+        "--sql
         with
             params as (
                 select
@@ -296,10 +297,8 @@ pub fn overall_report(
                 select
                     visitor_id,
                     created_at,
-                    -- the time to the next event for the same visitor
-                    extract(epoch from (lead(created_at) over (partition by visitor_id order by created_at) - created_at)) as time_until_next_event,
-                    -- the time to the previous event for the same visitor
-                    extract(epoch from (created_at - lag(created_at) over (partition by visitor_id order by created_at))) as time_since_previous_event
+                    time_from_last_event,
+                    time_to_next_event,
                 from events, params
                 where
                     event = ?::text and
@@ -326,7 +325,8 @@ pub fn overall_report(
             left join event_bins eb on tb.bin_start = eb.bin_start
         order by
             tb.bin_start;
-    ");
+    "
+    );
 
     let mut stmt = conn.prepare_cached(&query)?;
 
@@ -371,21 +371,20 @@ pub fn overall_stats(
     params.extend(entities);
     params.extend_from_params(filters_params);
 
-    let query = format!("--sql
+    let query = format!(
+        "--sql
         with
             params as (
                 select
                     ?::timestamp as start_time,
-                    ?::timestamp as end_time
+                    ?::timestamp as end_time,
             ),
             session_data as (
                 select
                     visitor_id,
                     created_at,
-                    -- the time to the next event for the same visitor
-                    extract(epoch from (lead(created_at) over (partition by visitor_id order by created_at) - created_at)) as time_until_next_event,
-                    -- the time to the previous event for the same visitor
-                    extract(epoch from (created_at - lag(created_at) over (partition by visitor_id order by created_at))) as time_since_previous_event
+                    time_from_last_event,
+                    time_to_next_event,
                 from events, params
                 where
                     event = ?::text and
@@ -400,7 +399,8 @@ pub fn overall_stats(
             {metric_avg_time_on_site} as avg_time_on_site
         from
             session_data sd;
-    ");
+    "
+    );
 
     let mut stmt = conn.prepare_cached(&query)?;
     let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
@@ -456,22 +456,21 @@ pub fn dimension_report(
     params.extend(entities);
     params.extend_from_params(filters_params);
 
-    let query = format!("--sql
+    let query = format!(
+        "--sql
         with
             params as (
                 select
                     ?::timestamp as start_time,
-                    ?::timestamp as end_time
+                    ?::timestamp as end_time,
             ),
             session_data as (
                 select
                     coalesce({dimension_column}, 'Unknown') as dimension_value,
                     visitor_id,
                     created_at,
-                    -- the time to the next event for the same visitor
-                    extract(epoch from (lead(created_at) over (partition by visitor_id order by created_at) - created_at)) as time_until_next_event,
-                    -- the time to the previous event for the same visitor
-                    extract(epoch from (created_at - lag(created_at) over (partition by visitor_id order by created_at))) as time_since_previous_event
+                    time_from_last_event,
+                    time_to_next_event,
                 from events sd, params
                 where
                     event = ?::text and
@@ -479,7 +478,7 @@ pub fn dimension_report(
                     entity_id in ({entity_vars})
                     {filters_sql}
                 group by
-                    {group_by_columns}, visitor_id, created_at
+                    {group_by_columns}, visitor_id, created_at, time_from_last_event, time_to_next_event
             )
         select
             dimension_value,

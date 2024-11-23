@@ -92,7 +92,9 @@ macro_rules! event_params {
             $event.utm_medium,
             $event.utm_campaign,
             $event.utm_content,
-            $event.utm_term
+            $event.utm_term,
+            None::<std::time::Duration>,
+            None::<std::time::Duration>,
         ]
     };
 }

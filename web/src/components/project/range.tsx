@@ -38,6 +38,7 @@ export const SelectRange = ({
 		const range = new DateRange({ start: startOfDay(from), end: endOfDay(new Date()) });
 		range.variant = "allTime";
 		onSelect(range);
+		if (detailsRef.current) detailsRef.current.open = false;
 	};
 
 	return (

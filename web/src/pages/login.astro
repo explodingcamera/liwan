@@ -38,7 +38,7 @@ import Layout from "../layouts/Base.astro";
 </Layout>
 
 <script>
-  import { api } from "../api";
+  import { api } from "../api/client";
 
   document.addEventListener("astro:page-load", () => {
     const form = document.getElementById("login-form") as HTMLFormElement;

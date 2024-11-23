@@ -27,7 +27,7 @@ impl LiwanEvents {
     }
 
     /// Get the daily salt, generating a new one if the current one is older than 24 hours
-    pub async fn get_salt(&self) -> Result<String> {
+    pub fn get_salt(&self) -> Result<String> {
         let (salt, updated_at) = {
             let salt = self.daily_salt.read().map_err(|_| eyre::eyre!("Failed to acquire read lock"))?;
             salt.clone()
@@ -55,10 +55,15 @@ impl LiwanEvents {
     pub fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
         let conn = self.duckdb.get()?;
         let mut appender = conn.appender("events")?;
+        let mut first_event_time = OffsetDateTime::now_utc();
         for event in events {
             appender.append_row(event_params![event])?;
+            if first_event_time > event.created_at {
+                first_event_time = event.created_at;
+            }
         }
         appender.flush()?;
+        update_event_times(&conn, first_event_time)?;
         Ok(())
     }
 
@@ -69,6 +74,7 @@ impl LiwanEvents {
                 Ok(event) => {
                     let conn = self.duckdb.get()?;
                     let mut appender = conn.appender("events")?;
+                    let mut first_event_time = event.created_at;
                     appender.append_row(event_params![event])?;
 
                     // Non-blockingly drain the remaining events in the queue if there are any
@@ -76,8 +82,18 @@ impl LiwanEvents {
                     for event in events.try_iter() {
                         appender.append_row(event_params![event])?;
                         count += 1;
+
+                        if first_event_time > event.created_at {
+                            first_event_time = event.created_at;
+                        }
+
+                        // always flush after 5000 events
+                        if count >= 5000 {
+                            break;
+                        }
                     }
                     appender.flush()?;
+                    update_event_times(&conn, first_event_time)?;
                     tracing::debug!("Processed {} events", count);
 
                     // Sleep to allow more events to be received before the next batch
@@ -87,4 +103,39 @@ impl LiwanEvents {
             }
         }
     }
+}
+
+use duckdb::{params, Connection, Result as DuckResult};
+
+pub fn update_event_times(conn: &Connection, from_time: OffsetDateTime) -> DuckResult<()> {
+    // this can probably be simplified, sadly the where clause can't contain window functions
+    let sql = "--sql
+        with
+            filtered_events as (
+                select *
+                from events
+                where created_at >= ?::timestamp or visitor_id in (
+                    select visitor_id
+                    from events
+                    where created_at >= now()::timestamp - interval '24 hours' and created_at < ?::timestamp and time_to_next_event is null
+                )
+            ),
+            cte as (
+                select
+                    visitor_id,
+                    created_at,
+                    created_at - lag(created_at) over (partition by visitor_id order by created_at) as time_from_last_event,
+                    lead(created_at) over (partition by visitor_id order by created_at) - created_at as time_to_next_event
+                from filtered_events
+            )
+        update events
+            set
+                time_from_last_event = cte.time_from_last_event,
+                time_to_next_event = cte.time_to_next_event
+            from cte
+            where events.visitor_id = cte.visitor_id and events.created_at = cte.created_at;
+    ";
+
+    conn.execute(sql, params![&from_time, &from_time])?;
+    Ok(())
 }
