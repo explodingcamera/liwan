@@ -10,9 +10,12 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
+    color: var(--pico-contrast);
+    transition: background-color 0.1s, opacity 0.1s;
+
     &:hover {
       background-color: var(--pico-card-background-color);
-      color: var(--pico-h1-background-color);
+      opacity: 1;
     }
   }
 
