@@ -31,8 +31,8 @@ import {
 	subYears,
 } from "date-fns";
 
-import type { GraphRange } from "../components/graph/graph";
 import { formatDateRange } from "little-date";
+import type { GraphRange } from "../components/graph/graph";
 
 type DateRangeValue = { start: Date; end: Date };
 

@@ -11,8 +11,7 @@
   background-color: var(--pico-form-element-background-color);
   color: var(--pico-color);
   font-weight: var(--pico-font-weight);
-  transition: background-color var(--pico-transition),
-    color var(--pico-transition), box-shadow var(--pico-transition);
+  transition: background-color var(--pico-transition), color var(--pico-transition), box-shadow var(--pico-transition);
   outline: 0;
 
   margin-bottom: calc(var(--pico-spacing) + 1rem);
@@ -21,8 +20,7 @@
 .react-tags.is-active {
   --pico-border-color: var(--pico-form-element-focus-color);
   --pico-outline-width: 0.0625rem;
-  --pico-box-shadow: 0 0 0 var(--pico-outline-width)
-    var(--pico-form-element-focus-color);
+  --pico-box-shadow: 0 0 0 var(--pico-outline-width) var(--pico-form-element-focus-color);
 }
 
 .react-tags.is-disabled {
@@ -163,8 +161,7 @@
 }
 
 .react-tags__listbox-option {
-  padding: calc(var(--pico-form-element-spacing-vertical) * 0.5)
-    var(--pico-form-element-spacing-horizontal);
+  padding: calc(var(--pico-form-element-spacing-vertical) * 0.5) var(--pico-form-element-spacing-horizontal);
 }
 
 .react-tags__listbox-option:hover {

@@ -1,20 +1,20 @@
 import styles from "./project.module.css";
 import _map from "./worldmap.module.css";
 
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useLocalStorage } from "@uidotdev/usehooks";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 
-import { DateRange } from "../api/ranges";
 import { metricNames, useDimension, useProject, useProjectData } from "../api";
-import type { DimensionFilter, Metric, ProjectResponse, DimensionTableRow, Dimension } from "../api";
+import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api";
+import { DateRange } from "../api/ranges";
 
 import { cls } from "../utils";
-import { LineGraph } from "./graph";
-import { SelectRange } from "./project/range";
-import { ProjectHeader } from "./project/project";
-import { SelectMetrics } from "./project/metric";
-import { SelectFilters } from "./project/filter";
 import { DimensionCard, DimensionDropdownCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
+import { LineGraph } from "./graph";
+import { SelectFilters } from "./project/filter";
+import { SelectMetrics } from "./project/metric";
+import { ProjectHeader } from "./project/project";
+import { SelectRange } from "./project/range";
 
 const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
 

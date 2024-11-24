@@ -1,5 +1,5 @@
+import { describe, expect, test } from "bun:test";
 import { capitalizeAll, cls, countryCodeToFlag, formatMetricVal, formatPercent } from "./utils";
-import { expect, test, describe } from "bun:test";
 
 describe("utils", () => {
 	test("capitalizeAll", () => {

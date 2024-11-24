@@ -1,6 +1,6 @@
+import { describe, expect, it } from "bun:test";
+import { addDays, endOfDay, startOfDay, subDays } from "date-fns";
 import { DateRange } from "./ranges";
-import { describe, it, expect } from "bun:test";
-import { startOfDay, endOfDay, addDays, subDays } from "date-fns";
 
 describe("DateRange", () => {
 	it("should initialize with a range name", () => {

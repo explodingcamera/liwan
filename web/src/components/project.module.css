@@ -98,6 +98,7 @@
   @media (max-width: 40rem) {
     grid-column: span 1;
     flex-direction: column;
+
     .geoTable,
     .geoMap {
       width: 100%;
@@ -116,6 +117,7 @@
     .geoTable {
       padding: 1rem;
       padding-top: 0;
+
       > div {
         padding: 0;
       }

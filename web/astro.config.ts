@@ -1,7 +1,7 @@
-import { defineConfig } from "astro/config";
-import react from "@astrojs/react";
-import license from "rollup-plugin-license";
 import path from "node:path";
+import react from "@astrojs/react";
+import { defineConfig } from "astro/config";
+import license from "rollup-plugin-license";
 const dirname = path.dirname(new URL(import.meta.url).pathname);
 
 const proxy = {

@@ -1,12 +1,12 @@
-import { ZoomInIcon } from "lucide-react";
 import fuzzysort from "fuzzysort";
+import { ZoomInIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
+import { useDeferredValue, useMemo, useState } from "react";
+import { DimensionLabel, DimensionValueBar } from ".";
+import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
 import { cls, formatMetricVal } from "../../utils";
 import { Dialog } from "../dialog";
-import { DimensionLabel, DimensionValueBar } from ".";
-import { dimensionNames, metricNames, useDimension, type Dimension, type DimensionTableRow } from "../../api";
-import { useDeferredValue, useMemo, useState } from "react";
 import type { ProjectQuery } from "../project";
 
 export const DetailsModal = ({

@@ -1,8 +1,8 @@
-import styles from "./project.module.css";
 import { CircleIcon, LockIcon } from "lucide-react";
+import styles from "./project.module.css";
 
-import { formatMetricVal } from "../../utils";
 import type { ProjectResponse, StatsResponse } from "../../api";
+import { formatMetricVal } from "../../utils";
 import { CardLink } from "../card";
 
 export const ProjectHeader = ({

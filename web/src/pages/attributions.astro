@@ -5,7 +5,7 @@ import licensesNpm from "../../../data/licenses-npm.json";
 import Layout from "../layouts/Layout.astro";
 
 const getRepositoryUrl = (repository: (typeof licensesNpm)[0]["repository"]) => {
-	let repo = typeof repository === "object" ? repository?.url ?? "" : repository;
+	let repo = typeof repository === "object" ? (repository?.url ?? "") : repository;
 	if (repo.startsWith("git+")) repo = repo.slice(4);
 	if (repo.endsWith(".git")) repo = repo.slice(0, -4);
 	repo = repo.replace("git://", "https://");

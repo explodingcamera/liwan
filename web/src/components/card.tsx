@@ -1,5 +1,5 @@
-import styles from "./card.module.css";
 import { cls } from "../utils";
+import styles from "./card.module.css";
 
 export const CardButton = ({
 	active,

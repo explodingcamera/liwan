@@ -2,12 +2,12 @@ import { useMemo } from "react";
 import styles from "./graph.module.css";
 
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
+import { useWindowSize } from "@uidotdev/usehooks";
 import { addMonths } from "date-fns";
 import type { DataPoint } from ".";
-import { formatMetricVal } from "../../utils";
-import { useWindowSize } from "@uidotdev/usehooks";
-import type { DateRange } from "../../api/ranges";
 import type { Metric } from "../../api";
+import type { DateRange } from "../../api/ranges";
+import { formatMetricVal } from "../../utils";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 

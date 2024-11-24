@@ -18,11 +18,7 @@
   transition: fill 0.3s, opacity 0.3s;
   outline: none;
 
-  fill: hsl(
-    94,
-    calc(0% + 80% * var(--percent) * var(--percent)),
-    calc(40% + 4% * var(--percent))
-  );
+  fill: hsl(94, calc(0% + 80% * var(--percent) * var(--percent)), calc(40% + 4% * var(--percent)));
 
   &:hover {
     opacity: 0.8;

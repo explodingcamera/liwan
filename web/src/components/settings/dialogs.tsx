@@ -18,8 +18,8 @@ import {
 	useMutation,
 	useProjects,
 } from "../../api";
-import { createToast } from "../toast";
 import { cls } from "../../utils";
+import { createToast } from "../toast";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 

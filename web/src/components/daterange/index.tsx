@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
-import styles from "./daterange.module.css";
 import { endOfDay, startOfDay, subWeeks } from "date-fns";
+import { useRef, useState } from "react";
 import { DateRange } from "../../api/ranges";
 import { Dialog } from "../dialog";
+import styles from "./daterange.module.css";
 
 export const DatePickerRange = ({
 	onSelect,

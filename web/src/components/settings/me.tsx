@@ -1,8 +1,8 @@
-import styles from "./me.module.css";
-import { api, useMe, useMutation } from "../../api";
 import { User2Icon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { api, useMe, useMutation } from "../../api";
 import { createToast } from "../toast";
+import styles from "./me.module.css";
 
 export const MyAccount = () => {
 	const formRef = useRef<HTMLFormElement>(null);

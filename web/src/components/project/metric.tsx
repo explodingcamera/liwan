@@ -1,5 +1,5 @@
-import styles from "./metric.module.css";
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import styles from "./metric.module.css";
 
 import type { Metric, StatsResponse } from "../../api";
 import { cls, formatMetricVal, formatPercent } from "../../utils";

@@ -4,14 +4,14 @@ import styles from "./projects.module.css";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { ChevronDownIcon } from "lucide-react";
 
+import * as Accordion from "@radix-ui/react-accordion";
 import { type Metric, type ProjectResponse, api, metricNames, useMe, useProjectData, useQuery } from "../api";
 import { DateRange } from "../api/ranges";
 import { getUsername } from "../utils";
 import { LineGraph } from "./graph";
-import { SelectRange } from "./project/range";
 import { SelectMetrics } from "./project/metric";
 import { ProjectHeader } from "./project/project";
-import * as Accordion from "@radix-ui/react-accordion";
+import { SelectRange } from "./project/range";
 
 const signedIn = getUsername();
 

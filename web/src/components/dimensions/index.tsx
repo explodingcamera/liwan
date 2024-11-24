@@ -4,12 +4,12 @@ import styles from "./dimensions.module.css";
 
 import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
 
-import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
-import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
-import { DetailsModal } from "./modal";
-import { formatMetricVal } from "../../utils";
-import type { ProjectQuery } from "../project";
 import { useState } from "react";
+import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
+import { formatMetricVal } from "../../utils";
+import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
+import type { ProjectQuery } from "../project";
+import { DetailsModal } from "./modal";
 
 export const cardStyles = styles.card;
 

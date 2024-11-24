@@ -1,11 +1,11 @@
-import styles from "./filter.module.css";
 import { SearchIcon, XIcon } from "lucide-react";
+import styles from "./filter.module.css";
 
-import { dimensionNames, filterNames, filterNamesInverted, type DimensionFilter, type FilterType } from "../../api";
+import { type DimensionFilter, type FilterType, dimensionNames, filterNames, filterNamesInverted } from "../../api";
 
-import { Dialog } from "../dialog";
-import { capitalizeAll, cls } from "../../utils";
 import { useRef, useState } from "react";
+import { capitalizeAll, cls } from "../../utils";
+import { Dialog } from "../dialog";
 
 export const SelectFilters = ({
 	value,

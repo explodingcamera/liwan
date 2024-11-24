@@ -23,8 +23,7 @@ details.edit summary + ul {
     cursor: pointer;
     margin: calc(var(--pico-form-element-spacing-vertical) * -0.5)
       calc(var(--pico-form-element-spacing-horizontal) * -1);
-    padding: calc(var(--pico-form-element-spacing-vertical) * 0.5)
-      var(--pico-form-element-spacing-horizontal);
+    padding: calc(var(--pico-form-element-spacing-vertical) * 0.5) var(--pico-form-element-spacing-horizontal);
     width: 100%;
 
     align-items: center;

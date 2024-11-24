@@ -99,7 +99,7 @@ where
     }
 }
 
-pub static DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
+pub static DEFAULT_CONFIG: &str = include_str!("../data/config.example.toml");
 
 impl Config {
     pub fn load(path: Option<String>) -> Result<Self> {

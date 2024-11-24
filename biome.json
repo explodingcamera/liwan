@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
 	"formatter": {
 		"indentStyle": "tab",
 		"indentWidth": 2,
@@ -10,6 +10,12 @@
 		"useIgnoreFile": true,
 		"clientKind": "git",
 		"defaultBranch": "main"
+	},
+	"css": {
+		"parser": { "cssModules": true },
+		"formatter": {
+			"indentStyle": "space"
+		}
 	},
 	"linter": {
 		"rules": {
@@ -22,6 +28,13 @@
 		}
 	},
 	"files": {
-		"ignore": ["**/node_modules/*", "**/api/dashboard.ts"]
+		"ignore": [
+			"**/node_modules/*",
+			"**/dist/*",
+			"**/target/*",
+			"**/api/dashboard.ts",
+			"tracker/script.min.js",
+			"tracker/script.d.ts"
+		]
 	}
 }
