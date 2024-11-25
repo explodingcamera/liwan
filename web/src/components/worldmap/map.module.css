@@ -3,6 +3,26 @@
   background: none;
 }
 
+button.reset {
+  all: unset;
+  cursor: pointer;
+  transition: opacity 0.3s;
+  display: flex;
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  pointer-events: none;
+  opacity: 0;
+
+  &.moved {
+    pointer-events: auto;
+    opacity: 0.4;
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
 .worldmap {
   display: flex;
   flex: 1;

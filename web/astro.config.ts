@@ -17,7 +17,6 @@ export default defineConfig({
 	vite: {
 		server: { proxy },
 		preview: { proxy },
-		// css: { transformer: "lightningcss" },
 		plugins: [
 			license({
 				thirdParty: {
@@ -27,8 +26,7 @@ export default defineConfig({
 						template: (dependencies) => JSON.stringify(dependencies),
 					},
 				},
-				// biome-ignore lint/suspicious/noExplicitAny: type is correct
-			}) as any,
+			}),
 		],
 	},
 	integrations: [react()],

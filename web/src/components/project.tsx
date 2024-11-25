@@ -1,5 +1,5 @@
 import styles from "./project.module.css";
-import _map from "./worldmap.module.css";
+import _map from "./worldmap/map.module.css";
 
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
@@ -16,7 +16,7 @@ import { SelectMetrics } from "./project/metric";
 import { ProjectHeader } from "./project/project";
 import { SelectRange } from "./project/range";
 
-const WorldMap = lazy(() => import("./worldmap").then((module) => ({ default: module.WorldMap })));
+const Worldmap = lazy(() => import("./worldmap").then((module) => ({ default: module.Worldmap })));
 
 export type ProjectQuery = {
 	project: ProjectResponse;
@@ -133,7 +133,7 @@ const GeoCard = ({
 		<article className={cls(cardStyles, styles.geoCard)} data-full-width="true">
 			<div className={styles.geoMap}>
 				<Suspense fallback={null}>
-					<WorldMap data={data ?? []} metric={query.metric} />
+					<Worldmap data={data ?? []} metric={query.metric} />
 				</Suspense>
 			</div>
 			<div className={styles.geoTable}>
