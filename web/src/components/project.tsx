@@ -11,11 +11,11 @@ import { useMetric, useRange } from "../hooks/persist";
 import { cls } from "../utils";
 import { DimensionCard, DimensionDropdownCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
 import { LineGraph } from "./graph";
+// import { LineGraph2 } from "./graph2";
 import { SelectFilters } from "./project/filter";
 import { SelectMetrics } from "./project/metric";
 import { ProjectHeader } from "./project/project";
 import { SelectRange } from "./project/range";
-import { LineGraph2 } from "./graph2";
 
 const Worldmap = lazy(() => import("./worldmap").then((module) => ({ default: module.Worldmap })));
 
@@ -112,9 +112,9 @@ export const Project = () => {
 				<article className={cls(cardStyles, styles.graphCard)}>
 					<LineGraph data={graph ?? []} metric={metric} title={metricNames[metric]} range={range} />
 				</article>
-				<article className={cls(cardStyles, styles.graphCard2)}>
+				{/* <article className={cls(cardStyles, styles.graphCard2)}>
 					<LineGraph2 data={graph ?? []} metric={metric} title={metricNames[metric]} range={range} />
-				</article>
+				</article> */}
 				<div className={styles.tables}>
 					<DimensionTabsCard dimensions={["url", "fqdn"]} query={query} onSelect={onSelectDimRow} />
 					<DimensionDropdownCard

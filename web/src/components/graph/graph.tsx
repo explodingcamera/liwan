@@ -2,7 +2,6 @@ import { useCallback, useMemo } from "react";
 import styles from "./graph.module.css";
 
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
-import { useWindowSize } from "@uidotdev/usehooks";
 import { addMonths } from "date-fns";
 import type { DataPoint } from ".";
 import type { Metric } from "../../api";
@@ -62,13 +61,13 @@ export const LineGraph = ({
 
 	const axisRange = range.getAxisRange();
 	const yCount = 5;
-	const size = useWindowSize();
-	let xCount = Math.min(data.length, 8);
-	if (size.width && size.width < 1000) {
-		xCount = Math.min(data.length, 6);
-	} else if (size.width && size.width < 600) {
-		xCount = Math.min(data.length, 4);
-	}
+	// const size = useWindowSize();
+	const xCount = Math.min(data.length, 8);
+	// if (size.width && size.width < 1000) {
+	// 	xCount = Math.min(data.length, 6);
+	// } else if (size.width && size.width < 600) {
+	// 	xCount = Math.min(data.length, 4);
+	// }
 
 	return (
 		<ResponsiveLine

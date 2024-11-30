@@ -1,19 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./graph.module.css";
 
-import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
-import { useWindowSize } from "@uidotdev/usehooks";
+import { extent } from "d3-array";
+import { easeCubic, easeLinear } from "d3-ease";
+import { scaleLinear, scaleUtc } from "d3-scale";
+import { select } from "d3-selection";
+import { area, curveMonotoneX } from "d3-shape";
 import { addMonths } from "date-fns";
+import { Tooltip } from "react-tooltip";
 import type { DataPoint } from ".";
 import type { Metric } from "../../api";
 import type { DateRange } from "../../api/ranges";
-import { formatMetricVal } from "../../utils";
-import { Tooltip } from "react-tooltip";
-import { scaleLinear, scaleUtc } from "d3-scale";
-import { extent } from "d3-array";
-import { area, curveMonotoneX } from "d3-shape";
-import { select } from "d3-selection";
-import { easeCubic, easeLinear } from "d3-ease";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 
