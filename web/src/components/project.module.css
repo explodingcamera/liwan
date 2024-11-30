@@ -39,6 +39,11 @@
   padding: 1rem 0 1rem 0.5rem;
 }
 
+.graphCard2 {
+  height: 20rem;
+  padding: 0 !important;
+}
+
 .geoCard.geoCard {
   padding: 0;
   grid-column: span 2;

@@ -164,7 +164,7 @@ export const DimensionTable = (props: DimensionProps) => {
 					</div>
 				)}
 			</div>
-			<DetailsModal {...props} />
+			<DetailsModal dimension={props.dimension} query={props.query} />
 		</>
 	);
 };
@@ -174,7 +174,7 @@ const DimensionValueButton = ({
 	onSelect,
 }: {
 	children: React.ReactNode;
-	onSelect: () => void;
+	onSelect?: () => void;
 }) => (
 	<button type="button" className={styles.dimensionItemSelect} onClick={onSelect}>
 		{children}
@@ -307,8 +307,8 @@ export const DimensionLabel = ({
 	dimension,
 	value,
 	onSelect,
-}: { dimension: Dimension; value: DimensionTableRow; onSelect: (value: DimensionTableRow) => void }) =>
-	dimensionLabels[dimension](value, () => onSelect(value));
+}: { dimension: Dimension; value: DimensionTableRow; onSelect?: (value: DimensionTableRow) => void }) =>
+	dimensionLabels[dimension](value, () => onSelect?.(value));
 
 export const DimensionValueBar = ({
 	value,

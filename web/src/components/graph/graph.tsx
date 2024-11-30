@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import styles from "./graph.module.css";
 
 import { ResponsiveLine, type SliceTooltipProps } from "@nivo/line";
@@ -54,10 +54,14 @@ export const LineGraph = ({
 	range: DateRange;
 	metric: Metric;
 }) => {
-	const axisRange = range.getAxisRange();
 	const max = useMemo(() => Math.max(...data.map((d) => d.y)), [data]);
-	const yCount = 5;
+	const tooltip = useCallback(
+		(props: SliceTooltipProps) => <Tooltip {...props} title={title} range={range} metric={metric} />,
+		[title, range, metric],
+	);
 
+	const axisRange = range.getAxisRange();
+	const yCount = 5;
 	const size = useWindowSize();
 	let xCount = Math.min(data.length, 8);
 	if (size.width && size.width < 1000) {
@@ -100,7 +104,7 @@ export const LineGraph = ({
 			pointLabel="data.yFormatted"
 			pointLabelYOffset={-12}
 			enableSlices="x"
-			sliceTooltip={(props) => <Tooltip {...props} metric={metric} title={title} range={range} />}
+			sliceTooltip={tooltip}
 			defs={[
 				{
 					colors: [

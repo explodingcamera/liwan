@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { toDataPoints } from "../components/graph";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "./types";
 
-import { api } from ".";
+import { api } from "./client";
 import { queryClient, useQuery } from "./query";
 import type { DateRange } from "./ranges";
 
@@ -96,19 +96,20 @@ export const useDimension = ({
 				.json(),
 	});
 
-	const biggest = useMemo(() => data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0, [data]);
-	const order = useMemo(() => data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue), [data]);
-
-	return { data: data?.data, biggest, order, isLoading, error };
+	return useMemo(() => {
+		const biggest = data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0;
+		const order = data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue);
+		return { data: data?.data, biggest, order, isLoading, error };
+	}, [data, isLoading, error]);
 };
 
-export const useProjectData = ({
-	project,
+export const useProjectGraph = ({
+	projectId,
 	metric,
 	range,
 	filters = [],
 }: {
-	project?: ProjectResponse;
+	projectId?: string;
 	metric: Metric;
 	range: DateRange;
 	filters?: DimensionFilter[];
@@ -122,60 +123,64 @@ export const useProjectData = ({
 	const dataPoints = range.getGraphDataPoints();
 
 	const {
-		data: stats,
-		isError: isErrorStats,
-		isLoading: isLoadingStats,
-	} = useQuery({
-		refetchInterval,
-		staleTime,
-		queryKey: ["project_stats", project?.id, range.cacheKey(), metric, filters],
-
-		enabled: project !== undefined,
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/stats"]
-				.post({ json: { range: range.toAPI(), filters }, params: { project_id: project?.id ?? "" } })
-				.json(),
-		placeholderData: (prev) => prev,
-	});
-
-	const {
 		data: graph,
-		isError: isErrorGraph,
-		isLoading: isLoadingGraph,
+		isError,
+		isLoading,
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		enabled: project !== undefined,
-		queryKey: ["project_graph", project?.id, range.cacheKey(), metric, filters, dataPoints],
+		enabled: projectId !== undefined,
+		queryKey: ["project_graph", projectId, range.cacheKey(), metric, filters, dataPoints],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
 				.post({
 					json: { range: range.toAPI(), metric, dataPoints, filters },
-					params: { project_id: project?.id ?? "" },
+					params: { project_id: projectId ?? "" },
 				})
+				.json()
+				.then(({ data }) => toDataPoints(data, range, metric)),
+		placeholderData: (prev) => prev,
+	});
+
+	return {
+		graph,
+		isLoading,
+		isError,
+	};
+};
+
+export const useProjectStats = ({
+	projectId,
+	metric,
+	range,
+	filters = [],
+}: {
+	projectId?: string;
+	metric: Metric;
+	range: DateRange;
+	filters?: DimensionFilter[];
+}) => {
+	const {
+		data: stats,
+		isError,
+		isLoading,
+	} = useQuery({
+		queryKey: ["project_stats", projectId, range.cacheKey(), metric, filters],
+
+		enabled: projectId !== undefined,
+		queryFn: () =>
+			api["/api/dashboard/project/{project_id}/stats"]
+				.post({ json: { range: range.toAPI(), filters }, params: { project_id: projectId ?? "" } })
 				.json(),
 		placeholderData: (prev) => prev,
 	});
 
 	return {
-		stats: {
-			error: isErrorStats,
-			loading: isLoadingStats,
-			data: stats,
-		},
-		graph: {
-			error: isErrorGraph,
-			loading: isLoadingGraph,
-			range,
-			data: graph?.data ? toDataPoints(graph.data, range, metric) : [],
-		},
-		isLoading: isLoadingStats || isLoadingGraph,
-		isError: isErrorStats || isErrorGraph,
+		stats,
+		isLoading,
+		isError,
 	};
 };
-
-export type ProjectDataGraph = ReturnType<typeof useProjectData>["graph"];
-export type ProjectDataStats = ReturnType<typeof useProjectData>["stats"];
 
 export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });
 export const invalidateEntities = () => queryClient.invalidateQueries({ queryKey: ["entities"] });

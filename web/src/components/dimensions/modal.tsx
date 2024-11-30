@@ -12,11 +12,9 @@ import type { ProjectQuery } from "../project";
 export const DetailsModal = ({
 	dimension,
 	query,
-	onSelect,
 }: {
 	dimension: Dimension;
 	query: ProjectQuery;
-	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
 }) => {
 	const { data, biggest, order, isLoading } = useDimension({ dimension, ...query });
 
@@ -64,7 +62,7 @@ export const DetailsModal = ({
 							className={styles.dimensionRow}
 						>
 							<DimensionValueBar value={d.value} biggest={biggest}>
-								<DimensionLabel dimension={dimension} value={d} onSelect={() => onSelect(d, dimension)} />
+								<DimensionLabel dimension={dimension} value={d} />
 							</DimensionValueBar>
 							<div>{formatMetricVal(d.value, query.metric)}</div>
 						</div>

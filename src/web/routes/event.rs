@@ -57,7 +57,7 @@ impl EventApi {
         let events = events.clone();
 
         // run the event processing in the background
-        let _ = tokio::task::spawn_blocking(move || {
+        tokio::task::spawn_blocking(move || {
             if let Err(e) = process_event(app, events, event, url, ip, user_agent) {
                 tracing::error!("Failed to process event: {:?}", e);
             }

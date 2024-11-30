@@ -1,13 +1,13 @@
 import styles from "./project.module.css";
 import _map from "./worldmap/map.module.css";
 
-import { useLocalStorage } from "@uidotdev/usehooks";
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 
-import { metricNames, useDimension, useProject, useProjectData } from "../api";
+import { metricNames, useDimension, useProject, useProjectGraph, useProjectStats } from "../api";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api";
-import { DateRange } from "../api/ranges";
+import type { DateRange } from "../api/ranges";
 
+import { useMetric, useRange } from "../hooks/persist";
 import { cls } from "../utils";
 import { DimensionCard, DimensionDropdownCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
 import { LineGraph } from "./graph";
@@ -15,6 +15,7 @@ import { SelectFilters } from "./project/filter";
 import { SelectMetrics } from "./project/metric";
 import { ProjectHeader } from "./project/project";
 import { SelectRange } from "./project/range";
+import { LineGraph2 } from "./graph2";
 
 const Worldmap = lazy(() => import("./worldmap").then((module) => ({ default: module.Worldmap })));
 
@@ -25,13 +26,41 @@ export type ProjectQuery = {
 	filters: DimensionFilter[];
 };
 
+const getDimensionFilter = (dimension: Dimension, value: string): DimensionFilter => {
+	if (dimension === "city")
+		// remove the first two characters from the dimension value
+		// which are the country code
+		return {
+			dimension: "city",
+			filterType: "equal",
+			value: value.slice(2),
+		};
+
+	if (dimension === "mobile")
+		return {
+			dimension: "mobile",
+			filterType: value === "true" ? "is_true" : "is_false",
+		};
+
+	if (value === "Unknown")
+		return {
+			dimension,
+			filterType: "is_null",
+		};
+
+	return {
+		dimension,
+		filterType: "equal",
+		value: value,
+	};
+};
+
 export const Project = () => {
 	const [projectId, setProjectId] = useState<string | undefined>();
 	const [filters, setFilters] = useState<DimensionFilter[]>([]);
-	const [metric, setMetric] = useLocalStorage<Metric>("metric", "views");
 
-	const [rangeString, setRangeString] = useLocalStorage<string>("date-range", "last7Days");
-	const range = useMemo(() => DateRange.deserialize(rangeString), [rangeString]);
+	const { metric, setMetric } = useMetric();
+	const { range, setRange } = useRange();
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -39,67 +68,52 @@ export const Project = () => {
 	}, []);
 
 	const { project } = useProject(projectId);
-	const { graph, stats } = useProjectData({ project, metric, range, filters });
+	const { graph } = useProjectGraph({ projectId, metric, range, filters });
+	const { stats } = useProjectStats({ projectId, metric, range, filters });
+
+	const query = useMemo<ProjectQuery>(
+		// biome-ignore lint/style/noNonNullAssertion: this is safe because code using this query will only run when project is defined.
+		() => ({ project: project!, metric, range, filters }),
+		[project, metric, range, filters],
+	);
+
+	const toggleFilter = useCallback(
+		(filter: DimensionFilter) => {
+			const index = filters.findIndex((f) => f.dimension === filter.dimension && f.filterType === filter.filterType);
+			if (index === -1) {
+				setFilters([...filters, filter]);
+			} else {
+				setFilters(filters.filter((_, i) => i !== index));
+			}
+		},
+		[filters],
+	);
+
+	const onSelectDimRow = useCallback(
+		(value: DimensionTableRow, dimension: Dimension) => {
+			toggleFilter(getDimensionFilter(dimension, value.dimensionValue));
+		},
+		[toggleFilter],
+	);
+
 	if (!project) return null;
-
-	const query = { metric, range, filters, project };
-
-	const toggleFilter = (filter: DimensionFilter) => {
-		const index = filters.findIndex((f) => f.dimension === filter.dimension && f.filterType === filter.filterType);
-		if (index === -1) {
-			setFilters([...filters, filter]);
-		} else {
-			setFilters(filters.filter((_, i) => i !== index));
-		}
-	};
-
-	const onSelectDimRow = (value: DimensionTableRow, dimension: Dimension) => {
-		let filter: DimensionFilter = {
-			dimension,
-			filterType: "equal",
-			value: value.dimensionValue,
-		};
-
-		if (dimension === "city") {
-			// remove the first two characters from the dimension value
-			// which are the country code
-			filter = {
-				dimension: "city",
-				filterType: "equal",
-				value: value.dimensionValue.slice(2),
-			};
-		}
-
-		if (dimension === "mobile") {
-			filter = {
-				dimension: "mobile",
-				filterType: value.dimensionValue === "true" ? "is_true" : "is_false",
-			};
-		}
-
-		if (value.dimensionValue === "Unknown") {
-			filter = {
-				dimension,
-				filterType: "is_null",
-			};
-		}
-
-		toggleFilter(filter);
-	};
 
 	return (
 		<div className={styles.project}>
 			<Suspense fallback={null}>
 				<div>
 					<div className={styles.projectHeader}>
-						<ProjectHeader project={project} stats={stats.data} />
-						<SelectRange onSelect={(range) => setRangeString(range.serialize())} range={range} projectId={project.id} />
+						<ProjectHeader project={project} stats={stats} />
+						<SelectRange onSelect={setRange} range={range} projectId={project.id} />
 					</div>
-					<SelectMetrics data={stats.data} metric={metric} setMetric={setMetric} className={styles.projectStats} />
+					<SelectMetrics data={stats} metric={metric} setMetric={setMetric} className={styles.projectStats} />
 					<SelectFilters value={filters} onChange={setFilters} />
 				</div>
 				<article className={cls(cardStyles, styles.graphCard)}>
-					<LineGraph data={graph.data} metric={metric} title={metricNames[metric]} range={graph.range} />
+					<LineGraph data={graph ?? []} metric={metric} title={metricNames[metric]} range={range} />
+				</article>
+				<article className={cls(cardStyles, styles.graphCard2)}>
+					<LineGraph2 data={graph ?? []} metric={metric} title={metricNames[metric]} range={range} />
 				</article>
 				<div className={styles.tables}>
 					<DimensionTabsCard dimensions={["url", "fqdn"]} query={query} onSelect={onSelectDimRow} />
@@ -133,7 +147,7 @@ const GeoCard = ({
 		<article className={cls(cardStyles, styles.geoCard)} data-full-width="true">
 			<div className={styles.geoMap}>
 				<Suspense fallback={null}>
-					<Worldmap data={data ?? []} metric={query.metric} />
+					<Worldmap data={data} metric={query.metric} />
 				</Suspense>
 			</div>
 			<div className={styles.geoTable}>
