@@ -194,10 +194,13 @@ fn metric_sql(metric: Metric) -> String {
             // total sessions: no time_to_next_event / time_to_next_event is null
             // bounce sessions: time to next / time to prev are both null or both > interval '30 minutes'
             "--sql
-            count(distinct sd.visitor_id)
-                filter (where (sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes') and
-                             (sd.time_from_last_event is null or sd.time_from_last_event > interval '30 minutes')) /
-            count(distinct sd.visitor_id) filter (where sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes')
+            coalesce(
+                count(distinct sd.visitor_id)
+                    filter (where (sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes') and
+                                 (sd.time_from_last_event is null or sd.time_from_last_event > interval '30 minutes')) /
+                nullif(count(distinct sd.visitor_id) filter (where sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes'), 0),
+                1
+            )
             "
         }
         Metric::AvgTimeOnSite => {

@@ -32,6 +32,7 @@
 			"**/node_modules/*",
 			"**/dist/*",
 			"**/target/*",
+			"**/.astro/*",
 			"**/api/dashboard.ts",
 			"tracker/script.min.js",
 			"tracker/script.d.ts"

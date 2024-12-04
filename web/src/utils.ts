@@ -2,6 +2,15 @@ import type { Metric } from "./api";
 
 type ClassName = string | undefined | null | false;
 
+// biome-ignore lint/suspicious/noExplicitAny: required
+export const debounce = <T extends (...args: any[]) => any>(func: T, wait: number) => {
+	let timeout: number;
+	return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
+		clearTimeout(timeout);
+		timeout = window.setTimeout(() => func.apply(this, args), wait);
+	};
+};
+
 export const capitalizeAll = (str: string) => str.replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
 
 export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | ClassName[])[]) =>
@@ -12,6 +21,22 @@ export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | Cl
 
 // get the username cookie or undefined if not set
 export const getUsername = () => document.cookie.match(/username=(.*?)(;|$)/)?.[1];
+
+export const formatMetricValEvenly = (value: number, metric: Metric, biggest: number) => {
+	if (metric === "bounce_rate") return formatPercent(Math.floor(value * 1000) / 10);
+	if (metric === "avg_time_on_site") return formatDuration(value);
+	if (value === 0) return "0";
+
+	if (biggest > 999999) {
+		return `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+	}
+
+	if (biggest > 999) {
+		return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+	}
+
+	return value.toFixed(1).replace(/\.0$/, "") || "0";
+};
 
 export const formatMetricVal = (value: number, metric: Metric) => {
 	if (metric === "bounce_rate") return formatPercent(Math.floor(value * 1000) / 10);
