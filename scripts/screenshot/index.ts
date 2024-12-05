@@ -1,14 +1,17 @@
 import captureWebsite from "capture-website";
 import { join } from "node:path";
 
+const geoCardMargin = ".geocard { margin-bottom: 2rem !important; }";
+
 await captureWebsite.file(
 	"http://localhost:4321/p/public-project",
 	join(__dirname, "../../data/images/liwan-desktop.png"),
 	{
 		overwrite: true,
 		width: 1100,
-		height: 1460,
+		height: 1480,
 		quality: 0.8,
+		styles: [geoCardMargin],
 	},
 );
 
@@ -19,8 +22,9 @@ await captureWebsite.file(
 		darkMode: true,
 		overwrite: true,
 		width: 1100,
-		height: 1460,
+		height: 1480,
 		quality: 0.8,
+		styles: [geoCardMargin],
 	},
 );
 

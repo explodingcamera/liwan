@@ -2,19 +2,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import styles from "./graph.module.css";
 
-import { easeCubic, easeCubicOut } from "d3-ease";
-import { scaleLinear, scaleUtc } from "d3-scale";
-import { select } from "d3-selection";
 import { extent } from "d3-array";
+import { easeCubic, easeCubicOut } from "d3-ease";
+import { scaleLinear, scaleTime } from "d3-scale";
+import { select } from "d3-selection";
 import { area } from "d3-shape";
+import "d3-transition";
 
 import { addMonths } from "date-fns";
 
 import type { DataPoint } from ".";
-import { axisBottom, axisLeft } from "./axis";
 import type { Metric } from "../../api";
 import type { DateRange } from "../../api/ranges";
 import { debounce, formatMetricVal, formatMetricValEvenly } from "../../utils";
+import { axisBottom, axisLeft } from "./axis";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 
@@ -73,14 +74,23 @@ export const LineGraph = ({
 			if (!svgRef.current || !dimensions) return;
 			const svg = select(svgRef.current);
 
-			const [minX, maxX] = extent(data, (d) => d.x);
+			const [minX, maxX] = extent(data, (d) => d.x).map((d) => d || new Date());
 			const [_minY, maxY] = extent(data, (d) => d.y).map((d) => d || 0);
-			const xCount = Math.max(data.length, 8);
 
-			const paddingTop = 50;
+			const sizeX = maxX.getTime() - minX.getTime();
+
+			let xCount = Math.min(data.length, 8);
+			if (dimensions.width && dimensions.width < 500) {
+				xCount = Math.min(data.length, 6);
+			} else if (dimensions.width && dimensions.width < 400) {
+				xCount = Math.min(data.length, 4);
+			}
+
+			const paddingTop = 30;
 			const paddingBottom = 40;
-			const paddingRight = 0;
-			const xAxis = scaleUtc([minX || 0, maxX || 0], [0, dimensions.width - paddingRight]);
+
+			const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
+
 			const yAxis =
 				metric === "bounce_rate"
 					? scaleLinear([0, 1], [dimensions.height - paddingBottom - paddingTop, 0])
@@ -114,16 +124,26 @@ export const LineGraph = ({
 			const yAxisElement = svg.selectChild<SVGGElement>("#y-axis");
 			const xAxisElement = svg.selectChild<SVGGElement>("#x-axis");
 
+			let tickValuesY = yAxis.ticks(5).filter((d) => d !== 0);
+			// if more than 5 ticks, remove every other tick
+			if (tickValuesY.length > 5) {
+				tickValuesY = tickValuesY.filter((_, i) => i % 2 === 0);
+			}
+
 			const leftAxis = axisLeft(yAxis)
 				.disableDomain()
 				.tickFormat((d) => formatMetricValEvenly(d as number, metric, maxY))
-				.ticks(5);
+				.tickValues(tickValuesY);
+
+			let tickValuesX = xAxis.ticks(xCount);
+			if (xAxis(tickValuesX[0]) < 20) tickValuesX = tickValuesX.slice(1);
+			if (xAxis(tickValuesX[tickValuesX.length - 1]) > dimensions.width - 20) tickValuesX = tickValuesX.slice(0, -1);
 
 			const bottomAxis = axisBottom(xAxis)
 				.disableDomain()
 				.disableTicks()
-				.ticks(Math.min(xCount, 8))
-				.tickFormat((d) => formatDate(d as Date, axisRange));
+				.tickFormat((d) => formatDate(d as Date, axisRange))
+				.tickValues(tickValuesX);
 
 			xAxisElement
 				.transition()
@@ -131,23 +151,23 @@ export const LineGraph = ({
 				.duration(transition)
 				.call((ax) => {
 					bottomAxis(ax);
-					ax.attr("transform", `translate(${30}, ${dimensions.height - paddingBottom + 10})`);
+					ax.attr("transform", `translate(0, ${dimensions.height - paddingBottom + 10})`);
 				});
 
 			yAxisElement.call((ax) => {
 				leftAxis(ax);
-				ax.attr("transform", `translate(${paddingRight}, ${paddingTop})`);
+				ax.attr("transform", `translate(0, ${paddingTop})`);
 
 				// make the ticks take up the full width of the graph
 				ax.selectAll(".tick line")
-					.attr("x2", dimensions.width - paddingRight)
+					.attr("x2", dimensions.width)
 					.attr("stroke", "var(--pico-secondary-background)")
 					.attr("stroke-width", 0.5)
 					.attr("stroke-dasharray", "2, 2");
 
 				// move the labels to the right side of the graph, keeping the text right-aligned
 				ax.selectAll(".tick text")
-					.attr("x", dimensions.width - paddingRight - 35)
+					.attr("x", dimensions.width - 35)
 					.attr("text-anchor", "end")
 					.attr("dx", "2em")
 					.attr("dy", "0.3em");
@@ -162,7 +182,7 @@ export const LineGraph = ({
 					// biome-ignore lint/suspicious/noExplicitAny: can't infer the type of the parent node
 					select((this as any)?.parentNode as SVGGElement)
 						.insert("rect", ":nth-child(2)")
-						.attr("x", dimensions.width - paddingRight - textWidth - 19)
+						.attr("x", dimensions.width - textWidth - 19)
 						.attr("y", -11)
 						.attr("width", textWidth + 10)
 						.attr("opacity", 0.6)

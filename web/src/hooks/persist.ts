@@ -15,7 +15,7 @@ export const useMetric = () => {
 
 export const useRange = () => {
 	const [range, _setRange] = useState<DateRange>(() =>
-		DateRange.deserialize(localStorage.getItem("liwan/date-range") || "last7Days"),
+		DateRange.deserialize(localStorage.getItem("liwan/date-range") || "last30Days"),
 	);
 	const setRange = useCallback((range: DateRange) => {
 		_setRange(range);

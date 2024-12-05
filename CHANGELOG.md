@@ -16,7 +16,7 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
-## v1.0.0 - 2024-11-24
+## v1.0.0 - 2024-12-06
 
 ### 🚀 Features
 
@@ -24,12 +24,14 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - **New Date Ranges**: Fully reworked date ranges. Data is more accurate and consistent now, and you can move to the next or previous time range. Also includes some new time ranges like `Week to Date` and `All Time`. You can now also select a custom date range to view your data. ([97cdfce](https://github.com/explodingcamera/liwan/commit/97cdfce509ed2fd2fd74b23c73726a5e01b7b288), [391c580](https://github.com/explodingcamera/liwan/commit/391c580c926e2b4ca250e08bbe725210774d99b2))
 - **UI Improvements**: A lot of small improvements to the UI for better polish and usability.
 - **New Metrics**: Added new metrics: `Bounce Rate`, `Average Time on Page` ([97cdfce](https://github.com/explodingcamera/liwan/commit/97cdfce509ed2fd2fd74b23c73726a5e01b7b288))
-- **Favicons can be disabled**: You can now disable fetching favicons from DuckDuckGo (`config.toml` setting: `disable_favicons`) ([2100bfe](2100bfe6ba868b59d2b383220f22b0dbf23a6712))
+- **Favicons can be disabled**: You can now disable fetching favicons from DuckDuckGo (`config.toml` setting: `disable_favicons`) ([2100bfe](https://github.com/explodingcamera/liwan/commit/2100bfe6ba868b59d2b383220f22b0dbf23a6712))
+- **New Graphs**: Graphs are now custom-built using d3 directly to improve performance and flexibility. ([eb1415d](https://github.com/explodingcamera/liwan/commit/eb1415d6bdf6d3be9509b0b4fa743b6f112b2c0a))
 
 ### 🐛 Bug Fixes
 
 - Fixed a potential panic when entities are not found in the database ([`31405a7`](https://github.com/explodingcamera/liwan/commit/31405a721dc5c5493098e211927281cca7816fec))
 - Fixed issues with the `Yesterday` Date Range ([`76278b57`](https://github.com/explodingcamera/liwan/commit/76278b579c5fe1557bf1c184542ed6ed2aba57cd))
+- Fixed issue with NaN values in the bounce rate metric ([eb1415d](https://github.com/explodingcamera/liwan/commit/eb1415d6bdf6d3be9509b0b4fa743b6f112b2c0a))
 
 ### Other
 

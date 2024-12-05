@@ -12,12 +12,7 @@
   .graph {
     height: 14rem;
     margin: 0;
-    padding: 1rem;
-    padding-top: 0;
-    padding-left: 0.5rem;
-    padding-right: 0;
-    margin-top: 0.5rem;
-    margin-right: -0.5rem;
+    margin-top: -1rem;
   }
 
   .projectHeader {
@@ -71,6 +66,20 @@
 
   a {
     cursor: pointer;
+  }
+
+  @media (max-width: 500px) {
+    h1 {
+      display: none;
+    }
+
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+    > div {
+      justify-content: right;
+      width: 100%;
+    }
   }
 }
 

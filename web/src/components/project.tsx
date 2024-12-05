@@ -140,7 +140,7 @@ const GeoCard = ({
 	});
 
 	return (
-		<article className={cls(cardStyles, styles.geoCard)} data-full-width="true">
+		<article className={cls(cardStyles, styles.geoCard, "geocard")} data-full-width="true">
 			<div className={styles.geoMap}>
 				<Suspense fallback={null}>
 					<Worldmap data={data} metric={query.metric} />
