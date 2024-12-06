@@ -57,7 +57,7 @@ export const Worldmap = ({
 	const biggest = useMemo(() => data?.reduce((a, b) => (a.value > b.value ? a : b), data[0]), [data]);
 	const countries = useMemo(() => getCountries(data ?? []), [data]);
 
-	const zoomBehavior = useRef<ZoomBehavior<SVGSVGElement, unknown>>();
+	const zoomBehavior = useRef<ZoomBehavior<SVGSVGElement, unknown>>(null);
 	if (!zoomBehavior.current) {
 		zoomBehavior.current = d3Zoom<SVGSVGElement, unknown>()
 			.scaleExtent([1, 8]) // Min and max zoom levels

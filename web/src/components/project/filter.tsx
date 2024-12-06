@@ -3,7 +3,7 @@ import styles from "./filter.module.css";
 
 import { type DimensionFilter, type FilterType, dimensionNames, filterNames, filterNamesInverted } from "../../api";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactElement } from "react";
 import { capitalizeAll, cls } from "../../utils";
 import { Dialog } from "../dialog";
 
@@ -122,7 +122,7 @@ const filters = {
 		filterTypes: FilterType[];
 		invertable?: boolean;
 		custom?: boolean;
-		render?: () => JSX.Element;
+		render?: () => ReactElement;
 		getFilter?: (data: FormData) => DimensionFilter;
 		displayValue?: (filter: DimensionFilter) => string;
 		displayType?: (filter: DimensionFilter) => string;

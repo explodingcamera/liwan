@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import styles from "./table.module.css";
 
 export type Column<T> = {
 	id: string;
-	header?: string | JSX.Element;
-	icon?: JSX.Element;
-	render?: (row: T) => JSX.Element | string;
+	header?: string | ReactElement;
+	icon?: ReactElement;
+	render?: (row: T) => ReactElement | string;
 	full?: boolean;
 	nowrap?: boolean;
 };

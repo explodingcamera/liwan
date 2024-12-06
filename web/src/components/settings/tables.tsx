@@ -1,4 +1,4 @@
-import { Fragment, useRef } from "react";
+import { Fragment, useRef, type ReactElement } from "react";
 import styles from "./tables.module.css";
 
 import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, TrashIcon } from "lucide-react";
@@ -17,7 +17,7 @@ import {
 import { cls } from "../../utils";
 import { createToast } from "../toast";
 
-type DropdownOptions = Record<string, ((close: () => void) => JSX.Element) | null>;
+type DropdownOptions = Record<string, ((close: () => void) => ReactElement) | null>;
 
 const Dropdown = ({ options }: { options: DropdownOptions }) => {
 	const detailsRef = useRef<HTMLDetailsElement>(null);
