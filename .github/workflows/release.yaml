@@ -1,9 +1,5 @@
 name: Release
 
-permissions:
-  contents: write
-  packages: write
-
 on:
   push:
     tags:
@@ -14,7 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: taiki-e/create-gh-release-action@v1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/create-gh-release-action@v1.8.2
         with:
           changelog: CHANGELOG.md
           allow-missing-changelog: true
@@ -26,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -41,6 +41,8 @@ jobs:
           path: ./web/dist
 
   upload-assets:
+    permissions:
+      contents: write
     needs: [create-release, build-web]
     strategy:
       matrix:
@@ -58,11 +60,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           name: web-dist
           path: ./web/dist
-      - uses: taiki-e/upload-rust-binary-action@v1
+      - uses: taiki-e/upload-rust-binary-action@v1.23.0
         with:
           bin: liwan
           target: ${{ matrix.target }}
@@ -70,6 +74,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   publish-container:
+    permissions:
+      packages: write
     needs: [create-release, upload-assets]
     uses: explodingcamera/liwan/.github/workflows/container.yaml@main
     with:

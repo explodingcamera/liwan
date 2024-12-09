@@ -1,9 +1,5 @@
 name: "Build & Publish Container Image"
 
-permissions:
-  contents: read
-  packages: write
-
 on:
   workflow_call:
     inputs:
@@ -19,17 +15,24 @@ on:
 
 jobs:
   docker-build:
+    permissions:
+      contents: read
+      packages: write
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
+          persist-credentials: false
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Extract Semver
         id: semver
+        env:
+          INPUT_TAG: "${{ inputs.tag }}"
         run: |
-          SEMVER_VERSION=$(echo "${{ inputs.tag }}" | sed -E 's/liwan-v//')
+          SEMVER_VERSION=$(echo "$INPUT_TAG" | sed -E 's/liwan-v//')
           echo "SEMVER_VERSION=${SEMVER_VERSION}" >> "$GITHUB_OUTPUT"
       - name: Setup Docker Metadata
         uses: docker/metadata-action@v5
