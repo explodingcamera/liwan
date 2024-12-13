@@ -9,7 +9,7 @@
 		"typecheck": "bun run --bun tsc --noEmit"
 	},
 	"dependencies": {
-		"@astrojs/react": "4.0.0",
+		"@astrojs/react": "4.1.0",
 		"@explodingcamera/css": "^0.0.4",
 		"@fontsource-variable/outfit": "^5.1.0",
 		"@icons-pack/react-simple-icons": "^10.2.0",
@@ -18,7 +18,7 @@
 		"@radix-ui/react-accordion": "^1.2.1",
 		"@radix-ui/react-dialog": "^1.1.2",
 		"@radix-ui/react-tabs": "^1.1.1",
-		"@tanstack/react-query": "^5.62.3",
+		"@tanstack/react-query": "^5.62.7",
 		"d3-array": "^3.2.4",
 		"d3-axis": "^3.0.0",
 		"d3-ease": "^3.0.1",
@@ -41,7 +41,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
-		"@million/lint": "^1.0.13",
+		"@million/lint": "^1.0.14",
 		"@types/bun": "^1.1.14",
 		"@types/d3-array": "^3.2.1",
 		"@types/d3-axis": "^3.0.6",
@@ -53,10 +53,10 @@
 		"@types/d3-transition": "^3.0.9",
 		"@types/d3-zoom": "^3.0.8",
 		"@types/react": "^19.0.1",
-		"@types/react-dom": "^19.0.1",
+		"@types/react-dom": "^19.0.2",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"astro": "5.0.4",
+		"astro": "5.0.5",
 		"rollup-plugin-license": "^3.5.3",
 		"typescript": "^5.7.2"
 	},
