@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crossbeam::sync::ShardedLock;
+use crossbeam_utils::sync::ShardedLock;
 use eyre::Result;
 
 use crate::{app::SqlitePool, utils::hash::onboarding_token};

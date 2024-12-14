@@ -7,7 +7,9 @@ use duckdb::params_from_iter;
 use eyre::{bail, Result};
 use poem_openapi::{Enum, Object};
 
-#[derive(Object, Debug, Clone)]
+pub use super::reports_cached::*;
+
+#[derive(Object, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
     pub start: time::OffsetDateTime,
     pub end: time::OffsetDateTime,
@@ -18,6 +20,14 @@ impl DateRange {
         let duration = self.end - self.start;
         DateRange { start: self.start - duration, end: self.start }
     }
+
+    pub fn ends_in_future(&self) -> bool {
+        self.end > time::OffsetDateTime::now_utc()
+    }
+
+    pub fn duration(&self) -> time::Duration {
+        self.end - self.start
+    }
 }
 
 impl Display for DateRange {
@@ -26,7 +36,7 @@ impl Display for DateRange {
     }
 }
 
-#[derive(Debug, Enum, Clone, Copy)]
+#[derive(Debug, Enum, Clone, Copy, PartialEq, Eq, Hash)]
 #[oai(rename_all = "snake_case")]
 pub enum Metric {
     Views,
@@ -35,7 +45,7 @@ pub enum Metric {
     AvgTimeOnSite,
 }
 
-#[derive(Debug, Enum, Clone, Copy, PartialEq)]
+#[derive(Debug, Enum, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
 #[oai(rename_all = "snake_case")]
 pub enum Dimension {
     Url,
@@ -54,7 +64,7 @@ pub enum Dimension {
     UtmTerm,
 }
 
-#[derive(Enum, Debug, Clone, Copy, PartialEq)]
+#[derive(Enum, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
 #[oai(rename_all = "snake_case")]
 pub enum FilterType {
     // Generic filters
@@ -83,7 +93,7 @@ pub struct ReportStats {
     pub avg_time_on_site: f64,
 }
 
-#[derive(Object, Debug, Clone)]
+#[derive(Object, Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 #[oai(rename_all = "camelCase")]
 pub struct DimensionFilter {
     /// The dimension to filter by

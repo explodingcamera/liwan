@@ -3,6 +3,7 @@ pub mod events;
 pub mod onboarding;
 pub mod projects;
 pub mod reports;
+mod reports_cached;
 pub mod sessions;
 pub mod users;
 

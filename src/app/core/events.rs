@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use crossbeam::{channel::Receiver, sync::ShardedLock};
+use crossbeam_channel::Receiver;
+use crossbeam_utils::sync::ShardedLock;
 use eyre::{bail, Result};
 use time::OffsetDateTime;
 

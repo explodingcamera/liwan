@@ -10,8 +10,8 @@ pub fn app() -> liwan::app::Liwan {
     Liwan::new_memory(Config::default()).unwrap()
 }
 
-pub fn events() -> (crossbeam::channel::Sender<Event>, crossbeam::channel::Receiver<Event>) {
-    crossbeam::channel::unbounded::<Event>()
+pub fn events() -> (crossbeam_channel::Sender<Event>, crossbeam_channel::Receiver<Event>) {
+    crossbeam_channel::unbounded::<Event>()
 }
 
 pub use liwan::web::create_router as router;

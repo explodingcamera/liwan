@@ -272,19 +272,26 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 			<DimensionValueButton onSelect={onSelect}>{value.displayName || "Unknown"}</DimensionValueButton>
 		</>
 	),
-	referrer: (value, onSelect) => (
-		<>
-			<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
-			<DimensionValueButton onSelect={onSelect}>
-				{value.displayName || value.dimensionValue || "Unknown"}
-			</DimensionValueButton>
-			{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
-				<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
-					<SquareArrowOutUpRightIcon size={16} />
-				</a>
-			)}
-		</>
-	),
+	referrer: (value, onSelect) => {
+		let name = value.displayName || value.dimensionValue || "Unknown";
+
+		if (!value.dimensionValue.endsWith(".com") && name === "Google") {
+			const end = value.dimensionValue.split(".").at(-1);
+			name = `Google (${end})`;
+		}
+
+		return (
+			<>
+				<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
+				<DimensionValueButton onSelect={onSelect}>{name}</DimensionValueButton>
+				{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
+					<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
+						<SquareArrowOutUpRightIcon size={16} />
+					</a>
+				)}
+			</>
+		);
+	},
 	path: (value, onSelect) => (
 		<>
 			<LinkIcon size={16} />

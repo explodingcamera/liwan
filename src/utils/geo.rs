@@ -1,19 +1,18 @@
-use std::cell::LazyCell;
 use std::collections::HashMap;
-
-thread_local! {
-    pub static COUNTRIES: LazyCell<HashMap<String, String>> = LazyCell::new(|| {
-        let mut map = HashMap::new();
-        for line in include_str!("../../data/countries.txt").lines() {
-            let mut parts = line.split('=');
-            let name = parts.next().unwrap();
-            let fqdn = parts.next().unwrap();
-            map.insert(fqdn.to_string(), name.to_string());
-        }
-        map
-    });
-}
+use std::sync::LazyLock;
 
 pub fn get_country_name(iso_2_code: &str) -> Option<String> {
-    COUNTRIES.with(|r| r.get(iso_2_code).map(std::string::ToString::to_string))
+    static COUNTRIES: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+        include_str!("../../data/countries.txt")
+            .lines()
+            .map(|line| {
+                let mut parts = line.split('=');
+                let name = parts.next().expect("countries.txt is malformed").to_string();
+                let fqdn = parts.next().expect("countries.txt is malformed").to_string();
+                (fqdn, name)
+            })
+            .collect()
+    });
+
+    COUNTRIES.get(iso_2_code).map(ToString::to_string)
 }

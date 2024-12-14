@@ -16,10 +16,12 @@ path="src/main.rs"
 
 [dependencies]
 # async/concurrency
-tokio={version="1.38", default-features=false, features=["rt-multi-thread"]}
+tokio={version="1.38", default-features=false, features=["macros", "rt-multi-thread"]}
 tokio-util={version="0.7", features=["io"]}
 futures-util="0.3"
-crossbeam="0.8"
+crossbeam-utils="0.8"
+crossbeam-channel="0.5"
+quick_cache="0.6"
 
 # encoding
 hex={version="0.4"}
@@ -27,7 +29,7 @@ bs58="0.5"
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
 md-5="0.10"
-async-compression="0.4"
+async-compression={version="0.4", default-features=false, features=["gzip"]}
 tokio-tar={package="krata-tokio-tar", version="0.4"}
 sha3={version="0.10"}
 argon2={version="0.5"}
@@ -36,12 +38,10 @@ argon2={version="0.5"}
 argh={version="0.1"}
 eyre={version="0.6"}
 rand={version="0.8"}
-cached="0.54"
-itertools={version="0.13"}
 time={version="0.3"}
 colored={version="2.1"}
 figment={version="0.10", features=["toml", "env"]}
-tracing="0.1"
+tracing={version="0.1", default-features=false, features=["std"]}
 tracing-subscriber={version="0.3", features=["env-filter"]}
 
 # web
@@ -56,7 +56,7 @@ poem-openapi={version="5.1", default-features=false, features=["time"]}
 tower={version="0.5", default-features=false, features=["limit"]}
 uaparser="0.6"
 mime_guess={version="2.0"}
-rust-embed="8.5"
+rust-embed={version="8.5"}
 reqwest={version="0.12", default-features=false, features=[
     "json",
     "stream",
@@ -73,8 +73,8 @@ duckdb={version="1.1", git="https://github.com/explodingcamera-contrib/duckdb-rs
 rusqlite={version="0.32", features=["bundled", "time"]}
 r2d2={version="0.8"}
 r2d2_sqlite="0.25"
-refinery={version="0.8"}
-refinery-core="0.8"
+refinery={version="0.8", default-features=false}
+refinery-core={version="0.8", default-features=false}
 maxminddb={version="0.24", optional=true}
 
 [dev-dependencies]
@@ -94,8 +94,7 @@ incremental=true
 [profile.release]
 lto="thin"
 strip=true
+opt-level=2
 
-[profile.dev.package.duckdb]
-inherits="release"
-[profile.dev.package.rusqlite]
-inherits="release"
+[profile.release.package.duckdb]
+opt-level=3

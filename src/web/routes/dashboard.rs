@@ -119,7 +119,7 @@ impl DashboardAPI {
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let report = spawn_blocking(move || {
-            reports::overall_report(
+            reports::overall_report_cached(
                 &conn,
                 &entities,
                 "pageview",
@@ -158,9 +158,11 @@ impl DashboardAPI {
         let conn2 = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let (stats, stats_prev) = tokio::try_join!(
-            spawn_blocking(move || { reports::overall_stats(&conn, &entities, "pageview", &req.range, &req.filters) }),
             spawn_blocking(move || {
-                reports::overall_stats(&conn2, &entities2, "pageview", &req2.range.prev(), &req2.filters)
+                reports::overall_stats_cached(&conn, &entities, "pageview", &req.range, &req.filters)
+            }),
+            spawn_blocking(move || {
+                reports::overall_stats_cached(&conn2, &entities2, "pageview", &req2.range.prev(), &req2.filters)
             })
         )
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -195,7 +197,7 @@ impl DashboardAPI {
         let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let stats = spawn_blocking(move || {
-            reports::dimension_report(
+            reports::dimension_report_cached(
                 &conn,
                 &entities,
                 "pageview",
@@ -226,7 +228,6 @@ impl DashboardAPI {
                         "Edge" => Some("Microsoft Edge".to_string()),
                         _ => None,
                     };
-
                     data.push(DimensionTableRow { dimension_value: key, value, display_name, icon: None });
                 }
                 Dimension::Country => {

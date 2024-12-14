@@ -4,13 +4,13 @@ pub mod webext;
 
 use crate::app::models::Event;
 use crate::app::Liwan;
+use crossbeam_channel::Sender;
 use routes::{dashboard_service, event_service};
 use webext::{catch_error, EmbeddedFilesEndpoint, PoemErrExt};
 
 pub use session::SessionUser;
 
 use colored::Colorize;
-use crossbeam::channel::Sender;
 use eyre::{Context, Result};
 use rust_embed::RustEmbed;
 

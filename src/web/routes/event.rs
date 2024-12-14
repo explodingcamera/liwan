@@ -4,17 +4,16 @@ use crate::utils::referrer::{process_referer, Referrer};
 use crate::utils::useragent;
 use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
 
-use cached::{Cached, TimedCache};
-use crossbeam::channel::Sender;
+use crossbeam_channel::Sender;
 use eyre::{Context, Result};
 use poem::http::{StatusCode, Uri};
 use poem::web::headers::UserAgent;
 use poem::web::{headers, Data, RealIp, TypedHeader};
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
-use std::cell::RefCell;
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::sync::LazyLock;
 use time::OffsetDateTime;
 
 #[derive(Object)]
@@ -35,10 +34,8 @@ struct Utm {
     term: Option<String>,
 }
 
-thread_local! {
-    // Cache for existing entities to reject invalid ones
-    static EXISTING_ENTITIES: RefCell<TimedCache<String, String>> = TimedCache::with_lifespan(60 * 60).into(); // 1 hour
-}
+static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
+    LazyLock::new(|| quick_cache::sync::Cache::new(1000));
 
 pub struct EventApi;
 #[OpenApi]
@@ -89,11 +86,11 @@ fn process_event(
     let referrer = referrer.map(|r| r.trim_start_matches("www.").to_string()); // remove www. prefix
     let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
 
-    if !EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_get(&event.entity_id).is_some()) {
+    if EXISTING_ENTITIES.get(&event.entity_id).is_none() {
         if !app.entities.exists(&event.entity_id).unwrap_or(false) {
             return Ok(());
         }
-        EXISTING_ENTITIES.with(|cache| cache.borrow_mut().cache_set(event.entity_id.clone(), event.entity_id.clone()));
+        EXISTING_ENTITIES.insert(event.entity_id.clone(), ());
     }
 
     let visitor_id = match ip {

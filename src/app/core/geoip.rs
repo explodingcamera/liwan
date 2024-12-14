@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::app::SqlitePool;
-use crossbeam::sync::ShardedLock;
+use crossbeam_utils::sync::ShardedLock;
 use eyre::{OptionExt, Result};
 use futures_util::{StreamExt, TryStreamExt};
 use md5::{Digest, Md5};

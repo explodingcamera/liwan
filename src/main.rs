@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     setup_logger(args.log_level)?;
 
     let config = Config::load(args.config)?;
-    let (s, r) = crossbeam::channel::unbounded::<Event>();
+    let (s, r) = crossbeam_channel::unbounded::<Event>();
 
     if let Some(cmd) = args.cmd {
         return cli::handle_command(config, cmd);
