@@ -1,4 +1,4 @@
-import { Fragment, useRef, type ReactElement } from "react";
+import { Fragment, use, useEffect, useRef, useState, type ReactElement } from "react";
 import styles from "./tables.module.css";
 
 import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, TrashIcon } from "lucide-react";
@@ -77,27 +77,23 @@ export const ProjectsTable = () => {
 	const columns: Column<(typeof projects)[number]>[] = [
 		{
 			id: "displayName",
-			// icon: <TagIcon size={18} />,
 			header: "Name",
 			render: (row) => <span>{row.displayName}</span>,
 			nowrap: true,
 		},
 		{
 			id: "id",
-			// icon: <WholeWordIcon size={18} />,
 			header: "ID",
 			render: (row) => <i>{row.id}</i>,
 			nowrap: true,
 		},
 		{
 			id: "public",
-			// icon: <ShieldIcon size={18} />,
 			header: "Visibility",
 			render: (row) => <>{row.public ? "Public" : "Private"}</>,
 		},
 		{
 			id: "entities",
-			// icon: <AppWindowIcon size={18} />,
 			header: "Entities",
 			render: (row) => (
 				<>
@@ -121,6 +117,11 @@ export const ProjectsTable = () => {
 };
 
 const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
+	const { role } = useMe();
+	if (role === "user") {
+		return null;
+	}
+
 	const options: DropdownOptions = {
 		copy: (close) => (
 			<button
@@ -170,6 +171,11 @@ const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
 
 export const EntitiesTable = () => {
 	const { entities, isLoading } = useEntities();
+
+	if (!useAdminPerms()) {
+		return <>You don't have permission to view this page.</>;
+	}
+
 	const columns: Column<(typeof entities)[number]>[] = [
 		{
 			id: "displayName",
@@ -256,9 +262,22 @@ const UserDropdown = ({ user }: { user: UserResponse }) => {
 	return <Dropdown options={options} />;
 };
 
+const useAdminPerms = () => {
+	const { role } = useMe();
+	const [isMounted, setIsMounted] = useState(false);
+	useEffect(() => {
+		setIsMounted(true);
+	});
+	return !isMounted || role === "admin";
+};
+
 export const UsersTable = () => {
 	const { users, isLoading } = useUsers();
 	const rows = users.map((user) => ({ id: user.username, ...user })) ?? [];
+
+	if (!useAdminPerms()) {
+		return <>You don't have permission to view this page.</>;
+	}
 
 	const columns: Column<(typeof rows)[number]>[] = [
 		{

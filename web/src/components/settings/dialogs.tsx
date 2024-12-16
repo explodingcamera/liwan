@@ -523,6 +523,11 @@ const roles = ["admin", "user"] as const;
 
 export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: ReactElement }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
+
+	const { projects } = useProjects();
+	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
+	const [selectedProjects, setSelectedProjects] = useState<Tag[]>([]);
+
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/user/{username}"].put,
 		onSuccess: () => {
@@ -533,12 +538,31 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 		onError: console.error,
 	});
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: don't want to re-run this effect when projects change
+	useEffect(() => {
+		setSelectedProjects(
+			user.projects.map((projectId) => {
+				const p = projects.find((p) => p.id === projectId);
+				return {
+					value: projectId,
+					label: p ? p.displayName : projectId,
+				};
+			}),
+		);
+	}, [user.projects]);
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
+
 		const form = e.target as HTMLFormElement;
-		const { role } = Object.fromEntries(new FormData(form)) as { role: (typeof roles)[number] };
-		mutate({ params: { username: user.username }, json: { role, projects: [] } });
+		const { admin } = Object.fromEntries(new FormData(form)) as { admin: string };
+		const role = admin === "on" ? "admin" : "user";
+
+		mutate({
+			params: { username: user.username },
+			json: { role, projects: selectedProjects.map((tag) => tag.value as string) },
+		});
 	};
 
 	return (
@@ -550,16 +574,23 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 			trigger={trigger}
 		>
 			<form onSubmit={handleSubmit}>
+				<Tags
+					labelText="Projects"
+					selected={selectedProjects}
+					suggestions={projectTags}
+					onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
+					onDelete={(i) => setSelectedProjects(selectedProjects.filter((_, index) => index !== i))}
+					noOptionsText="No matching projects"
+				/>
 				<label>
-					Role
-					<select name="role" defaultValue={user.role}>
-						{roles.map((r) => (
-							<option key={r} value={r}>
-								{r}
-							</option>
-						))}
-					</select>
+					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
+					<input name="admin" type="checkbox" role="switch" defaultChecked={user.role === "admin"} />
+					Enable Administrator Access
+					<br />
+					<small>Administators can edit and create projects, entities, and users.</small>
 				</label>
+				<br />
+
 				<div className="grid">
 					<Dialog.Close asChild>
 						<button className="secondary outline" type="button" ref={closeRef}>

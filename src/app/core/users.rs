@@ -31,7 +31,12 @@ impl LiwanUsers {
             Ok(models::User {
                 username: row.get("username")?,
                 role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
-                projects: row.get::<_, String>("projects")?.split(',').map(str::to_string).collect(),
+                projects: row
+                    .get::<_, String>("projects")?
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .collect(),
             })
         });
         user.map_err(|_| eyre::eyre!("user not found"))
@@ -45,7 +50,12 @@ impl LiwanUsers {
             Ok(models::User {
                 username: row.get("username")?,
                 role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
-                projects: row.get::<_, String>("projects")?.split(',').map(str::to_string).collect(),
+                projects: row
+                    .get::<_, String>("projects")?
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .collect(),
             })
         })?;
         Ok(users.collect::<Result<Vec<models::User>, rusqlite::Error>>()?)

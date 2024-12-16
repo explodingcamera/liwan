@@ -22,6 +22,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 - Improved query caching to prevent unnecessary database queries
 - Added Country Code to Google Referrer URLs
+- Improved Multi-User Support (Non-admin users can now be granted access to specific projects)
 
 ## v1.0.0 - 2024-12-06
 

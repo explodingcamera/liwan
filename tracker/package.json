@@ -4,7 +4,7 @@
 	"homepage": "https://liwan.dev",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/explodingcamera/liwan",
+		"url": "git+https://github.com/explodingcamera/liwan.git",
 		"directory": "tracker"
 	},
 	"license": "MIT",

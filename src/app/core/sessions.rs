@@ -42,7 +42,12 @@ impl LiwanSessions {
             Ok(models::User {
                 username: row.get("username")?,
                 role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
-                projects: row.get::<_, String>("projects")?.split(',').map(str::to_string).collect(),
+                projects: row
+                    .get::<_, String>("projects")?
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .collect(),
             })
         });
 
