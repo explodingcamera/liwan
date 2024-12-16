@@ -76,6 +76,7 @@ jobs:
   publish-container:
     permissions:
       packages: write
+      contents: read
     needs: [create-release, upload-assets]
     uses: explodingcamera/liwan/.github/workflows/container.yaml@main
     with:
