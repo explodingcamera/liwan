@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
 
 import { Dialog } from "../dialog";
 import { type Tag, Tags } from "../tags";
@@ -615,7 +615,7 @@ export const CreateUser = () => {
 	const { role } = useMe();
 	const closeRef = useRef<HTMLButtonElement>(null);
 
-	const { mutate, error, reset } = useMutation({
+	const { mutate, error } = useMutation({
 		mutationFn: api["/api/dashboard/user"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();

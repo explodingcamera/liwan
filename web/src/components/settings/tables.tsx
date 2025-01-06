@@ -1,4 +1,4 @@
-import { Fragment, use, useEffect, useRef, useState, type ReactElement } from "react";
+import { Fragment, type ReactElement, useEffect, useRef, useState } from "react";
 import styles from "./tables.module.css";
 
 import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, TrashIcon } from "lucide-react";

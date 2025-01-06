@@ -9,6 +9,7 @@
 		"typecheck": "bun run --bun tsc --noEmit"
 	},
 	"dependencies": {
+		"@astrojs/check": "^0.9.4",
 		"@astrojs/react": "4.1.2",
 		"@explodingcamera/css": "^0.0.4",
 		"@fontsource-variable/outfit": "^5.1.1",

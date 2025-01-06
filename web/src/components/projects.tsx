@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import styles from "./projects.module.css";
 
 import { ChevronDownIcon } from "lucide-react";

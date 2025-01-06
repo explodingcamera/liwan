@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { addDays, endOfDay, startOfDay, subDays } from "date-fns";
+import { startOfDay, subDays } from "date-fns";
 import { DateRange } from "./ranges";
 
 describe("DateRange", () => {

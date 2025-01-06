@@ -3,7 +3,7 @@ import "@fontsource-variable/outfit";
 import "../global.css";
 import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 
-import { ViewTransitions } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 
 type Props = { title: string; hideFooter?: boolean };
 ---
@@ -15,7 +15,7 @@ type Props = { title: string; hideFooter?: boolean };
     <meta name="robots" content="noindex" />
     <meta name="description" content="Liwan Web Analytics Dashboard" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <ViewTransitions />
+    <ClientRouter />
     <title>{Astro.props.title} | Liwan</title>
   </head>
   <body>

@@ -61,4 +61,3 @@ export const DatePickerRange = ({
 };
 
 const toHtmlDate = (date: Date) => date.toISOString().split("T")[0];
-const fromHtmlDate = (date: string) => new Date(date);

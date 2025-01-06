@@ -4,7 +4,7 @@ import styles from "./dimensions.module.css";
 
 import { useDeferredValue, useMemo, useState } from "react";
 import { DimensionLabel, DimensionValueBar } from ".";
-import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
+import { type Dimension, dimensionNames, metricNames, useDimension } from "../../api";
 import { cls, formatMetricVal } from "../../utils";
 import { Dialog } from "../dialog";
 import type { ProjectQuery } from "../project";

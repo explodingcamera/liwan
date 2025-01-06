@@ -3,7 +3,7 @@ import styles from "./filter.module.css";
 
 import { type DimensionFilter, type FilterType, dimensionNames, filterNames, filterNamesInverted } from "../../api";
 
-import { useRef, useState, type ReactElement } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { capitalizeAll, cls } from "../../utils";
 import { Dialog } from "../dialog";
 
