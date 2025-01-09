@@ -310,7 +310,6 @@ reddit=reddit.com
 reddit=np.reddit.com
 reddit=pay.reddit.com
 Renren=renren.com
-Skyrock=skyrock.com
 Snapchat=snapchat.com
 StackOverflow=stackoverflow.com
 Telegram=web.telegram.org

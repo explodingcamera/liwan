@@ -18,7 +18,6 @@ reddit=reddit
 Flickr=flickr
 GitHub=github
 Pinterest=pinterest
-Skyrock=skyrock
 StackOverflow=stackoverflow
 Bluesky=bluesky
 LiveJournal=livejournal
