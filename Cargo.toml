@@ -39,7 +39,7 @@ argh={version="0.1"}
 eyre={version="0.6"}
 rand={version="0.8"}
 time={version="0.3"}
-colored={version="2.1"}
+colored={version="3.0"}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}
 tracing-subscriber={version="0.3", features=["env-filter"]}
