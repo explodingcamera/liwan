@@ -53,7 +53,7 @@ pub fn process_referer(referer: Option<&str>) -> Referrer {
         // valid referer are stripped to the FQDN
         Some(Ok(referer_uri)) => {
             // ignore localhost / IP addresses
-            if referer_uri.host().map_or(false, |host| {
+            if referer_uri.host().is_some_and(|host| {
                 host == "localhost" || host.ends_with(".localhost") || host.parse::<std::net::IpAddr>().is_ok()
             }) {
                 return Referrer::Unknown(None);

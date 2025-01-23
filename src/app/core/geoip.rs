@@ -221,7 +221,7 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
             .map_err(|e| eyre::eyre!("Failed to read entry: {}", e))?;
 
         let entry_path = entry.path()?;
-        if entry_path.extension().map_or(false, |ext| ext == "mmdb") {
+        if entry_path.extension().is_some_and(|ext| ext == "mmdb") {
             file = entry
                 .unpack_in(folder)
                 .await

@@ -14,7 +14,7 @@ pub fn is_valid_username(name: &str) -> bool {
 }
 
 pub fn can_access_project(project: &Project, user: Option<&SessionUser>) -> bool {
-    project.public || user.map_or(false, |u| u.0.role == UserRole::Admin || u.0.projects.contains(&project.id))
+    project.public || user.is_some_and(|u| u.0.role == UserRole::Admin || u.0.projects.contains(&project.id))
 }
 
 #[cfg(test)]
