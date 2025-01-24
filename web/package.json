@@ -9,12 +9,10 @@
 		"typecheck": "bun run --bun tsc --noEmit"
 	},
 	"dependencies": {
-		"@astrojs/check": "^0.9.4",
 		"@astrojs/react": "4.1.6",
 		"@explodingcamera/css": "^0.0.4",
 		"@fontsource-variable/outfit": "^5.1.1",
 		"@icons-pack/react-simple-icons": "^11.1.0",
-		"@nivo/line": "^0.88.0",
 		"@picocss/pico": "^2.0.6",
 		"@radix-ui/react-accordion": "^1.2.2",
 		"@radix-ui/react-dialog": "^1.1.5",
@@ -33,7 +31,7 @@
 		"fets": "^0.8.4",
 		"fuzzysort": "^3.1.0",
 		"little-date": "^1.0.0",
-		"lucide-react": "0.473.0",
+		"lucide-react": "0.474.0",
 		"react": "19.0.0",
 		"react-dom": "19.0.0",
 		"react-tag-autocomplete": "^7.5.0",
@@ -41,6 +39,7 @@
 		"topojson-client": "^3.1.0"
 	},
 	"devDependencies": {
+		"@astrojs/check": "^0.9.4",
 		"@biomejs/biome": "1.9.4",
 		"@million/lint": "^1.0.14",
 		"@types/bun": "^1.2.0",
@@ -57,7 +56,7 @@
 		"@types/react-dom": "^19.0.3",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"astro": "5.1.8",
+		"astro": "5.1.9",
 		"rollup-plugin-license": "^3.5.3",
 		"typescript": "^5.7.3"
 	},
