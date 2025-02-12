@@ -30,6 +30,7 @@ export default defineConfig({
 			}) as any,
 		],
 	},
+	trailingSlash: "never",
 	integrations: [react()],
 	redirects: {
 		"/settings": "/settings/projects",
