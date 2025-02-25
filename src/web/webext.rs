@@ -1,6 +1,6 @@
 use std::{fmt::Display, marker::PhantomData};
 
-use poem::http::{header, Method, StatusCode};
+use poem::http::{Method, StatusCode, header};
 use poem::web::Json;
 use poem::{Endpoint, IntoResponse, Request, Response};
 use poem_openapi::{ApiResponse, Object};

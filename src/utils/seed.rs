@@ -29,12 +29,12 @@ pub fn random_events(
     entity_id: &str,
     fqdn: &str,
     count: usize,
-) -> impl Iterator<Item = Event> {
+) -> impl Iterator<Item = Event> + use<> {
     let mut rng = rand::thread_rng();
     let mut generated = 0;
     let entity_id = entity_id.to_string();
     let fqdn = fqdn.to_string();
-    let visitor_ids: Vec<String> = (0..count / 5).map(|_| rng.gen::<u64>().to_string()).collect();
+    let visitor_ids: Vec<String> = (0..count / 5).map(|_| rng.r#gen::<u64>().to_string()).collect();
 
     std::iter::from_fn(move || {
         if generated >= count {
@@ -80,7 +80,7 @@ pub fn random_events(
 
 fn random_date(min: OffsetDateTime, max: OffsetDateTime, scale: f64) -> OffsetDateTime {
     let mut rng = rand::thread_rng();
-    let uniform_random: f64 = rng.gen();
+    let uniform_random: f64 = rng.r#gen();
     let weighted_random = (uniform_random.powf(1.0 - scale)).min(1.0);
     let duration = max - min;
     let duration_seconds = duration.as_seconds_f64();
@@ -95,7 +95,7 @@ fn random_el<T>(slice: &[T], scale: f64) -> &T {
 
     assert!(len != 0, "Cannot choose from an empty slice");
 
-    let uniform_random: f64 = rng.gen();
+    let uniform_random: f64 = rng.r#gen();
     let weighted_random = (uniform_random.powf(1.0 - scale)).min(1.0);
     let index = (weighted_random * (len as f64)) as usize;
     &slice[index.min(len - 1)]

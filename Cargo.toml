@@ -1,8 +1,8 @@
 [package]
 name="liwan"
 version="0.1.1"
-edition="2021"
-rust-version="1.82"
+edition="2024"
+rust-version="1.85"
 repository="https://github.com/explodingcamera/liwan"
 license="AGPL-3.0-only OR LicenseRef-Liwan"
 publish=false
@@ -45,22 +45,37 @@ tracing={version="0.1", default-features=false, features=["std"]}
 tracing-subscriber={version="0.3", features=["env-filter"]}
 
 # web
-poem={version="3.1", default-features=false, features=["time", "embed", "cookie", "compression", "tower-compat"]}
+poem={version="3.1", default-features=false, features=[
+    "time",
+    "embed",
+    "cookie",
+    "compression",
+    "tower-compat",
+]}
 poem-openapi={version="5.1", default-features=false, features=["time"]}
 tower={version="0.5", default-features=false, features=["limit"]}
 uaparser="0.6"
 mime_guess={version="2.0"}
-rust-embed={version="8.5"}
-reqwest={version="0.12", default-features=false, features=["json", "stream", "charset", "rustls-tls"]}
+rust-embed={version="8.6"}
+reqwest={version="0.12", default-features=false, features=[
+    "json",
+    "stream",
+    "charset",
+    "rustls-tls",
+]}
 
 # database
-duckdb={version="1.1", git="https://github.com/explodingcamera-contrib/duckdb-rs", features=["bundled", "time", "r2d2"]}
+duckdb={version="1.1", git="https://github.com/explodingcamera-contrib/duckdb-rs", features=[
+    "bundled",
+    "time",
+    "r2d2",
+]}
 rusqlite={version="0.33", features=["bundled", "time"]}
 r2d2={version="0.8"}
 r2d2_sqlite="0.26"
 refinery={version="0.8", default-features=false}
 refinery-core={version="0.8", default-features=false}
-maxminddb={version="0.24", optional=true}
+maxminddb={version="0.25", optional=true}
 
 [dev-dependencies]
 figment={version="*", features=["test"]}
@@ -81,5 +96,5 @@ lto="thin"
 strip=true
 opt-level=2
 
-[profile.release.package.duckdb]
-opt-level=3
+[profile.dev.package.duckdb]
+opt-level=2
