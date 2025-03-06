@@ -1,8 +1,8 @@
 use eyre::Result;
-use refinery::{error::WrapMigrationError, Migration};
+use refinery::{Migration, error::WrapMigrationError};
 use refinery_core::{
-    traits::sync::{Query, Transaction},
     Migrate,
+    traits::sync::{Query, Transaction},
 };
 use std::ops::DerefMut;
 

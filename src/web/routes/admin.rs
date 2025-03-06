@@ -1,9 +1,9 @@
-use crate::app::models::{Entity, Project, UserRole};
 use crate::app::Liwan;
+use crate::app::models::{Entity, Project, UserRole};
 use crate::utils::validate::can_access_project;
 use crate::web::{
     session::SessionUser,
-    webext::{http_bail, ApiResult, EmptyResponse, PoemErrExt},
+    webext::{ApiResult, EmptyResponse, PoemErrExt, http_bail},
 };
 
 use poem::{http::StatusCode, web::Data};

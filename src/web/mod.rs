@@ -2,11 +2,11 @@ pub mod routes;
 pub mod session;
 pub mod webext;
 
-use crate::app::models::Event;
 use crate::app::Liwan;
+use crate::app::models::Event;
 use crossbeam_channel::Sender;
 use routes::{dashboard_service, event_service};
-use webext::{catch_error, EmbeddedFilesEndpoint, PoemErrExt};
+use webext::{EmbeddedFilesEndpoint, PoemErrExt, catch_error};
 
 pub use session::SessionUser;
 
@@ -92,15 +92,18 @@ pub async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result<()> {
     let router = create_router(app.clone(), events.clone());
     let listener = TcpListener::bind(("0.0.0.0", app.config.port));
 
-    match app.onboarding.token()? { Some(onboarding) => {
-        let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding).underline().bold();
-        let command = "liwan --help".bold();
-        tracing::info!("{}", "It looks like you're running Liwan for the first time!".white());
-        tracing::info!("{}", format!("You can get started by visiting: {get_started}").white());
-        tracing::info!("{}", format!("To see all available commands, run `{command}`").white());
-    } _ => {
-        tracing::info!("{}", format!("Liwan is running on {}", app.config.base_url.underline()).white());
-    }}
+    match app.onboarding.token()? {
+        Some(onboarding) => {
+            let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding).underline().bold();
+            let command = "liwan --help".bold();
+            tracing::info!("{}", "It looks like you're running Liwan for the first time!".white());
+            tracing::info!("{}", format!("You can get started by visiting: {get_started}").white());
+            tracing::info!("{}", format!("To see all available commands, run `{command}`").white());
+        }
+        _ => {
+            tracing::info!("{}", format!("Liwan is running on {}", app.config.base_url.underline()).white());
+        }
+    }
 
     Server::new(listener).run(router).await.wrap_err("server exited unexpectedly")
 }

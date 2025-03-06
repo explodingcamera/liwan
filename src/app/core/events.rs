@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use crossbeam_channel::Receiver;
 use crossbeam_utils::sync::ShardedLock;
-use eyre::{bail, Result};
+use eyre::{Result, bail};
 use time::OffsetDateTime;
 
-use crate::app::models::{event_params, Event};
-use crate::app::{DuckDBPool, SqlitePool, EVENT_BATCH_INTERVAL};
+use crate::app::models::{Event, event_params};
+use crate::app::{DuckDBPool, EVENT_BATCH_INTERVAL, SqlitePool};
 use crate::utils::hash::generate_salt;
 
 #[derive(Clone)]
@@ -106,7 +106,7 @@ impl LiwanEvents {
     }
 }
 
-use duckdb::{params, Connection, Result as DuckResult};
+use duckdb::{Connection, Result as DuckResult, params};
 
 pub fn update_event_times(conn: &Connection, from_time: OffsetDateTime) -> DuckResult<()> {
     // this can probably be simplified, sadly the where clause can't contain window functions

@@ -2,7 +2,7 @@
 
 use cookie::Cookie;
 use liwan::{
-    app::{models::Event, Liwan},
+    app::{Liwan, models::Event},
     config::Config,
 };
 
@@ -15,7 +15,7 @@ pub fn events() -> (crossbeam_channel::Sender<Event>, crossbeam_channel::Receive
 }
 
 pub use liwan::web::create_router as router;
-use poem::{test::TestResponse, Endpoint, IntoEndpoint};
+use poem::{Endpoint, IntoEndpoint, test::TestResponse};
 
 pub fn cookies(res: &TestResponse) -> Vec<cookie::Cookie<'static>> {
     res.0

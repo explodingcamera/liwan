@@ -3,7 +3,7 @@
 
 use eyre::Result;
 
-use liwan::app::{models::Event, Liwan};
+use liwan::app::{Liwan, models::Event};
 use liwan::{cli, config::Config, web};
 use tracing_subscriber::EnvFilter;
 

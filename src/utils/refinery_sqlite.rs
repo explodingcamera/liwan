@@ -3,8 +3,8 @@ use std::ops::DerefMut;
 use refinery::Migration;
 use refinery_core::traits::sync::{Migrate, Query, Transaction};
 use rusqlite::{Connection, Error as RqlError};
-use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
 
 pub struct RqlConnection<T: DerefMut<Target = Connection>>(pub T);
 impl<T: DerefMut<Target = Connection>> From<T> for RqlConnection<T> {

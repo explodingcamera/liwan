@@ -1,6 +1,6 @@
-use eyre::{bail, Result};
+use eyre::{Result, bail};
 
-use crate::app::{models, SqlitePool};
+use crate::app::{SqlitePool, models};
 use crate::utils::validate;
 
 #[derive(Clone)]

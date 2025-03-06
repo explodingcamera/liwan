@@ -1,10 +1,10 @@
-use argon2::password_hash::PasswordHasher;
 use argon2::PasswordVerifier;
-use argon2::{password_hash::SaltString, Argon2};
+use argon2::password_hash::PasswordHasher;
+use argon2::{Argon2, password_hash::SaltString};
 
 use eyre::Result;
-use rand::rngs::OsRng;
 use rand::Rng;
+use rand::rngs::OsRng;
 use sha3::Digest;
 use std::net::IpAddr;
 

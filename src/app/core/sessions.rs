@@ -1,4 +1,4 @@
-use crate::app::{models, SqlitePool};
+use crate::app::{SqlitePool, models};
 use eyre::Result;
 use rusqlite::params;
 use time::OffsetDateTime;
@@ -53,11 +53,7 @@ impl LiwanSessions {
 
         user.map(Some).or_else(
             |err| {
-                if err == rusqlite::Error::QueryReturnedNoRows {
-                    Ok(None)
-                } else {
-                    Err(err.into())
-                }
+                if err == rusqlite::Error::QueryReturnedNoRows { Ok(None) } else { Err(err.into()) }
             },
         )
     }

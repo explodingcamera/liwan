@@ -1,6 +1,6 @@
-use crate::app::{models::Event, Liwan};
+use crate::app::{Liwan, models::Event};
 use crate::utils::hash::{hash_ip, visitor_id};
-use crate::utils::referrer::{process_referer, Referrer};
+use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
 
@@ -8,7 +8,7 @@ use crossbeam_channel::Sender;
 use eyre::{Context, Result};
 use poem::http::{StatusCode, Uri};
 use poem::web::headers::UserAgent;
-use poem::web::{headers, Data, RealIp, TypedHeader};
+use poem::web::{Data, RealIp, TypedHeader, headers};
 use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
 use std::net::IpAddr;

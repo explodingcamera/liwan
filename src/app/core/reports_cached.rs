@@ -1,5 +1,5 @@
-use super::reports::{dimension_report, overall_report, overall_stats};
 use super::reports::{DateRange, Dimension, DimensionFilter, Metric, ReportGraph, ReportStats, ReportTable};
+use super::reports::{dimension_report, overall_report, overall_stats};
 
 use crate::{app::DuckDBConn, utils::to_sorted};
 use eyre::Result;

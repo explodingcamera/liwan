@@ -2,9 +2,9 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
-use crate::utils::duckdb::{repeat_vars, ParamVec};
+use crate::utils::duckdb::{ParamVec, repeat_vars};
 use duckdb::params_from_iter;
-use eyre::{bail, Result};
+use eyre::{Result, bail};
 use poem_openapi::{Enum, Object};
 
 pub use super::reports_cached::*;
@@ -143,11 +143,7 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
                         _ => bail!("Invalid filter type for value"),
                     };
 
-                    if inversed {
-                        format!("not {sql}")
-                    } else {
-                        sql.to_owned()
-                    }
+                    if inversed { format!("not {sql}") } else { sql.to_owned() }
                 }
                 (None, FilterType::IsNull, false) => "is null".into(),
                 (None, FilterType::IsNull, true) => "is not null".into(),

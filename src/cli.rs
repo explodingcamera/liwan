@@ -1,5 +1,5 @@
 use crate::{
-    app::{models::UserRole, Liwan},
+    app::{Liwan, models::UserRole},
     config::{Config, DEFAULT_CONFIG},
 };
 use argh::FromArgs;

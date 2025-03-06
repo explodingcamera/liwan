@@ -1,5 +1,5 @@
 mod common;
-use eyre::{bail, Result};
+use eyre::{Result, bail};
 use serde_json::json;
 
 #[tokio::test]

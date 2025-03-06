@@ -2,8 +2,8 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use crate::app::models::User;
-use poem::web::cookie::{Cookie, SameSite};
 use poem::FromRequest;
+use poem::web::cookie::{Cookie, SameSite};
 
 pub const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 
