@@ -69,6 +69,7 @@ duckdb={version="1.2", git="https://github.com/explodingcamera-contrib/duckdb-rs
     "bundled",
     "time",
     "r2d2",
+    "buildtime_bindgen",
 ]}
 rusqlite={version="0.34", features=["bundled", "time"]}
 r2d2={version="0.8"}
