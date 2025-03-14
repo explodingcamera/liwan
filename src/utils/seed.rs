@@ -30,11 +30,11 @@ pub fn random_events(
     fqdn: &str,
     count: usize,
 ) -> impl Iterator<Item = Event> + use<> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut generated = 0;
     let entity_id = entity_id.to_string();
     let fqdn = fqdn.to_string();
-    let visitor_ids: Vec<String> = (0..count / 5).map(|_| rng.r#gen::<u64>().to_string()).collect();
+    let visitor_ids: Vec<String> = (0..count / 5).map(|_| rng.random::<u64>().to_string()).collect();
 
     std::iter::from_fn(move || {
         if generated >= count {
@@ -53,7 +53,7 @@ pub fn random_events(
         let referrer = random_el(REFERRERS, 0.5);
         let platform = random_el(PLATFORMS, -0.5);
         let browser = random_el(BROWSERS, -0.5);
-        let mobile = rng.gen_bool(0.7);
+        let mobile = rng.random_bool(0.7);
         let (city, country) = random_el(CITIES, 0.5);
 
         Some(Event {
@@ -79,8 +79,8 @@ pub fn random_events(
 }
 
 fn random_date(min: OffsetDateTime, max: OffsetDateTime, scale: f64) -> OffsetDateTime {
-    let mut rng = rand::thread_rng();
-    let uniform_random: f64 = rng.r#gen();
+    let mut rng = rand::rng();
+    let uniform_random: f64 = rng.random();
     let weighted_random = (uniform_random.powf(1.0 - scale)).min(1.0);
     let duration = max - min;
     let duration_seconds = duration.as_seconds_f64();
@@ -90,12 +90,12 @@ fn random_date(min: OffsetDateTime, max: OffsetDateTime, scale: f64) -> OffsetDa
 }
 
 fn random_el<T>(slice: &[T], scale: f64) -> &T {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let len = slice.len();
 
     assert!(len != 0, "Cannot choose from an empty slice");
 
-    let uniform_random: f64 = rng.r#gen();
+    let uniform_random: f64 = rng.random();
     let weighted_random = (uniform_random.powf(1.0 - scale)).min(1.0);
     let index = (weighted_random * (len as f64)) as usize;
     &slice[index.min(len - 1)]

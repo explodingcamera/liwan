@@ -1,10 +1,9 @@
+use argon2::Argon2;
 use argon2::PasswordVerifier;
-use argon2::password_hash::PasswordHasher;
-use argon2::{Argon2, password_hash::SaltString};
+use argon2::password_hash::rand_core::{OsRng, RngCore};
+use argon2::password_hash::{PasswordHasher, SaltString};
 
 use eyre::Result;
-use rand::Rng;
-use rand::rngs::OsRng;
 use sha3::Digest;
 use std::net::IpAddr;
 
@@ -40,7 +39,7 @@ pub fn visitor_id() -> String {
     // random 32 byte hex string
     let mut rng = OsRng;
     let mut bytes = [0u8; 32];
-    rng.fill(&mut bytes);
+    rng.fill_bytes(&mut bytes);
     bs58::encode(bytes).into_string()
 }
 
@@ -48,13 +47,13 @@ pub fn session_token() -> String {
     // random 32 byte hex string
     let mut rng = OsRng;
     let mut bytes = [0u8; 32];
-    rng.fill(&mut bytes);
+    rng.fill_bytes(&mut bytes);
     bs58::encode(bytes).into_string()
 }
 
 pub fn onboarding_token() -> String {
     let mut rng = OsRng;
     let mut bytes = [0u8; 8];
-    rng.fill(&mut bytes);
+    rng.fill_bytes(&mut bytes);
     bs58::encode(bytes).into_string()
 }

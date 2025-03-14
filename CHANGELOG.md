@@ -18,7 +18,10 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ## [Unreleased]
 
-### 🚀 Features
+- Updated dependencies (DuckDb 1.2)
+- Updated list of referer spammer, useragents
+
+## v1.1.0 - 2024-12-28
 
 - Improved query caching to prevent unnecessary database queries
 - Added Country Code to Google Referrer URLs

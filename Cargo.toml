@@ -37,7 +37,7 @@ argon2={version="0.5"}
 # general
 argh={version="0.1"}
 eyre={version="0.6"}
-rand={version="0.8"}
+rand={version="0.9"}
 time={version="0.3"}
 colored={version="3.0"}
 figment={version="0.10", features=["toml", "env"]}
@@ -65,11 +65,10 @@ reqwest={version="0.12", default-features=false, features=[
 ]}
 
 # database
-duckdb={version="1.2", git="https://github.com/explodingcamera-contrib/duckdb-rs", features=[
+duckdb={git="https://github.com/explodingcamera-contrib/duckdb-rs", features=[
     "bundled",
     "time",
     "r2d2",
-    "buildtime_bindgen",
 ]}
 rusqlite={version="0.34", features=["bundled", "time"]}
 r2d2={version="0.8"}
