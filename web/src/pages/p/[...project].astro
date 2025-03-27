@@ -5,13 +5,10 @@ import { Project } from "../../components/project";
 import Layout from "../../layouts/Layout.astro";
 
 export const getStaticPaths = (() => {
-	return [
-		{ params: { project: "project" } },
-		{ params: { project: "private-project" } },
-		{ params: { project: "public-project" } },
-		{ params: { project: "liwan.dev" } },
-	];
+	return [{ params: { project: "project" } }];
 }) satisfies GetStaticPaths;
+
+export const prerender = import.meta.env.MODE !== "development";
 ---
 
 <Layout title="Project Details">
