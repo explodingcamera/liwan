@@ -80,7 +80,8 @@ impl LiwanGeoIP {
     pub fn lookup(&self, ip: &IpAddr) -> Result<LookupResult> {
         let reader = self.reader.read().map_err(|_| eyre::eyre!("Failed to acquire GeoIP reader lock"))?;
         let reader = reader.as_ref().ok_or_eyre("GeoIP database not found")?;
-        let lookup: maxminddb::geoip2::City = reader.lookup(*ip)?;
+        let lookup: maxminddb::geoip2::City =
+            reader.lookup(*ip)?.ok_or_else(|| eyre::eyre!("No data found for IP address"))?;
         let city = lookup.city.and_then(|city| city.names.and_then(|names| names.get("en").map(|s| (*s).to_string())));
         let country_code = lookup.country.and_then(|country| country.iso_code.map(ToString::to_string));
         Ok(LookupResult { city, country_code })
