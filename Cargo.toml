@@ -67,7 +67,6 @@ reqwest={version="0.12", default-features=false, features=[
 # database
 duckdb={git="https://github.com/explodingcamera-contrib/duckdb-rs", features=[
     "bundled",
-    "buildtime_bindgen",
     "time",
     "r2d2",
 ]}

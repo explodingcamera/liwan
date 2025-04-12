@@ -31,7 +31,6 @@ jobs:
       - name: Run tests
         run: bun test
         working-directory: ./web
-        # temporarily disabled due to a bug with astros client.d.ts
-      # - name: Run typecheck
-      #   run: bun typecheck
-      #   working-directory: ./web
+      - name: Run typecheck
+        run: bun typecheck
+        working-directory: ./web
