@@ -20,7 +20,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 - Liwan has been relicensed under the terms of the Apache-2.0 license
 - Updated dependencies (DuckDb 1.2)
-- Updated list of referer spammer, useragents
+- Updated list of referrer spammers, useragents
 
 ## v1.1.0 - 2024-12-28
 
