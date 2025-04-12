@@ -13,34 +13,41 @@ pub(super) fn init_duckdb(
     duckdb_config: Option<DuckdbConfig>,
     mut migrations_runner: Runner,
 ) -> Result<r2d2::Pool<DuckdbConnectionManager>> {
-    let conn = DuckdbConnectionManager::file(path)?;
-    let pool = r2d2::Pool::new(conn)?;
-    migrations_runner.set_migration_table_name("migrations");
+    let mut flags =
+        duckdb::Config::default().access_mode(duckdb::AccessMode::ReadWrite)?.with("enable_fsst_vectors", "true")?;
 
-    for migration in migrations_runner.run_iter(&mut DuckDBConnection(pool.get()?)) {
-        match migration {
-            Ok(migration) => {
-                tracing::info!("Applied migration: {}", migration);
-            }
-            Err(err) => {
-                bail!("Failed to apply migration: {}", err);
-            }
+    if let Some(duckdb_config) = duckdb_config {
+        if let Some(memory_limit) = duckdb_config.memory_limit {
+            flags = flags.max_memory(&memory_limit)?;
         }
+
+        if let Some(threads) = duckdb_config.threads {
+            flags = flags.threads((u16::try_from(threads)?).try_into()?)?;
+        }
+    }
+
+    let conn = DuckdbConnectionManager::file_with_flags(path, flags)?;
+    let pool = r2d2::Pool::new(conn)?;
+
+    {
+        let conn = pool.get()?;
+        conn.execute("PRAGMA enable_checkpoint_on_shutdown; LOAD core_functions;", [])?;
+        conn.pragma_update(None, "allow_community_extensions", &"false")?;
+        conn.pragma_update(None, "autoinstall_known_extensions", &"false")?;
+        conn.pragma_update(None, "autoload_known_extensions", &"false")?;
     }
 
     {
         let conn = pool.get()?;
-        conn.pragma_update(None, "allow_community_extensions", &"false")?;
-        conn.pragma_update(None, "enable_external_access", &"false")?;
-        conn.pragma_update(None, "enable_fsst_vectors", &"true")?;
-
-        if let Some(duckdb_config) = duckdb_config {
-            if let Some(memory_limit) = duckdb_config.memory_limit {
-                conn.pragma_update(None, "memory_limit", &memory_limit)?;
-            }
-
-            if let Some(threads) = duckdb_config.threads {
-                conn.pragma_update(None, "threads", &threads.to_string())?;
+        migrations_runner.set_migration_table_name("migrations");
+        for migration in migrations_runner.run_iter(&mut DuckDBConnection(conn)) {
+            match migration {
+                Ok(migration) => {
+                    tracing::info!("Applied migration: {}", migration);
+                }
+                Err(err) => {
+                    bail!("Failed to apply migration: {}", err);
+                }
             }
         }
     }
