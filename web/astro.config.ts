@@ -2,6 +2,7 @@ import path from "node:path";
 import react from "@astrojs/react";
 import { defineConfig } from "astro/config";
 import license from "rollup-plugin-license";
+import type { AstroIntegration } from "astro";
 const dirname = path.dirname(new URL(import.meta.url).pathname);
 
 const proxy = {
@@ -11,6 +12,23 @@ const proxy = {
 		cookieDomainRewrite: "localhost:4321",
 	},
 };
+
+function setPrerender(): AstroIntegration {
+	let isDev = false;
+	return {
+		name: "set-prerender",
+		hooks: {
+			"astro:config:setup": ({ command }) => {
+				isDev = command === "dev";
+			},
+			"astro:route:setup": ({ route }) => {
+				if (isDev && route.component.endsWith("/pages/p/[...project].astro")) {
+					route.prerender = false;
+				}
+			},
+		},
+	};
+}
 
 // https://astro.build/config
 export default defineConfig({
@@ -30,7 +48,7 @@ export default defineConfig({
 			}) as any,
 		],
 	},
-	integrations: [react()],
+	integrations: [react(), setPrerender()],
 	redirects: {
 		"/settings": "/settings/projects",
 	},

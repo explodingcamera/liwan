@@ -177,7 +177,7 @@ const DimensionValueButton = ({
 	onSelect?: () => void;
 }) => (
 	<button type="button" className={styles.dimensionItemSelect} onClick={onSelect}>
-		{children}
+		<span>{children}</span>
 	</button>
 );
 

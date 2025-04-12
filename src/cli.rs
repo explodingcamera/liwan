@@ -133,7 +133,7 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
         #[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
         Command::SeedDatabase(_) => {
             let app = Liwan::try_new(config)?;
-            app.seed_database(100000)?;
+            app.seed_database(10_000_000)?;
             println!("Database seeded with test data");
         }
     }

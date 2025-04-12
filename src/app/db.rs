@@ -31,7 +31,7 @@ pub(super) fn init_duckdb(
 
     {
         let conn = pool.get()?;
-        conn.execute("PRAGMA enable_checkpoint_on_shutdown; LOAD core_functions;", [])?;
+        conn.execute_batch("PRAGMA enable_checkpoint_on_shutdown; LOAD core_functions;")?;
         conn.pragma_update(None, "allow_community_extensions", &"false")?;
         conn.pragma_update(None, "autoinstall_known_extensions", &"false")?;
         conn.pragma_update(None, "autoload_known_extensions", &"false")?;
