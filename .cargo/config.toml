@@ -1,7 +1,7 @@
 [build]
 
 [target.x86_64-unknown-linux-musl]
-rustflags=["-C", "target_cpu=x86-64-v2", "-L", "./duckdb"]
+rustflags=["-C", "target_cpu=x86-64-v2"]
 
 [env]
 DUCKDB_STATIC="1"
