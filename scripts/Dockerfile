@@ -11,7 +11,7 @@ RUN echo "Downloading liwan for ${TARGETPLATFORM}..." \
     && tar -xzf /tmp/package.tar.gz -C /app \
     && chmod +x /app/liwan
 
-FROM scratch
+FROM alpine:3
 
 ENV LIWAN_CONFIG=/liwan.config.toml
 ENV LIWAN_DATA_DIR=/data
