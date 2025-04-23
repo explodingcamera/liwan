@@ -13,8 +13,10 @@ pub(super) fn init_duckdb(
     duckdb_config: Option<DuckdbConfig>,
     mut migrations_runner: Runner,
 ) -> Result<r2d2::Pool<DuckdbConnectionManager>> {
-    let mut flags =
-        duckdb::Config::default().access_mode(duckdb::AccessMode::ReadWrite)?.with("enable_fsst_vectors", "true")?;
+    let mut flags = duckdb::Config::default()
+        .enable_autoload_extension(true)?
+        .access_mode(duckdb::AccessMode::ReadWrite)?
+        .with("enable_fsst_vectors", "true")?;
 
     if let Some(duckdb_config) = duckdb_config {
         if let Some(memory_limit) = duckdb_config.memory_limit {
@@ -31,9 +33,7 @@ pub(super) fn init_duckdb(
 
     {
         let conn = pool.get()?;
-        conn.execute_batch("PRAGMA enable_checkpoint_on_shutdown; LOAD core_functions;")?;
-        conn.pragma_update(None, "allow_community_extensions", &"false")?;
-        conn.pragma_update(None, "autoinstall_known_extensions", &"false")?;
+        conn.execute_batch("PRAGMA enable_checkpoint_on_shutdown;")?;
         conn.pragma_update(None, "autoload_known_extensions", &"false")?;
     }
 
@@ -64,8 +64,6 @@ pub fn init_duckdb_mem(mut migrations_runner: Runner) -> Result<r2d2::Pool<Duckd
     {
         let conn = pool.get()?;
         conn.pragma_update(None, "allow_community_extensions", &"false")?;
-        conn.pragma_update(None, "autoinstall_known_extensions", &"false")?;
-        conn.pragma_update(None, "autoload_known_extensions", &"false")?;
         conn.pragma_update(None, "enable_fsst_vectors", &"true")?;
     }
 

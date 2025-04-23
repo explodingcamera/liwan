@@ -8,7 +8,6 @@ accepted=[
     "Unicode-DFS-2016",
     "Unicode-3.0",
     "OpenSSL",
-    "LicenseRef-Liwan",
     "Zlib",
 ]
 targets=["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "aarch64-apple-darwin"]

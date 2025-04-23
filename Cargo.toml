@@ -61,13 +61,13 @@ reqwest={version="0.12", default-features=false, features=[
     "json",
     "stream",
     "charset",
-    "rustls-tls",
+    "rustls-tls-webpki-roots-no-provider",
 ]}
+rustls={version="0.23"}
 
 # database
 duckdb={git="https://github.com/explodingcamera-contrib/duckdb-rs", features=[
     "bundled",
-    "extensions-full",
     "time",
     "r2d2",
 ]}
