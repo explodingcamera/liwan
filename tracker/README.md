@@ -83,4 +83,4 @@ export function event(
 
 ## License
 
-The liwan tracker is licensed under the [MIT License](LICENSE.md). Liwan itself is available under the [AGPL-3.0 License](https://github.com/explodingcamera/liwan/blob/main/LICENSE.md).
+The Liwan tracker is licensed under the [MIT License](LICENSE.md). Liwan itself is available under the [Apache-2.0 License](https://github.com/explodingcamera/liwan/blob/main/LICENSE.md).

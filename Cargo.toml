@@ -71,9 +71,9 @@ duckdb={git="https://github.com/explodingcamera-contrib/duckdb-rs", features=[
     "time",
     "r2d2",
 ]}
-rusqlite={version="0.34", features=["bundled", "modern_sqlite", "time"]}
+rusqlite={version="0.35", features=["bundled", "modern_sqlite", "time"]}
 r2d2={version="0.8"}
-r2d2_sqlite="0.27"
+r2d2_sqlite="0.28"
 refinery={version="0.8", default-features=false}
 refinery-core={version="0.8", default-features=false}
 maxminddb={version="0.26", optional=true}

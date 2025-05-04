@@ -1,7 +1,6 @@
 ---
-import licensesCargo from "../../../data/licenses-cargo.json";
-// biome-ignore lint/style/useImportType: no
-import licensesNpm from "../../../data/licenses-npm.json";
+import licensesCargo from "../../../data/licenses-cargo.json" assert { type: "json" };
+import licensesNpm from "../../../data/licenses-npm.json" assert { type: "json" };
 import Layout from "../layouts/Layout.astro";
 
 const getRepositoryUrl = (repository: (typeof licensesNpm)[0]["repository"]) => {
@@ -50,7 +49,7 @@ const licenseText = (text: string) => {
 
   <h2>Liwan</h2>
   <p>
-    Liwan is an open source project, available under the AGPL-3.0-only license.
+    Liwan is an open source project, available under the Apache-2.0 license.
     See <a href="https://liwan.dev">liwan.dev</a> and <a
       href="https://github.com/explodingcamera/liwan">GitHub</a
     > for more information.
