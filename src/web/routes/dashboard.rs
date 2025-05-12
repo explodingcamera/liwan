@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::app::Liwan;
 use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, Metric, ReportStats};
 use crate::utils::validate::{self, can_access_project};
@@ -74,7 +76,7 @@ pub struct DashboardAPI;
 #[OpenApi]
 impl DashboardAPI {
     #[oai(path = "/config", method = "get")]
-    async fn config_handler(&self, Data(app): Data<&Liwan>) -> ApiResult<Json<ConfigResponse>> {
+    async fn config_handler(&self, Data(app): Data<&Arc<Liwan>>) -> ApiResult<Json<ConfigResponse>> {
         Ok(Json(ConfigResponse { disable_favicons: app.config.disable_favicons }))
     }
 
@@ -82,7 +84,7 @@ impl DashboardAPI {
     async fn project_earliest_handler(
         &self,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<Option<time::OffsetDateTime>>> {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -102,7 +104,7 @@ impl DashboardAPI {
         &self,
         Json(req): Json<GraphRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<GraphResponse>> {
         if req.data_points > validate::MAX_DATAPOINTS {
@@ -141,7 +143,7 @@ impl DashboardAPI {
         &self,
         Json(req): Json<StatsRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<StatsResponse>> {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -184,7 +186,7 @@ impl DashboardAPI {
         &self,
         Json(req): Json<DimensionRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         user: Option<SessionUser>,
     ) -> ApiResult<Json<DimensionResponse>> {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;

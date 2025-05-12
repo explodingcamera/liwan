@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 use crate::app::models::User;
@@ -31,6 +31,9 @@ pub struct SessionUser(pub User);
 impl<'a> FromRequest<'a> for SessionId {
     async fn from_request(req: &'a poem::Request, _body: &mut poem::RequestBody) -> poem::Result<Self> {
         let session_id = req.cookie().get(SESSION_COOKIE.name()).map(|cookie| cookie.value_str().to_owned());
+
+        tracing::debug!("SessionId: {:?}", session_id);
+
         let session_id = session_id.ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
 
         Ok(Self(session_id))
@@ -41,9 +44,13 @@ impl<'a> FromRequest<'a> for SessionUser {
     async fn from_request(req: &'a poem::Request, body: &mut poem::RequestBody) -> poem::Result<Self> {
         let session_id = SessionId::from_request(req, body).await?.0;
 
+        tracing::debug!("getting session user");
+
         let app = req
-            .data::<crate::app::Liwan>()
+            .data::<Arc<crate::app::Liwan>>()
             .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+
+        tracing::debug!("SessionUser: {:?}", session_id);
 
         let user = app
             .sessions

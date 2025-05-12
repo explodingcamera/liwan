@@ -122,7 +122,7 @@ impl Config {
                 .join(Toml::file(format!("{config_dir}/liwan.config.toml")));
         }
 
-        let config: Config = config
+        let config: Self = config
             .merge(Env::raw().filter_map(|key| match key {
                 k if !k.starts_with("LIWAN_") => None,
                 k if k.starts_with("LIWAN_MAXMIND_") => Some(format!("geoip.maxmind_{}", &k[14..]).into()),

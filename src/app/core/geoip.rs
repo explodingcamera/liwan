@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::app::SqlitePool;
 use crossbeam_utils::sync::ShardedLock;
-use eyre::{OptionExt, Result};
+use eyre::{Context, OptionExt, Result};
 use futures_lite::StreamExt;
 use md5::{Digest, Md5};
 use tokio_tar::Archive;
@@ -119,11 +119,13 @@ impl LiwanGeoIP {
         }
 
         if update {
-            let Ok(file) = download_maxmind_db(&maxmind_edition, &maxmind_account_id, &maxmind_license_key).await
-            else {
-                tracing::warn!("Failed to download GeoIP database, skipping update");
-                self.downloading.store(false, Ordering::Release);
-                return Ok(());
+            let file = match download_maxmind_db(&maxmind_edition, &maxmind_account_id, &maxmind_license_key).await {
+                Ok(file) => file,
+                Err(e) => {
+                    tracing::warn!(error = ?e, "Failed to download GeoIP database, skipping update");
+                    self.downloading.store(false, Ordering::Release);
+                    return Ok(());
+                }
             };
 
             // close the current reader to free up the file
@@ -213,21 +215,20 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
     let mut entries = archive.entries()?;
 
     let folder = std::env::temp_dir().join("liwan-geoip");
+    std::fs::create_dir_all(&folder).wrap_err("Failed to create temp directory")?;
+
     let file;
     loop {
-        let mut entry = entries
-            .next()
-            .await
-            .ok_or_else(|| eyre::eyre!("No entries found"))?
-            .map_err(|e| eyre::eyre!("Failed to read entry: {}", e))?;
+        let mut entry = entries.next().await.ok_or_eyre("No entries found")?.wrap_err("Failed to read entry")?;
 
         let entry_path = entry.path()?;
         if entry_path.extension().is_some_and(|ext| ext == "mmdb") {
             file = entry
                 .unpack_in(folder)
                 .await
-                .map_err(|e| eyre::eyre!("Failed to unpack entry: {}", e))?
+                .wrap_err("Failed to unpack entry")?
                 .ok_or_eyre("Failed to unpack entry")?;
+
             break;
         }
     }

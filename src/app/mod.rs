@@ -3,6 +3,7 @@ mod db;
 
 pub mod models;
 pub use core::reports;
+use std::sync::Arc;
 
 use crate::config::Config;
 
@@ -10,13 +11,11 @@ use core::{LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjects, LiwanSess
 use duckdb::DuckdbConnectionManager;
 use eyre::Result;
 use r2d2_sqlite::SqliteConnectionManager;
-use std::sync::Arc;
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
 pub type SqlitePool = r2d2::Pool<SqliteConnectionManager>;
 
-#[derive(Clone)]
 pub struct Liwan {
     events_pool: r2d2::Pool<DuckdbConnectionManager>,
 
@@ -28,7 +27,7 @@ pub struct Liwan {
     pub projects: core::projects::LiwanProjects,
     pub geoip: Option<core::geoip::LiwanGeoIP>,
 
-    pub config: Arc<Config>,
+    pub config: Config,
 }
 
 #[rustfmt::skip]
@@ -40,7 +39,7 @@ mod embedded {
 const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 
 impl Liwan {
-    pub fn try_new(config: Config) -> Result<Self> {
+    pub fn try_new(config: Config) -> Result<Arc<Self>> {
         tracing::debug!("Initializing app");
         let folder = std::path::Path::new(&config.data_dir);
         if !folder.exists() {
@@ -68,11 +67,12 @@ impl Liwan {
             users: LiwanUsers::new(conn_app),
 
             events_pool: conn_events,
-            config: config.into(),
-        })
+            config,
+        }
+        .into())
     }
 
-    pub fn new_memory(config: Config) -> Result<Self> {
+    pub fn new_memory(config: Config) -> Result<Arc<Self>> {
         tracing::debug!("Initializing app in memory");
         let conn_app = db::init_sqlite_mem(embedded::app::migrations::runner())?;
         let conn_events = db::init_duckdb_mem(embedded::events::migrations::runner())?;
@@ -89,8 +89,9 @@ impl Liwan {
             users: LiwanUsers::new(conn_app),
 
             events_pool: conn_events,
-            config: config.into(),
-        })
+            config,
+        }
+        .into())
     }
 
     pub fn events_conn(&self) -> Result<DuckDBConn> {

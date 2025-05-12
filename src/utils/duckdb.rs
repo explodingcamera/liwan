@@ -12,7 +12,7 @@ impl<'a> ParamVec<'a> {
         self.0.push(Box::new(value));
     }
 
-    pub fn extend_from_params(&mut self, params: ParamVec<'a>) {
+    pub fn extend_from_params(&mut self, params: Self) {
         self.0.extend(params.0);
     }
 

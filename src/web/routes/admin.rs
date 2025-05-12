@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::app::Liwan;
 use crate::app::models::{Entity, Project, UserRole};
 use crate::utils::validate::can_access_project;
@@ -129,7 +131,7 @@ impl AdminAPI {
     #[oai(path = "/users", method = "get")]
     async fn users_handler(
         &self,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<Response<Json<UsersResponse>>> {
         if user.role != UserRole::Admin {
@@ -152,7 +154,7 @@ impl AdminAPI {
         &self,
         Path(username): Path<String>,
         Json(user): Json<UpdateUserRequest>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
@@ -175,7 +177,7 @@ impl AdminAPI {
         &self,
         Path(username): Path<String>,
         Json(password): Json<UpdatePasswordRequest>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin || username != session_user.username {
@@ -193,7 +195,7 @@ impl AdminAPI {
     async fn user_delete_handler(
         &self,
         Path(username): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
@@ -213,7 +215,7 @@ impl AdminAPI {
     async fn user_create_handler(
         &self,
         Json(user): Json<CreateUserRequest>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(session_user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if session_user.role != UserRole::Admin {
@@ -234,7 +236,7 @@ impl AdminAPI {
         &self,
         Json(project): Json<CreateProjectRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
@@ -261,7 +263,7 @@ impl AdminAPI {
         &self,
         Json(req): Json<UpdateProjectRequest>,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
@@ -291,7 +293,7 @@ impl AdminAPI {
     #[oai(path = "/projects", method = "get")]
     async fn projects_handler(
         &self,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         user: Option<SessionUser>,
     ) -> ApiResult<Response<Json<ProjectsResponse>>> {
         let projects = app.projects.all().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -320,7 +322,7 @@ impl AdminAPI {
     async fn project_handler(
         &self,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         user: Option<SessionUser>,
     ) -> ApiResult<Response<Json<ProjectResponse>>> {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -347,7 +349,7 @@ impl AdminAPI {
     async fn project_delete_handler(
         &self,
         Path(project_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -362,7 +364,7 @@ impl AdminAPI {
     #[oai(path = "/entities", method = "get")]
     async fn entities_handler(
         &self,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<Response<Json<EntitiesResponse>>> {
         if user.role != UserRole::Admin {
@@ -397,7 +399,7 @@ impl AdminAPI {
     async fn entity_create_handler(
         &self,
         Json(entity): Json<CreateEntityRequest>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<Json<EntityResponse>> {
         if user.role != UserRole::Admin {
@@ -419,7 +421,7 @@ impl AdminAPI {
         &self,
         Path(entity_id): Path<String>,
         Json(entity): Json<UpdateEntityRequest>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {
@@ -445,7 +447,7 @@ impl AdminAPI {
     async fn entity_delete_handler(
         &self,
         Path(entity_id): Path<String>,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         SessionUser(user): SessionUser,
     ) -> ApiResult<EmptyResponse> {
         if user.role != UserRole::Admin {

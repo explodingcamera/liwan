@@ -1,43 +1,44 @@
-use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-pub fn get_referer_name(fqdn: &str) -> Option<String> {
-    static REFERERS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
-        include_str!("../../data/referrers.txt")
-            .lines()
-            .map(|line| {
-                let mut parts = line.split('=');
-                let name = parts.next().expect("referrers.txt is malformed: missing key");
-                let fqdn = parts.next().expect("referrers.txt is malformed: missing value");
-                (fqdn.to_string(), name.to_string())
-            })
-            .collect()
-    });
+use ahash::{HashMap, HashSet};
 
+static REFERERS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    include_str!("../../data/referrers.txt")
+        .lines()
+        .map(|line| {
+            let mut parts = line.split('=');
+            let name = parts.next().expect("referrers.txt is malformed: missing key");
+            let fqdn = parts.next().expect("referrers.txt is malformed: missing value");
+            (fqdn.to_string(), name.to_string())
+        })
+        .collect()
+});
+
+static SPAMMERS: LazyLock<HashSet<String>> =
+    LazyLock::new(|| include_str!("../../data/spammers.txt").lines().map(ToString::to_string).collect());
+
+static REFERRER_ICONS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    include_str!("../../data/referrer_icons.txt")
+        .lines()
+        .map(|line| {
+            let mut parts = line.split('=');
+            let fqdn = parts.next().expect("referrer_icons.txt is malformed: missing key");
+            let icon = parts.next().expect("referrer_icons.txt is malformed: missing value");
+            (fqdn.to_string(), icon.to_string())
+        })
+        .collect()
+});
+
+pub fn get_referer_name(fqdn: &str) -> Option<String> {
     REFERERS.get(fqdn).map(ToString::to_string)
 }
 
 pub fn get_referer_icon(name: &str) -> Option<String> {
-    static REFERRER_ICONS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
-        include_str!("../../data/referrer_icons.txt")
-            .lines()
-            .map(|line| {
-                let mut parts = line.split('=');
-                let fqdn = parts.next().expect("referrer_icons.txt is malformed: missing key");
-                let icon = parts.next().expect("referrer_icons.txt is malformed: missing value");
-                (fqdn.to_string(), icon.to_string())
-            })
-            .collect()
-    });
-
     REFERRER_ICONS.get(name).map(ToString::to_string)
 }
 
 pub fn is_spammer(fqdn: &str) -> bool {
-    static SPAMMERS: LazyLock<HashSet<String>> =
-        LazyLock::new(|| include_str!("../../data/spammers.txt").lines().map(ToString::to_string).collect());
-
     SPAMMERS.contains(fqdn)
 }
 

@@ -2,6 +2,8 @@ pub mod routes;
 pub mod session;
 pub mod webext;
 
+use std::sync::Arc;
+
 use crate::app::Liwan;
 use crate::app::models::Event;
 use crossbeam_channel::Sender;
@@ -51,7 +53,7 @@ fn save_spec() -> Result<()> {
     Ok(())
 }
 
-pub fn create_router(app: Liwan, events: Sender<Event>) -> impl IntoEndpoint {
+pub fn create_router(app: Arc<Liwan>, events: Sender<Event>) -> impl IntoEndpoint {
     let handle_events = event_service().with(Cors::new().allow_method("POST").allow_credentials(false));
 
     let serve_script = EmbeddedFileEndpoint::<Script>::new("script.min.js")
@@ -85,7 +87,7 @@ pub fn create_router(app: Liwan, events: Sender<Event>) -> impl IntoEndpoint {
         .with(headers)
 }
 
-pub async fn start_webserver(app: Liwan, events: Sender<Event>) -> Result<()> {
+pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
     #[cfg(debug_assertions)]
     save_spec()?;
 

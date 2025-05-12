@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use ahash::HashMap;
 use std::sync::LazyLock;
 
 pub fn get_country_name(iso_2_code: &str) -> Option<String> {

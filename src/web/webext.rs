@@ -71,7 +71,7 @@ impl<E: RustEmbed + Send + Sync> Default for EmbeddedFilesEndpoint<E> {
 
 impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
     pub fn new() -> Self {
-        EmbeddedFilesEndpoint(PhantomData)
+        Self(PhantomData)
     }
 }
 
@@ -91,7 +91,7 @@ pub enum EmptyResponse {
 
 impl EmptyResponse {
     pub fn ok() -> ApiResult<Self> {
-        Ok(EmptyResponse::Ok(poem_openapi::payload::Json(StatusResponse { status: "ok".to_string(), message: None })))
+        Ok(Self::Ok(poem_openapi::payload::Json(StatusResponse { status: "ok".to_string(), message: None })))
     }
 }
 

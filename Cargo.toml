@@ -77,6 +77,7 @@ r2d2_sqlite="0.28"
 refinery={version="0.8", default-features=false}
 refinery-core={version="0.8", default-features=false}
 maxminddb={version="0.26", optional=true}
+ahash="0.8"
 
 [dev-dependencies]
 figment={version="*", features=["test"]}

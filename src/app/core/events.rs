@@ -70,10 +70,11 @@ impl LiwanEvents {
 
     /// Start processing events from the given channel. Blocks until the channel is closed.
     pub fn process(&self, events: Receiver<Event>) -> Result<()> {
+        let conn = self.duckdb.get()?;
+
         loop {
             match events.recv() {
                 Ok(event) => {
-                    let conn = self.duckdb.get()?;
                     let mut appender = conn.appender("events")?;
                     let mut first_event_time = event.created_at;
                     appender.append_row(event_params![event])?;
@@ -87,12 +88,8 @@ impl LiwanEvents {
                         if first_event_time > event.created_at {
                             first_event_time = event.created_at;
                         }
-
-                        // always flush after 5000 events
-                        if count >= 5000 {
-                            break;
-                        }
                     }
+
                     appender.flush()?;
                     update_event_times(&conn, first_event_time)?;
                     tracing::debug!("Processed {} events", count);

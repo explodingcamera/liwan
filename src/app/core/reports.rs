@@ -16,9 +16,9 @@ pub struct DateRange {
 }
 
 impl DateRange {
-    pub fn prev(&self) -> DateRange {
+    pub fn prev(&self) -> Self {
         let duration = self.end - self.start;
-        DateRange { start: self.start - duration, end: self.start }
+        Self { start: self.start - duration, end: self.start }
     }
 
     pub fn ends_in_future(&self) -> bool {

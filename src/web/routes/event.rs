@@ -13,7 +13,7 @@ use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use time::OffsetDateTime;
 
 #[derive(Object)]
@@ -35,7 +35,7 @@ struct Utm {
 }
 
 static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
-    LazyLock::new(|| quick_cache::sync::Cache::new(1000));
+    LazyLock::new(|| quick_cache::sync::Cache::new(512));
 
 pub struct EventApi;
 #[OpenApi]
@@ -44,7 +44,7 @@ impl EventApi {
     async fn event_handler(
         &self,
         RealIp(ip): RealIp,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         Data(events): Data<&Sender<Event>>,
         Json(event): Json<EventRequest>,
         TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
@@ -65,24 +65,18 @@ impl EventApi {
 }
 
 fn process_event(
-    app: Liwan,
+    app: Arc<Liwan>,
     events: Sender<Event>,
     event: EventRequest,
     url: Uri,
     ip: Option<IpAddr>,
     user_agent: UserAgent,
 ) -> Result<()> {
-    let client = useragent::parse(user_agent.as_str());
-    if useragent::is_bot(&client) {
-        return Ok(());
-    }
-
     let referrer = match process_referer(event.referrer.as_deref()) {
         Referrer::Fqdn(fqdn) => Some(fqdn),
         Referrer::Unknown(r) => r,
         Referrer::Spammer => return Ok(()),
     };
-
     let referrer = referrer.map(|r| r.trim_start_matches("www.").to_string()); // remove www. prefix
     let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
 
@@ -91,6 +85,12 @@ fn process_event(
             return Ok(());
         }
         EXISTING_ENTITIES.insert(event.entity_id.clone(), ());
+    }
+
+    // we delay the user agent parsing as much as possible since it's by far the most expensive operation
+    let client = useragent::parse(user_agent.as_str());
+    if client.is_bot() {
+        return Ok(());
     }
 
     let visitor_id = match ip {
@@ -115,14 +115,14 @@ fn process_event(
         referrer,
         country,
         city,
-        browser: client.user_agent.family.to_string().into(),
+        browser: client.ua_family.to_string().into(),
         created_at: OffsetDateTime::now_utc(),
         entity_id: event.entity_id,
         event: event.name,
         fqdn: fqdn.into(),
         path: path.into(),
-        mobile: Some(useragent::is_mobile(&client)),
-        platform: client.os.family.to_string().into(),
+        mobile: Some(client.is_mobile()),
+        platform: client.os_family.to_string().into(),
         utm_campaign: event.utm.as_ref().and_then(|u| u.campaign.clone()),
         utm_content: event.utm.as_ref().and_then(|u| u.content.clone()),
         utm_medium: event.utm.as_ref().and_then(|u| u.medium.clone()),

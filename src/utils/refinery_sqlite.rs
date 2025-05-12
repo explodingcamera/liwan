@@ -9,7 +9,7 @@ use time::format_description::well_known::Rfc3339;
 pub struct RqlConnection<T: DerefMut<Target = Connection>>(pub T);
 impl<T: DerefMut<Target = Connection>> From<T> for RqlConnection<T> {
     fn from(conn: T) -> Self {
-        RqlConnection(conn)
+        Self(conn)
     }
 }
 

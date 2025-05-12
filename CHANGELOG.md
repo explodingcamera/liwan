@@ -23,6 +23,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Updated list of referrer spammers, useragents
 - Ellipsis for long URLs in the UI
 - Fixed arm64 container images
+- Overall performance improvements and memory usage optimizations
 
 ## v1.1.0 - 2024-12-28
 

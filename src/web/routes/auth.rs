@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::app::Liwan;
 use crate::app::models::UserRole;
 use crate::utils::hash::session_token;
@@ -48,7 +50,7 @@ impl AuthApi {
     }
 
     #[oai(path = "/auth/setup", method = "post", transform = "login_rate_limit")]
-    async fn setup(&self, Data(app): Data<&Liwan>, Json(params): Json<SetupRequest>) -> ApiResult<EmptyResponse> {
+    async fn setup(&self, Data(app): Data<&Arc<Liwan>>, Json(params): Json<SetupRequest>) -> ApiResult<EmptyResponse> {
         let token = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
 
         if token != Some(params.token) {
@@ -70,7 +72,7 @@ impl AuthApi {
     #[oai(path = "/auth/login", method = "post", transform = "login_rate_limit")]
     async fn login(
         &self,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         Json(params): Json<LoginRequest>,
         cookies: &CookieJar,
     ) -> ApiResult<EmptyResponse> {
@@ -104,7 +106,7 @@ impl AuthApi {
     #[oai(path = "/auth/logout", method = "post")]
     async fn logout(
         &self,
-        Data(app): Data<&Liwan>,
+        Data(app): Data<&Arc<Liwan>>,
         cookies: &CookieJar,
         session_id: Option<SessionId>,
     ) -> ApiResult<EmptyResponse> {

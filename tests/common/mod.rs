@@ -6,7 +6,7 @@ use liwan::{
     config::Config,
 };
 
-pub fn app() -> liwan::app::Liwan {
+pub fn app() -> std::sync::Arc<Liwan> {
     Liwan::new_memory(Config::default()).unwrap()
 }
 

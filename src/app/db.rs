@@ -24,13 +24,12 @@ pub(super) fn init_duckdb(
         }
 
         if let Some(threads) = duckdb_config.threads {
-            flags = flags.threads((u16::try_from(threads)?).try_into()?)?;
+            flags = flags.threads(threads.get().into())?;
         }
     }
 
     let conn = DuckdbConnectionManager::file_with_flags(path, flags)?;
     let pool = r2d2::Pool::new(conn)?;
-
     {
         let conn = pool.get()?;
         conn.execute_batch("PRAGMA enable_checkpoint_on_shutdown;")?;

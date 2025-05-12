@@ -55,8 +55,8 @@ impl TryFrom<String> for UserRole {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.as_str() {
-            "admin" => Ok(UserRole::Admin),
-            "user" => Ok(UserRole::User),
+            "admin" => Ok(Self::Admin),
+            "user" => Ok(Self::User),
             _ => Err(format!("invalid role: {value}")),
         }
     }
@@ -66,8 +66,8 @@ impl UserRole {
     #[allow(clippy::inherent_to_string)]
     pub fn to_string(self) -> String {
         match self {
-            UserRole::Admin => "admin".to_string(),
-            UserRole::User => "user".to_string(),
+            Self::Admin => "admin".to_string(),
+            Self::User => "user".to_string(),
         }
     }
 }
