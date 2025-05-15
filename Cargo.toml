@@ -16,7 +16,7 @@ path="src/main.rs"
 
 [dependencies]
 # async/concurrency
-tokio={version="1.38", default-features=false, features=["macros", "rt-multi-thread"]}
+tokio={version="1.38", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-util="0.3"
 crossbeam-utils="0.8"

@@ -20,9 +20,14 @@ async fn main() -> Result<()> {
     }
 
     let app = Liwan::try_new(config)?;
+    let app_copy = app.clone();
 
     app.run_background_tasks();
     tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            tracing::info!("Received Ctrl-C, shutting down");
+            app_copy.shutdown()
+        },
         res = web::start_webserver(app.clone(), s) => res,
         res = tokio::task::spawn_blocking(move || app.clone().events.process(r)) => res?
     }

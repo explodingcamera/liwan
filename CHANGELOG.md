@@ -24,6 +24,16 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Added Country Code to Google Referrer URLs
 - Improved Multi-User Support (Non-admin users can now be granted access to specific projects)
 
+## v1.1.0 - 2025-05-15
+
+- Force duckdb to always checkpoint the database after shutting down. This is required for upgrading to the latest version of duckdb in liwan 1.2, which has issues loading the old checkpoint files when using musl libc.
+
+## v1.1.0 - 2024-12-28
+
+- Improved query caching to prevent unnecessary database queries
+- Added Country Code to Google Referrer URLs
+- Improved Multi-User Support (Non-admin users can now be granted access to specific projects)
+
 ## v1.0.0 - 2024-12-06
 
 ### 🚀 Features

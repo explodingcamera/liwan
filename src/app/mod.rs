@@ -100,6 +100,12 @@ impl Liwan {
     pub fn run_background_tasks(&self) {
         core::geoip::keep_updated(self.geoip.clone());
     }
+
+    pub fn shutdown(&self) -> Result<()> {
+        self.events_pool.get()?.execute("FORCE CHECKPOINT", [])?; // normal checkpoints don't seem to work consistently on shutdown
+        tracing::info!("Shutting down");
+        Ok(())
+    }
 }
 
 #[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
