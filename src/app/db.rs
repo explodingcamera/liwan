@@ -16,7 +16,8 @@ pub(super) fn init_duckdb(
     let mut flags = duckdb::Config::default()
         .enable_autoload_extension(true)?
         .access_mode(duckdb::AccessMode::ReadWrite)?
-        .with("enable_fsst_vectors", "true")?;
+        .with("enable_fsst_vectors", "true")?
+        .with("allocator_background_threads", "true")?;
 
     if let Some(duckdb_config) = duckdb_config {
         if let Some(memory_limit) = duckdb_config.memory_limit {
@@ -32,7 +33,7 @@ pub(super) fn init_duckdb(
     let pool = r2d2::Pool::new(conn)?;
     {
         let conn = pool.get()?;
-        conn.execute_batch("PRAGMA enable_checkpoint_on_shutdown;")?;
+        conn.execute("PRAGMA enable_checkpoint_on_shutdown", [])?;
         conn.pragma_update(None, "autoload_known_extensions", &"true")?;
         conn.pragma_update(None, "allow_community_extensions", &"false")?;
     }
