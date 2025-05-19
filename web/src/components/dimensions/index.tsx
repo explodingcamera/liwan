@@ -173,11 +173,11 @@ const DimensionValueButton = ({
 	children,
 	onSelect,
 }: {
-	children: React.ReactNode;
+	children: string;
 	onSelect?: () => void;
 }) => (
 	<button type="button" className={styles.dimensionItemSelect} onClick={onSelect}>
-		<span>{children}</span>
+		<span title={children}>{children}</span>
 	</button>
 );
 
