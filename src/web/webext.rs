@@ -1,4 +1,4 @@
-use std::{fmt::Display, marker::PhantomData};
+#![allow(clippy::result_large_err)]
 
 use poem::http::{Method, StatusCode, header};
 use poem::web::Json;
@@ -7,6 +7,7 @@ use poem_openapi::{ApiResponse, Object};
 use rust_embed::RustEmbed;
 use serde::Serialize;
 use serde_json::json;
+use std::{fmt::Display, marker::PhantomData};
 
 pub async fn catch_error(err: poem::Error) -> impl IntoResponse {
     Json(json!({ "status": "error", "message": err.to_string(), "code": err.status().as_u16()}))

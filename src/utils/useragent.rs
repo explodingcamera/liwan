@@ -26,7 +26,7 @@ pub fn parse(header: &str) -> UserAgent {
     let client = PARSER.parse(header);
     let uap = UserAgent {
         device_family: client.device.family.to_string(),
-        os_family: client.os.family.replace("Mac OS X", "macOS").replace("Other", "Unknown").into(),
+        os_family: client.os.family.replace("Mac OS X", "macOS").replace("Other", "Unknown"),
         ua_family: client.user_agent.family.to_string(),
     };
 
@@ -43,7 +43,7 @@ impl UserAgent {
         let client = PARSER.parse(header);
         let uap = UserAgent {
             device_family: client.device.family.to_string(),
-            os_family: client.os.family.replace("Mac OS X", "macOS").replace("Other", "Unknown").into(),
+            os_family: client.os.family.replace("Mac OS X", "macOS").replace("Other", "Unknown"),
             ua_family: client.user_agent.family.to_string(),
         };
 

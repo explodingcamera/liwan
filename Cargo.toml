@@ -2,7 +2,7 @@
 name="liwan"
 version="1.2.0"
 edition="2024"
-rust-version="1.86"
+rust-version="1.87"
 repository="https://github.com/explodingcamera/liwan"
 license="Apache-2.0"
 publish=false

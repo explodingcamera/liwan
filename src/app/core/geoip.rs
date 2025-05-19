@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
-use std::io::{self, ErrorKind};
+use std::io::{self};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -208,7 +208,7 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
 
     let client = reqwest::Client::new();
     let response = client.get(url).basic_auth(account_id, Some(license_key)).send().await?.error_for_status()?;
-    let stream = response.bytes_stream().map(|b| b.map_err(|e| io::Error::new(ErrorKind::Other, e)));
+    let stream = response.bytes_stream().map(|b| b.map_err(io::Error::other));
     let stream = StreamReader::new(stream);
     let stream = async_compression::tokio::bufread::GzipDecoder::new(stream);
     let mut archive = Archive::new(stream);

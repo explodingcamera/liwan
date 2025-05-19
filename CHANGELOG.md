@@ -16,22 +16,27 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
-## [Unreleased]
+<!-- ## [Unreleased] -->
 
-- Liwan has been relicensed under the terms of the Apache-2.0 license
-- Updated dependencies (DuckDb 1.2)
-- Updated list of referrer spammers, useragents
+## [v1.2.0] - 2025-05-16
+
+- Liwan has been relicensed under the terms of the **Apache-2.0** license (this also applies to all previous versions)
+- Updated to the latest version of DuckDB (1.2)
+- Updated list of referrer spammers, user-agents and site icons
 - Ellipsis for long URLs in the UI
-- Fixed arm64 container images
 - Overall performance improvements and memory usage optimizations
 
-## v1.1.0 - 2024-12-28
+## [v1.1.1] - 2025-05-15
+
+- Force duckdb to always checkpoint the database after shutting down. This is required for upgrading to the latest version of duckdb in liwan 1.2, which has issues loading the old checkpoint files when using musl libc.
+
+## [v1.1.0] - 2024-12-28
 
 - Improved query caching to prevent unnecessary database queries
 - Added Country Code to Google Referrer URLs
 - Improved Multi-User Support (Non-admin users can now be granted access to specific projects)
 
-## v1.0.0 - 2024-12-06
+## [v1.0.0] - 2024-12-06
 
 ### 🚀 Features
 
@@ -53,13 +58,13 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Removed Sessions and Average Views per Session metrics. They were not accurate and were removed to avoid confusion.
 - Added more tests & improved API performance ([`95d95d0`](https://github.com/explodingcamera/liwan/commit/95d95d0f4670d20a6fa4fc6a7f4b17e4b1854391))
 
-## **Liwan v0.1.1** - 2024-09-24
+## [v0.1.1] - 2024-09-24
 
 ### ⚡ Performance
 
 - **Database indexes**: Removed unnecessary indexes to improve performance and reduce disk usage ([`6191a72`](https://github.com/explodingcamera/liwan/commit/6191a72f08e8659237bc6c22139bde94432f66bb))
 
-## **Liwan v0.1.0** - 2024-09-18
+## [v0.1.0] - 2024-09-18
 
 This is the first full release of the Liwan! 🎉
 All essential features for web analytics are now available, including:
