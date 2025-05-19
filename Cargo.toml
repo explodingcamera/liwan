@@ -1,10 +1,10 @@
 [package]
 name="liwan"
-version="0.1.1"
+version="1.1.1"
 edition="2021"
 rust-version="1.82"
 repository="https://github.com/explodingcamera/liwan"
-license="AGPL-3.0-only OR LicenseRef-Liwan"
+license="Apache-2.0"
 publish=false
 
 [lib]
