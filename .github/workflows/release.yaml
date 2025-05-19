@@ -68,8 +68,8 @@ jobs:
         with:
           name: web-dist
           path: ./web/dist
-      - uses: actions-rust-lang/setup-rust-toolchain@v1.11.0
-      - uses: taiki-e/upload-rust-binary-action@v1.24.0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1.12.0
+      - uses: taiki-e/upload-rust-binary-action@v1.26.0
         with:
           bin: liwan
           target: ${{ matrix.target }}

@@ -18,7 +18,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 <!-- ## [Unreleased] -->
 
-## [v1.2.0] - 2025-05-16
+## [v1.2.0] - 2025-05-19
 
 - Liwan has been relicensed under the terms of the **Apache-2.0** license (this also applies to all previous versions)
 - Updated to the latest version of DuckDB (1.2)
@@ -26,7 +26,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Ellipsis for long URLs in the UI
 - Overall performance improvements and memory usage optimizations
 
-## [v1.1.1] - 2025-05-15
+## [v1.1.1] - 2025-05-19
 
 - Force duckdb to always checkpoint the database after shutting down. This is required for upgrading to the latest version of duckdb in liwan 1.2, which has issues loading the old checkpoint files when using musl libc.
 
