@@ -29,7 +29,7 @@ bs58="0.5"
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
 md-5="0.10"
-async-compression={version="0.4", default-features=false, features=["gzip"]}
+async-compression={version="0.4", default-features=false, features=["gzip", "tokio"]}
 tokio-tar={package="astral-tokio-tar", version="0.5"}
 sha3={version="0.10"}
 argon2={version="0.5"}
@@ -46,7 +46,6 @@ tracing-subscriber={version="0.3", features=["env-filter"]}
 
 # web
 poem={version="3.1", default-features=false, features=[
-    "time",
     "embed",
     "cookie",
     "compression",
@@ -80,10 +79,13 @@ refinery-core={version="0.8", default-features=false}
 maxminddb={version="0.26", optional=true}
 ahash="0.8"
 
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator="0.6"
+
 [dev-dependencies]
 figment={version="*", features=["test"]}
 poem={version="*", features=["test"]}
-cookie={version="*"}
+cookie={version="*", default-features=false}
 
 [features]
 default=["geoip"]

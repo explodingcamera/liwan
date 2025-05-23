@@ -49,17 +49,20 @@ let scriptEl: HTMLScriptElement | null = null;
 let endpoint: string | null = null;
 let entity: string | null = null;
 let referrer: string | null = null;
+const noWindow = typeof window === "undefined";
 
 if (typeof document !== "undefined") {
 	scriptEl = document.querySelector(`script[src^="${import.meta.url}"]`);
-	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && `${new URL(scriptEl.src).origin}/api/event`);
+	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && new URL(scriptEl.src).origin + "/api/event");
 	entity = scriptEl?.getAttribute("data-entity") || null;
 	referrer = document.referrer;
 }
 
-const LOCALHOST_REGEX = /^localhost$|^127(\.[0-9]+){0,2}\.[0-9]+$|^\[::1?\]$/;
-const log = (message: string) => console.info(`[liwan]: ${message}`);
-const ignore = (reason: string) => log(`Ignoring event: ${reason}`);
+const log = (message: string) => console.info("[liwan]: " + message);
+const ignore = (reason: string) => log("Ignoring event: " + reason);
+const reject = (message: string) => {
+	throw new Error("Failed to send event: " + message);
+};
 
 /**
  * Sends an event to the Liwan API.
@@ -82,36 +85,33 @@ const ignore = (reason: string) => log(`Ignoring event: ${reason}`);
  * ```
  */
 export async function event(name = "pageview", options?: EventOptions): Promise<void> {
-	if (typeof window === "undefined" && !options?.endpoint)
-		return Promise.reject(new Error("endpoint is required in server-side environments"));
+	const endpoint_url = options?.endpoint || endpoint;
+	if (!endpoint_url) return reject("endpoint is required");
 	if (typeof localStorage !== "undefined" && localStorage.getItem("disable-liwan")) return ignore("localStorage flag");
-	if (LOCALHOST_REGEX.test(location.hostname) || location.protocol === "file:") return ignore("localhost");
-	if (!endpoint && !options?.endpoint) return ignore("no endpoint");
-	const utm = new URLSearchParams(location.search);
+	if (/^localhost$|^127(?:\.\d+){0,2}\.\d+$|^\[::1?\]$/.test(location.hostname) || location.protocol === "file:")
+		return ignore("localhost");
 
-	// biome-ignore lint/style/noNonNullAssertion: we know that endpoint is not null
-	return fetch((options?.endpoint || endpoint)!, {
+	const response = await fetch(endpoint_url, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(<Payload>{
-			entity_id: options?.entity || entity,
 			name,
+			entity_id: options?.entity || entity,
 			referrer: options?.referrer || referrer,
-			url: options?.url || `${location.origin}${location.pathname}`,
+			url: options?.url || location.origin + location.pathname,
 			utm: {
-				campaign: utm.get("utm_campaign"),
-				content: utm.get("utm_content"),
-				medium: utm.get("utm_medium"),
-				source: utm.get("utm_source"),
-				term: utm.get("utm_term"),
+				...["campaign", "content", "medium", "source", "term"].map((v) => [
+					v,
+					new URLSearchParams(location.search).get("utm_" + v),
+				]),
 			},
 		}),
-	}).then((response) => {
-		if (!response.ok) {
-			log(`Failed to send event: ${response.statusText}`);
-			return Promise.reject(new Error(`Failed to send event: ${response.statusText}`));
-		}
 	});
+
+	if (!response.ok) {
+		log("Failed to send event: " + response.statusText);
+		reject(response.statusText);
+	}
 }
 
 const trackPageviews = () => {
@@ -150,6 +150,6 @@ const trackPageviews = () => {
 	page();
 };
 
-if (typeof window !== "undefined" && !window.__liwan_loaded && scriptEl) {
+if (!noWindow && !window.__liwan_loaded && scriptEl) {
 	trackPageviews();
 }
