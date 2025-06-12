@@ -3,7 +3,7 @@ pub struct Event {
     pub entity_id: String,
     pub visitor_id: String,
     pub event: String,
-    pub created_at: OffsetDateTime,
+    pub created_at: DateTime<Utc>,
     pub fqdn: Option<String>,
     pub path: Option<String>,
     pub referrer: Option<String>,
@@ -99,7 +99,7 @@ macro_rules! event_params {
     };
 }
 
+use chrono::{DateTime, Utc};
 pub use event_params;
 use poem_openapi::Enum;
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;

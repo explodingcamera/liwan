@@ -4,6 +4,7 @@ use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
 
+use chrono::Utc;
 use crossbeam_channel::Sender;
 use eyre::{Context, Result};
 use poem::http::{StatusCode, Uri};
@@ -14,7 +15,6 @@ use poem_openapi::{Object, OpenApi};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::{Arc, LazyLock};
-use time::OffsetDateTime;
 
 #[derive(Object)]
 struct EventRequest {
@@ -116,7 +116,7 @@ fn process_event(
         country,
         city,
         browser: client.ua_family.to_string().into(),
-        created_at: OffsetDateTime::now_utc(),
+        created_at: Utc::now(),
         entity_id: event.entity_id,
         event: event.name,
         fqdn: fqdn.into(),

@@ -1,4 +1,5 @@
 mod common;
+use chrono::{Duration, Utc};
 use eyre::{Result, bail};
 use serde_json::json;
 
@@ -17,9 +18,8 @@ async fn test_dashboard() -> Result<()> {
     let graph_path = format!("{}/graph", api_prefix);
     let dimension_path = format!("{}/dimension", api_prefix);
 
-    let start_date = (time::OffsetDateTime::now_utc() - time::Duration::days(365))
-        .format(&time::format_description::well_known::Rfc3339)?;
-    let end_date = time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?;
+    let start_date = (Utc::now() - Duration::days(365)).to_rfc3339();
+    let end_date = Utc::now().to_rfc3339();
 
     let stats_requests = [
         json!({"range":{"start": start_date ,"end": end_date},"filters":[]}),

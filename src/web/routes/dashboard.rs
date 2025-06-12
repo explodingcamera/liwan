@@ -6,6 +6,7 @@ use crate::utils::validate::{self, can_access_project};
 use crate::web::session::SessionUser;
 use crate::web::webext::{ApiResult, PoemErrExt, http_bail};
 
+use chrono::{DateTime, Utc};
 use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::param::Path;
@@ -86,7 +87,7 @@ impl DashboardAPI {
         Path(project_id): Path<String>,
         Data(app): Data<&Arc<Liwan>>,
         user: Option<SessionUser>,
-    ) -> ApiResult<Json<Option<time::OffsetDateTime>>> {
+    ) -> ApiResult<Json<Option<DateTime<Utc>>>> {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
 
         if !can_access_project(&project, user.as_ref()) {

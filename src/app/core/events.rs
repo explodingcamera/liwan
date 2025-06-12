@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use chrono::{DateTime, Utc};
 use crossbeam_channel::Receiver;
 use crossbeam_utils::sync::ShardedLock;
 use eyre::{Result, bail};
-use time::OffsetDateTime;
 
 use crate::app::models::{Event, event_params};
 use crate::app::{DuckDBPool, EVENT_BATCH_INTERVAL, SqlitePool};
@@ -13,12 +13,12 @@ use crate::utils::hash::generate_salt;
 pub struct LiwanEvents {
     duckdb: DuckDBPool,
     sqlite: SqlitePool,
-    daily_salt: Arc<ShardedLock<(String, OffsetDateTime)>>,
+    daily_salt: Arc<ShardedLock<(String, DateTime<Utc>)>>,
 }
 
 impl LiwanEvents {
     pub fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool) -> Result<Self> {
-        let daily_salt: (String, OffsetDateTime) = {
+        let daily_salt: (String, DateTime<Utc>) = {
             tracing::debug!("Loading daily salt");
             sqlite.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
                 Ok((row.get(0)?, row.get(1)?))
@@ -35,10 +35,10 @@ impl LiwanEvents {
         };
 
         // if the salt is older than 24 hours, replace it with a new one (utils::generate_salt)
-        if (OffsetDateTime::now_utc() - updated_at) > time::Duration::hours(24) {
+        if (Utc::now() - updated_at) > chrono::Duration::hours(24) {
             tracing::debug!("Daily salt expired, generating a new one");
             let new_salt = generate_salt();
-            let now = OffsetDateTime::now_utc();
+            let now = Utc::now();
             let conn = self.sqlite.get()?;
             conn.execute("update salts set salt = ?, updated_at = ? where id = 1", rusqlite::params![&new_salt, now])?;
 
@@ -56,7 +56,7 @@ impl LiwanEvents {
     pub fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
         let conn = self.duckdb.get()?;
         let mut appender = conn.appender("events")?;
-        let mut first_event_time = OffsetDateTime::now_utc();
+        let mut first_event_time = Utc::now();
         for event in events {
             appender.append_row(event_params![event])?;
             if first_event_time > event.created_at {
@@ -105,7 +105,7 @@ impl LiwanEvents {
 
 use duckdb::{Connection, Result as DuckResult, params};
 
-pub fn update_event_times(conn: &Connection, from_time: OffsetDateTime) -> DuckResult<()> {
+pub fn update_event_times(conn: &Connection, from_time: DateTime<Utc>) -> DuckResult<()> {
     // this can probably be simplified, sadly the where clause can't contain window functions
     let sql = "--sql
         with

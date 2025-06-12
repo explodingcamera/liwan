@@ -7,6 +7,7 @@ use crate::web::PoemErrExt;
 use crate::web::session::{MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE, SessionId, SessionUser};
 use crate::web::webext::{ApiResult, EmptyResponse, http_bail};
 
+use chrono::Utc;
 use eyre::eyre;
 use poem::http::StatusCode;
 use poem::middleware::TowerLayerCompatExt;
@@ -89,7 +90,7 @@ impl AuthApi {
         }
 
         let session_id = session_token();
-        let expires = time::OffsetDateTime::now_utc() + MAX_SESSION_AGE;
+        let expires = Utc::now() + MAX_SESSION_AGE;
         app.sessions.create(&session_id, &username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let mut public_cookie = PUBLIC_COOKIE.clone();

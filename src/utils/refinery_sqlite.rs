@@ -1,10 +1,9 @@
-use std::ops::DerefMut;
+use std::{ops::DerefMut, time::SystemTime};
 
+use chrono::{DateTime, Utc};
 use refinery::Migration;
 use refinery_core::traits::sync::{Migrate, Query, Transaction};
 use rusqlite::{Connection, Error as RqlError};
-use time::OffsetDateTime;
-use time::format_description::well_known::Rfc3339;
 
 pub struct RqlConnection<T: DerefMut<Target = Connection>>(pub T);
 impl<T: DerefMut<Target = Connection>> From<T> for RqlConnection<T> {
@@ -19,15 +18,14 @@ fn query_applied_migrations(transaction: &rusqlite::Transaction, query: &str) ->
     let mut applied = Vec::new();
     while let Some(row) = rows.next()? {
         let version = row.get(0)?;
-        let applied_on: String = row.get(2)?;
-        // Safe to call unwrap, as we stored it in RFC3339 format on the database
-        let applied_on = OffsetDateTime::parse(&applied_on, &Rfc3339).unwrap();
-
+        let applied_on: DateTime<Utc> = row.get(2)?;
+        let applied_on: SystemTime = applied_on.into();
         let checksum: String = row.get(3)?;
+
         applied.push(Migration::applied(
             version,
             row.get(1)?,
-            applied_on,
+            applied_on.into(),
             checksum.parse::<u64>().expect("checksum must be a valid u64"),
         ));
     }

@@ -1,10 +1,11 @@
+use chrono::{DateTime, Utc};
 use eyre::Result;
 use refinery::{Migration, error::WrapMigrationError};
 use refinery_core::{
     Migrate,
     traits::sync::{Query, Transaction},
 };
-use std::ops::DerefMut;
+use std::{ops::DerefMut, time::SystemTime};
 
 pub struct DuckDBConnection<T: DerefMut<Target = duckdb::Connection>>(pub T);
 impl<T: DerefMut<Target = duckdb::Connection>> From<T> for DuckDBConnection<T> {
@@ -33,9 +34,11 @@ impl<T: DerefMut<Target = duckdb::Connection>> Query<Vec<Migration>> for DuckDBC
             .query_map([], |row| {
                 let version = row.get(0)?;
                 let name: String = row.get(1)?;
-                let applied_on: time::OffsetDateTime = row.get(2)?;
+                let applied_on: DateTime<Utc> = row.get(2)?;
                 let checksum: u64 = row.get(3)?;
-                Ok(Migration::applied(version, name, applied_on, checksum))
+                let applied_on: SystemTime = applied_on.into();
+
+                Ok(Migration::applied(version, name, applied_on.into(), checksum))
             })?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(applied)

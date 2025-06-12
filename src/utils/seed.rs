@@ -1,5 +1,5 @@
+use chrono::{DateTime, Duration, Utc};
 use rand::Rng;
-use time::OffsetDateTime;
 
 use crate::app::models::Event;
 
@@ -25,7 +25,7 @@ const UTM_SOURCES: &[&str] = &["", "google", "bing", "facebook", "twitter"];
 const UTM_TERMS: &[&str] = &["", "liwan", "analytics", "tracking", "web"];
 
 pub fn random_events(
-    time_range: (OffsetDateTime, OffsetDateTime),
+    time_range: (DateTime<Utc>, DateTime<Utc>),
     entity_id: &str,
     fqdn: &str,
     count: usize,
@@ -78,14 +78,14 @@ pub fn random_events(
     })
 }
 
-fn random_date(min: OffsetDateTime, max: OffsetDateTime, scale: f64) -> OffsetDateTime {
+fn random_date(min: DateTime<Utc>, max: DateTime<Utc>, scale: f64) -> DateTime<Utc> {
     let mut rng = rand::rng();
     let uniform_random: f64 = rng.random();
     let weighted_random = (uniform_random.powf(1.0 - scale)).min(1.0);
     let duration = max - min;
     let duration_seconds = duration.as_seconds_f64();
     let weighted_duration_seconds = duration_seconds * weighted_random;
-    let weighted_duration = time::Duration::seconds(weighted_duration_seconds as i64);
+    let weighted_duration = Duration::seconds(weighted_duration_seconds as i64);
     min + weighted_duration
 }
 

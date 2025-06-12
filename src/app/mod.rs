@@ -112,8 +112,8 @@ impl Liwan {
 #[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
 impl Liwan {
     pub fn seed_database(&self, count_per_entity: usize) -> Result<()> {
+        use chrono::{Days, Utc};
         use models::UserRole;
-        use time::OffsetDateTime;
 
         let entities = vec![
             ("entity-1", "Entity 1", "example.com", vec!["public-project".to_string(), "private-project".to_string()]),
@@ -139,8 +139,8 @@ impl Liwan {
             )?;
         }
 
-        let start = OffsetDateTime::now_utc().checked_sub(time::Duration::days(365)).unwrap();
-        let end = OffsetDateTime::now_utc();
+        let start = Utc::now().checked_sub_days(Days::new(365)).unwrap();
+        let end = Utc::now();
         for (entity_id, display_name, fqdn, project_ids) in entities {
             self.entities.create(
                 &models::Entity { id: entity_id.to_string(), display_name: display_name.to_string() },

@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
+use chrono::{DateTime, Utc};
 use duckdb::params_from_iter;
 use eyre::{Result, bail};
 use poem_openapi::{Enum, Object};
@@ -11,8 +12,8 @@ pub use super::reports_cached::*;
 
 #[derive(Object, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
-    pub start: time::OffsetDateTime,
-    pub end: time::OffsetDateTime,
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
 }
 
 impl DateRange {
@@ -22,10 +23,10 @@ impl DateRange {
     }
 
     pub fn ends_in_future(&self) -> bool {
-        self.end > time::OffsetDateTime::now_utc()
+        self.end > Utc::now()
     }
 
-    pub fn duration(&self) -> time::Duration {
+    pub fn duration(&self) -> chrono::Duration {
         self.end - self.start
     }
 }
@@ -218,7 +219,7 @@ fn metric_sql(metric: Metric) -> String {
     .to_owned()
 }
 
-pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Option<time::OffsetDateTime>> {
+pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Option<DateTime<Utc>>> {
     if entities.is_empty() {
         return Ok(None);
     }
@@ -233,7 +234,7 @@ pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Opti
 
     let mut stmt = conn.prepare_cached(&query)?;
     let rows = stmt.query_map(params_from_iter(entities), |row| row.get(0))?;
-    let earliest_timestamp = rows.collect::<Result<Vec<Option<time::OffsetDateTime>>, duckdb::Error>>()?;
+    let earliest_timestamp = rows.collect::<Result<Vec<Option<DateTime<Utc>>>, duckdb::Error>>()?;
     Ok(earliest_timestamp[0])
 }
 
