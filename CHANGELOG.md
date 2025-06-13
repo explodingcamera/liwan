@@ -16,7 +16,13 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
-<!-- ## [Unreleased] -->
+## [Unreleased]
+
+<!-- ## [v1.2.1] - 2025-06-13 -->
+
+- Full dimension values are now shown when hovering over the dimension in the table
+- Updated dependencies & switched to the upstream of DuckDB
+- Now using Jemalloc as the default memory allocator for improved performance and memory usage
 
 ## [v1.2.0] - 2025-05-19
 

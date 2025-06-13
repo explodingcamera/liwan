@@ -1,6 +1,6 @@
 [package]
 name="liwan"
-version="1.2.0"
+version="1.2.1"
 edition="2024"
 rust-version="1.87"
 repository="https://github.com/explodingcamera/liwan"
@@ -90,7 +90,8 @@ _enable_seeding=[]
 opt-level=1
 
 [profile.release]
-lto="thin"
+lto="fat"
 panic="abort"
 strip=true
-opt-level=2
+opt-level=3
+codegen-units=1

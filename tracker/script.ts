@@ -91,6 +91,7 @@ export async function event(name = "pageview", options?: EventOptions): Promise<
 	if (/^localhost$|^127(?:\.\d+){0,2}\.\d+$|^\[::1?\]$/.test(location.hostname) || location.protocol === "file:")
 		return ignore("localhost");
 
+	const utm = new URLSearchParams(location.search);
 	const response = await fetch(endpoint_url, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -100,10 +101,11 @@ export async function event(name = "pageview", options?: EventOptions): Promise<
 			referrer: options?.referrer || referrer,
 			url: options?.url || location.origin + location.pathname,
 			utm: {
-				...["campaign", "content", "medium", "source", "term"].map((v) => [
-					v,
-					new URLSearchParams(location.search).get("utm_" + v),
-				]),
+				campaign: utm.get("utm_campaign"),
+				content: utm.get("utm_content"),
+				medium: utm.get("utm_medium"),
+				source: utm.get("utm_source"),
+				term: utm.get("utm_term"),
 			},
 		}),
 	});
