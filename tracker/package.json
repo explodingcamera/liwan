@@ -1,11 +1,17 @@
 {
 	"name": "liwan-tracker",
-	"version": "0.2.0",
+	"description": "Tracking script for Liwan, an open-source analytics platform",
+	"keywords": ["analytics", "tracking", "liwan"],
+	"version": "1.0.0",
 	"homepage": "https://liwan.dev",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/explodingcamera/liwan.git",
 		"directory": "tracker"
+	},
+	"bugs": {
+		"url": "https://github.com/explodingcamera/liwan/issues",
+		"email": "hi@liwan.dev"
 	},
 	"license": "MIT",
 	"author": {
@@ -17,9 +23,9 @@
 	"exports": {
 		".": {
 			"import": "./script.min.js",
-			"types": "./script.min.d.ts"
+			"types": "./script.d.ts"
 		}
 	},
 	"module": "script.min.js",
-	"types": "script.min.d.ts"
+	"types": "script.d.ts"
 }
