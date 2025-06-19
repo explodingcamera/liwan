@@ -1,11 +1,11 @@
 import {
+	useMutation as _useMutation,
+	useQuery as _useQuery,
 	type DefaultError,
 	QueryClient,
 	type QueryKey,
 	type UseQueryOptions,
 	type UseQueryResult,
-	useMutation as _useMutation,
-	useQuery as _useQuery,
 } from "@tanstack/react-query";
 
 export const queryClient = new QueryClient();

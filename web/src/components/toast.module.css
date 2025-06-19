@@ -11,11 +11,10 @@
 
 .toast {
   padding: 0.8rem 1.1rem;
-  border-radius: 0.5rem;
   font-size: 0.9rem;
   color: #fff;
   box-shadow: var(--pico-card-box-shadow);
-  border-radius: var(--pico-border-radius);
+  border-radius: var(--pico-border-radius, 0.5rem);
 }
 
 .success {

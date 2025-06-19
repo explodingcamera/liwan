@@ -1,11 +1,11 @@
 import { useConfig } from "../api";
 import styles from "./icons.module.css";
 
-// biome-ignore format:
+// biome-ignore format: no
 import { SiAndroid, SiBadoo, SiBluesky, SiDouban, SiDribbble, SiDuckduckgo, SiFacebook, SiFirefox, SiFlickr, SiFoursquare, SiGithub, SiGoogle, SiGooglechrome, SiInstagram, SiIos, SiLastdotfm, SiLinux, SiLivejournal, SiMacos, SiMaildotru, SiMastodon, SiOdnoklassniki, SiOpera, SiPinterest, SiPixelfed, SiReddit, SiRenren, SiSafari, SiSinaweibo, SiSnapchat, SiSourceforge, SiStackoverflow, SiTelegram, SiThreads, SiTiktok, SiTumblr, SiTwitch, SiV2ex, SiViadeo, SiVimeo, SiVk, SiWorkplace, SiX, SiXing, SiYcombinator, SiYoutube } from "@icons-pack/react-simple-icons";
-// biome-ignore format:
+// biome-ignore format: no
 import { AppWindowIcon, EarthIcon, LayoutGridIcon, MonitorIcon, SearchIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
-// biome-ignore format:
+// biome-ignore format: no
 const brandIcons = { foursquare: SiFoursquare, vk: SiVk, sinaweibo: SiSinaweibo, telegram: SiTelegram, pixelfed: SiPixelfed, workplace: SiWorkplace, x: SiX, threads: SiThreads, Ru: SiMaildotru, News: SiYcombinator, tiktok: SiTiktok, facebook: SiFacebook, lastdotfm: SiLastdotfm, dribbble: SiDribbble, reddit: SiReddit, flickr: SiFlickr, github: SiGithub, pinterest: SiPinterest, stackoverflow: SiStackoverflow, bluesky: SiBluesky, livejournal: SiLivejournal, v2ex: SiV2ex, douban: SiDouban, renren: SiRenren, tumblr: SiTumblr, snapchat: SiSnapchat, badoo: SiBadoo, youtube: SiYoutube, instagram: SiInstagram, viadeo: SiViadeo, odnoklassniki: SiOdnoklassniki, vimeo: SiVimeo, mastodon: SiMastodon, sourceforge: SiSourceforge, twitch: SiTwitch, xing: SiXing, google: SiGoogle, duckduckgo: SiDuckduckgo,};
 
 const genericIcons = {
@@ -76,12 +76,12 @@ export const MobileDeviceIcon = ({ isMobile, ...props }: { isMobile: boolean } &
 };
 
 export const ReferrerIcon = ({ referrer, icon, ...props }: { referrer: string; icon?: string } & IconProps) => {
-	if (icon && Object.hasOwnProperty.call(brandIcons, icon)) {
+	if (icon && Object.hasOwn(brandIcons, icon)) {
 		const Icon = brandIcons[icon as keyof typeof brandIcons];
 		return <Icon {...props} />;
 	}
 
-	if (icon && Object.hasOwnProperty.call(genericIcons, icon)) {
+	if (icon && Object.hasOwn(genericIcons, icon)) {
 		const Icon = genericIcons[icon as keyof typeof genericIcons];
 		return <Icon {...props} />;
 	}

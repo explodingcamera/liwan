@@ -1,8 +1,6 @@
 import { differenceInSeconds, endOfDay, endOfHour, endOfMonth, endOfYear } from "date-fns";
-import _graph from "./graph.module.css";
 
 import { lazy } from "react";
-import type { Metric } from "../../api";
 import type { DateRange } from "../../api/ranges.ts";
 
 export const LineGraph = lazy(() => import("./graph.tsx").then(({ LineGraph }) => ({ default: LineGraph })));
@@ -12,7 +10,7 @@ export type DataPoint = {
 	y: number;
 };
 
-export const toDataPoints = (data: number[], range: DateRange, metric: Metric): DataPoint[] => {
+export const toDataPoints = (data: number[], range: DateRange): DataPoint[] => {
 	const step = differenceInSeconds(range.value.end, range.value.start) / data.length;
 	return data
 		.map((value, i) => ({

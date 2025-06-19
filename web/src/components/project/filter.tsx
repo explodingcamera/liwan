@@ -1,11 +1,10 @@
 import { SearchIcon, XIcon } from "lucide-react";
-import styles from "./filter.module.css";
-
-import { type DimensionFilter, type FilterType, dimensionNames, filterNames, filterNamesInverted } from "../../api";
-
 import { type ReactElement, useRef, useState } from "react";
+
+import { type DimensionFilter, dimensionNames, type FilterType, filterNames, filterNamesInverted } from "../../api";
 import { capitalizeAll, cls } from "../../utils";
 import { Dialog } from "../dialog";
+import styles from "./filter.module.css";
 
 export const SelectFilters = ({
 	value,
@@ -131,11 +130,7 @@ const filters = {
 
 type filterDimension = keyof typeof filters;
 
-const FilterDialog = ({
-	onAdd,
-}: {
-	onAdd: (filter: DimensionFilter) => void;
-}) => {
+const FilterDialog = ({ onAdd }: { onAdd: (filter: DimensionFilter) => void }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const [dimension, setDimension] = useState<filterDimension>("url");
 	const filter = filters[dimension];

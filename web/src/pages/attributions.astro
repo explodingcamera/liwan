@@ -1,6 +1,7 @@
 ---
-import licensesCargo from "../../../data/licenses-cargo.json" assert { type: "json" };
-import licensesNpm from "../../../data/licenses-npm.json" assert { type: "json" };
+import licensesCargo from "../../../data/licenses-cargo.json" with { type: "json" };
+import licensesNpm from "../../../data/licenses-npm.json" with { type: "json" };
+
 import Layout from "../layouts/Layout.astro";
 
 const getRepositoryUrl = (repository: (typeof licensesNpm)[0]["repository"]) => {

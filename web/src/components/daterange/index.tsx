@@ -1,14 +1,10 @@
 import { endOfDay, startOfDay, subWeeks } from "date-fns";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { DateRange } from "../../api/ranges";
 import { Dialog } from "../dialog";
 import styles from "./daterange.module.css";
 
-export const DatePickerRange = ({
-	onSelect,
-}: {
-	onSelect: (range: DateRange) => void;
-}) => {
+export const DatePickerRange = ({ onSelect }: { onSelect: (range: DateRange) => void }) => {
 	const [start, setStart] = useState(() => toHtmlDate(subWeeks(new Date(), 1)));
 	const [end, setEnd] = useState(() => toHtmlDate(new Date()));
 	const closeRef = useRef<HTMLButtonElement>(null);
@@ -18,13 +14,16 @@ export const DatePickerRange = ({
 		closeRef.current?.click();
 	};
 
+	const startId = useId();
+	const endId = useId();
+
 	return (
 		<div className={styles.container}>
-			<label>
+			<label htmlFor={startId}>
 				Start date:
 				<input
 					type="date"
-					id="start"
+					id={startId}
 					name="trip-start"
 					min="1997-01-01"
 					max="2030-12-31"
@@ -32,11 +31,11 @@ export const DatePickerRange = ({
 					onChange={(e) => setStart(e.target.value)}
 				/>
 			</label>
-			<label>
+			<label htmlFor={endId}>
 				End date:
 				<input
 					type="date"
-					id="start"
+					id={endId}
 					name="trip-start"
 					min="1997-01-01"
 					max="2030-12-31"

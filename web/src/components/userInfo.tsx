@@ -48,7 +48,7 @@ export const LoginButton = () => {
 					<hr />
 				</li>
 				<li>
-					{/* biome-ignore lint/a11y/useValidAnchor: */}
+					{/* biome-ignore lint/a11y/useValidAnchor: no*/}
 					<a
 						href="#"
 						onClick={() => {

@@ -1,7 +1,7 @@
 // Based on https://github.com/d3/d3-axis/blob/main/src/axis.js,
 // which is licensed under the ISC License (ISC)
 // Modified to allow disabling the domain line and tick lines
-// biome-ignore lint:
+// biome-ignore lint: no
 type ANY = any;
 
 const identity = (d: ANY) => d;

@@ -68,11 +68,13 @@
     cursor: pointer;
   }
 
-  @media (max-width: 500px) {
-    h1 {
+  h1 {
+    @media (max-width: 500px) {
       display: none;
     }
+  }
 
+  @media (max-width: 500px) {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;

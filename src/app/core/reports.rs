@@ -116,7 +116,7 @@ pub struct DimensionFilter {
     value: Option<String>,
 }
 
-fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec)> {
+fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
     let mut params = ParamVec::new();
 
     if filters.is_empty() {

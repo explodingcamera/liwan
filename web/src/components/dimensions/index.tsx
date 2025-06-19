@@ -169,13 +169,7 @@ export const DimensionTable = (props: DimensionProps) => {
 	);
 };
 
-const DimensionValueButton = ({
-	children,
-	onSelect,
-}: {
-	children: string;
-	onSelect?: () => void;
-}) => (
+const DimensionValueButton = ({ children, onSelect }: { children: string; onSelect?: () => void }) => (
 	<button type="button" className={styles.dimensionItemSelect} onClick={onSelect}>
 		<span title={children}>{children}</span>
 	</button>
@@ -314,14 +308,21 @@ export const DimensionLabel = ({
 	dimension,
 	value,
 	onSelect,
-}: { dimension: Dimension; value: DimensionTableRow; onSelect?: (value: DimensionTableRow) => void }) =>
-	dimensionLabels[dimension](value, () => onSelect?.(value));
+}: {
+	dimension: Dimension;
+	value: DimensionTableRow;
+	onSelect?: (value: DimensionTableRow) => void;
+}) => dimensionLabels[dimension](value, () => onSelect?.(value));
 
 export const DimensionValueBar = ({
 	value,
 	biggest,
 	children,
-}: { value: number; biggest: number; children?: React.ReactNode }) => (
+}: {
+	value: number;
+	biggest: number;
+	children?: React.ReactNode;
+}) => (
 	<div className={styles.percentage} style={{ "--percentage": `${(value / biggest) * 100}%` } as React.CSSProperties}>
 		{children}
 	</div>

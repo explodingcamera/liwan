@@ -110,7 +110,12 @@ const Project = ({
 	metric,
 	setMetric,
 	range,
-}: { project: ProjectResponse; metric: Metric; setMetric: (value: Metric) => void; range: DateRange }) => {
+}: {
+	project: ProjectResponse;
+	metric: Metric;
+	setMetric: (value: Metric) => void;
+	range: DateRange;
+}) => {
 	const {
 		graph,
 		isError: graphError,

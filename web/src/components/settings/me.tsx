@@ -1,10 +1,13 @@
 import { User2Icon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api, useMe, useMutation } from "../../api";
 import { createToast } from "../toast";
 import styles from "./me.module.css";
 
 export const MyAccount = () => {
+	const newPasswordId = useId();
+	const confirmPasswordId = useId();
+
 	const formRef = useRef<HTMLFormElement>(null);
 	const { role, username, isLoading } = useMe();
 	const { mutate } = useMutation({
@@ -72,7 +75,7 @@ export const MyAccount = () => {
 							minLength={8}
 							required
 							type="password"
-							id="newPassword"
+							id={newPasswordId}
 							name="newPassword"
 							autoComplete="new-password"
 						/>
@@ -84,7 +87,7 @@ export const MyAccount = () => {
 							minLength={8}
 							required
 							type="password"
-							id="confirmNewPassword"
+							id={confirmPasswordId}
 							name="confirmNewPassword"
 							autoComplete="new-password"
 						/>

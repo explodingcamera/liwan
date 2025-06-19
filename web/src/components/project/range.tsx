@@ -14,7 +14,11 @@ export const SelectRange = ({
 	onSelect,
 	range,
 	projectId,
-}: { onSelect: (range: DateRange) => void; range: DateRange; projectId?: string }) => {
+}: {
+	onSelect: (range: DateRange) => void;
+	range: DateRange;
+	projectId?: string;
+}) => {
 	const detailsRef = useRef<HTMLDetailsElement>(null);
 
 	const handleSelect = (range: DateRange) => () => {

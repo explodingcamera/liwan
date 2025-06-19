@@ -64,7 +64,9 @@ button.card {
     background-color: var(--pico-card-background-color);
     opacity: 0;
     transform: scale(0.94) scaleX(1.04);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
   }
 
   &[data-active="true"] {

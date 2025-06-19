@@ -28,7 +28,12 @@ export const DeleteDialog = ({
 	displayName,
 	type,
 	trigger,
-}: { id: string; displayName: string; type: "project" | "entity" | "user"; trigger: ReactElement }) => {
+}: {
+	id: string;
+	displayName: string;
+	type: "project" | "entity" | "user";
+	trigger: ReactElement;
+}) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
 
@@ -518,8 +523,6 @@ export const EditPassword = ({ user, trigger }: { user: UserResponse; trigger: R
 		</Dialog>
 	);
 };
-
-const roles = ["admin", "user"] as const;
 
 export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: ReactElement }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);

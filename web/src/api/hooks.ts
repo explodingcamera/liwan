@@ -6,7 +6,6 @@ import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResp
 import { api } from "./client";
 import { queryClient, useQuery } from "./query";
 import type { DateRange } from "./ranges";
-
 export const useMe = () => {
 	const { data, isLoading } = useQuery({
 		queryKey: ["me"],
@@ -114,7 +113,7 @@ export const useProjectGraph = ({
 	range: DateRange;
 	filters?: DimensionFilter[];
 }) => {
-	let refetchInterval = undefined;
+	let refetchInterval: number | undefined;
 	let staleTime = 1000 * 60 * 10;
 	if (range.endsToday()) {
 		refetchInterval = 1000 * 60;
@@ -138,7 +137,7 @@ export const useProjectGraph = ({
 					params: { project_id: projectId ?? "" },
 				})
 				.json()
-				.then(({ data }) => toDataPoints(data, range, metric)),
+				.then(({ data }) => toDataPoints(data, range)),
 		placeholderData: (prev) => prev,
 	});
 

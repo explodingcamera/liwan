@@ -70,14 +70,12 @@ export const LineGraph = ({
 	const axisRange = range.getAxisRange();
 
 	const updateGraph = useCallback(
-		(transition: number, ease: (normalizedTime: number) => number = easeCubic) => {
+		(transition: number) => {
 			if (!svgRef.current || !dimensions) return;
 			const svg = select(svgRef.current);
 
 			const [minX, maxX] = extent(data, (d) => d.x).map((d) => d || new Date());
 			const [_minY, maxY] = extent(data, (d) => d.y).map((d) => d || 0);
-
-			const sizeX = maxX.getTime() - minX.getTime();
 
 			let xCount = Math.min(data.length, 8);
 			if (dimensions.width && dimensions.width < 500) {

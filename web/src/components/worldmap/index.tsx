@@ -41,13 +41,7 @@ const getCountries = (data: DimensionTableRow[]) => {
 	return countries;
 };
 
-export const Worldmap = ({
-	metric,
-	data,
-}: {
-	metric: Metric;
-	data?: DimensionTableRow[];
-}) => {
+export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTableRow[] }) => {
 	const svgRef = useRef<SVGSVGElement | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 

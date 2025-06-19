@@ -11,7 +11,9 @@
     align-items: center;
     cursor: pointer;
     color: var(--pico-contrast);
-    transition: background-color 0.1s, opacity 0.1s;
+    transition:
+      background-color 0.1s,
+      opacity 0.1s;
 
     &:hover {
       background-color: var(--pico-card-background-color);

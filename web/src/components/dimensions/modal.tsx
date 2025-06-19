@@ -9,13 +9,7 @@ import { cls, formatMetricVal } from "../../utils";
 import { Dialog } from "../dialog";
 import type { ProjectQuery } from "../project";
 
-export const DetailsModal = ({
-	dimension,
-	query,
-}: {
-	dimension: Dimension;
-	query: ProjectQuery;
-}) => {
+export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query: ProjectQuery }) => {
 	const { data, biggest, order, isLoading } = useDimension({ dimension, ...query });
 
 	const [filter, setFilter] = useState("");

@@ -5,13 +5,7 @@ import type { ProjectResponse, StatsResponse } from "../../api";
 import { formatMetricVal } from "../../utils";
 import { CardLink } from "../card";
 
-export const ProjectHeader = ({
-	project,
-	stats,
-}: {
-	stats?: StatsResponse;
-	project: ProjectResponse;
-}) => {
+export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; project: ProjectResponse }) => {
 	return (
 		<h1 className={styles.statsHeader}>
 			<span>

@@ -1,5 +1,4 @@
 import styles from "./project.module.css";
-import _map from "./worldmap/map.module.css";
 
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 

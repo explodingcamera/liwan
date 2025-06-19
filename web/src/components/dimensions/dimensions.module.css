@@ -71,7 +71,9 @@
     background: var(--pico-h5-color);
     opacity: 0.09;
     z-index: -1;
-    transition: width 0.3s ease-in-out, opacity 0.1s ease-in-out;
+    transition:
+      width 0.3s ease-in-out,
+      opacity 0.1s ease-in-out;
     border-radius: 1rem;
   }
 }
