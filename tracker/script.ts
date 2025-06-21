@@ -1,7 +1,7 @@
 declare global {
 	interface Window {
 		__liwan_loaded?: boolean;
-		// biome-ignore lint/suspicious/noExplicitAny:
+		// biome-ignore lint/suspicious/noExplicitAny: no
 		navigation?: any;
 	}
 }
