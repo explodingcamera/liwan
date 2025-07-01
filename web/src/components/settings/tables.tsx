@@ -173,7 +173,7 @@ export const EntitiesTable = () => {
 	const { entities, isLoading } = useEntities();
 
 	if (!useAdminPerms()) {
-		return <>You don't have permission to view this page.</>;
+		return "You don't have permission to view this page.";
 	}
 
 	const columns: Column<(typeof entities)[number]>[] = [
@@ -276,7 +276,7 @@ export const UsersTable = () => {
 	const rows = users.map((user) => ({ id: user.username, ...user })) ?? [];
 
 	if (!useAdminPerms()) {
-		return <>You don't have permission to view this page.</>;
+		return "You don't have permission to view this page.";
 	}
 
 	const columns: Column<(typeof rows)[number]>[] = [
