@@ -13,10 +13,10 @@ async fn test_dashboard() -> Result<()> {
     app.seed_database(100)?;
 
     let project_id = "public-project";
-    let api_prefix = format!("/api/dashboard/project/{}", project_id);
-    let stats_path = format!("{}/stats", api_prefix);
-    let graph_path = format!("{}/graph", api_prefix);
-    let dimension_path = format!("{}/dimension", api_prefix);
+    let api_prefix = format!("/api/dashboard/project/{project_id}");
+    let stats_path = format!("{api_prefix}/stats");
+    let graph_path = format!("{api_prefix}/graph");
+    let dimension_path = format!("{api_prefix}/dimension");
 
     let start_date = (Utc::now() - Duration::days(365)).to_rfc3339();
     let end_date = Utc::now().to_rfc3339();
