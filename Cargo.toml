@@ -2,7 +2,7 @@
 name="liwan"
 version="1.2.1"
 edition="2024"
-rust-version="1.88"
+rust-version="1.89"
 repository="https://github.com/explodingcamera/liwan"
 license="Apache-2.0"
 publish=false
@@ -16,7 +16,7 @@ path="src/main.rs"
 
 [dependencies]
 # async/concurrency
-tokio={version="1.46", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
+tokio={version="1.47", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
 crossbeam-utils="0.8"

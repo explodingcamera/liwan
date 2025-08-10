@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.1.4/schema.json",
 	"assist": {
 		"enabled": true,
 		"actions": { "recommended": true, "source": { "recommended": true, "organizeImports": "off" } }
