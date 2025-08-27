@@ -1,4 +1,4 @@
-FROM debian:12-slim AS downloader
+FROM debian:13-slim AS downloader
 ARG TAR_URL_AMD64
 ARG TAR_URL_ARM64
 ARG TARGETPLATFORM
@@ -19,3 +19,4 @@ ENV LIWAN_DATA_DIR=/data
 COPY --from=downloader /app/liwan /liwan
 ENTRYPOINT ["/liwan"]
 EXPOSE 9042
+STOPSIGNAL SIGINT
