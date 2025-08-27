@@ -26,7 +26,8 @@ async fn main() -> Result<()> {
     app.run_background_tasks();
 
     tokio::select! {
-        _ = tokio::signal::ctrl_c() => app_copy.shutdown(),
+        biased;
+        _ = liwan::utils::signals::shutdown() => app_copy.shutdown(),
         res = web::start_webserver(app.clone(), s) => res,
         res = tokio::task::spawn_blocking(move || app.clone().events.process(r)) => res?
     }
