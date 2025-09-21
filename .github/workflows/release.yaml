@@ -9,9 +9,9 @@ jobs:
   create-release:
     permissions:
       contents: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: taiki-e/create-gh-release-action@v1.9.1
@@ -23,9 +23,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-web:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
@@ -50,10 +50,10 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04
             build-tool: cargo-zigbuild
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04
             build-tool: cargo-zigbuild
           - target: aarch64-apple-darwin
             os: macos-latest
@@ -61,15 +61,15 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: web-dist
           path: ./web/dist
-      - uses: actions-rust-lang/setup-rust-toolchain@v1.12.0
-      - uses: taiki-e/upload-rust-binary-action@v1.26.0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1.15.0
+      - uses: taiki-e/upload-rust-binary-action@v1.27.0
         with:
           bin: liwan
           target: ${{ matrix.target }}
