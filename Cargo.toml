@@ -2,7 +2,7 @@
 name="liwan"
 version="1.2.1"
 edition="2024"
-rust-version="1.89"
+rust-version="1.90"
 repository="https://github.com/explodingcamera/liwan"
 license="Apache-2.0"
 publish=false
@@ -21,7 +21,7 @@ tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
 crossbeam-utils="0.8"
 crossbeam-channel="0.5"
-quick_cache="0.6"
+quick_cache={version="0.6", features=["parking_lot", "ahash"]}
 
 # encoding
 hex={version="0.4"}
@@ -38,11 +38,11 @@ argon2={version="0.5"}
 argh={version="0.1", default-features=false, features=["help"]}
 eyre={version="0.6"}
 rand={version="0.9", default-features=false, features=["std", "thread_rng"]}
-chrono={version="0.4"}
-colored={version="3.0"}
+chrono={version="0.4", default-features=false, features=["std", "now"]}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}
 tracing-subscriber={version="0.3", features=["env-filter"]}
+ahash="0.8"
 
 # web
 poem={version="3.1", default-features=false, features=[
@@ -63,15 +63,13 @@ reqwest={version="0.12", default-features=false, features=[
 ]}
 rustls={version="0.23", features=["aws_lc_rs"]}
 
-# database
-duckdb={version="1.4", features=["buildtime_bindgen", "bundled", "chrono", "r2d2"]}
+duckdb={version="1.4", features=["buildtime_bindgen", "bundled", "chrono", "r2d2"]} # database
 rusqlite={version="0.37", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 r2d2_sqlite="0.31"
 refinery={version="0.8", default-features=false}
 refinery-core={version="0.8", default-features=false}
 maxminddb={version="0.26", optional=true, features=["simdutf8"]}
-ahash="0.8"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator="0.6"
@@ -93,5 +91,6 @@ opt-level=1
 lto="fat"
 panic="abort"
 strip=true
+debug=false
 opt-level=3
 codegen-units=1

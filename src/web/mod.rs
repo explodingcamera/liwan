@@ -6,13 +6,13 @@ use std::sync::Arc;
 
 use crate::app::Liwan;
 use crate::app::models::Event;
+use crate::cli::{bold, underline, white};
 use crossbeam_channel::Sender;
 use routes::{dashboard_service, event_service};
 use webext::{EmbeddedFilesEndpoint, PoemErrExt, catch_error};
 
 pub use session::SessionUser;
 
-use colored::Colorize;
 use eyre::{Context, Result};
 use rust_embed::RustEmbed;
 
@@ -96,14 +96,14 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
 
     match app.onboarding.token()? {
         Some(onboarding) => {
-            let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding).underline().bold();
-            let command = "liwan --help".bold();
-            tracing::info!("{}", "It looks like you're running Liwan for the first time!".white());
-            tracing::info!("{}", format!("You can get started by visiting: {get_started}").white());
-            tracing::info!("{}", format!("To see all available commands, run `{command}`").white());
+            let get_started = bold(&format!("{}/setup?t={}", app.config.base_url, onboarding));
+            let command = bold("liwan --help");
+            tracing::info!("{}", white("It looks like you're running Liwan for the first time!"));
+            tracing::info!("{}", white(&format!("You can get started by visiting: {get_started}")));
+            tracing::info!("{}", white(&format!("To see all available commands, run `{command}`")));
         }
         _ => {
-            tracing::info!("{}", format!("Liwan is running on {}", app.config.base_url.underline()).white());
+            tracing::info!("{} {}", white("Liwan is running on "), underline(&app.config.base_url));
         }
     }
 

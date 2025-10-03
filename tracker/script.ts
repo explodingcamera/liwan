@@ -53,15 +53,15 @@ const noWindow = typeof window === "undefined";
 
 if (typeof document !== "undefined") {
 	scriptEl = document.querySelector(`script[src^="${import.meta.url}"]`);
-	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && new URL(scriptEl.src).origin + "/api/event");
+	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && `${new URL(scriptEl.src).origin}/api/event`);
 	entity = scriptEl?.getAttribute("data-entity") || null;
 	referrer = document.referrer;
 }
 
-const log = (message: string) => console.info("[liwan]: " + message);
-const ignore = (reason: string) => log("Ignoring event: " + reason);
+const log = (message: string) => console.info(`[liwan]: ${message}`);
+const ignore = (reason: string) => log(`Ignoring event: ${reason}`);
 const reject = (message: string) => {
-	throw new Error("Failed to send event: " + message);
+	throw new Error(`Failed to send event: ${message}`);
 };
 
 /**
@@ -87,7 +87,7 @@ const reject = (message: string) => {
 export async function event(name = "pageview", options?: EventOptions): Promise<void> {
 	const endpoint_url = options?.endpoint || endpoint;
 	if (!endpoint_url) return reject("endpoint is required");
-	if (typeof localStorage !== "undefined" && localStorage.getItem("disable-liwan")) return ignore("localStorage flag");
+	if (localStorage?.getItem("disable-liwan")) return ignore("localStorage flag");
 	if (/^localhost$|^127(?:\.\d+){0,2}\.\d+$|^\[::1?\]$/.test(location.hostname) || location.protocol === "file:")
 		return ignore("localhost");
 
@@ -111,7 +111,7 @@ export async function event(name = "pageview", options?: EventOptions): Promise<
 	});
 
 	if (!response.ok) {
-		log("Failed to send event: " + response.statusText);
+		log(`Failed to send event: ${response.statusText}`);
 		reject(response.statusText);
 	}
 }
@@ -135,8 +135,8 @@ const trackPageviews = () => {
 
 		// try to intercept history.pushState, but it's not always possible
 		window.history.pushState = new Proxy(window.history.pushState, {
-			apply: (target, thisArg, argArray) => {
-				target.apply(thisArg, argArray);
+			apply: (func, target, args) => {
+				Reflect.apply(func, target, args);
 				page();
 			},
 		});

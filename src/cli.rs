@@ -3,7 +3,6 @@ use crate::{
     config::{Config, DEFAULT_CONFIG},
 };
 use argh::FromArgs;
-use colored::Colorize;
 use eyre::Result;
 
 #[derive(FromArgs)]
@@ -99,14 +98,14 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
             let app = Liwan::try_new(config)?;
             let users = app.users.all()?;
             if users.is_empty() {
-                println!("{}", "No users found".bold());
+                println!("{}", bold("No users found"));
                 println!("Use `liwan add-user` to create a new user");
                 return Ok(());
             }
 
-            println!("{}", "Users:".bold());
+            println!("{}", bold("Users:"));
             for user in users {
-                println!(" - {} ({:?})", user.username.underline(), user.role);
+                println!(" - {} ({:?})", underline(&user.username), user.role);
             }
         }
         Command::AddUser(add) => {
@@ -139,4 +138,16 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn bold(s: &str) -> String {
+    format!("\x1b[1m{}\x1b[0m", s)
+}
+
+pub fn underline(s: &str) -> String {
+    format!("\x1b[4m{}\x1b[0m", s)
+}
+
+pub fn white(s: &str) -> String {
+    format!("\x1b[37m{}\x1b[0m", s)
 }

@@ -16,7 +16,10 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
-<!-- ## [Unreleased] -->
+## [Unreleased]
+
+- Updated to the latest version of DuckDB (1.4)
+- Graceful shutdown on SIGINT and SIGTERM
 
 ## [v1.2.1] - 2025-06-21
 
