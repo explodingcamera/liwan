@@ -14,11 +14,11 @@ impl<T: DerefMut<Target = duckdb::Connection>> From<T> for DuckDBConnection<T> {
     }
 }
 
-impl<T: DerefMut<Target = duckdb::Connection>> Transaction for DuckDBConnection<T> {
+impl<Conn: DerefMut<Target = duckdb::Connection>> Transaction for DuckDBConnection<Conn> {
     type Error = duckdb::Error;
-    fn execute(&mut self, queries: &[&str]) -> Result<usize, Self::Error> {
+    fn execute<'a, T: Iterator<Item = &'a str>>(&mut self, mut queries: T) -> std::result::Result<usize, Self::Error> {
         let transaction = self.0.transaction()?;
-        let count = queries.iter().try_fold(0, |count, query| {
+        let count = queries.try_fold(0, |count, query| {
             transaction.execute_batch(query)?;
             Ok::<_, Self::Error>(count + 1)
         })?;
@@ -55,7 +55,8 @@ impl<T: DerefMut<Target = duckdb::Connection>> Migrate for DuckDBConnection<T> {
                 checksum text not null
             )"
         );
-        self.execute(&[&query]).migration_err("error asserting migrations table", None)?;
+
+        self.execute(std::iter::once(query.as_str())).migration_err("error asserting migrations table", None)?;
         Ok(0)
     }
 }

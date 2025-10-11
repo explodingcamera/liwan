@@ -67,8 +67,8 @@ duckdb={version="1.4", features=["buildtime_bindgen", "bundled", "chrono", "r2d2
 rusqlite={version="0.37", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 r2d2_sqlite="0.31"
-refinery={version="0.8", default-features=false}
-refinery-core={version="0.8", default-features=false}
+refinery={version="0.9", default-features=false}
+refinery-core={version="0.9", default-features=false}
 maxminddb={version="0.26", optional=true, features=["simdutf8"]}
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
@@ -88,9 +88,8 @@ _enable_seeding=[]
 opt-level=1
 
 [profile.release]
-lto="fat"
+lto="thin"
 panic="abort"
 strip=true
 debug=false
 opt-level=3
-codegen-units=1

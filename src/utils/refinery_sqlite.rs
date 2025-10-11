@@ -32,9 +32,9 @@ fn query_applied_migrations(transaction: &rusqlite::Transaction, query: &str) ->
     Ok(applied)
 }
 
-impl<T: DerefMut<Target = Connection>> Transaction for RqlConnection<T> {
+impl<Conn: DerefMut<Target = Connection>> Transaction for RqlConnection<Conn> {
     type Error = RqlError;
-    fn execute(&mut self, queries: &[&str]) -> Result<usize, Self::Error> {
+    fn execute<'a, T: Iterator<Item = &'a str>>(&mut self, queries: T) -> Result<usize, Self::Error> {
         let transaction = self.0.transaction()?;
         let mut count = 0;
         for query in queries {
