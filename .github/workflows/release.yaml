@@ -68,7 +68,7 @@ jobs:
         with:
           name: web-dist
           path: ./web/dist
-      - uses: actions-rust-lang/setup-rust-toolchain@v1.15.0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1.15.2
       - uses: taiki-e/upload-rust-binary-action@v1.27.0
         with:
           bin: liwan

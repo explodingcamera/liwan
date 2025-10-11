@@ -98,14 +98,14 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
             let app = Liwan::try_new(config)?;
             let users = app.users.all()?;
             if users.is_empty() {
-                println!("{}", bold("No users found"));
+                println!("No users found");
                 println!("Use `liwan add-user` to create a new user");
                 return Ok(());
             }
 
-            println!("{}", bold("Users:"));
+            println!("Users:");
             for user in users {
-                println!(" - {} ({:?})", underline(&user.username), user.role);
+                println!(" - {} ({})", user.username, user.role);
             }
         }
         Command::AddUser(add) => {
@@ -138,16 +138,4 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
     }
 
     Ok(())
-}
-
-pub fn bold(s: &str) -> String {
-    format!("\x1b[1m{}\x1b[0m", s)
-}
-
-pub fn underline(s: &str) -> String {
-    format!("\x1b[4m{}\x1b[0m", s)
-}
-
-pub fn white(s: &str) -> String {
-    format!("\x1b[37m{}\x1b[0m", s)
 }

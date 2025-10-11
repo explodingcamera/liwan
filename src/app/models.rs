@@ -1,3 +1,9 @@
+use std::fmt::Display;
+
+use chrono::{DateTime, Utc};
+use poem_openapi::Enum;
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone)]
 pub struct Event {
     pub entity_id: String,
@@ -50,6 +56,15 @@ pub enum UserRole {
     User,
 }
 
+impl Display for UserRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UserRole::Admin => write!(f, "admin"),
+            UserRole::User => write!(f, "user"),
+        }
+    }
+}
+
 impl TryFrom<String> for UserRole {
     type Error = String;
 
@@ -58,16 +73,6 @@ impl TryFrom<String> for UserRole {
             "admin" => Ok(Self::Admin),
             "user" => Ok(Self::User),
             _ => Err(format!("invalid role: {value}")),
-        }
-    }
-}
-
-impl UserRole {
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(self) -> String {
-        match self {
-            Self::Admin => "admin".to_string(),
-            Self::User => "user".to_string(),
         }
     }
 }
@@ -99,7 +104,4 @@ macro_rules! event_params {
     };
 }
 
-use chrono::{DateTime, Utc};
 pub use event_params;
-use poem_openapi::Enum;
-use serde::{Deserialize, Serialize};

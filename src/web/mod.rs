@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use crate::app::Liwan;
 use crate::app::models::Event;
-use crate::cli::{bold, underline, white};
 use crossbeam_channel::Sender;
 use routes::{dashboard_service, event_service};
 use webext::{EmbeddedFilesEndpoint, PoemErrExt, catch_error};
@@ -96,14 +95,13 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
 
     match app.onboarding.token()? {
         Some(onboarding) => {
-            let get_started = bold(&format!("{}/setup?t={}", app.config.base_url, onboarding));
-            let command = bold("liwan --help");
-            tracing::info!("{}", white("It looks like you're running Liwan for the first time!"));
-            tracing::info!("{}", white(&format!("You can get started by visiting: {get_started}")));
-            tracing::info!("{}", white(&format!("To see all available commands, run `{command}`")));
+            let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding);
+            tracing::info!("It looks like you're running Liwan for the first time!");
+            tracing::info!("You can get started by visiting: {get_started}");
+            tracing::info!("To see all available commands, run `liwan --help`");
         }
         _ => {
-            tracing::info!("{} {}", white("Liwan is running on "), underline(&app.config.base_url));
+            tracing::info!("Liwan is running on {}", app.config.base_url);
         }
     }
 
