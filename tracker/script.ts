@@ -84,7 +84,7 @@ const reject = (message: string) => {
  * });
  * ```
  */
-export async function event(name = "pageview", options?: EventOptions): Promise<void> {
+export async function event(name: string = "pageview", options?: EventOptions): Promise<void> {
 	const endpoint_url = options?.endpoint || endpoint;
 	if (!endpoint_url) return reject("endpoint is required");
 	if (localStorage?.getItem("disable-liwan")) return ignore("localStorage flag");

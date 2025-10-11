@@ -1,8 +1,12 @@
 {
 	"name": "liwan-tracker",
 	"description": "Tracking script for Liwan, an open-source analytics platform",
-	"keywords": ["analytics", "tracking", "liwan"],
-	"version": "1.0.0",
+	"keywords": [
+		"analytics",
+		"tracking",
+		"liwan"
+	],
+	"version": "1.0.1",
 	"homepage": "https://liwan.dev",
 	"repository": {
 		"type": "git",
@@ -22,8 +26,10 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"import": "./script.min.js",
-			"types": "./script.d.ts"
+			"import": {
+				"types": "./script.d.ts",
+				"default": "./script.min.js"
+			}
 		}
 	},
 	"module": "script.min.js",
