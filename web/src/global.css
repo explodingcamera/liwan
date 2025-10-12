@@ -79,8 +79,8 @@ hr {
 
 details.dropdown.right summary + ul {
   left: unset;
-  right: 2rem;
-  transform: translateX(4px) translateY(-2px);
+  right: 0;
+  transform: translateX(-4px);
   min-width: 11rem;
   width: auto;
 }

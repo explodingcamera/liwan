@@ -78,13 +78,7 @@ export const ProjectsTable = () => {
 		{
 			id: "displayName",
 			header: "Name",
-			render: (row) => <span>{row.displayName}</span>,
-			nowrap: true,
-		},
-		{
-			id: "id",
-			header: "ID",
-			render: (row) => <i>{row.id}</i>,
+			render: (row) => <span data-tooltip={`ID: ${row.id}`}>{row.displayName}</span>,
 			nowrap: true,
 		},
 		{

@@ -1,5 +1,6 @@
 details.user {
   margin: 0;
+  position: initial;
 
   summary {
     display: flex;

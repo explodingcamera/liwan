@@ -22,7 +22,6 @@ const { title } = Astro.props;
       </ul>
       <ul>
         <li class="login"><LoginButton client:only="react" /></li>
-    
       </ul>
     </nav>
   </header>
@@ -34,6 +33,10 @@ const { title } = Astro.props;
 <style>
   main {
     flex: 1;
+  }
+
+  .login {
+    position: relative;
   }
 
   nav {

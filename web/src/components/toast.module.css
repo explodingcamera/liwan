@@ -12,7 +12,7 @@
 .toast {
   padding: 0.8rem 1.1rem;
   font-size: 0.9rem;
-  color: #fff;
+  color: #000;
   box-shadow: var(--pico-card-box-shadow);
   border-radius: var(--pico-border-radius, 0.5rem);
 }

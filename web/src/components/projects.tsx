@@ -62,7 +62,7 @@ export const Projects = () => {
 	if (isError)
 		return (
 			<div className={styles.info}>
-				<h1>Failed to load data</h1>
+				<h1>Failed to load dashboard</h1>
 			</div>
 		);
 
