@@ -117,8 +117,8 @@ impl Liwan {
 
         let entities = vec![
             ("entity-1", "Entity 1", "example.com", vec!["public-project".to_string(), "private-project".to_string()]),
-            ("entity-2", "Entity 2", "test.example.com", vec!["private-project".to_string()]),
-            ("entity-3", "Entity 3", "example.org", vec!["public-project".to_string()]),
+            // ("entity-2", "Entity 2", "test.example.com", vec!["private-project".to_string()]),
+            // ("entity-3", "Entity 3", "example.org", vec!["public-project".to_string()]),
         ];
         let projects = [("public-project", "Public Project", true), ("private-project", "Private Project", false)];
         let users = [("admin", "admin", UserRole::Admin), ("user", "user", UserRole::User)];
