@@ -1,14 +1,14 @@
 use argon2::Argon2;
 use argon2::PasswordVerifier;
-use argon2::password_hash::rand_core::{OsRng, RngCore};
 use argon2::password_hash::{PasswordHasher, SaltString};
 
 use eyre::Result;
+use rand::RngCore;
 use sha3::Digest;
 use std::net::IpAddr;
 
 pub fn hash_password(password: &str) -> Result<String> {
-    let salt = SaltString::generate(&mut OsRng);
+    let salt = SaltString::from_rng(&mut rand::rng());
     let hash = Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .map_err(|_| eyre::eyre!("Failed to hash password"))?;
@@ -22,7 +22,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<()> {
 }
 
 pub fn generate_salt() -> String {
-    SaltString::generate(&mut OsRng).to_string()
+    SaltString::from_rng(&mut rand::rng()).to_string()
 }
 
 pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id: &str) -> String {
@@ -32,28 +32,25 @@ pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id: &str)
     hasher.update(daily_salt);
     hasher.update(entity_id);
     let hash = hasher.finalize();
-    format!("{hash:02x}")[..32].to_string()
+    hex::encode(hash)[..32].to_string()
 }
 
 pub fn visitor_id() -> String {
     // random 32 byte hex string
-    let mut rng = OsRng;
     let mut bytes = [0u8; 32];
-    rng.fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     bs58::encode(bytes).into_string()
 }
 
 pub fn session_token() -> String {
     // random 32 byte hex string
-    let mut rng = OsRng;
     let mut bytes = [0u8; 32];
-    rng.fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     bs58::encode(bytes).into_string()
 }
 
 pub fn onboarding_token() -> String {
-    let mut rng = OsRng;
     let mut bytes = [0u8; 8];
-    rng.fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     bs58::encode(bytes).into_string()
 }

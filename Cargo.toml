@@ -28,16 +28,16 @@ hex={version="0.4"}
 bs58="0.5"
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
-md-5="0.10"
+md-5="0.10.6"
 async-compression={version="0.4", default-features=false, features=["gzip", "tokio"]}
 tokio-tar={package="astral-tokio-tar", version="0.5"}
-sha3={version="0.10"}
-argon2={version="0.5"}
+sha3={version="0.11.0-rc.3"}
+argon2={version="0.6.0-rc.2", features=["rand"]}
 
 # general
 argh={version="0.1", default-features=false, features=["help"]}
 eyre={version="0.6"}
-rand={version="0.9", default-features=false, features=["std", "thread_rng"]}
+rand={version="0.10.0-rc.5", default-features=false, features=["std", "thread_rng"]}
 chrono={version="0.4", default-features=false, features=["std", "now"]}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}
@@ -54,7 +54,7 @@ poem={version="3.1", default-features=false, features=[
 poem-openapi={version="5.1", default-features=false, features=["chrono"]}
 tower={version="0.5", default-features=false, features=["limit"]}
 uaparser="0.6"
-rust-embed={version="8.8", features=["mime-guess"]}
+rust-embed={version="8.9", features=["mime-guess"]}
 reqwest={version="0.12", default-features=false, features=[
     "json",
     "stream",

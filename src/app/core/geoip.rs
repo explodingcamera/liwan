@@ -223,6 +223,9 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
 
         let entry_path = entry.path()?;
         if entry_path.extension().is_some_and(|ext| ext == "mmdb") {
+            entry.set_allow_external_symlinks(false);
+            entry.set_preserve_permissions(false);
+
             file = entry
                 .unpack_in(folder)
                 .await
