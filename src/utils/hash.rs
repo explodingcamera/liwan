@@ -1,6 +1,6 @@
 use argon2::Argon2;
 use argon2::PasswordVerifier;
-use argon2::password_hash::{PasswordHasher, SaltString};
+use argon2::password_hash::{PasswordHasher, SaltString, rand_core};
 
 use eyre::Result;
 use rand::RngCore;
@@ -8,7 +8,7 @@ use sha3::Digest;
 use std::net::IpAddr;
 
 pub fn hash_password(password: &str) -> Result<String> {
-    let salt = SaltString::from_rng(&mut rand::rng());
+    let salt = SaltString::generate(&mut rand_core::OsRng);
     let hash = Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .map_err(|_| eyre::eyre!("Failed to hash password"))?;
@@ -22,7 +22,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<()> {
 }
 
 pub fn generate_salt() -> String {
-    SaltString::from_rng(&mut rand::rng()).to_string()
+    SaltString::generate(&mut rand_core::OsRng).to_string()
 }
 
 pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id: &str) -> String {

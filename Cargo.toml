@@ -2,7 +2,7 @@
 name="liwan"
 version="1.2.1"
 edition="2024"
-rust-version="1.90"
+rust-version="1.91"
 repository="https://github.com/explodingcamera/liwan"
 license="Apache-2.0"
 publish=false
@@ -31,13 +31,13 @@ serde_json={version="1.0"}
 md-5="0.10.6"
 async-compression={version="0.4", default-features=false, features=["gzip", "tokio"]}
 tokio-tar={package="astral-tokio-tar", version="0.5"}
-sha3={version="0.11.0-rc.3"}
-argon2={version="0.6.0-rc.2", features=["rand"]}
+sha3={version="0.10"}
+argon2={version="0.5", features=["rand"]}
 
 # general
 argh={version="0.1", default-features=false, features=["help"]}
 eyre={version="0.6"}
-rand={version="0.10.0-rc.5", default-features=false, features=["std", "thread_rng"]}
+rand={version="0.9", default-features=false, features=["std", "thread_rng"]}
 chrono={version="0.4", default-features=false, features=["std", "now"]}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}
