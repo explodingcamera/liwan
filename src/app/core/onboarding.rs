@@ -1,13 +1,12 @@
-use std::sync::Arc;
-
-use crossbeam_utils::sync::ShardedLock;
+use arc_swap::ArcSwapOption;
 use eyre::Result;
+use std::sync::Arc;
 
 use crate::{app::SqlitePool, utils::hash::onboarding_token};
 
 #[derive(Clone)]
 pub struct LiwanOnboarding {
-    token: Arc<ShardedLock<Option<String>>>,
+    token: Arc<ArcSwapOption<String>>,
 }
 
 impl LiwanOnboarding {
@@ -15,8 +14,8 @@ impl LiwanOnboarding {
         let onboarding = {
             tracing::debug!("Checking if an onboarding token needs to be generated");
             let conn = pool.get()?;
-            let mut stmt = conn.prepare("select 1 from users limit 1")?;
-            ShardedLock::new(if stmt.exists([])? { None } else { Some(onboarding_token()) })
+            let onboarded = conn.prepare("select 1 from users limit 1")?.exists([])?;
+            ArcSwapOption::new(onboarded.then(|| onboarding_token().into()))
         };
 
         Ok(Self { token: onboarding.into() })
@@ -24,19 +23,12 @@ impl LiwanOnboarding {
 
     /// Get the onboarding token, if it exists
     pub fn token(&self) -> Result<Option<String>> {
-        Ok(self
-            .token
-            .read()
-            .map_err(|_| eyre::eyre!("Failed to acquire onboarding token read lock"))?
-            .as_ref()
-            .cloned())
+        Ok((self.token.load()).as_ref().map(|v| (**v).clone()))
     }
 
     /// Clear the onboarding token to prevent it from being used again
     pub fn clear(&self) -> Result<()> {
-        let mut onboarding =
-            self.token.write().map_err(|_| eyre::eyre!("Failed to acquire onboarding token write lock"))?;
-        *onboarding = None;
+        self.token.store(None);
         Ok(())
     }
 }

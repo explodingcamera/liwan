@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use ahash::{HashMap, HashSet};
 
-static REFERERS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+static REFERRERS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
     include_str!("../../data/referrers.txt")
         .lines()
         .map(|line| {
@@ -31,7 +31,7 @@ static REFERRER_ICONS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
 });
 
 pub fn get_referer_name(fqdn: &str) -> Option<String> {
-    REFERERS.get(fqdn).map(ToString::to_string)
+    REFERRERS.get(fqdn).map(ToString::to_string)
 }
 
 pub fn get_referer_icon(name: &str) -> Option<String> {

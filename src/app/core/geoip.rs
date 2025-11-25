@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
 use std::io::{self};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
@@ -8,7 +7,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::app::SqlitePool;
-use crossbeam_utils::sync::ShardedLock;
+use arc_swap::ArcSwapOption;
 use eyre::{Context, OptionExt, Result};
 use futures_lite::StreamExt;
 use md5::{Digest, Md5};
@@ -19,6 +18,7 @@ const BASE_URL: &str = "https://updates.maxmind.com";
 const METADATA_ENDPOINT: &str = "/geoip/updates/metadata?edition_id=";
 const DOWNLOAD_ENDPOINT: &str = "/geoip/databases/";
 
+#[derive(Default)]
 pub struct LookupResult {
     pub city: Option<String>,
     pub country_code: Option<String>,
@@ -27,30 +27,26 @@ pub struct LookupResult {
 #[derive(Clone)]
 pub struct LiwanGeoIP {
     pool: SqlitePool,
-    reader: Arc<ShardedLock<Option<maxminddb::Reader<Vec<u8>>>>>,
+    reader: Arc<ArcSwapOption<maxminddb::Reader<Vec<u8>>>>,
 
     downloading: Arc<AtomicBool>,
-    config: crate::config::Config,
     geoip: crate::config::GeoIpConfig,
     path: PathBuf,
 }
 
 impl LiwanGeoIP {
-    pub fn try_new(config: crate::config::Config, pool: SqlitePool) -> Result<Option<Self>> {
-        let Some(geoip) = &config.geoip else {
-            tracing::trace!("GeoIP support disabled, skipping...");
-            return Ok(None);
-        };
-
+    pub fn try_new(config: crate::config::Config, pool: SqlitePool) -> Result<Self> {
+        let geoip = config.geoip;
         if geoip.maxmind_account_id.is_none() && geoip.maxmind_license_key.is_none() && geoip.maxmind_db_path.is_none()
         {
             tracing::trace!("GeoIP support disabled, skipping...");
-            return Ok(None);
+            return Ok(Self::noop(pool));
         }
 
-        let edition = geoip.maxmind_edition.as_deref().unwrap_or("GeoLite2-City");
+        let edition = &geoip.maxmind_edition;
         let default_path = PathBuf::from(config.data_dir.clone()).join(format!("./geoip/{edition}.mmdb"));
         let path = geoip.maxmind_db_path.as_ref().map_or(default_path, PathBuf::from);
+
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -60,28 +56,38 @@ impl LiwanGeoIP {
         }
 
         tracing::info!(database = geoip.maxmind_db_path, "GeoIP support enabled, loading database");
-        let reader = if path.exists() {
-            Some(maxminddb::Reader::open_readfile(path.clone()).expect("Failed to open GeoIP database file"))
-        } else {
-            None
-        };
 
-        Ok(Some(Self {
-            geoip: geoip.clone(),
-            config,
+        let reader = path.exists().then(|| {
+            maxminddb::Reader::open_readfile(path.clone()).expect("Failed to open GeoIP database file").into()
+        });
+
+        Ok(Self { geoip, pool, reader: ArcSwapOption::new(reader).into(), path, downloading: Default::default() })
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.reader.load().is_some() || self.downloading.load(Ordering::Acquire)
+    }
+
+    fn noop(pool: SqlitePool) -> Self {
+        Self {
+            geoip: Default::default(),
             pool,
-            reader: Arc::new(ShardedLock::new(reader)),
-            path,
-            downloading: Arc::new(AtomicBool::new(false)),
-        }))
+            reader: ArcSwapOption::new(None).into(),
+            downloading: Default::default(),
+            path: PathBuf::new(),
+        }
     }
 
     // Lookup the IP address in the GeoIP database
     pub fn lookup(&self, ip: &IpAddr) -> Result<LookupResult> {
-        let reader = self.reader.read().map_err(|_| eyre::eyre!("Failed to acquire GeoIP reader lock"))?;
-        let reader = reader.as_ref().ok_or_eyre("GeoIP database not found")?;
-        let lookup: maxminddb::geoip2::City =
-            reader.lookup(*ip)?.ok_or_else(|| eyre::eyre!("No data found for IP address"))?;
+        let Some(reader) = &*self.reader.load() else {
+            return Ok(Default::default());
+        };
+
+        let lookup = reader
+            .lookup::<maxminddb::geoip2::City>(*ip)?
+            .ok_or_else(|| eyre::eyre!("No data found for IP address"))?;
+
         let city = lookup.city.and_then(|city| city.names.and_then(|names| names.get("en").map(|s| (*s).to_string())));
         let country_code = lookup.country.and_then(|country| country.iso_code.map(ToString::to_string));
         Ok(LookupResult { city, country_code })
@@ -93,16 +99,17 @@ impl LiwanGeoIP {
             return Ok(());
         }
 
-        let maxmind_edition = self.geoip.maxmind_edition.clone().ok_or_eyre("MaxMind edition not found")?;
-        let maxmind_account_id = self.geoip.maxmind_account_id.clone().ok_or_eyre("MaxMind account ID not found")?;
-        let maxmind_license_key = self.geoip.maxmind_license_key.clone().ok_or_eyre("MaxMind license key not found")?;
+        let maxmind_edition = &self.geoip.maxmind_edition;
+        let maxmind_account_id = self.geoip.maxmind_account_id.as_deref().ok_or_eyre("MaxMind account ID not found")?;
+        let maxmind_license_key =
+            self.geoip.maxmind_license_key.as_deref().ok_or_eyre("MaxMind license key not found")?;
 
         let db_exists = self.path.exists();
         let db_md5 = if db_exists { file_md5(&self.path)? } else { String::new() };
 
-        let mut update = false;
+        let mut update = !db_exists;
         if db_exists {
-            match get_latest_md5(&maxmind_edition, &maxmind_account_id, &maxmind_license_key).await {
+            match get_latest_md5(maxmind_edition, maxmind_account_id, maxmind_license_key).await {
                 Ok(latest_md5) => {
                     if latest_md5 != db_md5 {
                         tracing::info!("GeoIP database outdated, downloading...");
@@ -115,11 +122,10 @@ impl LiwanGeoIP {
             };
         } else {
             tracing::info!("GeoIP database doesn't exist, attempting to download...");
-            update = true;
         }
 
         if update {
-            let file = match download_maxmind_db(&maxmind_edition, &maxmind_account_id, &maxmind_license_key).await {
+            let file = match download_maxmind_db(maxmind_edition, maxmind_account_id, maxmind_license_key).await {
                 Ok(file) => file,
                 Err(e) => {
                     tracing::warn!(error = ?e, "Failed to download GeoIP database, skipping update");
@@ -129,10 +135,7 @@ impl LiwanGeoIP {
             };
 
             // close the current reader to free up the file
-            {
-                let mut reader = self.reader.write().unwrap();
-                reader.take();
-            }
+            self.reader.swap(None);
 
             // move the downloaded file to the correct path
             std::fs::copy(&file, &self.path)?;
@@ -140,7 +143,7 @@ impl LiwanGeoIP {
 
             // open the new reader
             let reader = maxminddb::Reader::open_readfile(self.path.clone())?;
-            *self.reader.write().unwrap() = Some(reader);
+            self.reader.store(Some(reader.into()));
 
             let path = std::fs::canonicalize(&self.path)?;
             tracing::info!(path = ?path, "GeoIP database updated successfully");
@@ -151,8 +154,10 @@ impl LiwanGeoIP {
     }
 }
 
-pub fn keep_updated(geoip: Option<LiwanGeoIP>) {
-    let Some(geoip) = geoip else { return };
+pub fn keep_updated(geoip: LiwanGeoIP) {
+    if !geoip.is_enabled() {
+        return;
+    }
 
     tokio::task::spawn(async move {
         if let Err(e) = geoip.check_for_updates().await {
@@ -182,7 +187,7 @@ async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> R
         .basic_auth(account_id, Some(license_key))
         .send()
         .await?
-        .json::<HashMap<String, Vec<HashMap<String, String>>>>()
+        .json::<ahash::HashMap<String, Vec<ahash::HashMap<String, String>>>>()
         .await?;
 
     Ok(response

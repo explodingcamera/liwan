@@ -41,14 +41,16 @@ pub struct Config {
     #[serde(default = "default_data_dir")]
     pub data_dir: String,
 
-    pub geoip: Option<GeoIpConfig>,
+    #[serde(default)]
+    pub geoip: GeoIpConfig,
 
-    pub duckdb: Option<DuckdbConfig>,
+    #[serde(default)]
+    pub duckdb: DuckdbConfig,
 }
 
 #[must_use]
-pub fn default_maxmind_edition() -> Option<String> {
-    Some("GeoLite2-City".to_string())
+pub fn default_maxmind_edition() -> String {
+    "GeoLite2-City".to_string()
 }
 
 impl Default for Config {
@@ -57,26 +59,30 @@ impl Default for Config {
             base_url: default_base(),
             port: default_port(),
             data_dir: default_data_dir(),
-            geoip: None,
-            duckdb: None,
+            geoip: Default::default(),
+            duckdb: Default::default(),
             disable_favicons: false,
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GeoIpConfig {
+    #[serde(default)]
     pub maxmind_db_path: Option<String>,
     #[serde(default, deserialize_with = "deserialize_string_from_number")]
     pub maxmind_account_id: Option<String>,
+    #[serde(default)]
     pub maxmind_license_key: Option<String>,
     #[serde(default = "default_maxmind_edition")]
-    pub maxmind_edition: Option<String>,
+    pub maxmind_edition: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DuckdbConfig {
+    #[serde(default)]
     pub memory_limit: Option<String>,
+    #[serde(default)]
     pub threads: Option<NonZeroU16>,
 }
 
@@ -175,15 +181,15 @@ mod test {
 
             let config = Config::load(Some("liwan2.config.toml".into())).expect("failed to load config");
 
-            assert_eq!(config.geoip.as_ref().unwrap().maxmind_edition, Some("test".to_string()));
-            assert_eq!(config.geoip.as_ref().unwrap().maxmind_license_key, Some("test".to_string()));
-            assert_eq!(config.geoip.as_ref().unwrap().maxmind_account_id, Some("test".to_string()));
-            assert_eq!(config.geoip.as_ref().unwrap().maxmind_db_path, Some("test".to_string()));
+            assert_eq!(config.geoip.maxmind_edition, "test".to_string());
+            assert_eq!(config.geoip.maxmind_license_key, Some("test".to_string()));
+            assert_eq!(config.geoip.maxmind_account_id, Some("test".to_string()));
+            assert_eq!(config.geoip.maxmind_db_path, Some("test".to_string()));
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
             assert_eq!(config.port, 9042);
-            assert_eq!(config.duckdb.as_ref().unwrap().memory_limit, Some("2GB".to_string()));
-            assert_eq!(config.duckdb.as_ref().unwrap().threads, Some(NonZeroU16::new(4).unwrap()));
+            assert_eq!(config.duckdb.memory_limit, Some("2GB".to_string()));
+            assert_eq!(config.duckdb.threads, Some(NonZeroU16::new(4).unwrap()));
             Ok(())
         });
     }
@@ -201,7 +207,9 @@ mod test {
 
             let config = Config::load(Some("liwan3.config.toml".into())).expect("failed to load config");
 
-            assert!(config.geoip.is_none());
+            assert!(config.geoip.maxmind_db_path.is_none());
+            assert!(config.geoip.maxmind_account_id.is_none());
+            assert!(config.geoip.maxmind_license_key.is_none());
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
             assert_eq!(config.port, 9042);
@@ -223,8 +231,8 @@ mod test {
             )?;
 
             let config = Config::load(Some("liwan3.config.toml".into())).expect("failed to load config");
-            assert_eq!(config.geoip.clone().unwrap().maxmind_edition, Some("GeoLite2-City".to_string()));
-            assert_eq!(config.geoip.unwrap().maxmind_db_path, Some("test2".to_string()));
+            assert_eq!(config.geoip.maxmind_edition, default_maxmind_edition());
+            assert_eq!(config.geoip.maxmind_db_path, Some("test2".to_string()));
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
             Ok(())
@@ -240,7 +248,7 @@ mod test {
             let config = Config::load(None).expect("failed to load config");
             assert_eq!(config.data_dir, "/data");
             assert_eq!(config.base_url, "https://example.com");
-            assert_eq!(config.geoip.unwrap().maxmind_account_id, Some("123".to_string()));
+            assert_eq!(config.geoip.maxmind_account_id, Some("123".to_string()));
             Ok(())
         });
     }
@@ -249,7 +257,9 @@ mod test {
     fn test_no_config() {
         Jail::expect_with(|_jail| {
             let config = Config::load(None).expect("failed to load config");
-            assert!(config.geoip.is_none());
+            assert!(config.geoip.maxmind_db_path.is_none());
+            assert!(config.geoip.maxmind_account_id.is_none());
+            assert!(config.geoip.maxmind_license_key.is_none());
             assert_eq!(config.base_url, "http://localhost:9042");
             assert_eq!(config.port, 9042);
             Ok(())

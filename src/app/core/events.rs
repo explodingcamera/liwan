@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
-use crossbeam_channel::Receiver;
-use crossbeam_utils::sync::ShardedLock;
 use eyre::{Result, bail};
+use std::sync::mpsc::Receiver;
 
 use crate::app::models::{Event, event_params};
 use crate::app::{DuckDBPool, EVENT_BATCH_INTERVAL, SqlitePool};
@@ -13,7 +13,7 @@ use crate::utils::hash::generate_salt;
 pub struct LiwanEvents {
     duckdb: DuckDBPool,
     sqlite: SqlitePool,
-    daily_salt: Arc<ShardedLock<(String, DateTime<Utc>)>>,
+    daily_salt: Arc<ArcSwap<(String, DateTime<Utc>)>>,
 }
 
 impl LiwanEvents {
@@ -24,15 +24,12 @@ impl LiwanEvents {
                 Ok((row.get(0)?, row.get(1)?))
             })?
         };
-        Ok(Self { duckdb, sqlite, daily_salt: ShardedLock::new(daily_salt).into() })
+        Ok(Self { duckdb, sqlite, daily_salt: ArcSwap::new(daily_salt.into()).into() })
     }
 
     /// Get the daily salt, generating a new one if the current one is older than 24 hours
     pub fn get_salt(&self) -> Result<String> {
-        let (salt, updated_at) = {
-            let salt = self.daily_salt.read().map_err(|_| eyre::eyre!("Failed to acquire read lock"))?;
-            salt.clone()
-        };
+        let (salt, updated_at) = &**self.daily_salt.load();
 
         // if the salt is older than 24 hours, replace it with a new one (utils::generate_salt)
         if (Utc::now() - updated_at) > chrono::Duration::hours(24) {
@@ -41,15 +38,11 @@ impl LiwanEvents {
             let now = Utc::now();
             let conn = self.sqlite.get()?;
             conn.execute("update salts set salt = ?, updated_at = ? where id = 1", rusqlite::params![&new_salt, now])?;
-
-            if let Ok(mut daily_salt) = self.daily_salt.try_write() {
-                daily_salt.0.clone_from(&new_salt);
-                daily_salt.1 = now;
-                return Ok(new_salt);
-            }
+            self.daily_salt.store((new_salt.clone(), now).into());
+            Ok(new_salt)
+        } else {
+            Ok(salt.clone())
         }
-
-        Ok(salt)
     }
 
     /// Append events in batch

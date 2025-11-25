@@ -1,6 +1,6 @@
 use crate::{
     app::{Liwan, models::UserRole},
-    config::{Config, DEFAULT_CONFIG},
+    config::{Config, DEFAULT_CONFIG, GeoIpConfig},
 };
 use argh::FromArgs;
 use eyre::Result;
@@ -86,7 +86,7 @@ pub struct AddUser {
 }
 
 pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
-    config.geoip = None; // disable GeoIP support in CLI
+    config.geoip = GeoIpConfig::default(); // disable GeoIP in CLI commands
 
     match cmd {
         Command::UpdatePassword(update) => {

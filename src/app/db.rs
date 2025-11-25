@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 pub(super) fn init_duckdb(
     path: &PathBuf,
-    duckdb_config: Option<DuckdbConfig>,
+    duckdb_config: DuckdbConfig,
     mut migrations_runner: Runner,
 ) -> Result<r2d2::Pool<DuckdbConnectionManager>> {
     let mut flags = duckdb::Config::default()
@@ -19,14 +19,12 @@ pub(super) fn init_duckdb(
         .with("enable_fsst_vectors", "true")?
         .with("allocator_background_threads", "true")?;
 
-    if let Some(duckdb_config) = duckdb_config {
-        if let Some(memory_limit) = duckdb_config.memory_limit {
-            flags = flags.max_memory(&memory_limit)?;
-        }
+    if let Some(memory_limit) = duckdb_config.memory_limit {
+        flags = flags.max_memory(&memory_limit)?;
+    }
 
-        if let Some(threads) = duckdb_config.threads {
-            flags = flags.threads(threads.get().into())?;
-        }
+    if let Some(threads) = duckdb_config.threads {
+        flags = flags.threads(threads.get().into())?;
     }
 
     let conn = DuckdbConnectionManager::file_with_flags(path, flags).map_err(|e| {

@@ -25,7 +25,7 @@ pub struct Liwan {
     pub onboarding: core::onboarding::LiwanOnboarding,
     pub entities: core::entities::LiwanEntities,
     pub projects: core::projects::LiwanProjects,
-    pub geoip: Option<core::geoip::LiwanGeoIP>,
+    pub geoip: core::geoip::LiwanGeoIP,
 
     pub config: Config,
 }

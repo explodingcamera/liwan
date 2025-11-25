@@ -16,11 +16,10 @@ path="src/main.rs"
 
 [dependencies]
 # async/concurrency
+arc-swap="1.7"
 tokio={version="1.48", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
-crossbeam-utils="0.8"
-crossbeam-channel="0.5"
 quick_cache={version="0.6", features=["parking_lot", "ahash"]}
 
 # encoding
@@ -63,7 +62,8 @@ reqwest={version="0.12", default-features=false, features=[
 ]}
 rustls={version="0.23", features=["aws_lc_rs"]}
 
-duckdb={version="1.4", features=["buildtime_bindgen", "bundled", "chrono", "r2d2"]} # database
+# database
+duckdb={version="1.4", features=["buildtime_bindgen", "bundled", "chrono", "r2d2"]}
 rusqlite={version="0.37", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 r2d2_sqlite="0.31"

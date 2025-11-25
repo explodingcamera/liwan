@@ -10,8 +10,8 @@ pub fn app() -> std::sync::Arc<Liwan> {
     Liwan::new_memory(Config::default()).unwrap()
 }
 
-pub fn events() -> (crossbeam_channel::Sender<Event>, crossbeam_channel::Receiver<Event>) {
-    crossbeam_channel::unbounded::<Event>()
+pub fn events() -> (std::sync::mpsc::Sender<Event>, std::sync::mpsc::Receiver<Event>) {
+    std::sync::mpsc::channel::<Event>()
 }
 
 pub use liwan::web::create_router as router;

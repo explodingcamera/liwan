@@ -5,7 +5,6 @@ use crate::utils::useragent;
 use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
 
 use chrono::Utc;
-use crossbeam_channel::Sender;
 use eyre::{Context, Result};
 use poem::http::{StatusCode, Uri};
 use poem::web::headers::UserAgent;
@@ -14,6 +13,7 @@ use poem_openapi::payload::Json;
 use poem_openapi::{Object, OpenApi};
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, LazyLock};
 
 #[derive(Object)]
@@ -98,11 +98,8 @@ fn process_event(
         None => visitor_id(),
     };
 
-    let (country, city) = match (&app.geoip, ip) {
-        (Some(geoip), Some(ip)) => match geoip.lookup(&ip) {
-            Ok(lookup) => (lookup.country_code, lookup.city),
-            Err(_) => (None, None),
-        },
+    let (country, city) = match ip.map(|ip| app.geoip.lookup(&ip)) {
+        Some(Ok(lookup)) => (lookup.country_code, lookup.city),
         _ => (None, None),
     };
 
@@ -130,6 +127,6 @@ fn process_event(
         utm_term: event.utm.as_ref().and_then(|u| u.term.clone()),
     };
 
-    let _ = events.try_send(event);
+    events.send(event)?;
     Ok(())
 }

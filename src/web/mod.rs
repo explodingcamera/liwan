@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use crate::app::Liwan;
 use crate::app::models::Event;
-use crossbeam_channel::Sender;
 use routes::{dashboard_service, event_service};
+use std::sync::mpsc::Sender;
 use webext::{EmbeddedFilesEndpoint, PoemErrExt, catch_error};
 
 pub use session::SessionUser;
