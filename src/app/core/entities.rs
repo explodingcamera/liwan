@@ -1,4 +1,4 @@
-use eyre::{Result, bail};
+use anyhow::{Result, bail};
 
 use crate::app::{SqlitePool, models};
 use crate::utils::validate;

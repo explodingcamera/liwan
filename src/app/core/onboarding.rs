@@ -1,5 +1,5 @@
+use anyhow::Result;
 use arc_swap::ArcSwapOption;
-use eyre::Result;
 use std::sync::Arc;
 
 use crate::{app::SqlitePool, utils::hash::onboarding_token};

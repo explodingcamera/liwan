@@ -7,8 +7,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::app::SqlitePool;
+use anyhow::{Context, Result, anyhow};
 use arc_swap::ArcSwapOption;
-use eyre::{Context, OptionExt, Result};
 use futures_lite::StreamExt;
 use md5::{Digest, Md5};
 use tokio_tar::Archive;
@@ -52,7 +52,7 @@ impl LiwanGeoIP {
         }
 
         if path.extension() != Some("mmdb".as_ref()) {
-            return Err(eyre::eyre!("Invalid GeoIP database path file extension, expected '.mmdb'"));
+            return Err(anyhow!("Invalid GeoIP database path file extension, expected '.mmdb'"));
         }
 
         tracing::info!(database = geoip.maxmind_db_path, "GeoIP support enabled, loading database");
@@ -84,9 +84,8 @@ impl LiwanGeoIP {
             return Ok(Default::default());
         };
 
-        let lookup = reader
-            .lookup::<maxminddb::geoip2::City>(*ip)?
-            .ok_or_else(|| eyre::eyre!("No data found for IP address"))?;
+        let lookup =
+            reader.lookup::<maxminddb::geoip2::City>(*ip)?.ok_or_else(|| anyhow!("No data found for IP address"))?;
 
         let city = lookup.city.and_then(|city| city.names.and_then(|names| names.get("en").map(|s| (*s).to_string())));
         let country_code = lookup.country.and_then(|country| country.iso_code.map(ToString::to_string));
@@ -100,9 +99,10 @@ impl LiwanGeoIP {
         }
 
         let maxmind_edition = &self.geoip.maxmind_edition;
-        let maxmind_account_id = self.geoip.maxmind_account_id.as_deref().ok_or_eyre("MaxMind account ID not found")?;
+        let maxmind_account_id =
+            self.geoip.maxmind_account_id.as_deref().ok_or_else(|| anyhow!("MaxMind account ID not found"))?;
         let maxmind_license_key =
-            self.geoip.maxmind_license_key.as_deref().ok_or_eyre("MaxMind license key not found")?;
+            self.geoip.maxmind_license_key.as_deref().ok_or_else(|| anyhow!("MaxMind license key not found"))?;
 
         let db_exists = self.path.exists();
         let db_md5 = if db_exists { file_md5(&self.path)? } else { String::new() };
@@ -192,11 +192,11 @@ async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> R
 
     Ok(response
         .get("databases")
-        .ok_or_eyre("No databases found")?
+        .ok_or_else(|| anyhow!("No databases found"))?
         .first()
-        .ok_or_eyre("MD5 hash not found")?
+        .ok_or_else(|| anyhow!("MD5 hash not found"))?
         .get("md5")
-        .ok_or_eyre("MD5 hash not found")?
+        .ok_or_else(|| anyhow!("MD5 hash not found"))?
         .clone())
 }
 
@@ -220,26 +220,21 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
     let mut entries = archive.entries()?;
 
     let folder = std::env::temp_dir().join("liwan-geoip");
-    std::fs::create_dir_all(&folder).wrap_err("Failed to create temp directory")?;
+    std::fs::create_dir_all(&folder).context("Failed to create temp directory")?;
 
-    let file;
     loop {
-        let mut entry = entries.next().await.ok_or_eyre("No entries found")?.wrap_err("Failed to read entry")?;
+        let mut entry = entries.next().await.context("No entries found")?.context("Failed to read entry")?;
 
         let entry_path = entry.path()?;
         if entry_path.extension().is_some_and(|ext| ext == "mmdb") {
             entry.set_allow_external_symlinks(false);
             entry.set_preserve_permissions(false);
 
-            file = entry
+            return Ok(entry
                 .unpack_in(folder)
                 .await
-                .wrap_err("Failed to unpack entry")?
-                .ok_or_eyre("Failed to unpack entry")?;
-
-            break;
+                .context("Failed to unpack entry")?
+                .ok_or_else(|| anyhow!("Failed to unpack entry"))?);
         }
     }
-
-    Ok(file)
 }

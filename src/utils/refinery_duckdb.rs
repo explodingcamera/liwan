@@ -1,5 +1,5 @@
+use anyhow::Result;
 use chrono::{DateTime, Utc};
-use eyre::Result;
 use refinery::{Migration, error::WrapMigrationError};
 use refinery_core::{
     Migrate,

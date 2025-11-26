@@ -1,4 +1,4 @@
-use eyre::Result;
+use anyhow::Result;
 use liwan::app::models::{self, UserRole};
 use poem::http::{header, status::StatusCode};
 use serde_json::json;

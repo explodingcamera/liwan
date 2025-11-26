@@ -7,9 +7,9 @@ use std::sync::Arc;
 
 use crate::config::Config;
 
+use anyhow::Result;
 use core::{LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjects, LiwanSessions, LiwanUsers};
 use duckdb::DuckdbConnectionManager;
-use eyre::Result;
 use r2d2_sqlite::SqliteConnectionManager;
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use anyhow::{Result, bail};
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
-use eyre::{Result, bail};
 use std::sync::mpsc::Receiver;
 
 use crate::app::models::{Event, event_params};

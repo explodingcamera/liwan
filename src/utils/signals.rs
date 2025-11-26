@@ -1,4 +1,4 @@
-use eyre::Result;
+use anyhow::Result;
 use tokio::task::JoinSet;
 
 pub async fn shutdown() -> Result<()> {

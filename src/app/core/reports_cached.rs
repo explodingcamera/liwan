@@ -2,8 +2,8 @@ use super::reports::{DateRange, Dimension, DimensionFilter, Metric, ReportGraph,
 use super::reports::{dimension_report, overall_report, overall_stats};
 
 use crate::{app::DuckDBConn, utils::to_sorted};
+use anyhow::Result;
 use chrono::{DateTime, Utc};
-use eyre::Result;
 use quick_cache::sync::Cache;
 use std::sync::LazyLock;
 

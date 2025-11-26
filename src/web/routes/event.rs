@@ -4,8 +4,8 @@ use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
 
+use anyhow::{Context, Result};
 use chrono::Utc;
-use eyre::{Context, Result};
 use poem::http::{StatusCode, Uri};
 use poem::web::headers::UserAgent;
 use poem::web::{Data, RealIp, TypedHeader, headers};
@@ -49,7 +49,7 @@ impl EventApi {
         Json(event): Json<EventRequest>,
         TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
     ) -> ApiResult<EmptyResponse> {
-        let url = Uri::from_str(&event.url).wrap_err("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
+        let url = Uri::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
         let app = app.clone();
         let events = events.clone();
 
@@ -112,14 +112,14 @@ fn process_event(
         referrer,
         country,
         city,
-        browser: client.ua_family.to_string().into(),
+        mobile: Some(client.is_mobile()),
+        browser: client.ua_family,
+        platform: client.os_family,
         created_at: Utc::now(),
         entity_id: event.entity_id,
         event: event.name,
         fqdn: fqdn.into(),
         path: path.into(),
-        mobile: Some(client.is_mobile()),
-        platform: client.os_family.to_string().into(),
         utm_campaign: event.utm.as_ref().and_then(|u| u.campaign.clone()),
         utm_content: event.utm.as_ref().and_then(|u| u.content.clone()),
         utm_medium: event.utm.as_ref().and_then(|u| u.medium.clone()),

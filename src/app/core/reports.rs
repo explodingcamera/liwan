@@ -3,9 +3,9 @@ use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
+use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use duckdb::params_from_iter;
-use eyre::{Result, bail};
 use poem_openapi::{Enum, Object};
 
 pub use super::reports_cached::*;

@@ -1,5 +1,5 @@
 mod common;
-use eyre::Result;
+use anyhow::Result;
 use liwan::app::models::Entity;
 use poem::http::{header, status::StatusCode};
 use serde_json::json;

@@ -1,4 +1,4 @@
-use eyre::{Context, Result, bail};
+use anyhow::{Context, Result, bail};
 use figment::Figment;
 use figment::providers::{Env, Format, Toml};
 use poem::http::Uri;
@@ -137,7 +137,7 @@ impl Config {
             }))
             .extract()?;
 
-        let url: Uri = Uri::from_str(&config.base_url).wrap_err("Invalid base URL")?;
+        let url: Uri = Uri::from_str(&config.base_url).context("Invalid base URL")?;
 
         if ![Some("http"), Some("https")].contains(&url.scheme_str()) {
             bail!("Invalid base URL: protocol must be either http or https");

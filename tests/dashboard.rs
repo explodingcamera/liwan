@@ -1,6 +1,6 @@
 mod common;
+use anyhow::{Result, bail};
 use chrono::{Duration, Utc};
-use eyre::{Result, bail};
 use serde_json::json;
 
 #[tokio::test]

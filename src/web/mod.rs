@@ -12,7 +12,7 @@ use webext::{EmbeddedFilesEndpoint, PoemErrExt, catch_error};
 
 pub use session::SessionUser;
 
-use eyre::{Context, Result};
+use anyhow::{Context, Result};
 use rust_embed::RustEmbed;
 
 use poem::endpoint::EmbeddedFileEndpoint;
@@ -105,5 +105,5 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
         }
     }
 
-    Server::new(listener).run(router).await.wrap_err("server exited unexpectedly")
+    Server::new(listener).run(router).await.context("server exited unexpectedly")
 }

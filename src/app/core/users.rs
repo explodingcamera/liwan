@@ -1,7 +1,7 @@
 use crate::app::{SqlitePool, models};
 use crate::utils::hash::{hash_password, verify_password};
 use crate::utils::validate;
-use eyre::{Result, bail};
+use anyhow::{Result, bail};
 
 #[derive(Clone)]
 pub struct LiwanUsers {
@@ -39,7 +39,7 @@ impl LiwanUsers {
                     .collect(),
             })
         });
-        user.map_err(|_| eyre::eyre!("user not found"))
+        user.map_err(|_| anyhow::anyhow!("user not found"))
     }
 
     /// Get all users

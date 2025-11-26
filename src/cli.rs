@@ -2,8 +2,8 @@ use crate::{
     app::{Liwan, models::UserRole},
     config::{Config, DEFAULT_CONFIG, GeoIpConfig},
 };
+use anyhow::Result;
 use argh::FromArgs;
-use eyre::Result;
 
 #[derive(FromArgs)]
 /// liwan - lightweight web analytics

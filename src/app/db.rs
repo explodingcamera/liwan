@@ -2,8 +2,8 @@ use crate::config::DuckdbConfig;
 use crate::utils::refinery_duckdb::DuckDBConnection;
 use crate::utils::refinery_sqlite::RqlConnection;
 
+use anyhow::{Result, bail};
 use duckdb::DuckdbConnectionManager;
-use eyre::{Result, bail};
 use r2d2_sqlite::SqliteConnectionManager;
 use refinery::Runner;
 use std::path::PathBuf;
@@ -29,7 +29,7 @@ pub(super) fn init_duckdb(
 
     let conn = DuckdbConnectionManager::file_with_flags(path, flags).map_err(|e| {
         tracing::warn!("Failed to create DuckDB connection. If you've just upgraded to Liwan 1.2, please downgrade to version 1.1.1 first, start and stop the server, and then upgrade to 1.2 again.");
-        eyre::eyre!("Failed to create DuckDB connection: {}", e)
+        anyhow::anyhow!("Failed to create DuckDB connection: {}", e)
     })?;
 
     let pool = r2d2::Pool::new(conn)?;

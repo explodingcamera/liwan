@@ -7,8 +7,8 @@ use crate::web::PoemErrExt;
 use crate::web::session::{MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE, SessionId, SessionUser};
 use crate::web::webext::{ApiResult, EmptyResponse, http_bail};
 
+use anyhow::anyhow;
 use chrono::Utc;
-use eyre::eyre;
 use poem::http::StatusCode;
 use poem::middleware::TowerLayerCompatExt;
 use poem::web::{Data, cookie::CookieJar};
@@ -64,7 +64,7 @@ impl AuthApi {
 
         app.onboarding
             .clear()
-            .map_err(|_| eyre!("onboarding lock poisoned"))
+            .map_err(|_| anyhow!("onboarding lock poisoned"))
             .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
         EmptyResponse::ok()

@@ -1,6 +1,6 @@
 use crate::app::{SqlitePool, models};
+use anyhow::Result;
 use chrono::{DateTime, Utc};
-use eyre::Result;
 use rusqlite::params;
 
 #[derive(Clone)]
