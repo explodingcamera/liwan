@@ -15,7 +15,7 @@ impl LiwanOnboarding {
             tracing::debug!("Checking if an onboarding token needs to be generated");
             let conn = pool.get()?;
             let onboarded = conn.prepare("select 1 from users limit 1")?.exists([])?;
-            ArcSwapOption::new(onboarded.then(|| onboarding_token().into()))
+            ArcSwapOption::new((!onboarded).then(|| onboarding_token().into()))
         };
 
         Ok(Self { token: onboarding.into() })
