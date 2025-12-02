@@ -24,12 +24,11 @@ pub struct LookupResult {
     pub country_code: Option<String>,
 }
 
-#[derive(Clone)]
 pub struct LiwanGeoIP {
     pool: SqlitePool,
-    reader: Arc<ArcSwapOption<maxminddb::Reader<Vec<u8>>>>,
+    reader: ArcSwapOption<maxminddb::Reader<Vec<u8>>>,
 
-    downloading: Arc<AtomicBool>,
+    downloading: AtomicBool,
     geoip: crate::config::GeoIpConfig,
     path: PathBuf,
 }
@@ -61,7 +60,7 @@ impl LiwanGeoIP {
             maxminddb::Reader::open_readfile(path.clone()).expect("Failed to open GeoIP database file").into()
         });
 
-        Ok(Self { geoip, pool, reader: ArcSwapOption::new(reader).into(), path, downloading: Default::default() })
+        Ok(Self { geoip, pool, reader: ArcSwapOption::new(reader), path, downloading: Default::default() })
     }
 
     fn is_enabled(&self) -> bool {
@@ -72,7 +71,7 @@ impl LiwanGeoIP {
         Self {
             geoip: Default::default(),
             pool,
-            reader: ArcSwapOption::new(None).into(),
+            reader: ArcSwapOption::new(None),
             downloading: Default::default(),
             path: PathBuf::new(),
         }
@@ -84,11 +83,9 @@ impl LiwanGeoIP {
             return Ok(Default::default());
         };
 
-        let lookup =
-            reader.lookup::<maxminddb::geoip2::City>(*ip)?.ok_or_else(|| anyhow!("No data found for IP address"))?;
-
-        let city = lookup.city.and_then(|city| city.names.and_then(|names| names.get("en").map(|s| (*s).to_string())));
-        let country_code = lookup.country.and_then(|country| country.iso_code.map(ToString::to_string));
+        let lookup = reader.lookup(*ip)?.decode::<maxminddb::geoip2::City>().context("failed to decode data")?;
+        let city = lookup.as_ref().and_then(|lookup| lookup.city.names.english.map(|v| v.to_string()));
+        let country_code = lookup.and_then(|lookup| lookup.country.iso_code.map(|v| v.to_string()));
         Ok(LookupResult { city, country_code })
     }
 
@@ -154,7 +151,7 @@ impl LiwanGeoIP {
     }
 }
 
-pub fn keep_updated(geoip: LiwanGeoIP) {
+pub fn keep_updated(geoip: Arc<LiwanGeoIP>) {
     if !geoip.is_enabled() {
         return;
     }
@@ -230,11 +227,11 @@ async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str)
             entry.set_allow_external_symlinks(false);
             entry.set_preserve_permissions(false);
 
-            return Ok(entry
+            return entry
                 .unpack_in(folder)
                 .await
                 .context("Failed to unpack entry")?
-                .ok_or_else(|| anyhow!("Failed to unpack entry"))?);
+                .ok_or_else(|| anyhow!("Failed to unpack entry"));
         }
     }
 }

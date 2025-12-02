@@ -70,7 +70,7 @@ r2d2={version="0.8", default-features=false}
 r2d2_sqlite="0.31"
 refinery={version="0.9", default-features=false}
 refinery-core={version="0.9", default-features=false}
-maxminddb={version="0.26", optional=true, features=["simdutf8"]}
+maxminddb={version="0.27", optional=true, features=["simdutf8"]}
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator="0.6"

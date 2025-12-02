@@ -12,8 +12,8 @@ pub struct UserAgent {
 static PARSER: LazyLock<Extractor<'static>> = LazyLock::new(|| {
     let data = zstd::decode_all(Cursor::new(include_bytes!("../../data/ua_regexes.json.zstd"))).expect("valid data");
     let regexes: ua_parser::Regexes = serde_json::from_slice(&data).expect("valid data");
-    let extractor = ua_parser::Extractor::try_from(regexes).expect("valid data");
-    extractor
+
+    ua_parser::Extractor::try_from(regexes).expect("valid data")
 });
 
 static UAP_CACHE: LazyLock<Cache<String, UserAgent>> = LazyLock::new(|| Cache::new(1024));

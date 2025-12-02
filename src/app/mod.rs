@@ -25,7 +25,7 @@ pub struct Liwan {
     pub onboarding: core::onboarding::LiwanOnboarding,
     pub entities: core::entities::LiwanEntities,
     pub projects: core::projects::LiwanProjects,
-    pub geoip: core::geoip::LiwanGeoIP,
+    pub geoip: Arc<core::geoip::LiwanGeoIP>,
 
     pub config: Config,
 }
@@ -57,7 +57,7 @@ impl Liwan {
 
         Ok(Self {
             #[cfg(feature = "geoip")]
-            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?,
+            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
@@ -79,7 +79,7 @@ impl Liwan {
 
         Ok(Self {
             #[cfg(feature = "geoip")]
-            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?,
+            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,

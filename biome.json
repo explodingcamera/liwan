@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+	"$schema": "./web/node_modules/@biomejs/biome/configuration_schema.json",
 	"assist": {
 		"enabled": true,
 		"actions": {
