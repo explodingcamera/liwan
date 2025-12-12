@@ -2,7 +2,7 @@
 name="liwan"
 version="1.2.1"
 edition="2024"
-rust-version="1.91"
+rust-version="1.92"
 repository="https://github.com/explodingcamera/liwan"
 license="Apache-2.0"
 publish=false
@@ -64,7 +64,7 @@ reqwest={version="0.12", default-features=false, features=[
 rustls={version="0.23", features=["aws_lc_rs"]}
 
 # database
-duckdb={version="1.4", features=["buildtime_bindgen", "bundled", "chrono", "r2d2"]}
+duckdb={version="1.4", features=["buildtime_bindgen", "chrono", "bundled", "r2d2"]}
 rusqlite={version="0.37", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 r2d2_sqlite="0.31"
