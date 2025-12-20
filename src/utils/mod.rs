@@ -1,6 +1,7 @@
 pub mod duckdb;
 pub mod geo;
 pub mod hash;
+pub mod r2d2_sqlite;
 pub mod referrer;
 pub mod refinery_duckdb;
 pub mod refinery_sqlite;

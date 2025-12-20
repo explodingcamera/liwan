@@ -5,7 +5,7 @@ use crate::app::models::User;
 use poem::FromRequest;
 use poem::web::cookie::{Cookie, SameSite};
 
-pub const MAX_SESSION_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 14);
+pub const MAX_SESSION_AGE: Duration = Duration::from_hours(24 * 14);
 
 pub static PUBLIC_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
     let mut public_cookie = Cookie::named("liwan-username");

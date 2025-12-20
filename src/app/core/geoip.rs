@@ -161,8 +161,7 @@ pub fn keep_updated(geoip: Arc<LiwanGeoIP>) {
             tracing::error!(error = ?e, "Failed to check for GeoIP database updates");
         }
 
-        // Create an interval that ticks every 24 hours
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400));
+        let mut interval = tokio::time::interval(std::time::Duration::from_hours(24));
         loop {
             interval.tick().await;
             let geoip = geoip.clone();

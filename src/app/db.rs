@@ -2,9 +2,9 @@ use crate::config::DuckdbConfig;
 use crate::utils::refinery_duckdb::DuckDBConnection;
 use crate::utils::refinery_sqlite::RqlConnection;
 
+use crate::utils::r2d2_sqlite::SqliteConnectionManager;
 use anyhow::{Result, bail};
 use duckdb::DuckdbConnectionManager;
-use r2d2_sqlite::SqliteConnectionManager;
 use refinery::Runner;
 use std::path::PathBuf;
 
