@@ -9,8 +9,6 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
-    rustls::crypto::aws_lc_rs::default_provider().install_default().expect("failed to install crypto provider");
-
     let args = cli::args();
     setup_logger(args.log_level)?;
 

@@ -1,4 +1,4 @@
-workarounds=["ring", "rustls"]
+workarounds=["bitvec", "rustls", "chrono", "rustix"]
 accepted=[
     "Apache-2.0",
     "MIT",
@@ -14,4 +14,4 @@ accepted=[
 targets=["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "aarch64-apple-darwin"]
 ignore-build-dependencies=true
 ignore-dev-dependencies=true
-no-clearly-defined=true
+filter-noassertion=true

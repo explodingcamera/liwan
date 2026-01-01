@@ -16,7 +16,7 @@ path="src/main.rs"
 
 [dependencies]
 # async/concurrency
-arc-swap="1.7"
+arc-swap="1.8"
 tokio={version="1.48", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
@@ -27,7 +27,7 @@ hex={version="0.4"}
 bs58="0.5"
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
-md-5="0.10.6"
+md5={package="md-5", version="0.10.6"}
 async-compression={version="0.4", default-features=false, features=["gzip", "tokio"]}
 tokio-tar={package="astral-tokio-tar", version="0.5"}
 sha3={version="0.10"}
@@ -46,23 +46,12 @@ tracing-subscriber={version="0.3", features=["env-filter"]}
 ahash="0.8"
 
 # web
-poem={version="3.1", default-features=false, features=[
-    "embed",
-    "cookie",
-    "compression",
-    "tower-compat",
-]}
+poem={version="3.1", default-features=false, features=["embed", "cookie", "compression", "tower-compat"]}
 poem-openapi={version="5.1", default-features=false, features=["chrono"]}
 tower={version="0.5", default-features=false, features=["limit"]}
 ua-parser="0.2"
 rust-embed={version="8.9", features=["mime-guess"]}
-reqwest={version="0.12", default-features=false, features=[
-    "json",
-    "stream",
-    "charset",
-    "rustls-tls-webpki-roots-no-provider",
-]}
-rustls={version="0.23", features=["aws_lc_rs"]}
+reqwest={version="0.13", default-features=false, features=["json", "stream", "charset", "rustls"]}
 
 # database
 duckdb={version="1.4", features=["buildtime_bindgen", "chrono", "bundled", "r2d2"]}
