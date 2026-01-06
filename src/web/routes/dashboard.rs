@@ -1,13 +1,10 @@
-use std::sync::Arc;
-
-use crate::app::Liwan;
 use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, Metric, ReportStats};
 use crate::utils::validate::{self, can_access_project};
-use crate::web::RouterState;
 use crate::web::session::SessionUser;
 use crate::web::webext::{ApiResult, AxumErrExt, http_bail};
+use crate::web::{MaybeExtract, RouterState};
 
-use aide::axum::{ApiRouter, IntoApiResponse, routing::*};
+use aide::axum::{ApiRouter, routing::*};
 use axum::Json;
 use axum::extract::{Path, State};
 use chrono::{DateTime, Utc};
@@ -94,7 +91,7 @@ struct EarliestResponse {
 
 async fn project_earliest_handler(
     app: State<RouterState>,
-    user: Option<SessionUser>,
+    MaybeExtract(user): MaybeExtract<SessionUser>,
     Path(project_id): Path<String>,
 ) -> ApiResult<Json<EarliestResponse>> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -111,10 +108,10 @@ async fn project_earliest_handler(
 }
 
 async fn project_graph_handler(
-    Json(req): Json<GraphRequest>,
-    Path(project_id): Path<String>,
     app: State<RouterState>,
-    user: Option<SessionUser>,
+    Path(project_id): Path<String>,
+    MaybeExtract(user): MaybeExtract<SessionUser>,
+    Json(req): Json<GraphRequest>,
 ) -> ApiResult<Json<GraphResponse>> {
     if req.data_points > validate::MAX_DATAPOINTS {
         http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
@@ -148,10 +145,10 @@ async fn project_graph_handler(
 }
 
 async fn project_stats_handler(
-    Json(req): Json<StatsRequest>,
-    Path(project_id): Path<String>,
     app: State<RouterState>,
-    user: Option<SessionUser>,
+    Path(project_id): Path<String>,
+    MaybeExtract(user): MaybeExtract<SessionUser>,
+    Json(req): Json<StatsRequest>,
 ) -> ApiResult<Json<StatsResponse>> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
     if !can_access_project(&project, user.as_ref()) {
@@ -188,10 +185,10 @@ async fn project_stats_handler(
 }
 
 async fn project_detailed_handler(
-    Json(req): Json<DimensionRequest>,
-    Path(project_id): Path<String>,
     app: State<RouterState>,
-    user: Option<SessionUser>,
+    MaybeExtract(user): MaybeExtract<SessionUser>,
+    Path(project_id): Path<String>,
+    Json(req): Json<DimensionRequest>,
 ) -> ApiResult<Json<DimensionResponse>> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
     let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;

@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use aide::OperationOutput;
 use aide::axum::IntoApiResponse;
 use axum::body::{Body, Bytes};
 use axum::response::IntoResponse;
@@ -70,6 +71,10 @@ pub struct ApiError {
     pub status: StatusCode,
 }
 
+impl OperationOutput for ApiError {
+    type Inner = Self;
+}
+
 impl From<StatusCode> for ApiError {
     fn from(status: StatusCode) -> Self {
         ApiError { message: status.canonical_reason().unwrap_or("Unknown error").to_string(), status }
@@ -124,10 +129,10 @@ pub async fn call<E: RustEmbed + Send + Sync>(
     let Some(content) = file else { return Err(StatusCode::NOT_FOUND) };
 
     let hash = hex::encode(content.metadata.sha256_hash());
-    if let Some(etag) = req.headers().get(header::IF_NONE_MATCH) {
-        if etag.to_str().unwrap_or("000000") == hash {
-            return Err(StatusCode::NOT_MODIFIED);
-        }
+    if let Some(etag) = req.headers().get(header::IF_NONE_MATCH)
+        && etag.to_str().unwrap_or("000000") == hash
+    {
+        return Err(StatusCode::NOT_MODIFIED);
     }
 
     let body = Body::from(content.data);
@@ -153,7 +158,7 @@ impl<T> StaticFile<T> {
 
 impl<T: RustEmbed + Send + Sync> IntoResponse for StaticFile<T> {
     fn into_response(self) -> http::Response<Body> {
-        match T::get(self.0.as_ref()) {
+        match T::get(self.0) {
             Some(content) => ([(header::CONTENT_TYPE, content.metadata.mimetype())], content.data).into_response(),
             None => StatusCode::NOT_FOUND.into_response(),
         }
@@ -171,7 +176,7 @@ impl<T: RustEmbed + Send + Sync> Service<Request<Body>> for StaticFile<T> {
 
     fn call(&mut self, _req: Request<Body>) -> Self::Future {
         Box::pin(async {
-            Ok(match T::get(self.0.as_ref()) {
+            Ok(match T::get(self.0) {
                 Some(content) => Response::builder()
                     .header(header::CONTENT_TYPE, content.metadata.mimetype())
                     .body(Body::from(content.data))
@@ -194,7 +199,6 @@ pub(crate) fn empty_response() -> impl IntoApiResponse {
     (StatusCode::OK, Json(StatusResponse { status: "OK".into() }))
 }
 
-#[macro_use]
 macro_rules! http_bail {
     ($status:expr, $($arg:tt)*) => {
         return Err(crate::web::webext::ApiError {

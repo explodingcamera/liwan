@@ -13,10 +13,7 @@ impl SqliteConnectionManager {
     }
 
     pub fn memory() -> Self {
-        Self {
-            source: format!("file:{}?mode=memory&cache=shared", Uuid::new_v4().to_string()).into(),
-            flags: OpenFlags::default(),
-        }
+        Self { source: format!("file:{}?mode=memory&cache=shared", Uuid::new_v4()).into(), flags: OpenFlags::default() }
     }
 
     pub fn with_flags(self, flags: OpenFlags) -> Self {

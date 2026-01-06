@@ -11,7 +11,7 @@ use crate::{
     app::models::{Entity, Project, UserRole},
     utils::validate::can_access_project,
     web::{
-        RouterState, SessionUser,
+        MaybeExtract, RouterState, SessionUser,
         webext::{ApiResult, AxumErrExt, empty_response, http_bail},
     },
 };
@@ -164,10 +164,10 @@ async fn get_users(app: State<RouterState>, SessionUser(user): SessionUser) -> A
 }
 
 async fn update_user(
-    Path(username): Path<String>,
-    user: Json<UpdateUserRequest>,
     app: State<RouterState>,
+    Path(username): Path<String>,
     SessionUser(session_user): SessionUser,
+    user: Json<UpdateUserRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if session_user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
@@ -185,10 +185,10 @@ async fn update_user(
 }
 
 async fn update_user_password(
-    Path(username): Path<String>,
-    password: Json<UpdatePasswordRequest>,
     app: State<RouterState>,
+    Path(username): Path<String>,
     SessionUser(session_user): SessionUser,
+    password: Json<UpdatePasswordRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if session_user.role != UserRole::Admin || username != session_user.username {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
@@ -202,8 +202,8 @@ async fn update_user_password(
 }
 
 async fn remove_user(
-    Path(username): Path<String>,
     app: State<RouterState>,
+    Path(username): Path<String>,
     SessionUser(session_user): SessionUser,
 ) -> ApiResult<impl IntoApiResponse> {
     if session_user.role != UserRole::Admin {
@@ -220,9 +220,9 @@ async fn remove_user(
 }
 
 async fn create_user(
-    user: Json<CreateUserRequest>,
     app: State<RouterState>,
     SessionUser(session_user): SessionUser,
+    user: Json<CreateUserRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if session_user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
@@ -239,9 +239,9 @@ async fn create_user(
 
 async fn project_create_handler(
     app: State<RouterState>,
-    Json(project): Json<CreateProjectRequest>,
     Path(project_id): Path<String>,
     SessionUser(user): SessionUser,
+    Json(project): Json<CreateProjectRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
@@ -264,9 +264,9 @@ async fn project_create_handler(
 
 async fn project_update_handler(
     app: State<RouterState>,
-    Json(req): Json<UpdateProjectRequest>,
     Path(project_id): Path<String>,
     SessionUser(user): SessionUser,
+    Json(req): Json<UpdateProjectRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
@@ -292,7 +292,10 @@ async fn project_update_handler(
     Ok(empty_response())
 }
 
-async fn projects_handler(app: State<RouterState>, user: Option<SessionUser>) -> ApiResult<impl IntoApiResponse> {
+async fn projects_handler(
+    app: State<RouterState>,
+    MaybeExtract(user): MaybeExtract<SessionUser>,
+) -> ApiResult<impl IntoApiResponse> {
     let projects = app.projects.all().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
     let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, user.as_ref())).collect();
 
@@ -316,9 +319,9 @@ async fn projects_handler(app: State<RouterState>, user: Option<SessionUser>) ->
 }
 
 async fn project_handler(
-    Path(project_id): Path<String>,
     app: State<RouterState>,
-    user: Option<SessionUser>,
+    MaybeExtract(user): MaybeExtract<SessionUser>,
+    Path(project_id): Path<String>,
 ) -> ApiResult<impl IntoApiResponse> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
     if !can_access_project(&project, user.as_ref()) {
@@ -342,8 +345,8 @@ async fn project_handler(
 }
 
 async fn project_delete_handler(
-    Path(project_id): Path<String>,
     app: State<RouterState>,
+    Path(project_id): Path<String>,
     SessionUser(user): SessionUser,
 ) -> ApiResult<impl IntoApiResponse> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -386,8 +389,8 @@ async fn entities_handler(app: State<RouterState>, SessionUser(user): SessionUse
 
 async fn entity_create_handler(
     app: State<RouterState>,
-    Json(entity): Json<CreateEntityRequest>,
     SessionUser(user): SessionUser,
+    Json(entity): Json<CreateEntityRequest>,
 ) -> ApiResult<Json<EntityResponse>> {
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
@@ -405,9 +408,9 @@ async fn entity_create_handler(
 
 async fn entity_update_handler(
     app: State<RouterState>,
-    Json(entity): Json<UpdateEntityRequest>,
     Path(entity_id): Path<String>,
     SessionUser(user): SessionUser,
+    Json(entity): Json<UpdateEntityRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
@@ -429,8 +432,8 @@ async fn entity_update_handler(
 }
 
 async fn entity_delete_handler(
-    Path(entity_id): Path<String>,
     app: State<RouterState>,
+    Path(entity_id): Path<String>,
     SessionUser(user): SessionUser,
 ) -> ApiResult<impl IntoApiResponse> {
     if user.role != UserRole::Admin {

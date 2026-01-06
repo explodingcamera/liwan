@@ -1,7 +1,7 @@
 use crate::app::{Liwan, models::Event};
 use crate::utils::hash::{hash_ip, visitor_id};
 use crate::utils::referrer::{Referrer, process_referer};
-use crate::utils::useragent::{self, UserAgent};
+use crate::utils::useragent;
 use crate::web::RouterState;
 use crate::web::webext::{ApiResult, AxumErrExt, empty_response};
 
@@ -10,8 +10,10 @@ use aide::axum::{ApiRouter, IntoApiResponse};
 use anyhow::{Context, Result};
 use axum::Json;
 use axum::extract::State;
+use axum_extra::TypedHeader;
 use chrono::Utc;
 use http::{StatusCode, Uri};
+use schemars::JsonSchema;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
@@ -21,6 +23,7 @@ pub fn router() -> ApiRouter<RouterState> {
     ApiRouter::new().route("/event", post(event_handler))
 }
 
+#[derive(serde::Deserialize, JsonSchema)]
 struct EventRequest {
     entity_id: String,
     name: String,
@@ -29,6 +32,7 @@ struct EventRequest {
     utm: Option<Utm>,
 }
 
+#[derive(serde::Deserialize, JsonSchema)]
 struct Utm {
     source: Option<String>,
     content: Option<String>,
@@ -42,13 +46,15 @@ static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
 
 async fn event_handler(
     state: State<RouterState>,
-    Json(event): Json<EventRequest>,
-    RealIp(ip): RealIp,
+    // RealIp(ip): RealIp, TODO
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
+    Json(event): Json<EventRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     let url = Uri::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
     let app = state.app.clone();
     let events = state.events.clone();
+
+    let ip = None; // TODO: RealIp
 
     // run the event processing in the background
     tokio::task::spawn_blocking(move || {
@@ -66,7 +72,7 @@ fn process_event(
     event: EventRequest,
     url: Uri,
     ip: Option<IpAddr>,
-    user_agent: UserAgent,
+    user_agent: headers::UserAgent,
 ) -> Result<()> {
     let referrer = match process_referer(event.referrer.as_deref()) {
         Referrer::Fqdn(fqdn) => Some(fqdn),
