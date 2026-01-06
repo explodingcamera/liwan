@@ -62,20 +62,6 @@ impl<T, E: Display> PoemErrExt<T> for Result<T, E> {
     }
 }
 
-pub struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
-
-impl<E: RustEmbed + Send + Sync> Default for EmbeddedFilesEndpoint<E> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
-    pub fn new() -> Self {
-        Self(PhantomData)
-    }
-}
-
 pub type ApiResult<T> = poem::Result<T, poem::Error>;
 
 #[derive(Object, Serialize)]
@@ -93,6 +79,20 @@ pub enum EmptyResponse {
 impl EmptyResponse {
     pub fn ok() -> ApiResult<Self> {
         Ok(Self::Ok(poem_openapi::payload::Json(StatusResponse { status: "ok".to_string(), message: None })))
+    }
+}
+
+pub struct EmbeddedFilesEndpoint<E: RustEmbed + Send + Sync>(PhantomData<E>);
+
+impl<E: RustEmbed + Send + Sync> Default for EmbeddedFilesEndpoint<E> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<E: RustEmbed + Send + Sync> EmbeddedFilesEndpoint<E> {
+    pub fn new() -> Self {
+        Self(PhantomData)
     }
 }
 
