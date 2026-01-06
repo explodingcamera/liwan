@@ -7,10 +7,11 @@ use std::ops::Deref;
 use std::sync::{Arc, mpsc::Sender};
 
 use anyhow::{Context, Result};
+use axum::handler::{Handler, HandlerWithoutStateExt};
 use rust_embed::RustEmbed;
 
 use aide::{axum::ApiRouter, openapi};
-use http::{Method, header};
+use http::{HeaderValue, Method, header};
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
@@ -19,12 +20,12 @@ use tower_http::{
 
 use crate::app::{Liwan, models::Event};
 
-pub use session::SessionUser;
+pub use session::{MaybeExtract, SessionId, SessionUser};
 use webext::StaticFile;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
-struct Files;
+struct _Files;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./tracker"]
@@ -45,18 +46,32 @@ impl Deref for RouterState {
 }
 
 pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
+    let mut api = openapi::OpenApi {
+        info: openapi::Info { title: "Liwan API".to_string(), ..Default::default() },
+        ..openapi::OpenApi::default()
+    };
+
     let event_cors = CorsLayer::new().allow_methods([Method::POST]).allow_origin(Any).allow_credentials(false);
     let script_cors = CorsLayer::new().allow_methods([Method::GET]).allow_origin(Any).allow_credentials(false);
 
     let set_headers = tower::ServiceBuilder::new()
-        .layer(SetResponseHeaderLayer::if_not_present(header::X_FRAME_OPTIONS, "DENY"))
-        .layer(SetResponseHeaderLayer::if_not_present(header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
-        .layer(SetResponseHeaderLayer::if_not_present(header::X_XSS_PROTECTION, "1; mode=block"))
+        .layer(SetResponseHeaderLayer::if_not_present(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY")))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::X_XSS_PROTECTION,
+            HeaderValue::from_static("1; mode=block"),
+        ))
         .layer(SetResponseHeaderLayer::if_not_present(
             header::CONTENT_SECURITY_POLICY,
-            "default-src 'self' data: 'unsafe-inline'; img-src 'self' data: https://*",
+            HeaderValue::from_static("default-src 'self' data: 'unsafe-inline'; img-src 'self' data: https://*"),
         ))
-        .layer(SetResponseHeaderLayer::if_not_present(header::REFERRER_POLICY, "same-origin"));
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::REFERRER_POLICY,
+            HeaderValue::from_static("same-origin"),
+        ));
 
     let dashboard = ApiRouter::new()
         .merge(routes::admin::router())
@@ -66,10 +81,13 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
     let router = ApiRouter::new()
         .nest("/api", routes::event::router().layer(event_cors))
         .nest("/api/dashboard", dashboard)
-        .route_service("/script.js", StaticFile::<Script>::new("script.min.js").layer(script_cors))
+        .route_service("/script.js", StaticFile::<Script>::new("script.min.js").layer(script_cors).into_service())
         .layer(CompressionLayer::new())
         .layer(set_headers)
-        .with_state(RouterState { app: app.clone(), events });
+        .with_state(RouterState { app: app.clone(), events })
+        .finish_api(&mut api);
+
+    // todo: serve files with webext::call
 
     match app.onboarding.token()? {
         Some(onboarding) => {
@@ -83,10 +101,7 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
         }
     }
 
-    let mut api = openapi::OpenApi::default();
-    api.info = openapi::Info { description: Some("an example API".to_string()), ..openapi::Info::default() };
-
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", app.config.port)).await.unwrap();
-    let server = router.finish_api(&mut api).into_make_service_with_connect_info::<SocketAddr>();
-    axum::serve(listener, server).await.context("server exited unexpectedly")
+    let service = router.into_make_service_with_connect_info::<SocketAddr>();
+    axum::serve(listener, service).await.context("server exited unexpectedly")
 }

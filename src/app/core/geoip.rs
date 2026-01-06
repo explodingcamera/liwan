@@ -195,7 +195,7 @@ fn get_file_meta(path: &PathBuf) -> Option<(u64, u64, u64, i64)> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;
-        return Some((md.dev(), md.ino(), md.size(), md.mtime()));
+        Some((md.dev(), md.ino(), md.size(), md.mtime()))
     }
 
     #[cfg(windows)]
