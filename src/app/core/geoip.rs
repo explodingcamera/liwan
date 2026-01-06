@@ -5,6 +5,7 @@ use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use crate::app::SqlitePool;
 use anyhow::{Context, Result, anyhow};
@@ -61,10 +62,6 @@ impl LiwanGeoIP {
         });
 
         Ok(Self { geoip, pool, reader: ArcSwapOption::new(reader), path, downloading: Default::default() })
-    }
-
-    fn is_enabled(&self) -> bool {
-        self.reader.load().is_some() || self.downloading.load(Ordering::Acquire)
     }
 
     fn noop(pool: SqlitePool) -> Self {
@@ -149,30 +146,66 @@ impl LiwanGeoIP {
         self.downloading.store(false, Ordering::Release);
         Ok(())
     }
+
+    pub fn reload(&self) -> Result<()> {
+        if self.downloading.load(Ordering::Acquire) {
+            return Ok(());
+        }
+
+        let reader = maxminddb::Reader::open_readfile(self.path.clone())?;
+        self.reader.store(Some(reader.into()));
+        Ok(())
+    }
 }
 
-pub fn keep_updated(geoip: Arc<LiwanGeoIP>) {
-    if !geoip.is_enabled() {
-        return;
-    }
+pub async fn keep_updated(geoip: Arc<LiwanGeoIP>) {
+    let path: PathBuf = geoip.path.clone();
+    let mut last_meta = get_file_meta(&path);
 
-    tokio::task::spawn(async move {
-        if let Err(e) = geoip.check_for_updates().await {
-            tracing::error!(error = ?e, "Failed to check for GeoIP database updates");
-        }
+    let mut file_interval = tokio::time::interval(Duration::from_secs(60));
+    let mut daily_interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
+    let enable_updates = geoip.geoip.maxmind_account_id.is_some() && geoip.geoip.maxmind_license_key.is_some();
 
-        let mut interval = tokio::time::interval(std::time::Duration::from_hours(24));
-        loop {
-            interval.tick().await;
-            let geoip = geoip.clone();
-            // Run the task once a day
-            tokio::task::spawn(async move {
-                if let Err(e) = geoip.check_for_updates().await {
+    loop {
+        tokio::select! {
+            _ = file_interval.tick() => {
+                // just a simple polling based file watcher so we don't need to add a bunch of dependencies
+                let meta = get_file_meta(&path);
+                if meta != last_meta {
+                    if let Err(e) = geoip.reload() {
+                        tracing::error!(error = ?e, "Failed to reload GeoIP database");
+                    } else {
+                        tracing::info!("GeoIP database reloaded after file change");
+                        last_meta = meta;
+                    }
+                }
+            }
+            _ = daily_interval.tick()  => {
+                if enable_updates && let Err(e) = geoip.check_for_updates().await {
                     tracing::error!(error = ?e, "Failed to check for GeoIP database updates");
                 }
-            });
+            }
         }
-    });
+    }
+}
+
+fn get_file_meta(path: &PathBuf) -> Option<(u64, u64, u64, i64)> {
+    let md = std::fs::metadata(path).ok()?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        return Some((md.dev(), md.ino(), md.size(), md.mtime()));
+    }
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        return Some((md.file_index(), md.volume_serial_number(), md.file_size(), md.last_write_time() as i64));
+    };
+
+    #[cfg(not(any(unix, windows)))]
+    Some((0, 0, md.len(), md.modified().ok()?.elapsed().ok()?.as_secs() as i64))
 }
 
 async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> Result<String> {

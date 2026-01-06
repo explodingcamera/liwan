@@ -99,7 +99,7 @@ impl Liwan {
     }
 
     pub fn run_background_tasks(&self) {
-        core::geoip::keep_updated(self.geoip.clone());
+        tokio::task::spawn(core::geoip::keep_updated(self.geoip.clone()));
     }
 
     pub fn shutdown(&self) -> Result<()> {
