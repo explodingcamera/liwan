@@ -1,22 +1,26 @@
 use crate::app::{Liwan, models::Event};
 use crate::utils::hash::{hash_ip, visitor_id};
 use crate::utils::referrer::{Referrer, process_referer};
-use crate::utils::useragent;
-use crate::web::webext::{ApiResult, EmptyResponse, PoemErrExt};
+use crate::utils::useragent::{self, UserAgent};
+use crate::web::RouterState;
+use crate::web::webext::{ApiResult, AxumErrExt, empty_response};
 
+use aide::axum::routing::post;
+use aide::axum::{ApiRouter, IntoApiResponse};
 use anyhow::{Context, Result};
+use axum::Json;
+use axum::extract::State;
 use chrono::Utc;
-use poem::http::{StatusCode, Uri};
-use poem::web::headers::UserAgent;
-use poem::web::{Data, RealIp, TypedHeader, headers};
-use poem_openapi::payload::Json;
-use poem_openapi::{Object, OpenApi};
+use http::{StatusCode, Uri};
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, LazyLock};
 
-#[derive(Object)]
+pub fn router() -> ApiRouter<RouterState> {
+    ApiRouter::new().route("/event", post(event_handler))
+}
+
 struct EventRequest {
     entity_id: String,
     name: String,
@@ -25,7 +29,6 @@ struct EventRequest {
     utm: Option<Utm>,
 }
 
-#[derive(Object)]
 struct Utm {
     source: Option<String>,
     content: Option<String>,
@@ -37,31 +40,24 @@ struct Utm {
 static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
     LazyLock::new(|| quick_cache::sync::Cache::new(512));
 
-pub struct EventApi;
-#[OpenApi]
-impl EventApi {
-    #[oai(path = "/event", method = "post")]
-    async fn event_handler(
-        &self,
-        RealIp(ip): RealIp,
-        Data(app): Data<&Arc<Liwan>>,
-        Data(events): Data<&Sender<Event>>,
-        Json(event): Json<EventRequest>,
-        TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
-    ) -> ApiResult<EmptyResponse> {
-        let url = Uri::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
-        let app = app.clone();
-        let events = events.clone();
+async fn event_handler(
+    state: State<RouterState>,
+    Json(event): Json<EventRequest>,
+    RealIp(ip): RealIp,
+    TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
+) -> ApiResult<impl IntoApiResponse> {
+    let url = Uri::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
+    let app = state.app.clone();
+    let events = state.events.clone();
 
-        // run the event processing in the background
-        tokio::task::spawn_blocking(move || {
-            if let Err(e) = process_event(app, events, event, url, ip, user_agent) {
-                tracing::error!("Failed to process event: {:?}", e);
-            }
-        });
+    // run the event processing in the background
+    tokio::task::spawn_blocking(move || {
+        if let Err(e) = process_event(app, events, event, url, ip, user_agent) {
+            tracing::error!("Failed to process event: {:?}", e);
+        }
+    });
 
-        EmptyResponse::ok()
-    }
+    Ok(empty_response())
 }
 
 fn process_event(

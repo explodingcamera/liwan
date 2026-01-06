@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use figment::Figment;
 use figment::providers::{Env, Format, Toml};
-use poem::http::Uri;
+use http::Uri;
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU16;
 use std::str::FromStr;

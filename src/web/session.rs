@@ -1,63 +1,47 @@
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 use std::time::Duration;
 
+use axum::{
+    extract::Extension,
+    http::{StatusCode, request::Parts},
+};
+use axum_extra::extract::cookie::CookieJar;
+
 use crate::app::models::User;
-use poem::FromRequest;
-use poem::web::cookie::{Cookie, SameSite};
 
-pub const MAX_SESSION_AGE: Duration = Duration::from_hours(24 * 14);
+pub const MAX_SESSION_AGE: Duration = Duration::from_secs(24 * 60 * 60 * 14);
 
-pub static PUBLIC_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
-    let mut public_cookie = Cookie::named("liwan-username");
-    public_cookie.set_max_age(MAX_SESSION_AGE);
-    public_cookie.set_http_only(false);
-    public_cookie.set_path("/");
-    public_cookie.set_same_site(SameSite::Strict);
-    public_cookie
-});
+pub static PUBLIC_COOKIE_NAME: &str = "liwan-username";
+pub static SESSION_COOKIE_NAME: &str = "liwan-session";
 
-pub static SESSION_COOKIE: LazyLock<Cookie> = LazyLock::new(|| {
-    let mut session_cookie = Cookie::named("liwan-session");
-    session_cookie.set_max_age(MAX_SESSION_AGE);
-    session_cookie.set_http_only(true);
-    session_cookie.set_path("/api/dashboard");
-    session_cookie.set_same_site(SameSite::Strict);
-    session_cookie
-});
-
+#[derive(Debug, Clone)]
 pub struct SessionId(pub String);
+
+#[derive(Debug, Clone)]
 pub struct SessionUser(pub User);
 
-impl<'a> FromRequest<'a> for SessionId {
-    async fn from_request(req: &'a poem::Request, _body: &mut poem::RequestBody) -> poem::Result<Self> {
-        let session_id = req.cookie().get(SESSION_COOKIE.name()).map(|cookie| cookie.value_str().to_owned());
+impl<S: Send + Sync> axum::extract::FromRequestParts<S> for SessionId {
+    type Rejection = StatusCode;
 
-        tracing::debug!("SessionId: {:?}", session_id);
-
-        let session_id = session_id.ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
-
-        Ok(Self(session_id))
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let jar = CookieJar::from_headers(&parts.headers);
+        jar.get(SESSION_COOKIE_NAME).map(|c| SessionId(c.value().to_string())).ok_or(StatusCode::UNAUTHORIZED)
     }
 }
 
-impl<'a> FromRequest<'a> for SessionUser {
-    async fn from_request(req: &'a poem::Request, body: &mut poem::RequestBody) -> poem::Result<Self> {
-        let session_id = SessionId::from_request(req, body).await?.0;
+impl<S: Send + Sync> axum::extract::FromRequestParts<S> for SessionUser {
+    type Rejection = StatusCode;
 
-        tracing::debug!("getting session user");
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let jar = CookieJar::from_headers(&parts.headers);
+        let session_id = SessionId::from_request_parts(parts, _state).await?.0;
 
-        let app = req
-            .data::<Arc<crate::app::Liwan>>()
-            .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
+        let Extension(app): Extension<Arc<crate::app::Liwan>> =
+            Extension::from_request_parts(parts, _state).await.map_err(|_| StatusCode::UNAUTHORIZED)?;
 
-        tracing::debug!("SessionUser: {:?}", session_id);
+        let user =
+            app.sessions.get(&session_id).map_err(|_| StatusCode::UNAUTHORIZED)?.ok_or(StatusCode::UNAUTHORIZED)?;
 
-        let user = app
-            .sessions
-            .get(&session_id)
-            .map_err(|_| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?
-            .ok_or_else(|| poem::Error::from_status(poem::http::StatusCode::UNAUTHORIZED))?;
-
-        Ok(Self(user))
+        Ok(SessionUser(user))
     }
 }

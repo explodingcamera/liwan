@@ -50,7 +50,7 @@ pub enum Referrer {
 }
 
 pub fn process_referer(referer: Option<&str>) -> Referrer {
-    match referer.map(poem::http::Uri::from_str) {
+    match referer.map(http::Uri::from_str) {
         // valid referer are stripped to the FQDN
         Some(Ok(referer_uri)) => {
             // ignore localhost / IP addresses
