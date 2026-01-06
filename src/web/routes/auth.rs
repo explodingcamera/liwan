@@ -1,127 +1,120 @@
-use std::sync::Arc;
-
-use crate::app::Liwan;
-use crate::app::models::UserRole;
-use crate::utils::hash::session_token;
-use crate::web::PoemErrExt;
-use crate::web::session::{MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE, SessionId, SessionUser};
-use crate::web::webext::{ApiResult, EmptyResponse, http_bail};
-
-use anyhow::anyhow;
+use aide::axum::{ApiRouter, IntoApiResponse, routing::*};
+use anyhow::Context;
+use axum::{Json, extract::State};
+use axum_extra::extract::CookieJar;
 use chrono::Utc;
-use poem::http::StatusCode;
-use poem::middleware::TowerLayerCompatExt;
-use poem::web::{Data, cookie::CookieJar};
-use poem::{Endpoint, EndpointExt};
-use poem_openapi::payload::{Json, Response};
-use poem_openapi::{Object, OpenApi};
+use http::{StatusCode, header};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::task::spawn_blocking;
-use tower::limit::RateLimitLayer;
 
-#[derive(Serialize, Object)]
+use crate::{
+    app::models::UserRole,
+    utils::hash::session_token,
+    web::{
+        RouterState, SessionUser,
+        session::{MAX_SESSION_AGE, SessionId},
+        webext::{ApiResult, AxumErrExt, empty_response, http_bail},
+    },
+};
+
+pub fn router() -> ApiRouter<RouterState> {
+    ApiRouter::new()
+        .api_route("/auth/me", get(me))
+        .api_route("/auth/setup", post(setup))
+        .api_route("/auth/login", post(login))
+        .api_route("/auth/logout", post(logout))
+}
+
+#[derive(Serialize, JsonSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
 }
 
-#[derive(Deserialize, Serialize, Object)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 pub struct SetupRequest {
     pub token: String,
     pub username: String,
     pub password: String,
 }
 
-#[derive(Object, Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct MeResponse {
     pub username: String,
     pub role: UserRole,
 }
 
-fn login_rate_limit(ep: impl Endpoint + 'static) -> impl Endpoint {
-    ep.with(RateLimitLayer::new(10, std::time::Duration::from_secs(10)).compat())
+// fn login_rate_limit(ep: impl Endpoint + 'static) -> impl Endpoint {
+//     ep.with(RateLimitLayer::new(10, std::time::Duration::from_secs(10)).compat())
+// }
+
+async fn me(SessionUser(user): SessionUser) -> impl IntoApiResponse {
+    ([(header::CACHE_CONTROL, "private")], Json(MeResponse { username: user.username, role: user.role }))
 }
 
-pub struct AuthApi;
-#[OpenApi]
-impl AuthApi {
-    #[oai(path = "/auth/me", method = "get")]
-    async fn me(&self, SessionUser(user): SessionUser) -> Response<Json<MeResponse>> {
-        Response::new(Json(MeResponse { username: user.username, role: user.role })).header("Cache-Control", "private")
+async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> ApiResult<impl IntoApiResponse> {
+    let token = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+
+    if token != Some(params.token) {
+        http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
     }
 
-    #[oai(path = "/auth/setup", method = "post", transform = "login_rate_limit")]
-    async fn setup(&self, Data(app): Data<&Arc<Liwan>>, Json(params): Json<SetupRequest>) -> ApiResult<EmptyResponse> {
-        let token = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+    app.users
+        .create(&params.username, &params.password, UserRole::Admin, &[])
+        .http_err("failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        if token != Some(params.token) {
-            http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
-        }
+    app.onboarding.clear().context("onboarding lock poisoned").http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(empty_response())
+}
 
-        app.users
-            .create(&params.username, &params.password, UserRole::Admin, &[])
-            .http_err("failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
+async fn login(
+    app: State<RouterState>,
+    Json(params): Json<LoginRequest>,
+    cookies: &CookieJar,
+) -> ApiResult<impl IntoApiResponse> {
+    let username = params.username.clone();
 
-        app.onboarding
-            .clear()
-            .map_err(|_| anyhow!("onboarding lock poisoned"))
-            .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let app2 = app.clone();
+    let authorized =
+        spawn_blocking(move || app2.users.check_login(&params.username, &params.password).unwrap_or(false))
+            .await
+            .unwrap_or(false);
 
-        EmptyResponse::ok()
+    if !(authorized) {
+        http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
     }
 
-    #[oai(path = "/auth/login", method = "post", transform = "login_rate_limit")]
-    async fn login(
-        &self,
-        Data(app): Data<&Arc<Liwan>>,
-        Json(params): Json<LoginRequest>,
-        cookies: &CookieJar,
-    ) -> ApiResult<EmptyResponse> {
-        let username = params.username.clone();
+    let session_id = session_token();
+    let expires = Utc::now() + MAX_SESSION_AGE;
+    app.sessions.create(&session_id, &username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let app2 = app.clone();
-        let authorized =
-            spawn_blocking(move || app2.users.check_login(&params.username, &params.password).unwrap_or(false))
-                .await
-                .unwrap_or(false);
+    let mut public_cookie = PUBLIC_COOKIE.clone();
+    let mut session_cookie = SESSION_COOKIE.clone();
+    public_cookie.set_secure(app.config.secure());
+    public_cookie.set_value_str(username.clone());
+    session_cookie.set_secure(app.config.secure());
+    session_cookie.set_value_str(session_id);
+    cookies.add(public_cookie);
+    cookies.add(session_cookie);
+    Ok(empty_response())
+}
 
-        if !(authorized) {
-            http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
-        }
-
-        let session_id = session_token();
-        let expires = Utc::now() + MAX_SESSION_AGE;
-        app.sessions.create(&session_id, &username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-
-        let mut public_cookie = PUBLIC_COOKIE.clone();
-        let mut session_cookie = SESSION_COOKIE.clone();
-        public_cookie.set_secure(app.config.secure());
-        public_cookie.set_value_str(username.clone());
-        session_cookie.set_secure(app.config.secure());
-        session_cookie.set_value_str(session_id);
-        cookies.add(public_cookie);
-        cookies.add(session_cookie);
-        EmptyResponse::ok()
+async fn logout(
+    app: State<RouterState>,
+    cookies: &CookieJar,
+    session_id: Option<SessionId>,
+) -> ApiResult<impl IntoApiResponse> {
+    if let Some(session_id) = session_id {
+        let _ = app.sessions.delete(&session_id.0);
     }
-
-    #[oai(path = "/auth/logout", method = "post")]
-    async fn logout(
-        &self,
-        Data(app): Data<&Arc<Liwan>>,
-        cookies: &CookieJar,
-        session_id: Option<SessionId>,
-    ) -> ApiResult<EmptyResponse> {
-        if let Some(session_id) = session_id {
-            let _ = app.sessions.delete(&session_id.0);
-        }
-        let mut public_cookie = PUBLIC_COOKIE.clone();
-        let mut session_cookie = SESSION_COOKIE.clone();
-        public_cookie.set_secure(app.config.secure());
-        public_cookie.make_removal();
-        session_cookie.set_secure(app.config.secure());
-        session_cookie.make_removal();
-        cookies.add(public_cookie);
-        cookies.add(session_cookie);
-        EmptyResponse::ok()
-    }
+    let mut public_cookie = PUBLIC_COOKIE.clone();
+    let mut session_cookie = SESSION_COOKIE.clone();
+    public_cookie.set_secure(app.config.secure());
+    public_cookie.make_removal();
+    session_cookie.set_secure(app.config.secure());
+    session_cookie.make_removal();
+    cookies.add(public_cookie);
+    cookies.add(session_cookie);
+    Ok(empty_response())
 }
