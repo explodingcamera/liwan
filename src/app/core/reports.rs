@@ -38,7 +38,7 @@ impl Display for DateRange {
 }
 
 #[derive(Debug, Enum, Clone, Copy, PartialEq, Eq, Hash)]
-#[oai(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum Metric {
     Views,
     UniqueVisitors,
@@ -47,7 +47,7 @@ pub enum Metric {
 }
 
 #[derive(Debug, Enum, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[oai(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum Dimension {
     Url,
     Fqdn,
@@ -66,7 +66,7 @@ pub enum Dimension {
 }
 
 #[derive(Enum, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[oai(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum FilterType {
     // Generic filters
     IsNull,
@@ -86,7 +86,7 @@ pub type ReportGraph = Vec<f64>;
 pub type ReportTable = BTreeMap<String, f64>;
 
 #[derive(Object, Clone, Debug, Default)]
-#[oai(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct ReportStats {
     pub total_views: u64,
     pub unique_visitors: u64,
@@ -95,7 +95,7 @@ pub struct ReportStats {
 }
 
 #[derive(Object, Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[oai(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct DimensionFilter {
     /// The dimension to filter by
     dimension: Dimension,

@@ -48,6 +48,7 @@ ahash="0.8"
 # web
 axum="0.8"
 axum-extra={version="0.12", default-features=false, features=["cookie"]}
+http="1.4"
 tower={version="0.5", default-features=false, features=["limit"]}
 tower-http={version="0.6", default-features=false, features=[
     "cors",
@@ -74,7 +75,6 @@ tikv-jemallocator="0.6"
 
 [dev-dependencies]
 figment={version="*", features=["test"]}
-poem={version="*", features=["test"]}
 cookie={version="*", default-features=false}
 
 [features]

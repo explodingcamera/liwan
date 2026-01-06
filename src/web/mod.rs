@@ -2,24 +2,25 @@ pub mod routes;
 pub mod session;
 pub mod webext;
 
-use std::sync::Arc;
-
-use crate::app::Liwan;
-use crate::app::models::Event;
-use routes::{dashboard_service, event_service};
-use std::sync::mpsc::Sender;
-use webext::{EmbeddedFilesEndpoint, PoemErrExt, catch_error};
-
-pub use session::SessionUser;
+use std::net::SocketAddr;
+use std::ops::Deref;
+use std::sync::{Arc, mpsc::Sender};
 
 use anyhow::{Context, Result};
 use rust_embed::RustEmbed;
 
-use poem::endpoint::EmbeddedFileEndpoint;
-use poem::listener::TcpListener;
-use poem::middleware::{AddData, Compression, CookieJarManager, Cors, SetHeader};
-use poem::web::CompressionAlgo;
-use poem::{EndpointExt, IntoEndpoint, Route, Server};
+use aide::{axum::ApiRouter, openapi};
+use http::{Method, header};
+use tower_http::{
+    compression::CompressionLayer,
+    cors::{Any, CorsLayer},
+    set_header::SetResponseHeaderLayer,
+};
+
+use crate::app::{Liwan, models::Event};
+
+pub use session::SessionUser;
+use webext::StaticFile;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
@@ -29,69 +30,46 @@ struct Files;
 #[folder = "./tracker"]
 struct Script;
 
-#[cfg(debug_assertions)]
-fn save_spec() -> Result<()> {
-    use std::path::Path;
-
-    let path = Path::new("./web/src/api/dashboard.ts");
-    if path.exists() {
-        let spec = serde_json::to_string(&serde_json::from_str::<serde_json::Value>(&dashboard_service().spec())?)?
-            .replace(r#""servers":[],"#, "") // fets doesn't work with an empty servers array
-            .replace("; charset=utf-8", "") // fets doesn't detect the json content type correctly
-            .replace(r#""format":"int64","#, ""); // fets uses bigint for int64
-
-        // check if the spec has changed
-        let old_spec = std::fs::read_to_string(path)?;
-        if old_spec == format!("export default {spec} as const;\n") {
-            return Ok(());
-        }
-
-        tracing::info!("API has changed, updating the openapi spec...");
-        std::fs::write(path, format!("export default {spec} as const;\n"))?;
-    }
-    Ok(())
+#[derive(Clone)]
+pub struct RouterState {
+    pub app: Arc<Liwan>,
+    pub events: Sender<Event>,
 }
 
-pub fn create_router(app: Arc<Liwan>, events: Sender<Event>) -> impl IntoEndpoint {
-    let handle_events = event_service().with(Cors::new().allow_method("POST").allow_credentials(false));
+impl Deref for RouterState {
+    type Target = Arc<Liwan>;
 
-    let serve_script = EmbeddedFileEndpoint::<Script>::new("script.min.js")
-        .with(Cors::new().allow_method("GET").allow_credentials(false))
-        .with(SetHeader::new().appending("Content-Type", "application/javascript"));
-
-    let headers = SetHeader::new()
-        .appending("X-Frame-Options", "DENY")
-        .appending("X-Content-Type-Options", "nosniff")
-        .appending("X-XSS-Protection", "1; mode=block")
-        .appending(
-            "Content-Security-Policy",
-            "default-src 'self' data: 'unsafe-inline'; img-src 'self' data: https://*",
-        )
-        .appending("Referrer-Policy", "same-origin")
-        .appending("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
-
-    let api_router = Route::new()
-        .nest_no_strip("/event", handle_events)
-        .nest("/dashboard", dashboard_service().with(CookieJarManager::new()))
-        .catch_all_error(catch_error);
-
-    Route::new()
-        .nest("/api", api_router)
-        .at("/script.js", serve_script)
-        .nest("/", EmbeddedFilesEndpoint::<Files>::new())
-        .with(AddData::new(app))
-        .with(AddData::new(events))
-        .with(CookieJarManager::new())
-        .with(Compression::new().algorithms([CompressionAlgo::BR, CompressionAlgo::GZIP]))
-        .with(headers)
+    fn deref(&self) -> &Self::Target {
+        &self.app
+    }
 }
 
 pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
-    #[cfg(debug_assertions)]
-    save_spec()?;
+    let event_cors = CorsLayer::new().allow_methods([Method::POST]).allow_origin(Any).allow_credentials(false);
+    let script_cors = CorsLayer::new().allow_methods([Method::GET]).allow_origin(Any).allow_credentials(false);
 
-    let router = create_router(app.clone(), events.clone());
-    let listener = TcpListener::bind(("0.0.0.0", app.config.port));
+    let set_headers = tower::ServiceBuilder::new()
+        .layer(SetResponseHeaderLayer::if_not_present(header::X_FRAME_OPTIONS, "DENY"))
+        .layer(SetResponseHeaderLayer::if_not_present(header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
+        .layer(SetResponseHeaderLayer::if_not_present(header::X_XSS_PROTECTION, "1; mode=block"))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::CONTENT_SECURITY_POLICY,
+            "default-src 'self' data: 'unsafe-inline'; img-src 'self' data: https://*",
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(header::REFERRER_POLICY, "same-origin"));
+
+    let dashboard = ApiRouter::new()
+        .merge(routes::admin::router())
+        .merge(routes::auth::router())
+        .merge(routes::dashboard::router());
+
+    let router = ApiRouter::new()
+        .nest("/api", routes::event::router().layer(event_cors))
+        .nest("/api/dashboard", dashboard)
+        .route_service("/script.js", StaticFile::<Script>::new("script.min.js").layer(script_cors))
+        .layer(CompressionLayer::new())
+        .layer(set_headers)
+        .with_state(RouterState { app: app.clone(), events });
 
     match app.onboarding.token()? {
         Some(onboarding) => {
@@ -105,5 +83,10 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
         }
     }
 
-    Server::new(listener).run(router).await.context("server exited unexpectedly")
+    let mut api = openapi::OpenApi::default();
+    api.info = openapi::Info { description: Some("an example API".to_string()), ..openapi::Info::default() };
+
+    let listener = tokio::net::TcpListener::bind(("0.0.0.0", app.config.port)).await.unwrap();
+    let server = router.finish_api(&mut api).into_make_service_with_connect_info::<SocketAddr>();
+    axum::serve(listener, server).await.context("server exited unexpectedly")
 }
