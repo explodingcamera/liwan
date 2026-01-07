@@ -8,10 +8,11 @@ use std::task::{Context, Poll};
 
 use aide::OperationOutput;
 use aide::axum::IntoApiResponse;
-use axum::body::{Body, Bytes};
+use axum::body::Body;
+use axum::extract::Request;
 use axum::response::IntoResponse;
 use axum::{Json, extract};
-use http::{Request, Response, StatusCode, header};
+use http::{Response, StatusCode, header};
 use rust_embed::RustEmbed;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -90,10 +91,7 @@ impl IntoResponse for ApiError {
     }
 }
 
-pub async fn call<E: RustEmbed + Send + Sync>(
-    orig_uri: extract::OriginalUri,
-    req: Request<Bytes>,
-) -> Result<impl IntoResponse, StatusCode> {
+pub(super) async fn serve(orig_uri: extract::OriginalUri, req: Request) -> Result<impl IntoResponse, StatusCode> {
     let mut path = req.uri().path().trim_start_matches('/').trim_end_matches('/').to_string();
     if path.is_empty() {
         path = "index.html".to_string();
@@ -109,11 +107,11 @@ pub async fn call<E: RustEmbed + Send + Sync>(
         path = parts.join("/");
     }
 
-    let file = if let Some(content) = E::get(&path) {
+    let file = if let Some(content) = Files::get(&path) {
         Some(content)
     } else {
         path = format!("{path}/index.html");
-        E::get(&path)
+        Files::get(&path)
     };
 
     let orig_path = orig_uri.path();
@@ -209,3 +207,5 @@ macro_rules! http_bail {
 }
 
 pub(crate) use http_bail;
+
+use crate::web::Files;
