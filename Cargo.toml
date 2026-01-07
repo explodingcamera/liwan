@@ -47,7 +47,7 @@ tracing-subscriber={version="0.3", features=["env-filter"]}
 ahash="0.8"
 
 # web
-axum="0.8"
+axum={version="0.8", features=["macros"]}
 axum-extra={version="0.12", default-features=false, features=["cookie", "typed-header"]}
 http="1.4"
 headers="0.4"
