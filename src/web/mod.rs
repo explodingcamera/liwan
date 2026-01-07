@@ -19,13 +19,14 @@ use tower_http::{
 };
 
 use crate::app::{Liwan, models::Event};
+use crate::web::webext::serve;
 
 pub use session::{MaybeExtract, SessionId, SessionUser};
 use webext::StaticFile;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./web/dist"]
-struct _Files;
+pub struct Files;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "./tracker"]
@@ -82,12 +83,11 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
         .nest("/api", routes::event::router().layer(event_cors))
         .nest("/api/dashboard", dashboard)
         .route_service("/script.js", StaticFile::<Script>::new("script.min.js").layer(script_cors).into_service())
+        .fallback(axum::routing::get(serve))
         .layer(CompressionLayer::new())
         .layer(set_headers)
         .with_state(RouterState { app: app.clone(), events })
         .finish_api(&mut api);
-
-    // todo: serve files with webext::call
 
     match app.onboarding.token()? {
         Some(onboarding) => {
