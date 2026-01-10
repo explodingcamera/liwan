@@ -3,13 +3,15 @@
 use std::convert::Infallible;
 use std::fmt::Display;
 use std::marker::PhantomData;
+use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use aide::OperationOutput;
+use crate::web::Files;
 use aide::axum::IntoApiResponse;
+use aide::{OperationIo, OperationOutput};
 use axum::body::Body;
-use axum::extract::Request;
+use axum::extract::{ConnectInfo, FromRequestParts, Request};
 use axum::response::IntoResponse;
 use axum::{Json, extract};
 use http::{Response, StatusCode, header};
@@ -205,7 +207,47 @@ macro_rules! http_bail {
         })
     };
 }
-
 pub(crate) use http_bail;
 
-use crate::web::Files;
+#[derive(Debug, Copy, Clone, OperationIo)]
+pub struct ClientIp(pub Option<IpAddr>);
+
+impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
+    type Rejection = Infallible;
+
+    async fn from_request_parts(parts: &mut http::request::Parts, state: &S) -> Result<Self, Self::Rejection> {
+        if let Some(ip) = [
+            "cf-connecting-ip",
+            "fly-client-ip",
+            "true-client-ip",
+            "x-real-ip",
+            "cloudfront-viewer-address",
+            "x-forwarded-for",
+            "forwarded",
+        ]
+        .iter()
+        .find_map(|&name| {
+            let v = parts.headers.get(name)?.to_str().ok()?.trim();
+            match name {
+                "cloudfront-viewer-address" => v.rsplit_once(':')?.0.parse().ok(),
+                "x-forwarded-for" => v.split(',').next_back()?.trim().parse().ok(),
+                "forwarded" => v
+                    .split(',')
+                    .next_back()?
+                    .split(';')
+                    .find_map(|p| p.trim().strip_prefix("for="))
+                    .map(|p| p.trim_matches('"'))
+                    .and_then(|p| p.parse().ok()),
+                _ => v.parse().ok(),
+            }
+        }) {
+            return Ok(ClientIp(Some(ip)));
+        }
+
+        if let Ok(ConnectInfo(addr)) = ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await {
+            return Ok(ClientIp(Some(addr.ip())));
+        }
+
+        Ok(ClientIp(None))
+    }
+}
