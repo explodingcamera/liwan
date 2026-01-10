@@ -17,7 +17,7 @@ path="src/main.rs"
 [dependencies]
 # async/concurrency
 arc-swap="1.8"
-tokio={version="1.48", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
+tokio={version="1.49", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
 quick_cache={version="0.6", features=["ahash"]}
@@ -32,6 +32,7 @@ async-compression={version="0.4", default-features=false, features=["gzip", "tok
 tokio-tar={package="astral-tokio-tar", version="0.5"}
 sha3={version="0.10"}
 argon2={version="0.5", features=["rand"]}
+password-hash={version="0.5", features=["rand_core", "getrandom"]}
 zstd={version="0.13", default-features=false}
 uuid={version="1.19", features=["v4"]}
 
@@ -39,21 +40,37 @@ uuid={version="1.19", features=["v4"]}
 argh={version="0.1", default-features=false, features=["help"]}
 anyhow={version="1.0"}
 rand={version="0.9", default-features=false, features=["std", "thread_rng"]}
-chrono={version="0.4", default-features=false, features=["std", "now"]}
+chrono={version="0.4", default-features=false, features=["std", "now", "serde"]}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}
 tracing-subscriber={version="0.3", features=["env-filter"]}
 ahash="0.8"
 
 # web
-poem={version="3.1", default-features=false, features=[
-    "embed",
-    "cookie",
-    "compression",
-    "tower-compat",
+axum={version="0.8", features=["macros"]}
+axum-extra={version="0.12", default-features=false, features=["cookie", "typed-header"]}
+http="1.4"
+headers="0.4"
+tower={version="0.5", default-features=false}
+tower-http={version="0.6", default-features=false, features=[
+    "cors",
+    "compression-zstd",
+    "set-header",
 ]}
-poem-openapi={version="5.1", default-features=false, features=["chrono"]}
-tower={version="0.5", default-features=false, features=["limit"]}
+tower_governor={version="0.8", default-features=false, features=["axum"]}
+aide={version="0.16.0-alpha.1", default-features=false, features=[
+    "axum",
+    "axum-json",
+    "axum-query",
+    "axum-matched-path",
+    "axum-tokio",
+    "axum-extra",
+    "axum-extra-cookie",
+    "axum-extra-headers",
+    "macros",
+]}
+schemars={version="1.2", features=["derive", "chrono04"]}
+
 ua-parser="0.2"
 rust-embed={version="8.9", features=["mime-guess"]}
 reqwest={version="0.13", default-features=false, features=["json", "stream", "charset", "rustls"]}
@@ -71,7 +88,6 @@ tikv-jemallocator="0.6"
 
 [dev-dependencies]
 figment={version="*", features=["test"]}
-poem={version="*", features=["test"]}
 cookie={version="*", default-features=false}
 
 [features]

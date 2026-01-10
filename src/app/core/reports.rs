@@ -6,11 +6,12 @@ use crate::utils::duckdb::{ParamVec, repeat_vars};
 use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use duckdb::params_from_iter;
-use poem_openapi::{Enum, Object};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 pub use super::reports_cached::*;
 
-#[derive(Object, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
@@ -37,8 +38,8 @@ impl Display for DateRange {
     }
 }
 
-#[derive(Debug, Enum, Clone, Copy, PartialEq, Eq, Hash)]
-#[oai(rename_all = "snake_case")]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
 pub enum Metric {
     Views,
     UniqueVisitors,
@@ -46,8 +47,8 @@ pub enum Metric {
     AvgTimeOnSite,
 }
 
-#[derive(Debug, Enum, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[oai(rename_all = "snake_case")]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
 pub enum Dimension {
     Url,
     Fqdn,
@@ -65,8 +66,8 @@ pub enum Dimension {
     UtmTerm,
 }
 
-#[derive(Enum, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[oai(rename_all = "snake_case")]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
 pub enum FilterType {
     // Generic filters
     IsNull,
@@ -85,8 +86,8 @@ pub enum FilterType {
 pub type ReportGraph = Vec<f64>;
 pub type ReportTable = BTreeMap<String, f64>;
 
-#[derive(Object, Clone, Debug, Default)]
-#[oai(rename_all = "camelCase")]
+#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct ReportStats {
     pub total_views: u64,
     pub unique_visitors: u64,
@@ -94,8 +95,8 @@ pub struct ReportStats {
     pub avg_time_on_site: f64,
 }
 
-#[derive(Object, Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[oai(rename_all = "camelCase")]
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
 pub struct DimensionFilter {
     /// The dimension to filter by
     dimension: Dimension,

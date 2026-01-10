@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
-use poem_openapi::Enum;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -46,8 +46,8 @@ pub struct User {
     pub projects: Vec<String>,
 }
 
-#[derive(Debug, Enum, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
-#[oai(rename_all = "snake_case")]
+#[derive(Debug, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum UserRole {
     #[serde(rename = "admin")]
     Admin,
