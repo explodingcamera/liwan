@@ -3,7 +3,7 @@ use crate::utils::hash::{hash_ip, visitor_id};
 use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::RouterState;
-use crate::web::webext::{ApiResult, AxumErrExt, empty_response};
+use crate::web::webext::{ApiResult, AxumErrExt, ClientIp, empty_response};
 
 use aide::axum::routing::post;
 use aide::axum::{ApiRouter, IntoApiResponse};
@@ -46,15 +46,13 @@ static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
 
 async fn event_handler(
     state: State<RouterState>,
-    // RealIp(ip): RealIp, TODO
+    ClientIp(ip): ClientIp,
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
     Json(event): Json<EventRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     let url = Uri::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
     let app = state.app.clone();
     let events = state.events.clone();
-
-    let ip = None; // TODO: RealIp
 
     // run the event processing in the background
     tokio::task::spawn_blocking(move || {
