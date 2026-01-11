@@ -1,19 +1,37 @@
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::LazyLock, time::Duration};
 
 use aide::OperationInput;
 use axum::{
-    extract::{Extension, FromRequestParts},
+    extract::FromRequestParts,
     http::{StatusCode, request::Parts},
 };
-use axum_extra::extract::cookie::CookieJar;
+use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 
 use crate::app::models::User;
+use crate::web::RouterState;
 
 pub const MAX_SESSION_AGE: Duration = Duration::from_secs(24 * 60 * 60 * 14);
 
 pub static PUBLIC_COOKIE_NAME: &str = "liwan-username";
 pub static SESSION_COOKIE_NAME: &str = "liwan-session";
+
+pub static PUBLIC_COOKIE: LazyLock<Cookie<'static>> = LazyLock::new(|| {
+    let mut public_cookie = Cookie::new(PUBLIC_COOKIE_NAME, "");
+    public_cookie.set_max_age(Some(MAX_SESSION_AGE.try_into().unwrap()));
+    public_cookie.set_http_only(false);
+    public_cookie.set_path("/");
+    public_cookie.set_same_site(SameSite::Strict);
+    public_cookie
+});
+
+pub static SESSION_COOKIE: LazyLock<Cookie<'static>> = LazyLock::new(|| {
+    let mut session_cookie = Cookie::new(SESSION_COOKIE_NAME, "");
+    session_cookie.set_max_age(Some(MAX_SESSION_AGE.try_into().unwrap()));
+    session_cookie.set_http_only(true);
+    session_cookie.set_path("/api/dashboard");
+    session_cookie.set_same_site(SameSite::Strict);
+    session_cookie
+});
 
 #[derive(Debug, Clone)]
 pub struct SessionId(pub String);
@@ -38,24 +56,26 @@ impl<S: Send + Sync> axum::extract::FromRequestParts<S> for SessionId {
     }
 }
 
-impl<S: Send + Sync> axum::extract::FromRequestParts<S> for SessionUser {
+impl axum::extract::FromRequestParts<RouterState> for SessionUser {
     type Rejection = StatusCode;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let session_id = SessionId::from_request_parts(parts, _state).await?.0;
-        let Extension(app): Extension<Arc<crate::app::Liwan>> =
-            Extension::from_request_parts(parts, _state).await.map_err(|_| StatusCode::UNAUTHORIZED)?;
-        let user =
-            app.sessions.get(&session_id).map_err(|_| StatusCode::UNAUTHORIZED)?.ok_or(StatusCode::UNAUTHORIZED)?;
+    async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
+        let session_id = SessionId::from_request_parts(parts, state).await?.0;
+        let user = state
+            .app
+            .sessions
+            .get(&session_id)
+            .map_err(|_| StatusCode::UNAUTHORIZED)?
+            .ok_or(StatusCode::UNAUTHORIZED)?;
 
         Ok(SessionUser(user))
     }
 }
 
-impl<T: FromRequestParts<S>, S: Send + Sync> axum::extract::FromRequestParts<S> for MaybeExtract<T> {
+impl<T: FromRequestParts<RouterState>> axum::extract::FromRequestParts<RouterState> for MaybeExtract<T> {
     type Rejection = std::convert::Infallible;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        T::from_request_parts(parts, _state).await.map(|su| Self(Some(su))).or_else(|_| Ok(Self(None)))
+    async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
+        T::from_request_parts(parts, state).await.map(|su| Self(Some(su))).or_else(|_| Ok(Self(None)))
     }
 }

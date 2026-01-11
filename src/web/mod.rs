@@ -46,7 +46,7 @@ impl Deref for RouterState {
     }
 }
 
-pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
+pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<axum::Router<()>> {
     let mut api = openapi::OpenApi {
         info: openapi::Info { title: "Liwan API".to_string(), ..Default::default() },
         ..openapi::OpenApi::default()
@@ -89,6 +89,10 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
         .with_state(RouterState { app: app.clone(), events })
         .finish_api(&mut api);
 
+    Ok(router)
+}
+
+pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
     match app.onboarding.token()? {
         Some(onboarding) => {
             let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding);
@@ -101,6 +105,7 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
         }
     }
 
+    let router = router(app.clone(), events)?;
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", app.config.port)).await.unwrap();
     let service = router.into_make_service_with_connect_info::<SocketAddr>();
     axum::serve(listener, service).await.context("server exited unexpectedly")

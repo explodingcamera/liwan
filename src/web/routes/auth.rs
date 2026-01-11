@@ -14,7 +14,7 @@ use crate::{
     utils::hash::session_token,
     web::{
         MaybeExtract, RouterState, SessionUser,
-        session::{MAX_SESSION_AGE, SessionId},
+        session::{MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE, SessionId},
         webext::{ApiResult, AxumErrExt, empty_response, http_bail},
     },
 };
@@ -79,7 +79,7 @@ async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> Api
 
 async fn login(
     app: State<RouterState>,
-    _cookies: CookieJar,
+    cookies: CookieJar,
     Json(params): Json<LoginRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     let username = params.username.clone();
@@ -98,32 +98,33 @@ async fn login(
     let expires = Utc::now() + MAX_SESSION_AGE;
     app.sessions.create(&session_id, &username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // let mut public_cookie = PUBLIC_COOKIE.clone();
-    // let mut session_cookie = SESSION_COOKIE.clone();
-    // public_cookie.set_secure(app.config.secure());
-    // public_cookie.set_value_str(username.clone());
-    // session_cookie.set_secure(app.config.secure());
-    // session_cookie.set_value_str(session_id);
-    // cookies.add(public_cookie);
-    // cookies.add(session_cookie);
-    Ok(empty_response())
+    let mut public_cookie = PUBLIC_COOKIE.clone();
+    let mut session_cookie = SESSION_COOKIE.clone();
+    public_cookie.set_secure(app.config.secure());
+    public_cookie.set_value(username.clone());
+    session_cookie.set_secure(app.config.secure());
+    session_cookie.set_value(session_id);
+
+    let cookies = cookies.add(public_cookie).add(session_cookie);
+    Ok((cookies, empty_response()))
 }
 
 async fn logout(
     app: State<RouterState>,
-    _cookies: CookieJar,
+    cookies: CookieJar,
     MaybeExtract(session_id): MaybeExtract<SessionId>,
 ) -> ApiResult<impl IntoApiResponse> {
     if let Some(session_id) = session_id {
         let _ = app.sessions.delete(&session_id.0);
     }
-    // let mut public_cookie = PUBLIC_COOKIE.clone();
-    // let mut session_cookie = SESSION_COOKIE.clone();
-    // public_cookie.set_secure(app.config.secure());
-    // public_cookie.make_removal();
-    // session_cookie.set_secure(app.config.secure());
-    // session_cookie.make_removal();
-    // cookies.add(public_cookie);
-    // cookies.add(session_cookie);
-    Ok(empty_response())
+
+    let mut public_cookie = PUBLIC_COOKIE.clone();
+    let mut session_cookie = SESSION_COOKIE.clone();
+    public_cookie.set_secure(app.config.secure());
+    public_cookie.make_removal();
+    session_cookie.set_secure(app.config.secure());
+    session_cookie.make_removal();
+
+    let cookies = cookies.add(public_cookie).add(session_cookie);
+    Ok((cookies, empty_response()))
 }

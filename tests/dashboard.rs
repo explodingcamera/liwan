@@ -1,5 +1,5 @@
 mod common;
-use anyhow::{Result, bail};
+use anyhow::Result;
 use chrono::{Duration, Utc};
 use serde_json::json;
 
@@ -7,8 +7,7 @@ use serde_json::json;
 async fn test_dashboard() -> Result<()> {
     let app = common::app();
     let (tx, _rx) = common::events();
-    let router = common::router(app.clone(), tx);
-    let client = poem::test::TestClient::new(router);
+    let client = common::TestClient::new(app.clone(), tx);
 
     app.seed_database(100)?;
 
@@ -39,31 +38,18 @@ async fn test_dashboard() -> Result<()> {
     ];
 
     for request in stats_requests.iter() {
-        let res = client.post(stats_path.clone()).body_json(request).send().await;
-        let status = res.0.status();
-        if !status.is_success() {
-            bail!("Failed to get stats: status: {}, body: {:?}", status, res.0.into_body().into_string().await);
-        }
+        let res = client.post(&stats_path, request.clone()).await;
+        res.assert_status_success();
     }
 
     for request in graph_requests.iter() {
-        let res = client.post(graph_path.clone()).body_json(request).send().await;
-        let status = res.0.status();
-        if !status.is_success() {
-            bail!("Failed to get graph: status: {}, body: {:?}", status, res.0.into_body().into_string().await);
-        }
+        let res = client.post(&graph_path, request.clone()).await;
+        res.assert_status_success();
     }
 
     for request in dimensions_requests.iter() {
-        let res = client.post(dimension_path.clone()).body_json(request).send().await;
-        let status = res.0.status();
-        if !status.is_success() {
-            bail!(
-                "Failed to get dimension report: status: {}, body: {:?}",
-                status,
-                res.0.into_body().into_string().await
-            );
-        }
+        let res = client.post(&dimension_path, request.clone()).await;
+        res.assert_status_success();
     }
 
     Ok(())
