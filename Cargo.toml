@@ -89,6 +89,9 @@ tikv-jemallocator="0.6"
 [dev-dependencies]
 figment={version="*", features=["test"]}
 cookie={version="*", default-features=false}
+tower={version="*", features=["util"]}
+hyper={version="*", features=["full"]}
+axum-test={version="18"}
 
 [features]
 default=["geoip"]
