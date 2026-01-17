@@ -98,10 +98,7 @@ fn save_spec(spec: openapi::OpenApi) -> Result<()> {
 
     let path = Path::new("./web/src/api/dashboard.ts");
     if path.exists() {
-        let spec = serde_json::to_string(&spec)?
-            .replace(r#""servers":[],"#, "") // fets doesn't work with an empty servers array
-            .replace("; charset=utf-8", "") // fets doesn't detect the json content type correctly
-            .replace(r#""format":"int64","#, ""); // fets uses bigint for int64
+        let spec = serde_json::to_string(&spec)?;
 
         // check if the spec has changed
         let old_spec = std::fs::read_to_string(path)?;
@@ -112,6 +109,7 @@ fn save_spec(spec: openapi::OpenApi) -> Result<()> {
         tracing::info!("API has changed, updating the openapi spec...");
         std::fs::write(path, format!("export default {spec} as const;\n"))?;
     }
+
     Ok(())
 }
 

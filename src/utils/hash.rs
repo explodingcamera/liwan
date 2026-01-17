@@ -54,3 +54,9 @@ pub fn onboarding_token() -> String {
     rand::rng().fill_bytes(&mut bytes);
     bs58::encode(bytes).into_string()
 }
+
+pub fn db_name() -> String {
+    let mut bytes = [0u8; 16];
+    rand::rng().fill_bytes(&mut bytes);
+    bs58::encode(bytes).into_string()
+}

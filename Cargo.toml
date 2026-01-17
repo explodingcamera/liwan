@@ -32,9 +32,8 @@ async-compression={version="0.4", default-features=false, features=["gzip", "tok
 tokio-tar={package="astral-tokio-tar", version="0.5"}
 sha3={version="0.10"}
 argon2={version="0.5", features=["rand"]}
-password-hash={version="0.5", features=["rand_core", "getrandom"]}
+password-hash={version="0.5", features=["rand_core", "getrandom"]} # required for getrandom feature
 zstd={version="0.13", default-features=false}
-uuid={version="1.19", features=["v4"]}
 
 # general
 argh={version="0.1", default-features=false, features=["help"]}
@@ -47,7 +46,14 @@ tracing-subscriber={version="0.3", features=["env-filter"]}
 ahash="0.8"
 
 # web
-axum={version="0.8", features=["macros"]}
+axum={version="0.8", default-features=false, features=[
+    "http1",
+    "tokio",
+    "json",
+    "matched-path",
+    "original-uri",
+    "query",
+]}
 axum-extra={version="0.12", default-features=false, features=["cookie", "typed-header"]}
 http="1.4"
 headers="0.4"
@@ -61,13 +67,9 @@ tower_governor={version="0.8", default-features=false, features=["axum"]}
 aide={version="0.16.0-alpha.2", default-features=false, features=[
     "axum",
     "axum-json",
-    "axum-query",
     "axum-matched-path",
-    "axum-tokio",
-    "axum-extra",
     "axum-extra-cookie",
     "axum-extra-headers",
-    "macros",
 ]}
 schemars={version="1.2", features=["derive", "chrono04"]}
 

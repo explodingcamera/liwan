@@ -49,17 +49,23 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download liwan binaries
+        run: |
+          mkdir -p dist
+
+          curl -fsSL https://github.com/explodingcamera/liwan/releases/download/${{ inputs.tag }}/liwan-x86_64-unknown-linux-musl.tar.gz \
+            | tar -xz -C dist --strip-components=1 &
+
+          curl -fsSL https://github.com/explodingcamera/liwan/releases/download/${{ inputs.tag }}/liwan-aarch64-unknown-linux-musl.tar.gz \
+            | tar -xz -C dist/arm64 --strip-components=1 &
+
+          wait
       - name: Build and push Docker images
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # @v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
         with:
           context: .
           file: ./scripts/Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: |
-            linux/amd64
-            linux/arm64
-          build-args: |
-            TAR_URL_AMD64=https://github.com/explodingcamera/liwan/releases/download/${{ inputs.tag }}/liwan-x86_64-unknown-linux-musl.tar.gz
-            TAR_URL_ARM64=https://github.com/explodingcamera/liwan/releases/download/${{ inputs.tag }}/liwan-aarch64-unknown-linux-musl.tar.gz

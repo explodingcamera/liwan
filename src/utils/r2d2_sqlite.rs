@@ -1,6 +1,6 @@
+use crate::utils::hash::db_name;
 use rusqlite::{Connection, OpenFlags, Result};
 use std::path::{Path, PathBuf};
-use uuid::Uuid;
 
 pub struct SqliteConnectionManager {
     source: PathBuf,
@@ -13,7 +13,7 @@ impl SqliteConnectionManager {
     }
 
     pub fn memory() -> Self {
-        Self { source: format!("file:{}?mode=memory&cache=shared", Uuid::new_v4()).into(), flags: OpenFlags::default() }
+        Self { source: format!("file:{}?mode=memory&cache=shared", db_name()).into(), flags: OpenFlags::default() }
     }
 
     pub fn with_flags(self, flags: OpenFlags) -> Self {
