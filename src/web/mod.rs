@@ -46,7 +46,7 @@ impl Deref for RouterState {
     }
 }
 
-pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<axum::Router<()>> {
+pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()>, openapi::OpenApi)> {
     let mut api = openapi::OpenApi {
         info: openapi::Info { title: "Liwan API".to_string(), ..Default::default() },
         ..openapi::OpenApi::default()
@@ -89,7 +89,30 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<axum::Router<()>
         .with_state(RouterState { app: app.clone(), events })
         .finish_api(&mut api);
 
-    Ok(router)
+    Ok((router, api))
+}
+
+#[cfg(debug_assertions)]
+fn save_spec(spec: openapi::OpenApi) -> Result<()> {
+    use std::path::Path;
+
+    let path = Path::new("./web/src/api/dashboard.ts");
+    if path.exists() {
+        let spec = serde_json::to_string(&spec)?
+            .replace(r#""servers":[],"#, "") // fets doesn't work with an empty servers array
+            .replace("; charset=utf-8", "") // fets doesn't detect the json content type correctly
+            .replace(r#""format":"int64","#, ""); // fets uses bigint for int64
+
+        // check if the spec has changed
+        let old_spec = std::fs::read_to_string(path)?;
+        if old_spec == format!("export default {spec} as const;\n") {
+            return Ok(());
+        }
+
+        tracing::info!("API has changed, updating the openapi spec...");
+        std::fs::write(path, format!("export default {spec} as const;\n"))?;
+    }
+    Ok(())
 }
 
 pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
@@ -106,7 +129,11 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
     }
 
     let router = router(app.clone(), events)?;
+
+    #[cfg(debug_assertions)]
+    save_spec(router.1)?;
+
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", app.config.port)).await.unwrap();
-    let service = router.into_make_service_with_connect_info::<SocketAddr>();
+    let service = router.0.into_make_service_with_connect_info::<SocketAddr>();
     axum::serve(listener, service).await.context("server exited unexpectedly")
 }

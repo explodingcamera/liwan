@@ -1,4 +1,7 @@
-use aide::axum::{ApiRouter, IntoApiResponse, routing::*};
+use aide::{
+    UseApi,
+    axum::{ApiRouter, IntoApiResponse, routing::*},
+};
 use anyhow::Context;
 use axum::{Json, extract::State};
 use axum_extra::extract::CookieJar;
@@ -58,8 +61,8 @@ pub struct MeResponse {
     pub role: UserRole,
 }
 
-async fn me(SessionUser(user): SessionUser) -> impl IntoApiResponse {
-    ([(header::CACHE_CONTROL, "private")], Json(MeResponse { username: user.username, role: user.role }))
+async fn me(SessionUser(user): SessionUser) -> UseApi<impl IntoApiResponse, Json<MeResponse>> {
+    ([(header::CACHE_CONTROL, "private")], Json(MeResponse { username: user.username, role: user.role })).into()
 }
 
 async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> ApiResult<impl IntoApiResponse> {

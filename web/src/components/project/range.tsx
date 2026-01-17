@@ -33,11 +33,10 @@ export const SelectRange = ({
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/earliest"].get({ params: { project_id: projectId || "" } }).json(),
 	});
-
 	const selectAllTime = async () => {
 		if (!projectId) return;
-		if (!allTime.data) return;
-		const from = new Date(allTime.data);
+		if (!allTime.data?.earliest) return;
+		const from = new Date(allTime.data.earliest);
 		const range = new DateRange({ start: startOfDay(from), end: endOfDay(new Date()) });
 		range.variant = "allTime";
 		onSelect(range);

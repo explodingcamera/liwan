@@ -75,7 +75,11 @@ export const MobileDeviceIcon = ({ isMobile, ...props }: { isMobile: boolean } &
 	return <Icon {...props} />;
 };
 
-export const ReferrerIcon = ({ referrer, icon, ...props }: { referrer: string; icon?: string } & IconProps) => {
+export const ReferrerIcon = ({
+	referrer,
+	icon,
+	...props
+}: { referrer: string; icon: string | null | undefined } & IconProps) => {
 	if (icon && Object.hasOwn(brandIcons, icon)) {
 		const Icon = brandIcons[icon as keyof typeof brandIcons];
 		return <Icon {...props} />;

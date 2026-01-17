@@ -1,4 +1,7 @@
-use aide::axum::{ApiRouter, IntoApiResponse, routing::*};
+use aide::{
+    UseApi,
+    axum::{ApiRouter, IntoApiResponse, routing::*},
+};
 use axum::{
     Json,
     extract::{Path, State},
@@ -147,7 +150,10 @@ struct EntitiesResponse {
     entities: Vec<EntityResponse>,
 }
 
-async fn get_users(app: State<RouterState>, SessionUser(user): SessionUser) -> ApiResult<impl IntoApiResponse> {
+async fn get_users(
+    app: State<RouterState>,
+    SessionUser(user): SessionUser,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<UsersResponse>>> {
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
@@ -160,7 +166,7 @@ async fn get_users(app: State<RouterState>, SessionUser(user): SessionUser) -> A
         .map(|u| UserResponse { username: u.username.clone(), role: u.role, projects: u.projects.clone() })
         .collect();
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(UsersResponse { users })))
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(UsersResponse { users })).into())
 }
 
 async fn update_user(
@@ -295,7 +301,7 @@ async fn project_update_handler(
 async fn projects_handler(
     app: State<RouterState>,
     MaybeExtract(user): MaybeExtract<SessionUser>,
-) -> ApiResult<impl IntoApiResponse> {
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectsResponse>>> {
     let projects = app.projects.all().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
     let projects: Vec<Project> = projects.into_iter().filter(|p| can_access_project(p, user.as_ref())).collect();
 
@@ -315,14 +321,14 @@ async fn projects_handler(
         });
     }
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(ProjectsResponse { projects: resp })))
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(ProjectsResponse { projects: resp })).into())
 }
 
 async fn project_handler(
     app: State<RouterState>,
     MaybeExtract(user): MaybeExtract<SessionUser>,
     Path(project_id): Path<String>,
-) -> ApiResult<impl IntoApiResponse> {
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectResponse>>> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
     if !can_access_project(&project, user.as_ref()) {
         return Err(StatusCode::NOT_FOUND.into());
@@ -341,7 +347,7 @@ async fn project_handler(
         public: project.public,
     });
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], resp))
+    Ok(([(http::header::CACHE_CONTROL, "private")], resp).into())
 }
 
 async fn project_delete_handler(
@@ -358,7 +364,10 @@ async fn project_delete_handler(
     Ok(empty_response())
 }
 
-async fn entities_handler(app: State<RouterState>, SessionUser(user): SessionUser) -> ApiResult<impl IntoApiResponse> {
+async fn entities_handler(
+    app: State<RouterState>,
+    SessionUser(user): SessionUser,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<EntitiesResponse>>> {
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
@@ -384,7 +393,7 @@ async fn entities_handler(app: State<RouterState>, SessionUser(user): SessionUse
         });
     }
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(EntitiesResponse { entities: resp })))
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(EntitiesResponse { entities: resp })).into())
 }
 
 async fn entity_create_handler(

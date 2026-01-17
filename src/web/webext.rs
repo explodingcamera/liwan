@@ -9,7 +9,7 @@ use std::task::{Context, Poll};
 
 use crate::web::Files;
 use aide::axum::IntoApiResponse;
-use aide::{OperationIo, OperationOutput};
+use aide::{OperationInput, OperationOutput};
 use axum::body::Body;
 use axum::extract::{ConnectInfo, FromRequestParts, Request};
 use axum::response::IntoResponse;
@@ -209,8 +209,9 @@ macro_rules! http_bail {
 }
 pub(crate) use http_bail;
 
-#[derive(Debug, Copy, Clone, OperationIo)]
+#[derive(Debug, Copy, Clone)]
 pub struct ClientIp(pub Option<IpAddr>);
+impl OperationInput for ClientIp {}
 
 impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
     type Rejection = Infallible;

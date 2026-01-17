@@ -23,7 +23,7 @@ pub struct TestClient {
 
 impl TestClient {
     pub fn new(app: Arc<Liwan>, events: std::sync::mpsc::Sender<Event>) -> Self {
-        let router = liwan::web::router(app, events).unwrap();
+        let (router, _) = liwan::web::router(app, events).unwrap();
         let server = TestServer::new(router).unwrap();
         Self { server }
     }

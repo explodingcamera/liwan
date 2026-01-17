@@ -58,7 +58,7 @@ tower-http={version="0.6", default-features=false, features=[
     "set-header",
 ]}
 tower_governor={version="0.8", default-features=false, features=["axum"]}
-aide={version="0.16.0-alpha.1", default-features=false, features=[
+aide={version="0.16.0-alpha.2", default-features=false, features=[
     "axum",
     "axum-json",
     "axum-query",
@@ -72,7 +72,7 @@ aide={version="0.16.0-alpha.1", default-features=false, features=[
 schemars={version="1.2", features=["derive", "chrono04"]}
 
 ua-parser="0.2"
-rust-embed={version="8.9", features=["mime-guess"]}
+rust-embed={version="8.11", features=["mime-guess"]}
 reqwest={version="0.13", default-features=false, features=["json", "stream", "charset", "rustls"]}
 
 # database
