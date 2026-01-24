@@ -2,7 +2,7 @@
 name="liwan"
 version="1.2.1"
 edition="2024"
-rust-version="1.92"
+rust-version="1.93"
 repository="https://github.com/explodingcamera/liwan"
 license="Apache-2.0"
 publish=false
@@ -84,9 +84,6 @@ r2d2={version="0.8", default-features=false}
 refinery={version="0.9", default-features=false}
 refinery-core={version="0.9", default-features=false}
 maxminddb={version="0.27", optional=true, features=["simdutf8"]}
-
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator="0.6"
 
 [dev-dependencies]
 figment={version="*", features=["test"]}
