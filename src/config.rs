@@ -3,6 +3,7 @@ use figment::Figment;
 use figment::providers::{Env, Format, Toml};
 use http::Uri;
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use std::num::NonZeroU16;
 use std::str::FromStr;
 
@@ -12,6 +13,15 @@ fn default_base() -> String {
 
 fn default_port() -> u16 {
     9042
+}
+
+fn default_listen() -> ListenAddr {
+    ListenAddr::Port(default_port())
+}
+
+#[must_use]
+pub fn default_maxmind_edition() -> String {
+    "GeoLite2-City".to_string()
 }
 
 fn default_data_dir() -> String {
@@ -31,8 +41,8 @@ pub struct Config {
     #[serde(default = "default_base")]
     pub base_url: String,
 
-    #[serde(default = "default_port")]
-    pub port: u16,
+    #[serde(default = "default_listen", alias = "port")]
+    pub listen: ListenAddr,
 
     #[serde(default)]
     // don't load favicons from the duckduckgo api
@@ -48,16 +58,27 @@ pub struct Config {
     pub duckdb: DuckdbConfig,
 }
 
-#[must_use]
-pub fn default_maxmind_edition() -> String {
-    "GeoLite2-City".to_string()
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum ListenAddr {
+    Port(u16),
+    Addr(String),
+}
+
+impl ListenAddr {
+    pub fn addr(&self) -> String {
+        match self {
+            ListenAddr::Port(port) => SocketAddr::from(([0, 0, 0, 0], *port)).to_string(),
+            ListenAddr::Addr(addr) => addr.clone(),
+        }
+    }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             base_url: default_base(),
-            port: default_port(),
+            listen: default_listen(),
             data_dir: default_data_dir(),
             geoip: Default::default(),
             duckdb: Default::default(),
@@ -187,7 +208,7 @@ mod test {
             assert_eq!(config.geoip.maxmind_db_path, Some("test".to_string()));
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
-            assert_eq!(config.port, 9042);
+            assert_eq!(config.listen, ListenAddr::Port(9042));
             assert_eq!(config.duckdb.memory_limit, Some("2GB".to_string()));
             assert_eq!(config.duckdb.threads, Some(NonZeroU16::new(4).unwrap()));
             Ok(())
@@ -212,7 +233,7 @@ mod test {
             assert!(config.geoip.maxmind_license_key.is_none());
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
-            assert_eq!(config.port, 9042);
+            assert_eq!(config.listen, ListenAddr::Port(9042));
             Ok(())
         });
     }
@@ -261,7 +282,7 @@ mod test {
             assert!(config.geoip.maxmind_account_id.is_none());
             assert!(config.geoip.maxmind_license_key.is_none());
             assert_eq!(config.base_url, "http://localhost:9042");
-            assert_eq!(config.port, 9042);
+            assert_eq!(config.listen, ListenAddr::Port(9042));
             Ok(())
         });
     }
