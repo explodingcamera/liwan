@@ -21,6 +21,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - GeoIP database now automatically reloads if it has been updated on disk
 - Docker image is now based on `distroless`
 - Switched to using `axum` as the web framework and `ua-parser` for user-agent parsing
+- Added new `listen` configuration option to specify the address and port to listen on (can be a socket address or just a port number). The old `port` option is still supported for backwards compatibility.
 
 ## [v1.3.0] - 2025-10-12
 
