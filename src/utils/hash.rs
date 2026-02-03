@@ -1,38 +1,31 @@
+use anyhow::Context;
 use argon2::Argon2;
 use argon2::PasswordVerifier;
-use argon2::password_hash::{PasswordHasher, SaltString, rand_core};
+use argon2::password_hash::PasswordHasher;
 
 use anyhow::Result;
 use rand::RngCore;
-use sha3::Digest;
 use std::net::IpAddr;
 
 pub fn hash_password(password: &str) -> Result<String> {
-    let salt = SaltString::generate(&mut rand_core::OsRng);
-    let hash = Argon2::default()
-        .hash_password(password.as_bytes(), &salt)
-        .map_err(|_| anyhow::anyhow!("Failed to hash password"))?;
+    let hash = Argon2::default().hash_password(password.as_bytes()).context("Failed to hash password")?;
     Ok(hash.to_string())
 }
 
 pub fn verify_password(password: &str, hash: &str) -> Result<()> {
-    let hash = argon2::PasswordHash::new(hash).map_err(|_| anyhow::anyhow!("Invalid hash"))?;
+    let hash = argon2::PasswordHash::new(hash).context("Invalid hash")?;
     let argon2 = Argon2::default();
-    argon2.verify_password(password.as_bytes(), &hash).map_err(|_| anyhow::anyhow!("Failed to verify password"))
+    argon2.verify_password(password.as_bytes(), &hash).context("Failed to verify password")
 }
 
-pub fn generate_salt() -> String {
-    SaltString::generate(&mut rand_core::OsRng).to_string()
-}
-
-pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id: &str) -> String {
-    let mut hasher = sha3::Sha3_256::new();
-    hasher.update(ip.to_string());
-    hasher.update(user_agent);
-    hasher.update(daily_salt);
-    hasher.update(entity_id);
+pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: [u8; 16], entity_id: &str) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(ip.to_string().as_bytes());
+    hasher.update(user_agent.as_bytes());
+    hasher.update(&daily_salt);
+    hasher.update(entity_id.as_bytes());
     let hash = hasher.finalize();
-    hex::encode(hash)[..32].to_string()
+    hex::encode(hash.as_bytes())[..32].to_string()
 }
 
 pub fn visitor_id() -> String {

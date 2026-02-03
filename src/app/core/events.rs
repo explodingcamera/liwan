@@ -3,22 +3,22 @@ use std::sync::Arc;
 use anyhow::{Result, bail};
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
+use password_hash::try_generate_salt;
 use std::sync::mpsc::Receiver;
 
 use crate::app::models::{Event, event_params};
 use crate::app::{DuckDBPool, EVENT_BATCH_INTERVAL, SqlitePool};
-use crate::utils::hash::generate_salt;
 
 #[derive(Clone)]
 pub struct LiwanEvents {
     duckdb: DuckDBPool,
     sqlite: SqlitePool,
-    daily_salt: Arc<ArcSwap<(String, DateTime<Utc>)>>,
+    daily_salt: Arc<ArcSwap<([u8; 16], DateTime<Utc>)>>,
 }
 
 impl LiwanEvents {
     pub fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool) -> Result<Self> {
-        let daily_salt: (String, DateTime<Utc>) = {
+        let daily_salt: ([u8; 16], DateTime<Utc>) = {
             tracing::debug!("Loading daily salt");
             sqlite.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
                 Ok((row.get(0)?, row.get(1)?))
@@ -28,13 +28,13 @@ impl LiwanEvents {
     }
 
     /// Get the daily salt, generating a new one if the current one is older than 24 hours
-    pub fn get_salt(&self) -> Result<String> {
+    pub fn get_salt(&self) -> Result<[u8; 16]> {
         let (salt, updated_at) = &**self.daily_salt.load();
 
         // if the salt is older than 24 hours, replace it with a new one (utils::generate_salt)
         if (Utc::now() - updated_at) > chrono::Duration::hours(24) {
             tracing::debug!("Daily salt expired, generating a new one");
-            let new_salt = generate_salt();
+            let new_salt = try_generate_salt()?;
             let now = Utc::now();
             let conn = self.sqlite.get()?;
             conn.execute("update salts set salt = ?, updated_at = ? where id = 1", rusqlite::params![&new_salt, now])?;

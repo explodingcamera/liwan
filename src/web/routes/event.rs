@@ -94,7 +94,7 @@ fn process_event(
     }
 
     let visitor_id = match ip {
-        Some(ip) => hash_ip(&ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id),
+        Some(ip) => hash_ip(&ip, user_agent.as_str(), app.events.get_salt()?, &event.entity_id),
         None => visitor_id(),
     };
 
