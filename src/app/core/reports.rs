@@ -9,8 +9,6 @@ use duckdb::params_from_iter;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub use super::reports_cached::*;
-
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
     pub start: DateTime<Utc>,

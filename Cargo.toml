@@ -27,7 +27,7 @@ hex={version="0.4"}
 bs58="0.5"
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
-md-5={version="0.10"}
+md-5={version="0.11.0-rc.5"}
 async-compression={version="0.4", default-features=false, features=["gzip", "tokio"]}
 tokio-tar={package="astral-tokio-tar", version="0.5"}
 blake3={version="1.8"}
@@ -41,8 +41,7 @@ zstd={version="0.13", default-features=false}
 # general
 argh={version="0.1", default-features=false, features=["help"]}
 anyhow={version="1.0"}
-rand_core={version="0.10"}
-rand={version="0.9", default-features=false, features=["std", "thread_rng"]}
+rand={version="0.10.0-rc.9", default-features=false, features=["std", "thread_rng"]}
 chrono={version="0.4", default-features=false, features=["std", "now", "serde"]}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}

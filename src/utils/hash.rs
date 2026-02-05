@@ -4,7 +4,7 @@ use argon2::PasswordVerifier;
 use argon2::password_hash::PasswordHasher;
 
 use anyhow::Result;
-use rand::RngCore;
+use rand::Rng;
 use std::net::IpAddr;
 
 pub fn hash_password(password: &str) -> Result<String> {
@@ -18,11 +18,11 @@ pub fn verify_password(password: &str, hash: &str) -> Result<()> {
     argon2.verify_password(password.as_bytes(), &hash).context("Failed to verify password")
 }
 
-pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: [u8; 16], entity_id: &str) -> String {
+pub fn hash_ip(ip: &IpAddr, user_agent: &str, daily_salt: &str, entity_id: &str) -> String {
     let mut hasher = blake3::Hasher::new();
     hasher.update(ip.to_string().as_bytes());
     hasher.update(user_agent.as_bytes());
-    hasher.update(&daily_salt);
+    hasher.update(daily_salt.as_bytes());
     hasher.update(entity_id.as_bytes());
     let hash = hasher.finalize();
     hex::encode(hash.as_bytes())[..32].to_string()
