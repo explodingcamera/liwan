@@ -17,7 +17,7 @@ path="src/main.rs"
 [dependencies]
 # async/concurrency
 arc-swap="1.8"
-tokio={version="1.49", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
+tokio={version="1.50", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
 quick_cache={version="0.6", features=["ahash"]}
@@ -41,7 +41,7 @@ zstd={version="0.13", default-features=false}
 # general
 argh={version="0.1", default-features=false, features=["help"]}
 anyhow={version="1.0"}
-rand={version="0.10.0-rc.9", default-features=false, features=["std", "thread_rng"]}
+rand={version="0.10.0", default-features=false, features=["std", "thread_rng"]}
 chrono={version="0.4", default-features=false, features=["std", "now", "serde"]}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}
@@ -92,8 +92,7 @@ maxminddb={version="0.27", optional=true, features=["simdutf8"]}
 figment={version="*", features=["test"]}
 cookie={version="*", default-features=false}
 tower={version="*", features=["util"]}
-hyper={version="*", features=["full"]}
-axum-test={version="18"}
+axum-test={version="19"}
 
 [features]
 default=["geoip"]

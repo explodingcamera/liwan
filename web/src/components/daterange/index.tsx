@@ -45,10 +45,8 @@ export const DatePickerRange = ({ onSelect }: { onSelect: (range: DateRange) => 
 			</label>
 
 			<div>
-				<Dialog.Close asChild ref={closeRef}>
-					<button className="secondary outline" type="button">
-						Cancel
-					</button>
+				<Dialog.Close ref={closeRef} className="secondary outline">
+					Cancel
 				</Dialog.Close>
 
 				<button type="button" className="secondary" onClick={handleSelect}>
