@@ -173,6 +173,7 @@ impl Config {
 }
 
 #[cfg(test)]
+#[allow(clippy::result_large_err)]
 mod test {
     use super::*;
     use figment::Jail;
