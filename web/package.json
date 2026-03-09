@@ -12,7 +12,7 @@
 		"@astrojs/react": "^4.4.2",
 		"@base-ui/react": "^1.2.0",
 		"@explodingcamera/css": "^0.0.4",
-		"@fontsource-variable/outfit": "^5.2.8",
+		"@fontsource-variable/stack-sans-headline": "^5.2.1",
 		"@icons-pack/react-simple-icons": "^13.12.0",
 		"@tanstack/react-query": "^5.90.21",
 		"d3-array": "^3.2.4",
