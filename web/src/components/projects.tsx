@@ -3,7 +3,7 @@ import styles from "./projects.module.css";
 
 import { ChevronDownIcon } from "lucide-react";
 
-import * as Accordion from "@radix-ui/react-accordion";
+import { Accordion } from "@base-ui/react/accordion";
 import {
 	type Metric,
 	type ProjectResponse,
@@ -88,7 +88,7 @@ export const Projects = () => {
 			<Suspense>
 				<Accordion.Root
 					className="AccordionRoot"
-					type="multiple"
+					multiple
 					onValueChange={(value) =>
 						setHiddenProjects(data?.projects.map((p) => p.id).filter((id) => !value.includes(id)) ?? [])
 					}
@@ -142,11 +142,11 @@ const Project = ({
 				</div>
 				<SelectMetrics data={stats} metric={metric} setMetric={setMetric} />
 			</div>
-			<Accordion.AccordionContent className={styles.AccordionContent}>
+			<Accordion.Panel className={styles.AccordionContent}>
 				<div className={styles.graph}>
 					<LineGraph title={metricNames[metric]} metric={metric} data={graph ?? []} range={range} />
 				</div>
-			</Accordion.AccordionContent>
+			</Accordion.Panel>
 		</article>
 	);
 };

@@ -29,12 +29,12 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 			showClose
 			className={styles.detailsModal}
 			autoOverflow
-			trigger={() => (
+			trigger={
 				<button type="button" className={cls(styles.showMore, (data?.length ?? 0) === 0 && styles.showMoreHidden)}>
 					<ZoomInIcon size={16} />
 					Show details
 				</button>
-			)}
+			}
 		>
 			<div className={styles.dimensionTable} style={{ "--count": data?.length } as React.CSSProperties}>
 				<div className={styles.dimensionHeader}>

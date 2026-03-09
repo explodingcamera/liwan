@@ -1,4 +1,4 @@
-import * as Tabs from "@radix-ui/react-tabs";
+import { Tabs } from "@base-ui/react/tabs";
 import { LinkIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
@@ -95,9 +95,9 @@ export const DimensionDropdown = ({
 				<div>{metricNames[query.metric]}</div>
 			</Tabs.List>
 			{dimensions.map((dimension) => (
-				<Tabs.Content key={dimension} value={dimension} className={styles.tabsContent}>
+				<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
 					<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
-				</Tabs.Content>
+				</Tabs.Panel>
 			))}
 		</Tabs.Root>
 	);
@@ -116,16 +116,16 @@ export const DimensionTabs = ({
 		<Tabs.Root className={styles.tabs} defaultValue={dimensions[0]}>
 			<Tabs.List className={styles.tabsList}>
 				{Object.entries(dimensions).map(([key, value]) => (
-					<Tabs.Trigger key={key} value={value}>
+					<Tabs.Tab key={key} value={value}>
 						{dimensionNames[value]}
-					</Tabs.Trigger>
+					</Tabs.Tab>
 				))}
 				<div>{metricNames[query.metric]}</div>
 			</Tabs.List>
 			{dimensions.map((dimension) => (
-				<Tabs.Content key={dimension} value={dimension} className={styles.tabsContent}>
+				<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
 					<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
-				</Tabs.Content>
+				</Tabs.Panel>
 			))}
 		</Tabs.Root>
 	);

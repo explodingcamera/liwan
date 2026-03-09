@@ -218,10 +218,8 @@ const FilterDialog = ({ onAdd }: { onAdd: (filter: DimensionFilter) => void }) =
 				)}
 
 				<div className="grid">
-					<Dialog.Close asChild ref={closeRef}>
-						<button className="secondary outline" type="button">
-							Cancel
-						</button>
+					<Dialog.Close ref={closeRef} className="secondary outline">
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Add Filter</button>
 				</div>

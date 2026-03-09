@@ -80,10 +80,8 @@ export const DeleteDialog = ({
 		>
 			<form onSubmit={handleSubmit}>
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit" className={styles.danger}>
 						Delete {type}
@@ -180,10 +178,8 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 				</label>
 				<br />
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Save Changes</button>
 				</div>
@@ -269,10 +265,8 @@ export const CreateProject = () => {
 				<br />
 
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Create Project</button>
 				</div>
@@ -356,10 +350,8 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 					noOptionsText="No matching projects"
 				/>
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Save Changes</button>
 				</div>
@@ -438,10 +430,8 @@ export const CreateEntity = () => {
 					noOptionsText="No matching projects"
 				/>
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Create Entity</button>
 				</div>
@@ -505,10 +495,8 @@ export const EditPassword = ({ user, trigger }: { user: UserResponse; trigger: R
 					<input required name="confirm" type="password" autoComplete="new-password" ref={confirmPasswordRef} />
 				</label>
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Change Password</button>
 				</div>
@@ -590,15 +578,13 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 					<input name="admin" type="checkbox" role="switch" defaultChecked={user.role === "admin"} />
 					Enable Administrator Access
 					<br />
-					<small>Administators can edit and create projects, entities, and users.</small>
+					<small>Administrators can edit and create projects, entities, and users.</small>
 				</label>
 				<br />
 
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Save Changes</button>
 				</div>
@@ -674,14 +660,12 @@ export const CreateUser = () => {
 					<input name="publish" type="checkbox" role="switch" />
 					Enable Administrator Access
 					<br />
-					<small>Administators can edit and create projects, entities, and users.</small>
+					<small>Administrators can edit and create projects, entities, and users.</small>
 				</label>
 				<br />
 				<div className="grid">
-					<Dialog.Close asChild>
-						<button className="secondary outline" type="button" ref={closeRef}>
-							Cancel
-						</button>
+					<Dialog.Close className="secondary outline" ref={closeRef}>
+						Cancel
 					</Dialog.Close>
 					<button type="submit">Create User</button>
 				</div>

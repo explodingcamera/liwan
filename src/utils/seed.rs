@@ -1,7 +1,6 @@
-use chrono::{DateTime, Duration, Utc};
-use rand::Rng;
-
 use crate::app::models::Event;
+use chrono::{DateTime, Duration, Utc};
+use rand::RngExt;
 
 const PATHS: &[&str] = &["/", "/about", "/contact", "/pricing", "/blog", "/login", "/signup"];
 const REFERRERS: &[&str] = &["", "google.com", "twitter.com", "liwan.dev", "example.com", "henrygressmann.de"];

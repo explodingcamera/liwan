@@ -279,13 +279,13 @@ export const LineGraph = ({
 	return (
 		<div ref={containerRef} className={styles.graph} data-tooltip-float={true} data-tooltip-id="graph">
 			<svg ref={svgRef} style={{ display: "block", width: "100%", height: "100%" }}>
+				<title>Graph</title>
 				<defs>
 					<linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
 						<stop offset="0%" stopColor="rgba(166, 206, 227, 0.4)" />
 						<stop offset="100%" stopColor="rgba(166, 206, 227, 0)" />
 					</linearGradient>
 				</defs>
-				<title>Graph</title>
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
 				<path id="line" fill="none" stroke="#a6cee3" />
 				{/* doted line */}

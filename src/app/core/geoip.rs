@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::io::{self};
+use std::io::{self, Read};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use crate::app::SqlitePool;
 use anyhow::{Context, Result, anyhow};
 use arc_swap::ArcSwapOption;
 use futures_lite::StreamExt;
-use md5::{Digest, Md5};
+use md5::Digest;
 use tokio_tar::Archive;
 use tokio_util::io::StreamReader;
 
@@ -232,9 +232,18 @@ async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> R
 fn file_md5(path: &Path) -> Result<String> {
     let file = std::fs::File::open(path)?;
     let mut reader = std::io::BufReader::new(file);
-    let mut hasher = Md5::new();
-    std::io::copy(&mut reader, &mut hasher)?;
-    Ok(format!("{:x}", hasher.finalize()))
+    let mut hasher = md5::Md5::new();
+
+    let mut buffer = [0u8; 8192];
+    loop {
+        let n = reader.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buffer[..n]);
+    }
+
+    Ok(hex::encode(hasher.finalize()))
 }
 
 async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str) -> Result<PathBuf> {

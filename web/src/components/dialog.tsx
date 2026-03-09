@@ -1,14 +1,15 @@
-import * as Dia from "@radix-ui/react-dialog";
+import { Dialog as Dia } from "@base-ui/react";
 import { XIcon } from "lucide-react";
 
 import { cls } from "../utils";
 import styles from "./dialog.module.css";
+import type { ReactElement } from "react";
 
 export type DialogProps = {
 	title: string;
 	description?: string;
 	hideDescription?: boolean;
-	trigger: React.ReactNode | (() => React.ReactNode);
+	trigger?: ReactElement | false;
 	children: React.ReactNode;
 	onOpenChange?: (open: boolean) => void;
 	className?: string;
@@ -31,30 +32,30 @@ export const Dialog = ({
 }: DialogProps) => {
 	return (
 		<Dia.Root onOpenChange={onOpenChange}>
-			<Dia.Trigger asChild>{typeof trigger === "function" ? trigger() : trigger}</Dia.Trigger>
+			{trigger && <Dia.Trigger nativeButton={trigger.type === "button"} render={trigger} />}
 			<Dia.Portal>
-				<Dia.Overlay className={styles.overlay} />
-				{showClose && (
-					<Dia.Close asChild>
-						<button type="button" className={styles.close}>
-							<XIcon size="24" />
-						</button>
-					</Dia.Close>
-				)}
+				<Dia.Backdrop className={styles.overlay} />
 
-				<Dia.Content asChild>
-					<article className={cls(styles.content, autoOverflow && styles.autoOverflow, className)}>
-						<Dia.Title className={styles.title} hidden={hideTitle}>
-							{title}
-						</Dia.Title>
-						{description && (
-							<Dia.Description hidden={hideDescription} className={styles.description}>
-								{description}
-							</Dia.Description>
-						)}
-						{children}
-					</article>
-				</Dia.Content>
+				<Dia.Viewport>
+					{showClose && (
+						<Dia.Close className={styles.close}>
+							<XIcon size="24" />
+						</Dia.Close>
+					)}
+					<Dia.Popup>
+						<article className={cls(styles.content, autoOverflow && styles.autoOverflow, className)}>
+							<Dia.Title className={styles.title} hidden={hideTitle}>
+								{title}
+							</Dia.Title>
+							{description && (
+								<Dia.Description hidden={hideDescription} className={styles.description}>
+									{description}
+								</Dia.Description>
+							)}
+							{children}
+						</article>
+					</Dia.Popup>
+				</Dia.Viewport>
 			</Dia.Portal>
 		</Dia.Root>
 	);
