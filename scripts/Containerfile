@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/debian13:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot
 ARG TARGETARCH
 
 ENV LIWAN_CONFIG=/liwan.config.toml
