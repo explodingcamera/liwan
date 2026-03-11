@@ -11,8 +11,6 @@ import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
 import type { ProjectQuery } from "../project";
 import { DetailsModal } from "./modal";
 
-export const cardStyles = styles.card;
-
 type DimensionProps = {
 	dimension: Dimension;
 	query: ProjectQuery;

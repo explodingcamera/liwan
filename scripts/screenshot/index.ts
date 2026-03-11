@@ -4,7 +4,7 @@ import { join } from "node:path";
 const geoCardMargin = ".geocard { margin-bottom: 2rem !important; }";
 
 await captureWebsite.file(
-	"http://localhost:4321/p/public-project",
+	"http://localhost:9042/p/public-project",
 	join(__dirname, "../../data/images/liwan-desktop.png"),
 	{
 		overwrite: true,
@@ -16,7 +16,7 @@ await captureWebsite.file(
 );
 
 await captureWebsite.file(
-	"http://localhost:4321/p/public-project",
+	"http://localhost:9042/p/public-project",
 	join(__dirname, "../../data/images/liwan-desktop-dark.png"),
 	{
 		darkMode: true,
@@ -29,7 +29,7 @@ await captureWebsite.file(
 );
 
 await captureWebsite.file(
-	"http://localhost:4321/p/public-project",
+	"http://localhost:9042/p/public-project",
 	join(__dirname, "../../data/images/liwan-desktop-full.png"),
 	{
 		overwrite: true,
@@ -40,7 +40,7 @@ await captureWebsite.file(
 );
 
 await captureWebsite.file(
-	"http://localhost:4321/p/public-project",
+	"http://localhost:9042/p/public-project",
 	join(__dirname, "../../data/images/liwan-desktop-full-dark.png"),
 	{
 		darkMode: true,

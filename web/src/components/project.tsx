@@ -1,4 +1,5 @@
 import styles from "./project.module.css";
+import cardStyles from "./dimensions/dimensions.module.css";
 
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 
@@ -8,7 +9,7 @@ import type { DateRange } from "../api/ranges";
 
 import { useMetric, useRange } from "../hooks/persist";
 import { cls } from "../utils";
-import { DimensionCard, DimensionDropdownCard, DimensionTabs, DimensionTabsCard, cardStyles } from "./dimensions";
+import { DimensionCard, DimensionDropdownCard, DimensionTabs, DimensionTabsCard } from "./dimensions";
 import { LineGraph } from "./graph";
 import { SelectFilters } from "./project/filter";
 import { SelectMetrics } from "./project/metric";
@@ -107,7 +108,7 @@ export const Project = () => {
 					<SelectMetrics data={stats} metric={metric} setMetric={setMetric} className={styles.projectStats} />
 					<SelectFilters value={filters} onChange={setFilters} />
 				</div>
-				<article className={cls(cardStyles, styles.graphCard)}>
+				<article className={cls(cardStyles.card, styles.graphCard)}>
 					<LineGraph data={graph ?? []} metric={metric} title={metricNames[metric]} range={range} />
 				</article>
 				<div className={styles.tables}>
@@ -139,7 +140,7 @@ const GeoCard = ({
 	});
 
 	return (
-		<article className={cls(cardStyles, styles.geoCard, "geocard")} data-full-width="true">
+		<article className={cls(cardStyles.card, styles.geoCard, "geocard")} data-full-width="true">
 			<div className={styles.geoMap}>
 				<Suspense fallback={null}>
 					<Worldmap data={data} metric={query.metric} />

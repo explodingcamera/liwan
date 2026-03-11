@@ -135,10 +135,6 @@ impl LiwanGeoIP {
             std::fs::copy(&file, &self.path)?;
             std::fs::remove_file(file)?;
 
-            // open the new reader
-            let reader = maxminddb::Reader::open_readfile(self.path.clone())?;
-            self.reader.store(Some(reader.into()));
-
             let path = std::fs::canonicalize(&self.path)?;
             tracing::info!(path = ?path, "GeoIP database updated successfully");
         }

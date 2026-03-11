@@ -32,7 +32,7 @@ async-compression={version="0.4", default-features=false, features=["gzip", "tok
 tokio-tar={package="astral-tokio-tar", version="0.5"}
 blake3={version="1.8"}
 argon2={version="0.6.0-rc.7", features=[]}
-password-hash={version="0.6.0-rc.12", features=[
+password-hash={version="0.6.0", features=[
     "rand_core",
     "getrandom",
 ]} # required for getrandom feature
@@ -81,7 +81,7 @@ rust-embed={version="8.11", features=["mime-guess"]}
 reqwest={version="0.13", default-features=false, features=["json", "stream", "charset", "rustls"]}
 
 # database
-duckdb={version="1.4", features=["buildtime_bindgen", "chrono", "bundled", "r2d2"]}
+duckdb={version="1.10500", features=["buildtime_bindgen", "chrono", "bundled", "r2d2"]}
 rusqlite={version="0.38", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 refinery={version="0.9", default-features=false}

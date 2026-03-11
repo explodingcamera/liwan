@@ -1,5 +1,5 @@
 @import "@explodingcamera/css/all.css" layer(base);
-@import "@picocss/pico/css/pico.lime.min.css" layer(pico);
+@import "@picocss/pico/css/pico.slate.min.css" layer(pico);
 @import "react-tooltip/dist/react-tooltip.css" layer(tooltip);
 
 :root {

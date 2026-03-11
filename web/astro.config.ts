@@ -49,8 +49,18 @@ export default defineConfig({
 			}) as any,
 		],
 	},
-	integrations: [react(), setPrerender()],
+	integrations: [
+		react({
+			babel: {
+				plugins: ["babel-plugin-react-compiler"],
+			},
+		}),
+		setPrerender(),
+	],
 	redirects: {
 		"/settings": "/settings/projects",
+	},
+	experimental: {
+		rustCompiler: true,
 	},
 });
