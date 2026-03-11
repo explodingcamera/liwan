@@ -1,11 +1,14 @@
 #![forbid(unsafe_code)]
-#![warn(rust_2018_idioms)]
-
 use anyhow::Result;
 
 use liwan::app::{Liwan, models::Event};
 use liwan::{cli, config::Config, web};
 use tracing_subscriber::EnvFilter;
+
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {

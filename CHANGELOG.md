@@ -18,10 +18,15 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ## Unreleased
 
-- GeoIP database now automatically reloads if it has been updated on disk
-- Docker image is now based on `distroless`
+- Updated to the latest version of DuckDB (1.5)
+- GeoIP database now automatically reloads if it has been updated on disk / fixed an issue where the GeoIP database would not be updated on the first boot
 - Switched to using `axum` as the web framework and `ua-parser` for user-agent parsing
 - Added new `listen` configuration option to specify the address and port to listen on (can be a socket address or just a port number). The old `port` option is still supported for backwards compatibility.
+- Some small UI improvements and optimizations
+- Container image is now based on `distroless`
+
+**⚠️ The container now runs as a non-root user (UID 1000)!**  
+If you map a folder to `/data` and encounter permission issues, ensure it’s owned by UID `1000` (e.g. `chown 1000:1000 ./data`) or has appropriate permissions (e.g. `chmod 777 ./data`). You can also override the UID user by Liwan when starting the container by setting the `--user` flag (e.g. `docker run --user 0 ...`).
 
 ## [v1.3.0] - 2025-10-12
 
