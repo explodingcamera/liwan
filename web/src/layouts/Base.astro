@@ -5,7 +5,7 @@ import "../global.css";
 import { ClientRouter } from "astro:transitions";
 import ThemeSwitcher from "../components/ThemeSwitcher.astro";
 
-type Props = { title: string; hideFooter?: boolean };
+type Props = { title: string; hideFooter?: boolean; noSwitcher?: boolean };
 ---
 
 <html lang="en" transition:animate="none">
@@ -23,7 +23,7 @@ type Props = { title: string; hideFooter?: boolean };
     {
       !Astro.props.hideFooter && (
         <footer class="container-fluid footer">
-          <ThemeSwitcher />
+          {!Astro.props.noSwitcher && <ThemeSwitcher />}
           <small>
             Powered by&nbsp;
             <a href="https://liwan.dev" target="_blank" class="secondary">

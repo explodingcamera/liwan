@@ -1,8 +1,9 @@
 ---
 import { MoonIcon, SunIcon } from "lucide-react";
+const { class: className, ...rest } = Astro.props;
 ---
 
-<button id="theme-switcher" type="button" aria-label="Toggle dark mode">
+<button id="theme-switcher" type="button" aria-label="Toggle dark mode" class={className} {...rest}>
   <SunIcon className="sun" />
   <MoonIcon className="moon" />
 </button>
@@ -58,6 +59,7 @@ import { MoonIcon, SunIcon } from "lucide-react";
     const button = document.querySelector(
       "#theme-switcher"
     ) as HTMLButtonElement;
+
     const sun = document.querySelector(
       "#theme-switcher .sun"
     ) as HTMLElement | null;
@@ -75,6 +77,8 @@ import { MoonIcon, SunIcon } from "lucide-react";
     }
 
     button.addEventListener("click", () => {
+        console.log("click");
+
       if (theme === "dark") {
         setTheme("light");
         sun.style.display = "block";
