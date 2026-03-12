@@ -9,7 +9,7 @@
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/explodingcamera/liwan/test.yaml?style=flat-square)
 ![GitHub Release](https://img.shields.io/github/v/release/explodingcamera/liwan?style=flat-square)
-[![Container](https://img.shields.io/badge/Container-ghcr.io%2Fexplodingcamera%2Fliwan%3Aedge-blue?style=flat-square)](https://github.com/explodingcamera/liwan/pkgs/container/liwan)
+[![Container](https://img.shields.io/badge/Container-ghcr.io%2Fexplodingcamera%2Fliwan%3Alatest-blue?style=flat-square)](https://github.com/explodingcamera/liwan/pkgs/container/liwan)
 
 </div>
 

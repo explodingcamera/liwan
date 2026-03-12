@@ -52,8 +52,17 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()
         ..openapi::OpenApi::default()
     };
 
-    let event_cors = CorsLayer::new().allow_methods([Method::POST]).allow_origin(Any).allow_credentials(false);
-    let script_cors = CorsLayer::new().allow_methods([Method::GET]).allow_origin(Any).allow_credentials(false);
+    let event_cors = CorsLayer::new()
+        .allow_methods([Method::POST])
+        .allow_origin(Any)
+        .allow_credentials(false)
+        .allow_headers([http::header::CONTENT_TYPE, http::header::ACCEPT]);
+
+    let script_cors = CorsLayer::new()
+        .allow_methods([Method::GET])
+        .allow_origin(Any)
+        .allow_credentials(false)
+        .allow_headers([http::header::CONTENT_TYPE, http::header::ACCEPT]);
 
     let set_headers = tower::ServiceBuilder::new()
         .layer(SetResponseHeaderLayer::if_not_present(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY")))
