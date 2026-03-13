@@ -5,10 +5,10 @@ pub mod models;
 pub use core::reports;
 use std::sync::Arc;
 
-use crate::config::Config;
+use crate::{config::Config, utils::writable::check_directory_writable};
 
 use crate::utils::r2d2_sqlite::SqliteConnectionManager;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use core::{LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjects, LiwanSessions, LiwanUsers};
 use duckdb::DuckdbConnectionManager;
 
@@ -41,16 +41,18 @@ const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs
 impl Liwan {
     pub fn try_new(config: Config) -> Result<Arc<Self>> {
         tracing::debug!("Initializing app");
-        let folder = std::path::Path::new(&config.data_dir);
-        if !folder.exists() {
-            tracing::debug!(path = config.data_dir, "Creating database folder since it doesn't exist");
-            std::fs::create_dir_all(folder)?;
+        let dir = std::path::Path::new(&config.data_dir);
+
+        if !dir.exists() {
+            tracing::debug!(path = config.data_dir, "Creating data directory since it doesn't exist");
+            std::fs::create_dir_all(dir).context("Failed to create data directory")?;
         }
+        check_directory_writable(dir);
 
         tracing::debug!("Initializing databases");
-        let conn_app = db::init_sqlite(&folder.join("liwan-app.sqlite"), embedded::app::migrations::runner())?;
+        let conn_app = db::init_sqlite(&dir.join("liwan-app.sqlite"), embedded::app::migrations::runner())?;
         let conn_events = db::init_duckdb(
-            &folder.join("liwan-events.duckdb"),
+            &dir.join("liwan-events.duckdb"),
             config.duckdb.clone(),
             embedded::events::migrations::runner(),
         )?;

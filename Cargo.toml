@@ -47,6 +47,7 @@ figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}
 tracing-subscriber={version="0.3", features=["env-filter"]}
 ahash="0.8"
+nix={version="0.31", features=["user"]}
 
 # web
 axum={version="0.8", default-features=false, features=[
