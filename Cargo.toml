@@ -41,7 +41,7 @@ zstd={version="0.13", default-features=false}
 # general
 argh={version="0.1", default-features=false, features=["help"]}
 anyhow={version="1.0"}
-rand={version="0.10.0", default-features=false, features=["std", "thread_rng"]}
+rand={version="0.10", default-features=false, features=["std", "thread_rng"]}
 chrono={version="0.4", default-features=false, features=["std", "now", "serde"]}
 figment={version="0.10", features=["toml", "env"]}
 tracing={version="0.1", default-features=false, features=["std"]}

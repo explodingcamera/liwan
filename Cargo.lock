@@ -105,9 +105,9 @@ dependencies = [
 
 [[package]]
 name = "argh"
-version = "0.1.17"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42a66b74feaa2a7eddc2a74d273f151b545742ef375581c5a566607df992565e"
+checksum = "16a3bf61b195d0d2202b21a5783b273ccba8dc04c7f07c3bc22a70d02b81e154"
 dependencies = [
  "argh_derive",
  "argh_shared",
@@ -115,9 +115,9 @@ dependencies = [
 
 [[package]]
 name = "argh_derive"
-version = "0.1.17"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ce8f59ed4ec07742760cf3593727c8caff28ef4537eeb33be25e5fb454850d1"
+checksum = "8ba478f46c1c645512959fada39ced2b0d3552fb4a60ef3ff65d0c8850d222a5"
 dependencies = [
  "argh_shared",
  "proc-macro2",
@@ -127,9 +127,9 @@ dependencies = [
 
 [[package]]
 name = "argh_shared"
-version = "0.1.17"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284b476f7c2b6af9aa49f059466ebfa725b0f53c33d271a691e613e9187bf507"
+checksum = "2db5bbb2053ca6b6d64f11e8572f2e4a0a32421e87f4260ec49039cf75b07ef3"
 
 [[package]]
 name = "argon2"
@@ -566,7 +566,7 @@ version = "0.11.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d52965399b470437fc7f4d4b51134668dbc96573fea6f1b83318a420e4605745"
 dependencies = [
- "digest 0.11.1",
+ "digest 0.11.2",
 ]
 
 [[package]]
@@ -687,9 +687,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.2.56"
+version = "1.2.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aebf35691d1bfb0ac386a69bac2fde4dd276fb618cf8bf4f5318fe285e821bb2"
+checksum = "7a0dd1ca384932ff3641c8718a02769f1698e7563dc6974ffd03346116310423"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -992,9 +992,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.11.1"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "285743a676ccb6b3e116bc14cc69319b957867930ae9c4822f8e0f54509d7243"
+checksum = "4850db49bf08e663084f7fb5c87d202ef91a3907271aff24a94eb97ff039153c"
 dependencies = [
  "block-buffer 0.12.0",
  "const-oid",
@@ -2131,7 +2131,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59e715bb6f273068fc89403d6c4f5eeb83708c62b74c8d43e3e8772ca73a6288"
 dependencies = [
  "cfg-if",
- "digest 0.11.1",
+ "digest 0.11.2",
 ]
 
 [[package]]
@@ -3987,9 +3987,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.3.22"
+version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f30143827ddab0d256fd843b7a66d164e9f271cfa0dde49142c5ca0ca291f1e"
+checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
 dependencies = [
  "matchers",
  "nu-ansi-term",

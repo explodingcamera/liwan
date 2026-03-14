@@ -16,7 +16,7 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
-## Unreleased
+## [v1.4.0] - 2026-03-14
 
 - Updated to the latest version of DuckDB (1.5)
 - GeoIP database now automatically reloads if it has been updated on disk / fixed an issue where the GeoIP database would not be updated on the first boot
@@ -26,7 +26,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Container image is now based on `distroless`
 
 **⚠️ The container now runs as a non-root user (UID 1000)!**  
-If you map a folder to `/data` and encounter permission issues, ensure it’s owned by UID `1000` (e.g. `chown 1000:1000 ./data`) or has appropriate permissions (e.g. `chmod 777 ./data`). You can also override the UID user by Liwan when starting the container by setting the `--user` flag (e.g. `docker run --user 0 ...`).
+If you map a folder to `/data` and encounter permission issues, ensure it’s owned by UID `1000` (e.g. `chown 1000:1000 ./data`) or has appropriate permissions (e.g. `chmod 777 ./data`). You can also override the UID used by Liwan when starting the container by setting the `--user` flag (e.g. `docker run --user 0 ...` to keep the old behavior).
 
 ## [v1.3.0] - 2025-10-12
 
