@@ -53,7 +53,7 @@ jobs:
         env:
           INPUT_TAG: "${{ inputs.tag }}"
         run: |
-          mkdir -p dist/amd64 dist/arm64
+          mkdir -p dist/amd64 dist/arm64 dist/data
 
           # sanitize tag: only keep alphanum, dot, underscore, dash
           SAFE_TAG=$(echo "$INPUT_TAG" | sed 's/[^A-Za-z0-9._-]/_/g')

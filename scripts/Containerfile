@@ -6,7 +6,9 @@ ENV LIWAN_DATA_DIR=/data
 
 USER 1000:1000
 
-COPY ./dist/${TARGETARCH:+amd64/}liwan /liwan
+COPY ./dist/${TARGETARCH}/liwan /liwan
+COPY --chown=1000:1000 ./dist/data /data
+VOLUME /data
 
 EXPOSE 9042
 STOPSIGNAL SIGINT
