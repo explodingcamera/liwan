@@ -83,7 +83,7 @@ reqwest={version="0.13", default-features=false, features=["json", "stream", "ch
 
 # database
 duckdb={version="1.10500", features=["buildtime_bindgen", "chrono", "bundled", "r2d2"]}
-rusqlite={version="0.38", features=["bundled", "modern_sqlite", "chrono"]}
+rusqlite={version="0.39", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 refinery={version="0.9", default-features=false}
 refinery-core={version="0.9", default-features=false}
