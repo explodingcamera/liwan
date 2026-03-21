@@ -10,6 +10,8 @@ type Payload = {
 	name: string;
 	url: string;
 	referrer?: string;
+	screen_width?: number;
+	screen_height?: number;
 	utm?: { campaign?: string; content?: string; medium?: string; source?: string; term?: string };
 };
 
@@ -100,6 +102,8 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 			entity_id: options?.entity || entity,
 			referrer: options?.referrer || referrer,
 			url: options?.url || location.origin + location.pathname,
+			screen_width: !noWindow ? window.screen?.width : undefined,
+			screen_height: !noWindow ? window.screen?.height : undefined,
 			utm: {
 				campaign: utm.get("utm_campaign"),
 				content: utm.get("utm_content"),
