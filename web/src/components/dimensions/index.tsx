@@ -1,5 +1,5 @@
 import { Tabs } from "@base-ui/react/tabs";
-import { LinkIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
+import { LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
 import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
@@ -288,6 +288,12 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 		<>
 			<LinkIcon size={16} />
 			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
+		</>
+	),
+	screen_resolution: (value, onSelect) => (
+		<>
+		<MonitorIcon size={16} />
+		<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown"}</DimensionValueButton>
 		</>
 	),
 };
