@@ -182,7 +182,9 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
                 Dimension::UtmCampaign => format!("utm_campaign {filter_value}"),
                 Dimension::UtmContent => format!("utm_content {filter_value}"),
                 Dimension::UtmTerm => format!("utm_term {filter_value}"),
-                Dimension::ScreenResolution => format!("concat_ws('x', screen_width::text, screen_height::text) {filter_value}"),
+                Dimension::ScreenResolution => {
+                    format!("concat_ws('x', screen_width::text, screen_height::text) {filter_value}")
+                }
             })
         })
         .collect::<Result<Vec<String>>>()?;
@@ -459,7 +461,9 @@ pub fn dimension_report(
         Dimension::UtmCampaign => ("utm_campaign", "utm_campaign"),
         Dimension::UtmContent => ("utm_content", "utm_content"),
         Dimension::UtmTerm => ("utm_term", "utm_term"),
-        Dimension::ScreenResolution => ("concat_ws('x', screen_width::text, screen_height::text)", "screen_width, screen_height"),
+        Dimension::ScreenResolution => {
+            ("nullif(concat_ws('x', screen_width::text, screen_height::text), '')", "screen_width, screen_height")
+        }
     };
 
     params.push(range.start);
