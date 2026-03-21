@@ -30,6 +30,8 @@ struct EventRequest {
     url: String,
     referrer: Option<String>,
     utm: Option<Utm>,
+    screen_width: Option<i32>,
+    screen_height: Option<i32>,
 }
 
 #[derive(serde::Deserialize, JsonSchema)]
@@ -124,6 +126,8 @@ fn process_event(
         utm_medium: event.utm.as_ref().and_then(|u| u.medium.clone()),
         utm_source: event.utm.as_ref().and_then(|u| u.source.clone()),
         utm_term: event.utm.as_ref().and_then(|u| u.term.clone()),
+        screen_width: event.screen_width,
+        screen_height: event.screen_height,
     };
 
     events.send(event)?;

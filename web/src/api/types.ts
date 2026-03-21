@@ -23,6 +23,7 @@ export const dimensions = [
 	"utm_medium",
 	"utm_source",
 	"utm_term",
+	"screen_resolution",
 ] as const satisfies Dimension[];
 
 export const filterTypes = [
