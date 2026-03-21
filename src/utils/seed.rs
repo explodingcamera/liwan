@@ -125,6 +125,8 @@ pub fn random_events(
             utm_medium: Some(random_el(UTM_MEDIUMS, 0.6).to_string()),
             utm_source: Some(random_el(UTM_SOURCES, 0.6).to_string()),
             utm_term: Some(random_el(UTM_TERMS, 0.6).to_string()),
+            screen_width: None,
+            screen_height: None,
         })
     })
 }

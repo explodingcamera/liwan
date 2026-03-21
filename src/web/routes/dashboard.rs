@@ -227,6 +227,9 @@ async fn project_detailed_handler(
                 let city = city.filter(|city| !city.is_empty());
                 data.push(DimensionTableRow { dimension_value: key, value, display_name: city, icon: country });
             }
+            Dimension::ScreenResolution => {
+                data.push(DimensionTableRow { dimension_value: key, value, display_name: None, icon: None });
+            }
             _ => {
                 data.push(DimensionTableRow { dimension_value: key, value, display_name: None, icon: None });
             }
