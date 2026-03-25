@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::io::{self, Read};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
@@ -7,7 +5,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::app::SqlitePool;
 use anyhow::{Context, Result, anyhow};
 use arc_swap::ArcSwapOption;
 use futures_lite::StreamExt;
@@ -26,21 +23,19 @@ pub struct LookupResult {
 }
 
 pub struct LiwanGeoIP {
-    pool: SqlitePool,
     reader: ArcSwapOption<maxminddb::Reader<Vec<u8>>>,
-
     downloading: AtomicBool,
     geoip: crate::config::GeoIpConfig,
     path: PathBuf,
 }
 
 impl LiwanGeoIP {
-    pub fn try_new(config: crate::config::Config, pool: SqlitePool) -> Result<Self> {
+    pub fn try_new(config: crate::config::Config) -> Result<Self> {
         let geoip = config.geoip;
         if geoip.maxmind_account_id.is_none() && geoip.maxmind_license_key.is_none() && geoip.maxmind_db_path.is_none()
         {
             tracing::trace!("GeoIP support disabled, skipping...");
-            return Ok(Self::noop(pool));
+            return Ok(Self::noop());
         }
 
         let edition = &geoip.maxmind_edition;
@@ -61,13 +56,12 @@ impl LiwanGeoIP {
             maxminddb::Reader::open_readfile(path.clone()).expect("Failed to open GeoIP database file").into()
         });
 
-        Ok(Self { geoip, pool, reader: ArcSwapOption::new(reader), path, downloading: Default::default() })
+        Ok(Self { geoip, reader: ArcSwapOption::new(reader), path, downloading: Default::default() })
     }
 
-    fn noop(pool: SqlitePool) -> Self {
+    fn noop() -> Self {
         Self {
             geoip: Default::default(),
-            pool,
             reader: ArcSwapOption::new(None),
             downloading: Default::default(),
             path: PathBuf::new(),

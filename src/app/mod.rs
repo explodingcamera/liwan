@@ -25,6 +25,8 @@ pub struct Liwan {
     pub onboarding: core::onboarding::LiwanOnboarding,
     pub entities: core::entities::LiwanEntities,
     pub projects: core::projects::LiwanProjects,
+
+    #[cfg(feature = "geoip")]
     pub geoip: Arc<core::geoip::LiwanGeoIP>,
 
     pub config: Config,
@@ -59,7 +61,7 @@ impl Liwan {
 
         Ok(Self {
             #[cfg(feature = "geoip")]
-            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?.into(),
+            geoip: core::geoip::LiwanGeoIP::try_new(config.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
@@ -81,7 +83,7 @@ impl Liwan {
 
         Ok(Self {
             #[cfg(feature = "geoip")]
-            geoip: core::geoip::LiwanGeoIP::try_new(config.clone(), conn_app.clone())?.into(),
+            geoip: core::geoip::LiwanGeoIP::try_new(config.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
@@ -101,6 +103,7 @@ impl Liwan {
     }
 
     pub fn run_background_tasks(&self) {
+        #[cfg(feature = "geoip")]
         tokio::task::spawn(core::geoip::keep_updated(self.geoip.clone()));
     }
 

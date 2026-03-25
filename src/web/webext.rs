@@ -1,5 +1,3 @@
-#![allow(clippy::result_large_err)]
-
 use std::convert::Infallible;
 use std::fmt::Display;
 use std::marker::PhantomData;

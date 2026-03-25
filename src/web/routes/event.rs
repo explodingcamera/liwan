@@ -97,10 +97,15 @@ fn process_event(
         Some(ip) => hash_ip(&ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id),
         None => visitor_id(),
     };
+
+    #[cfg(feature = "geoip")]
     let (country, city) = ip
         .and_then(|ip| app.geoip.lookup(&ip).ok())
         .map(|lookup| (lookup.country_code, lookup.city))
         .unwrap_or((None, None));
+
+    #[cfg(not(feature = "geoip"))]
+    let (country, city) = (None, None);
 
     let path = url.path().to_string();
     let path = if path.len() > 1 && path.ends_with('/') { path.trim_end_matches('/').to_string() } else { path };
