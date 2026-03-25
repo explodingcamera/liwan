@@ -92,7 +92,13 @@ export const useDimension = ({
 						range: range.toAPI(),
 					},
 				})
-				.json(),
+				.json()
+				.then((req) => {
+					if (typeof req === "string") {
+						return Promise.reject(new Error(req));
+					}
+					return req;
+				}),
 	});
 
 	return useMemo(() => {
@@ -137,7 +143,12 @@ export const useProjectGraph = ({
 					params: { project_id: projectId ?? "" },
 				})
 				.json()
-				.then(({ data }) => toDataPoints(data, range)),
+				.then((req) => {
+					if (typeof req === "string") {
+						return Promise.reject(new Error(req));
+					}
+					toDataPoints(req.data, range);
+				}),
 		placeholderData: (prev) => prev,
 	});
 
@@ -170,7 +181,13 @@ export const useProjectStats = ({
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/stats"]
 				.post({ json: { range: range.toAPI(), filters }, params: { project_id: projectId ?? "" } })
-				.json(),
+				.json()
+				.then((req) => {
+					if (typeof req === "string") {
+						return Promise.reject(new Error(req));
+					}
+					return req;
+				}),
 		placeholderData: (prev) => prev,
 	});
 

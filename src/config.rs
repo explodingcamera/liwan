@@ -41,8 +41,11 @@ pub struct Config {
     #[serde(default = "default_base")]
     pub base_url: String,
 
-    #[serde(default = "default_listen", alias = "port")]
-    pub listen: ListenAddr,
+    #[serde(default)]
+    listen: Option<ListenAddr>,
+
+    #[serde(default)]
+    port: Option<ListenAddr>,
 
     #[serde(default)]
     // don't load favicons from the duckduckgo api
@@ -78,11 +81,12 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             base_url: default_base(),
-            listen: default_listen(),
             data_dir: default_data_dir(),
             geoip: Default::default(),
             duckdb: Default::default(),
             disable_favicons: false,
+            listen: None,
+            port: None,
         }
     }
 }
@@ -167,6 +171,10 @@ impl Config {
         Ok(config)
     }
 
+    pub fn listen_addr(&self) -> String {
+        self.listen.as_ref().or(self.port.as_ref()).unwrap_or(&default_listen()).addr()
+    }
+
     pub fn secure(&self) -> bool {
         self.base_url.starts_with("https")
     }
@@ -209,7 +217,7 @@ mod test {
             assert_eq!(config.geoip.maxmind_db_path, Some("test".to_string()));
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
-            assert_eq!(config.listen, ListenAddr::Port(9042));
+            assert_eq!(config.listen_addr(), "0.0.0.0:9042");
             assert_eq!(config.duckdb.memory_limit, Some("2GB".to_string()));
             assert_eq!(config.duckdb.threads, Some(NonZeroU16::new(4).unwrap()));
             Ok(())
@@ -234,7 +242,7 @@ mod test {
             assert!(config.geoip.maxmind_license_key.is_none());
             assert_eq!(config.base_url, "http://localhost:8081");
             assert_eq!(config.data_dir, "./liwan-test-data");
-            assert_eq!(config.listen, ListenAddr::Port(9042));
+            assert_eq!(config.listen_addr(), "0.0.0.0:9042");
             Ok(())
         });
     }
@@ -283,7 +291,7 @@ mod test {
             assert!(config.geoip.maxmind_account_id.is_none());
             assert!(config.geoip.maxmind_license_key.is_none());
             assert_eq!(config.base_url, "http://localhost:9042");
-            assert_eq!(config.listen, ListenAddr::Port(9042));
+            assert_eq!(config.listen_addr(), "0.0.0.0:9042");
             Ok(())
         });
     }

@@ -131,7 +131,7 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
             tracing::info!("To see all available commands, run `liwan --help`");
         }
         _ => {
-            tracing::info!("Liwan is running on {} ({})", app.config.base_url, app.config.listen.addr());
+            tracing::info!("Liwan is running on {} ({})", app.config.base_url, app.config.listen_addr());
         }
     }
 
@@ -140,7 +140,9 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
     #[cfg(debug_assertions)]
     save_spec(router.1)?;
 
-    let listener = tokio::net::TcpListener::bind(app.config.listen.addr()).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(app.config.listen_addr())
+        .await
+        .with_context(|| format!("Failed to bind to address {}", app.config.listen_addr()))?;
     let service = router.0.into_make_service_with_connect_info::<SocketAddr>();
     axum::serve(listener, service).await.context("server exited unexpectedly")
 }
