@@ -1,11 +1,11 @@
 use anyhow::{Context, Result, bail};
 use figment::Figment;
 use figment::providers::{Env, Format, Toml};
-use http::Uri;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::num::NonZeroU16;
 use std::str::FromStr;
+use url::Url;
 
 fn default_base() -> String {
     "http://localhost:9042".to_string()
@@ -162,10 +162,20 @@ impl Config {
             }))
             .extract()?;
 
-        let url: Uri = Uri::from_str(&config.base_url).context("Invalid base URL")?;
+        let url: Url = Url::from_str(&config.base_url).context("Invalid base URL")?;
 
-        if ![Some("http"), Some("https")].contains(&url.scheme_str()) {
+        if !["http", "https"].contains(&url.scheme()) {
             bail!("Invalid base URL: protocol must be either http or https");
+        }
+
+        if url.scheme() != "https" {
+            tracing::warn!("Base URL is not using HTTPS");
+        }
+
+        if config.listen.is_some() && config.port.is_some() {
+            tracing::warn!(
+                "Both `listen` and `port` configuration options are set. The `listen` option will take precedence over `port`."
+            );
         }
 
         Ok(config)

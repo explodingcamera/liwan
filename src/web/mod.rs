@@ -2,7 +2,7 @@ pub mod routes;
 pub mod session;
 pub mod webext;
 
-use std::net::SocketAddr;
+use std::net::{SocketAddr, ToSocketAddrs};
 use std::ops::Deref;
 use std::sync::{Arc, mpsc::Sender};
 
@@ -140,9 +140,13 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
     #[cfg(debug_assertions)]
     save_spec(router.1)?;
 
-    let listener = tokio::net::TcpListener::bind(app.config.listen_addr())
+    let socket_addrs: Vec<_> =
+        app.config.listen_addr().to_socket_addrs().context("Failed to resolve listen address")?.collect();
+
+    let listener = tokio::net::TcpListener::bind(socket_addrs.as_slice())
         .await
         .with_context(|| format!("Failed to bind to address {}", app.config.listen_addr()))?;
+
     let service = router.0.into_make_service_with_connect_info::<SocketAddr>();
     axum::serve(listener, service).await.context("server exited unexpectedly")
 }

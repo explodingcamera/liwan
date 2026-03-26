@@ -3,7 +3,7 @@ use crate::utils::refinery_duckdb::DuckDBConnection;
 use crate::utils::refinery_sqlite::RqlConnection;
 
 use crate::utils::r2d2_sqlite::SqliteConnectionManager;
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use duckdb::DuckdbConnectionManager;
 use refinery::Runner;
 use std::path::PathBuf;
@@ -13,24 +13,40 @@ pub(super) fn init_duckdb(
     duckdb_config: DuckdbConfig,
     mut migrations_runner: Runner,
 ) -> Result<r2d2::Pool<DuckdbConnectionManager>> {
-    let mut flags = duckdb::Config::default()
-        .enable_autoload_extension(true)?
-        .access_mode(duckdb::AccessMode::ReadWrite)?
-        .with("enable_fsst_vectors", "true")?
-        .with("allocator_background_threads", "true")?;
+    let mut tries = 10;
+    let conn = loop {
+        let mut flags = duckdb::Config::default()
+            .enable_autoload_extension(true)?
+            .access_mode(duckdb::AccessMode::ReadWrite)?
+            .with("enable_fsst_vectors", "true")?
+            .with("allocator_background_threads", "true")?;
 
-    if let Some(memory_limit) = duckdb_config.memory_limit {
-        flags = flags.max_memory(&memory_limit)?;
-    }
+        if let Some(memory_limit) = &duckdb_config.memory_limit {
+            flags = flags.max_memory(memory_limit)?;
+        }
 
-    if let Some(threads) = duckdb_config.threads {
-        flags = flags.threads(threads.get().into())?;
-    }
+        if let Some(threads) = duckdb_config.threads {
+            flags = flags.threads(threads.get().into())?;
+        }
 
-    let conn = DuckdbConnectionManager::file_with_flags(path, flags).map_err(|e| {
-        tracing::warn!("Failed to create DuckDB connection. If you've just upgraded to Liwan 1.2, please downgrade to version 1.1.1 first, start and stop the server, and then upgrade to 1.2 again.");
-        anyhow::anyhow!("Failed to create DuckDB connection: {}", e)
-    })?;
+        match DuckdbConnectionManager::file_with_flags(path, flags) {
+            Ok(conn) => break conn,
+            Err(e) => {
+                if tries <= 0 {
+                    tracing::warn!("");
+                    return Err(e).context("Failed to load DuckDB Database after 10 attempts");
+                }
+
+                if e.to_string().contains("Could not set lock on file") {
+                    tracing::warn!("DuckDB database is locked. Retrying... ({} tries left)", tries);
+                    tries -= 1;
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                } else {
+                    return Err(e).context("Failed to load DuckDB Database");
+                }
+            }
+        }
+    };
 
     let pool = r2d2::Pool::new(conn)?;
     {

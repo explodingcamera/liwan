@@ -76,13 +76,13 @@ aide={version="0.16.0-alpha.3", default-features=false, features=[
     "axum-extra-headers",
 ]}
 schemars={version="1.2", features=["derive", "chrono04"]}
-
+url="2.5"
 ua-parser="0.2"
 rust-embed={version="8.11", features=["mime-guess"]}
 reqwest={version="0.13", default-features=false, features=["json", "stream", "charset", "rustls"]}
 
 # database
-duckdb={version="1.10501", features=["buildtime_bindgen", "chrono", "bundled", "r2d2"]}
+duckdb={version="1.10501", features=["chrono", "bundled", "r2d2"]}
 rusqlite={version="0.39", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 refinery={version="0.9", default-features=false}

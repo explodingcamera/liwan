@@ -20,6 +20,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 - Updated to the latest version of DuckDB (1.5.1)
 - Fixed error when both `listen` and `port` configuration options are set
+- Added retry logic when loading the DuckDB database to handle potential locking issues on startup (e.g. when the database is being updated by another process or when using a shared network drive)
 
 ## [v1.4.0] - 2026-03-14
 

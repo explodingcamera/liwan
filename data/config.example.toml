@@ -1,8 +1,5 @@
-# The base URL of the Liwan instance
-base_url="http://localhost:9042"
-
-# The port to listen on (http)
-port=9042
+base_url="http://localhost:9042" # The base URL of the Liwan instance
+listen=9042 # The port to listen on (http)
 
 # # Folder to store the database in (Will be created if it doesn't exist)
 # # defaults to $HOME/.local/share/liwan/data on linux/macos
