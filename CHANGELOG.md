@@ -22,7 +22,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Fixed error when both `listen` and `port` configuration options are set
 - Added retry logic when loading the DuckDB database to handle potential locking issues on startup (e.g. when the database is being updated by another process or when using a shared network drive)
 - Improved filtering out invalid referrers
-- Improved world map rendering for bounce rate metric
+- Improved world map rendering & graph for bounce rate metric
 
 ## [v1.4.0] - 2026-03-14
 

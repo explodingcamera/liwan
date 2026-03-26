@@ -56,7 +56,13 @@ pub fn process_referer(referer: Option<&str>) -> Referrer {
         return Referrer::Local;
     }
 
-    match referer.map(url::Url::parse) {
+    let original = referer;
+    let referer = original.map(|referer| {
+        // if the referer doesn't start with a scheme, add "http://" to make it parseable as a URL
+        if referer.contains("://") { referer.to_string() } else { format!("http://{}", referer) }
+    });
+
+    match referer.as_deref().map(url::Url::parse) {
         // valid referer are stripped to the FQDN
         Some(Ok(referer_uri)) => {
             // ignore localhost / IP addresses
@@ -73,7 +79,7 @@ pub fn process_referer(referer: Option<&str>) -> Referrer {
             Referrer::Fqdn(referer_fqn.to_string())
         }
         // invalid referer are kept as is (e.g. when using custom referer values outside of the browser)
-        Some(Err(_)) => Referrer::Unknown(referer.map(ToString::to_string)),
+        Some(Err(_)) => Referrer::Unknown(original.map(ToString::to_string)),
         None => Referrer::Unknown(None),
     }
 }
@@ -99,10 +105,10 @@ mod test {
         );
 
         assert_eq!(process_referer(Some("google.com")), Referrer::Fqdn("google.com".to_string()));
-        assert_eq!(process_referer(Some("127.0.0.1")), Referrer::Unknown(None));
-        assert_eq!(process_referer(Some("1.1.1.1")), Referrer::Unknown(None));
-        assert_eq!(process_referer(Some("localhost")), Referrer::Unknown(None));
-        assert_eq!(process_referer(Some("asdf.localhost")), Referrer::Unknown(None));
+        assert_eq!(process_referer(Some("127.0.0.1")), Referrer::Local);
+        assert_eq!(process_referer(Some("1.1.1.1")), Referrer::Local);
+        assert_eq!(process_referer(Some("localhost")), Referrer::Local);
+        assert_eq!(process_referer(Some("asdf.localhost")), Referrer::Local);
 
         assert_eq!(
             process_referer(Some("invalid referrer")),

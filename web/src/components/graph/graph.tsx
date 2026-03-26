@@ -94,12 +94,30 @@ export const LineGraph = ({
 					? scaleLinear([0, 1], [dimensions.height - paddingBottom - paddingTop, 0])
 					: scaleLinear([0, Math.max(maxY * 1.25 || 0, 20)], [dimensions.height - paddingBottom - paddingTop, 0]);
 
+			const bounceTolerance = 0.01;
+			const isExtremeBouncePoint = (d: DataPoint) =>
+				metric === "bounce_rate" && (d.y <= bounceTolerance || d.y >= 1 - bounceTolerance);
+			const isNormalPoint = (d: DataPoint) => !isExtremeBouncePoint(d);
+
 			const svgArea = area<DataPoint>()
+				.defined(isNormalPoint)
+				.x((d) => xAxis(d.x))
+				.y0(yAxis(0))
+				.y1((d) => yAxis(d.y));
+
+			const svgAreaFaded = area<DataPoint>()
+				.defined(() => metric === "bounce_rate")
 				.x((d) => xAxis(d.x))
 				.y0(yAxis(0))
 				.y1((d) => yAxis(d.y));
 
 			const svgLine = area<DataPoint>()
+				.defined(isNormalPoint)
+				.x((d) => xAxis(d.x))
+				.y((d) => yAxis(d.y));
+
+			const svgLineFaded = area<DataPoint>()
+				.defined(() => metric === "bounce_rate")
 				.x((d) => xAxis(d.x))
 				.y((d) => yAxis(d.y));
 
@@ -112,12 +130,28 @@ export const LineGraph = ({
 				.attr("d", svgArea(data) || "");
 
 			svg
+				.selectChild("#background-faded")
+				.attr("transform", `translate(0, ${paddingTop})`)
+				.transition()
+				.ease(easeCubic)
+				.duration(transition)
+				.attr("d", svgAreaFaded(data) || "");
+
+			svg
 				.selectChild("#line")
 				.attr("transform", `translate(0, ${paddingTop})`)
 				.transition()
 				.ease(easeCubic)
 				.duration(transition)
 				.attr("d", svgLine(data) || "");
+
+			svg
+				.selectChild("#line-faded")
+				.attr("transform", `translate(0, ${paddingTop})`)
+				.transition()
+				.ease(easeCubic)
+				.duration(transition)
+				.attr("d", svgLineFaded(data) || "");
 
 			const yAxisElement = svg.selectChild<SVGGElement>("#y-axis");
 			const xAxisElement = svg.selectChild<SVGGElement>("#x-axis");
@@ -287,7 +321,9 @@ export const LineGraph = ({
 					</linearGradient>
 				</defs>
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
+				<path id="background-faded" fill="url(#graphGradient)" stroke="none" opacity="0.14" />
 				<path id="line" fill="none" stroke="#a6cee3" />
+				<path id="line-faded" fill="none" stroke="#a6cee3" opacity="0.15" />
 				{/* doted line */}
 				<path
 					id="needle"
