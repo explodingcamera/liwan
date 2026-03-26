@@ -12,12 +12,13 @@ use axum::Json;
 use axum::extract::State;
 use axum_extra::TypedHeader;
 use chrono::Utc;
-use http::{StatusCode, Uri};
+use http::StatusCode;
 use schemars::JsonSchema;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, LazyLock};
+use url::Url;
 
 pub fn router() -> ApiRouter<RouterState> {
     ApiRouter::new().route("/event", post(event_handler))
@@ -50,7 +51,7 @@ async fn event_handler(
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
     Json(event): Json<EventRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    let url = Uri::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
+    let url = Url::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
     let app = state.app.clone();
     let events = state.events.clone();
 
@@ -68,7 +69,7 @@ fn process_event(
     app: Arc<Liwan>,
     events: Sender<Event>,
     event: EventRequest,
-    url: Uri,
+    url: Url,
     ip: Option<IpAddr>,
     user_agent: headers::UserAgent,
 ) -> Result<()> {
@@ -76,6 +77,7 @@ fn process_event(
         Referrer::Fqdn(fqdn) => Some(fqdn),
         Referrer::Unknown(r) => r,
         Referrer::Spammer => return Ok(()),
+        Referrer::Local => return Ok(()),
     };
     let referrer = referrer.map(|r| r.trim_start_matches("www.").to_string()); // remove www. prefix
     let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
@@ -109,7 +111,7 @@ fn process_event(
 
     let path = url.path().to_string();
     let path = if path.len() > 1 && path.ends_with('/') { path.trim_end_matches('/').to_string() } else { path };
-    let fqdn = url.host().unwrap_or_default().to_string();
+    let fqdn = url.host_str().unwrap_or_default().to_string();
 
     let event = Event {
         visitor_id,

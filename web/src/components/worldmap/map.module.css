@@ -45,6 +45,15 @@ button.reset {
   &:hover {
     opacity: 0.8;
   }
+
+  &[data-inverted="true"] {
+    /* same fill, but closer to 100 means worse instead of better */
+    fill: hsl(94, calc(0% + 80% * (1 - var(--percent)) * (1 - var(--percent))), calc(40% + 4% * (1 - var(--percent))));
+  }
+
+  &[data-ignored="true"] {
+    fill: hsl(94, 0%, 28%);
+  }
 }
 
 div.tooltip {

@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::LazyLock;
 
 use ahash::{HashMap, HashSet};
@@ -46,28 +45,35 @@ pub fn is_spammer(fqdn: &str) -> bool {
 pub enum Referrer {
     Fqdn(String),
     Unknown(Option<String>),
+    Local,
     Spammer,
 }
 
 pub fn process_referer(referer: Option<&str>) -> Referrer {
-    match referer.map(http::Uri::from_str) {
+    if referer.is_some_and(|referer| {
+        referer.parse::<std::net::IpAddr>().is_ok() || referer == "localhost" || referer.ends_with(".localhost")
+    }) {
+        return Referrer::Local;
+    }
+
+    match referer.map(url::Url::parse) {
         // valid referer are stripped to the FQDN
         Some(Ok(referer_uri)) => {
             // ignore localhost / IP addresses
-            if referer_uri.host().is_some_and(|host| {
+            if referer_uri.host_str().is_some_and(|host| {
                 host == "localhost" || host.ends_with(".localhost") || host.parse::<std::net::IpAddr>().is_ok()
             }) {
-                return Referrer::Unknown(None);
+                return Referrer::Local;
             }
 
-            let referer_fqn = referer_uri.host().unwrap_or_default();
+            let referer_fqn = referer_uri.host_str().unwrap_or_default();
             if is_spammer(referer_fqn) {
                 return Referrer::Spammer;
             }
             Referrer::Fqdn(referer_fqn.to_string())
         }
         // invalid referer are kept as is (e.g. when using custom referer values outside of the browser)
-        Some(Err(_)) => Referrer::Unknown(referer.map(std::string::ToString::to_string)),
+        Some(Err(_)) => Referrer::Unknown(referer.map(ToString::to_string)),
         None => Referrer::Unknown(None),
     }
 }

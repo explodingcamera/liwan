@@ -39,7 +39,7 @@ export const Dialog = ({
 				<Dia.Viewport>
 					{showClose && (
 						<Dia.Close className={styles.close}>
-							<XIcon size="24" />
+							<XIcon color="black" size="24" />
 						</Dia.Close>
 					)}
 					<Dia.Popup>

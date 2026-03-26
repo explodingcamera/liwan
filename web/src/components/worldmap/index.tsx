@@ -75,9 +75,10 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 					countries={countries}
 					biggest={biggest}
 					onSetLocation={setCurrentLocation}
+					metric={metric}
 				/>
 			)),
-		[countries, biggest],
+		[countries, biggest, metric],
 	);
 
 	const resetZoom = () => {
@@ -127,11 +128,13 @@ const Landmass = ({
 	countries,
 	biggest,
 	onSetLocation,
+	metric,
 }: {
 	feature: (typeof features)[number];
 	countries: Map<string, number>;
 	biggest?: DimensionTableRow;
 	onSetLocation: (location: Location | null) => void;
+	metric: Metric;
 }) => {
 	const percent = useMemo(
 		() => (countries.get(feature.iso) ?? 0) / (biggest?.value ?? 100),
@@ -142,6 +145,8 @@ const Landmass = ({
 		<path
 			d={feature.path || ""}
 			className={styles.geo}
+			data-inverted={metric === "bounce_rate"}
+			data-ignored={metric === "bounce_rate" && (percent === 0 || percent === 100)}
 			style={{ "--percent": percent } as React.CSSProperties}
 			onMouseEnter={() => onSetLocation({ name: feature.name, iso: feature.iso })}
 			onMouseLeave={() => onSetLocation(null)}
