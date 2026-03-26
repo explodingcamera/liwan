@@ -9,7 +9,13 @@ import type { DateRange } from "../api/ranges";
 
 import { useMetric, useRange } from "../hooks/persist";
 import { cls } from "../utils";
-import { DimensionCard, DimensionDropdownCard, DimensionTabs, DimensionTabsCard } from "./dimensions";
+import {
+	DimensionCard,
+	DimensionDropdownCard,
+	DimensionTabs,
+	DimensionTabsCard,
+	PageDimensionTabsCard,
+} from "./dimensions";
 import { LineGraph } from "./graph";
 import { SelectFilters } from "./project/filter";
 import { SelectMetrics } from "./project/metric";
@@ -112,7 +118,7 @@ export const Project = () => {
 					<LineGraph data={graph ?? []} metric={metric} title={metricNames[metric]} range={range} />
 				</article>
 				<div className={styles.tables}>
-					<DimensionTabsCard dimensions={["url", "fqdn"]} query={query} onSelect={onSelectDimRow} />
+					<PageDimensionTabsCard query={query} onSelect={onSelectDimRow} />
 					<DimensionDropdownCard
 						dimensions={["referrer", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]}
 						query={query}

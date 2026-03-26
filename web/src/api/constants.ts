@@ -11,6 +11,8 @@ export const dimensionNames: Record<Dimension, string> = {
 	platform: "Platform",
 	browser: "Browser",
 	url: "URL",
+	url_entry: "Entry",
+	url_exit: "Exit",
 	path: "Path",
 	mobile: "Device Type",
 	referrer: "Referrer",

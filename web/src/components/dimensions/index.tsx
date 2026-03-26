@@ -45,6 +45,48 @@ export const DimensionTabsCard = ({
 	);
 };
 
+export const PageDimensionTabsCard = ({
+	query,
+	onSelect,
+}: {
+	query: ProjectQuery;
+	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
+}) => {
+	const showSessionPageDimensions = query.metric === "views" || query.metric === "unique_visitors";
+	const dimensions: Dimension[] = showSessionPageDimensions
+		? ["url", "url_entry", "url_exit", "fqdn"]
+		: ["url", "fqdn"];
+
+	return (
+		<article className={styles.card}>
+			<Tabs.Root
+				className={styles.tabs}
+				defaultValue="url"
+				key={showSessionPageDimensions ? "session-pages" : "basic-pages"}
+			>
+				<Tabs.List className={styles.tabsList}>
+					<div className={styles.pageTabGroup}>
+						<Tabs.Tab value="url">URL</Tabs.Tab>
+						{showSessionPageDimensions && (
+							<>
+								<Tabs.Tab value="url_entry">Entry</Tabs.Tab>
+								<Tabs.Tab value="url_exit">Exit</Tabs.Tab>
+							</>
+						)}
+					</div>
+					<Tabs.Tab value="fqdn">Domain</Tabs.Tab>
+					<div>{metricNames[query.metric]}</div>
+				</Tabs.List>
+				{dimensions.map((dimension) => (
+					<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
+						<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
+					</Tabs.Panel>
+				))}
+			</Tabs.Root>
+		</article>
+	);
+};
+
 export const DimensionDropdownCard = ({
 	dimensions,
 	query,
@@ -173,6 +215,21 @@ const DimensionValueButton = ({ children, onSelect }: { children: string; onSele
 	</button>
 );
 
+const renderUrlDimensionLabel = (value: DimensionTableRow, onSelect: () => void) => {
+	const url = tryParseUrl(value.dimensionValue);
+
+	return (
+		<>
+			<LinkIcon size={16} />
+			<DimensionValueButton onSelect={onSelect}>{formatPath(url)}</DimensionValueButton>
+			<a href={getHref(url)} target="_blank" rel="noreferrer" className={styles.external}>
+				<SquareArrowOutUpRightIcon size={16} />
+			</a>
+			{typeof url !== "string" && <span className={styles.hostname}>{formatHost(url)}</span>}
+		</>
+	);
+};
+
 const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: () => void) => React.ReactNode> = {
 	utm_campaign: (value, onSelect) => (
 		<>
@@ -216,20 +273,9 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
 		</>
 	),
-	url: (value, onSelect) => {
-		const url = tryParseUrl(value.dimensionValue);
-
-		return (
-			<>
-				<LinkIcon size={16} />
-				<DimensionValueButton onSelect={onSelect}>{formatPath(url)}</DimensionValueButton>
-				<a href={getHref(url)} target="_blank" rel="noreferrer" className={styles.external}>
-					<SquareArrowOutUpRightIcon size={16} />
-				</a>
-				{typeof url !== "string" && <span className={styles.hostname}>{formatHost(url)}</span>}
-			</>
-		);
-	},
+	url: renderUrlDimensionLabel,
+	url_entry: renderUrlDimensionLabel,
+	url_exit: renderUrlDimensionLabel,
 	fqdn: (value, onSelect) => {
 		const url = tryParseUrl(value.dimensionValue);
 		return (

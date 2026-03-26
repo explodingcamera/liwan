@@ -8,7 +8,7 @@
 .tabs {
   .tabsList {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     margin-bottom: 1rem;
 
     .dimensionSelect {
@@ -24,18 +24,50 @@
     }
   }
 
-  .tabsList > button {
+  .tabsList button {
     all: unset;
     cursor: pointer;
     user-select: none;
+    opacity: 0.9;
+    font-weight: 500;
+  }
 
-    &[aria-selected="true"] {
-      text-decoration: underline;
-      font-weight: 600;
+  .tabsList button[aria-selected="true"] {
+    opacity: 1;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-thickness: 0.15rem;
+  }
+
+  .tabsList > button:last-of-type {
+    margin-right: auto;
+  }
+
+  .tabsList .pageTabGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+
+    > :first-child {
+      margin-right: 0.1rem;
     }
 
-    &:last-of-type {
-      margin-right: auto;
+    > :not(:first-child) {
+      font-size: 0.8rem;
+      padding: 0.1rem 0.1rem;
+      margin-top: 0.15rem;
+
+      &button {
+        font-weight: 800;
+      }
+
+      &:not([aria-selected="true"]) {
+        opacity: 0.6;
+      }
+    }
+
+    > :last-child {
+      margin-right: 0.5rem;
     }
   }
 

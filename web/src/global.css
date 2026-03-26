@@ -6,8 +6,8 @@
   --pico-background-color: #f7f8ff;
   --card-background-base: 0deg 0% 100%;
   --pico-card-background-color: hsl(var(--card-background-base));
-  --pico-block-spacing-vertical: 1rem;
-  --pico-block-spacing-horizontal: 1rem;
+  --pico-block-spacing-vertical: 0.8rem;
+  --pico-block-spacing-horizontal: 0.8rem;
   --pico-card-box-shadow: 0px 0px 24px #15233610;
   --pico-dropdown-background-color: #ffffff81;
 

@@ -2,12 +2,14 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
-use crate::utils::duckdb::{ParamVec, repeat_vars};
-use anyhow::{Result, bail};
+use crate::utils::duckdb::{repeat_vars, ParamVec};
+use anyhow::{bail, Result};
 use chrono::{DateTime, Utc};
 use duckdb::params_from_iter;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+const SESSION_DURATION_SQL: &str = "interval '30 minutes'";
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
@@ -49,6 +51,8 @@ pub enum Metric {
 #[serde(rename_all = "snake_case")]
 pub enum Dimension {
     Url,
+    UrlEntry,
+    UrlExit,
     Fqdn,
     Path,
     Referrer,
@@ -168,6 +172,12 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
 
             Ok(match filter.dimension {
                 Dimension::Url => format!("concat(fqdn, path) {filter_value}"),
+                Dimension::UrlEntry => format!(
+                    "(time_from_last_event is null or time_from_last_event > {SESSION_DURATION_SQL}) and concat(fqdn, path) {filter_value}"
+                ),
+                Dimension::UrlExit => format!(
+                    "(time_to_next_event is null or time_to_next_event > {SESSION_DURATION_SQL}) and concat(fqdn, path) {filter_value}"
+                ),
                 Dimension::Path => format!("path {filter_value}"),
                 Dimension::Fqdn => format!("fqdn {filter_value}"),
                 Dimension::Referrer => format!("referrer {filter_value}"),
@@ -190,32 +200,36 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
 
 fn metric_sql(metric: Metric) -> String {
     match metric {
-        Metric::Views => "count(sd.created_at)",
+        Metric::Views => "count(sd.created_at)".to_owned(),
         Metric::UniqueVisitors => {
             // Count the number of unique visitors as the number of distinct visitor IDs
             "--sql
             count(distinct sd.visitor_id)"
+                .to_owned()
         }
         Metric::BounceRate => {
             // total sessions: no time_to_next_event / time_to_next_event is null
-            // bounce sessions: time to next / time to prev are both null or both > interval '30 minutes'
-            "--sql
+            // bounce sessions: time to next / time to prev are both null or both > session duration
+            format!(
+                "--sql
             coalesce(
                 count(distinct sd.visitor_id)
-                    filter (where (sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes') and
-                                 (sd.time_from_last_event is null or sd.time_from_last_event > interval '30 minutes')) /
-                nullif(count(distinct sd.visitor_id) filter (where sd.time_to_next_event is null or sd.time_to_next_event > interval '30 minutes'), 0),
+                    filter (where (sd.time_to_next_event is null or sd.time_to_next_event > {SESSION_DURATION_SQL}) and
+                                 (sd.time_from_last_event is null or sd.time_from_last_event > {SESSION_DURATION_SQL})) /
+                nullif(count(distinct sd.visitor_id) filter (where sd.time_to_next_event is null or sd.time_to_next_event > {SESSION_DURATION_SQL}), 0),
                 1
             )
             "
+            )
         }
         Metric::AvgTimeOnSite => {
-            // avg time_to_next_event where time_to_next_event <= 1800 and time_to_next_event is not null
-            "--sql
-            coalesce(avg(extract(epoch from sd.time_to_next_event)) filter (where sd.time_to_next_event is not null and sd.time_to_next_event <= interval '30 minutes'), 0)"
+            // avg time_to_next_event where time_to_next_event <= session duration and time_to_next_event is not null
+            format!(
+                "--sql
+            coalesce(avg(extract(epoch from sd.time_to_next_event)) filter (where sd.time_to_next_event is not null and sd.time_to_next_event <= {SESSION_DURATION_SQL}), 0)"
+            )
         }
     }
-    .to_owned()
 }
 
 pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Option<DateTime<Utc>>> {
@@ -442,21 +456,36 @@ pub fn dimension_report(
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
     let metric_column = metric_sql(*metric);
-    let (dimension_column, group_by_columns) = match dimension {
-        Dimension::Url => ("concat(fqdn, path)", "fqdn, path"),
-        Dimension::Path => ("path", "path"),
-        Dimension::Fqdn => ("fqdn", "fqdn"),
-        Dimension::Referrer => ("referrer", "referrer"),
-        Dimension::Platform => ("platform", "platform"),
-        Dimension::Browser => ("browser", "browser"),
-        Dimension::Mobile => ("mobile::text", "mobile"),
-        Dimension::Country => ("country", "country"),
-        Dimension::City => ("concat(country, city)", "country, city"),
-        Dimension::UtmSource => ("utm_source", "utm_source"),
-        Dimension::UtmMedium => ("utm_medium", "utm_medium"),
-        Dimension::UtmCampaign => ("utm_campaign", "utm_campaign"),
-        Dimension::UtmContent => ("utm_content", "utm_content"),
-        Dimension::UtmTerm => ("utm_term", "utm_term"),
+    let (dimension_column, group_by_columns, dimension_scope_sql) = match dimension {
+        Dimension::Url => ("concat(fqdn, path)", "fqdn, path", None),
+        Dimension::UrlEntry => (
+            "concat(fqdn, path)",
+            "fqdn, path",
+            Some(format!("time_from_last_event is null or time_from_last_event > {SESSION_DURATION_SQL}")),
+        ),
+        Dimension::UrlExit => (
+            "concat(fqdn, path)",
+            "fqdn, path",
+            Some(format!("time_to_next_event is null or time_to_next_event > {SESSION_DURATION_SQL}")),
+        ),
+        Dimension::Path => ("path", "path", None),
+        Dimension::Fqdn => ("fqdn", "fqdn", None),
+        Dimension::Referrer => ("referrer", "referrer", None),
+        Dimension::Platform => ("platform", "platform", None),
+        Dimension::Browser => ("browser", "browser", None),
+        Dimension::Mobile => ("mobile::text", "mobile", None),
+        Dimension::Country => ("country", "country", None),
+        Dimension::City => ("concat(country, city)", "country, city", None),
+        Dimension::UtmSource => ("utm_source", "utm_source", None),
+        Dimension::UtmMedium => ("utm_medium", "utm_medium", None),
+        Dimension::UtmCampaign => ("utm_campaign", "utm_campaign", None),
+        Dimension::UtmContent => ("utm_content", "utm_content", None),
+        Dimension::UtmTerm => ("utm_term", "utm_term", None),
+    };
+    let filters_sql = match (filters_sql.is_empty(), dimension_scope_sql) {
+        (true, Some(scope)) => format!("and ({scope})"),
+        (false, Some(scope)) => format!("{filters_sql} and ({scope})"),
+        (_, None) => filters_sql,
     };
 
     params.push(range.start);

@@ -54,6 +54,14 @@ const filters = {
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
 	},
+	url_entry: {
+		invertable: true,
+		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+	},
+	url_exit: {
+		invertable: true,
+		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+	},
 	fqdn: {
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
@@ -129,6 +137,9 @@ const filters = {
 >;
 
 type filterDimension = keyof typeof filters;
+const displayFilters = (Object.keys(filters) as filterDimension[]).filter(
+	(dimension) => dimension !== "url_entry" && dimension !== "url_exit",
+);
 
 const FilterDialog = ({ onAdd }: { onAdd: (filter: DimensionFilter) => void }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
@@ -171,7 +182,7 @@ const FilterDialog = ({ onAdd }: { onAdd: (filter: DimensionFilter) => void }) =
 				<label>
 					Dimension
 					<select name="dimension" value={dimension} onChange={(e) => setDimension(e.target.value as filterDimension)}>
-						{Object.keys(filters).map((dimension) => (
+						{displayFilters.map((dimension) => (
 							<option key={dimension} value={dimension}>
 								{dimensionNames[dimension as filterDimension]}
 							</option>

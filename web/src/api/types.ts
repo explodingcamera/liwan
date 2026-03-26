@@ -12,6 +12,8 @@ export const dimensions = [
 	"platform",
 	"browser",
 	"url",
+	"url_entry",
+	"url_exit",
 	"path",
 	"mobile",
 	"referrer",
