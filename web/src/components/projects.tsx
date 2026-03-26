@@ -120,6 +120,7 @@ const Project = ({
 		graph,
 		isError: graphError,
 		isLoading: graphLoading,
+		isUpdating: graphUpdating,
 	} = useProjectGraph({ projectId: project.id, metric, range });
 
 	const {
@@ -144,7 +145,14 @@ const Project = ({
 			</div>
 			<Accordion.Panel className={styles.AccordionContent}>
 				<div className={styles.graph}>
-					<LineGraph title={metricNames[metric]} metric={metric} data={graph ?? []} range={range} />
+					<LineGraph
+						data={graph}
+						title={metricNames[metric]}
+						metric={metric}
+						isLoading={graphLoading}
+						isUpdating={graphUpdating}
+						range={range}
+					/>
 				</div>
 			</Accordion.Panel>
 		</article>

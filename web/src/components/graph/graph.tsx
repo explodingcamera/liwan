@@ -11,8 +11,7 @@ import "d3-transition";
 
 import { addMonths } from "date-fns";
 
-import type { DataPoint } from ".";
-import type { Metric } from "../../api";
+import type { DataPoint, GraphState } from ".";
 import type { DateRange } from "../../api/ranges";
 import { debounce, formatMetricVal, formatMetricValEvenly } from "../../utils";
 import { axisBottom, axisLeft } from "./axis";
@@ -36,17 +35,7 @@ const formatDate = (date: Date, range: GraphRange | "day+hour" | "day+year" = "d
 	}
 };
 
-export const LineGraph = ({
-	data,
-	title,
-	range,
-	metric,
-}: {
-	data: DataPoint[];
-	title: string;
-	range: DateRange;
-	metric: Metric;
-}) => {
+export const LineGraph = ({ state, range }: { state: GraphState; range: DateRange }) => {
 	const svgRef = useRef<SVGSVGElement | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -69,163 +58,154 @@ export const LineGraph = ({
 
 	const axisRange = range.getAxisRange();
 
-	const updateGraph = useCallback(
-		(transition: number) => {
-			if (!svgRef.current || !dimensions) return;
-			const svg = select(svgRef.current);
+	const firstRender = useRef(true);
 
-			const [minX, maxX] = extent(data, (d) => d.x).map((d) => d || new Date());
-			const [_minY, maxY] = extent(data, (d) => d.y).map((d) => d || 0);
+	const updateGraph = useCallback(() => {
+		if (!svgRef.current || !dimensions) return;
+		const svg = select(svgRef.current);
 
-			let xCount = Math.min(data.length, 8);
-			if (dimensions.width && dimensions.width < 500) {
-				xCount = Math.min(data.length, 6);
-			} else if (dimensions.width && dimensions.width < 400) {
-				xCount = Math.min(data.length, 4);
-			}
+		const [minX, maxX] = extent(state.data, (d) => d.x).map((d) => d || new Date());
+		const [_minY, maxY] = extent(state.data, (d) => d.y).map((d) => d || 0);
 
-			const paddingTop = 30;
-			const paddingBottom = 40;
+		let xCount = Math.min(state.data.length, 8);
+		if (dimensions.width && dimensions.width < 500) {
+			xCount = Math.min(state.data.length, 6);
+		} else if (dimensions.width && dimensions.width < 400) {
+			xCount = Math.min(state.data.length, 4);
+		}
 
-			const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
+		const paddingTop = 30;
+		const paddingBottom = 40;
 
-			const yAxis =
-				metric === "bounce_rate"
-					? scaleLinear([0, 1], [dimensions.height - paddingBottom - paddingTop, 0])
-					: scaleLinear([0, Math.max(maxY * 1.25 || 0, 20)], [dimensions.height - paddingBottom - paddingTop, 0]);
+		const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
 
-			const bounceTolerance = 0.01;
-			const isExtremeBouncePoint = (d: DataPoint) =>
-				metric === "bounce_rate" && (d.y <= bounceTolerance || d.y >= 1 - bounceTolerance);
-			const isNormalPoint = (d: DataPoint) => !isExtremeBouncePoint(d);
+		const yAxis =
+			state.metric === "bounce_rate"
+				? scaleLinear([0, 1], [dimensions.height - paddingBottom - paddingTop, 0])
+				: scaleLinear([0, Math.max(maxY * 1.25 || 0, 20)], [dimensions.height - paddingBottom - paddingTop, 0]);
 
-			const svgArea = area<DataPoint>()
-				.defined(isNormalPoint)
-				.x((d) => xAxis(d.x))
-				.y0(yAxis(0))
-				.y1((d) => yAxis(d.y));
+		const bounceTolerance = 0.01;
+		const isExtremeBouncePoint = (d: DataPoint) =>
+			state.metric === "bounce_rate" && (d.y <= bounceTolerance || d.y >= 1 - bounceTolerance);
+		const isNormalPoint = (d: DataPoint) => !isExtremeBouncePoint(d);
 
-			const svgAreaFaded = area<DataPoint>()
-				.defined(() => metric === "bounce_rate")
-				.x((d) => xAxis(d.x))
-				.y0(yAxis(0))
-				.y1((d) => yAxis(d.y));
+		const svgArea = area<DataPoint>()
+			.defined(isNormalPoint)
+			.x((d) => xAxis(d.x))
+			.y0(yAxis(0))
+			.y1((d) => yAxis(d.y));
 
-			const svgLine = area<DataPoint>()
-				.defined(isNormalPoint)
-				.x((d) => xAxis(d.x))
-				.y((d) => yAxis(d.y));
+		const svgAreaFaded = area<DataPoint>()
+			.defined(() => state.metric === "bounce_rate")
+			.x((d) => xAxis(d.x))
+			.y0(yAxis(0))
+			.y1((d) => yAxis(d.y));
 
-			const svgLineFaded = area<DataPoint>()
-				.defined(() => metric === "bounce_rate")
-				.x((d) => xAxis(d.x))
-				.y((d) => yAxis(d.y));
+		const svgLine = area<DataPoint>()
+			.defined(isNormalPoint)
+			.x((d) => xAxis(d.x))
+			.y((d) => yAxis(d.y));
 
-			svg
-				.selectChild("#background")
-				.attr("transform", `translate(0, ${paddingTop})`)
-				.transition()
-				.ease(easeCubic)
-				.duration(transition)
-				.attr("d", svgArea(data) || "");
+		const svgLineFaded = area<DataPoint>()
+			.defined(() => state.metric === "bounce_rate")
+			.x((d) => xAxis(d.x))
+			.y((d) => yAxis(d.y));
 
-			svg
-				.selectChild("#background-faded")
-				.attr("transform", `translate(0, ${paddingTop})`)
-				.transition()
-				.ease(easeCubic)
-				.duration(transition)
-				.attr("d", svgAreaFaded(data) || "");
+		svg
+			.selectChild("#background")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgArea(state.data) || "");
 
-			svg
-				.selectChild("#line")
-				.attr("transform", `translate(0, ${paddingTop})`)
-				.transition()
-				.ease(easeCubic)
-				.duration(transition)
-				.attr("d", svgLine(data) || "");
+		svg
+			.selectChild("#background-faded")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgAreaFaded(state.data) || "");
 
-			svg
-				.selectChild("#line-faded")
-				.attr("transform", `translate(0, ${paddingTop})`)
-				.transition()
-				.ease(easeCubic)
-				.duration(transition)
-				.attr("d", svgLineFaded(data) || "");
+		svg
+			.selectChild("#line")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgLine(state.data) || "");
 
-			const yAxisElement = svg.selectChild<SVGGElement>("#y-axis");
-			const xAxisElement = svg.selectChild<SVGGElement>("#x-axis");
+		svg
+			.selectChild("#line-faded")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgLineFaded(state.data) || "");
 
-			let tickValuesY = yAxis.ticks(5).filter((d) => d !== 0);
-			// if more than 5 ticks, remove every other tick
-			if (tickValuesY.length > 5) {
-				tickValuesY = tickValuesY.filter((_, i) => i % 2 === 0);
-			}
+		const yAxisElement = svg.selectChild<SVGGElement>("#y-axis");
+		const xAxisElement = svg.selectChild<SVGGElement>("#x-axis");
 
-			const leftAxis = axisLeft(yAxis)
-				.disableDomain()
-				.tickFormat((d) => formatMetricValEvenly(d as number, metric, maxY))
-				.tickValues(tickValuesY);
+		let tickValuesY = yAxis.ticks(5).filter((d) => d !== 0);
+		// if more than 5 ticks, remove every other tick
+		if (tickValuesY.length > 5) {
+			tickValuesY = tickValuesY.filter((_, i) => i % 2 === 0);
+		}
 
-			let tickValuesX = xAxis.ticks(xCount);
-			if (xAxis(tickValuesX[0]) < 20) tickValuesX = tickValuesX.slice(1);
-			if (xAxis(tickValuesX[tickValuesX.length - 1]) > dimensions.width - 20) tickValuesX = tickValuesX.slice(0, -1);
+		const leftAxis = axisLeft(yAxis)
+			.disableDomain()
+			.tickFormat((d) => formatMetricValEvenly(d as number, state.metric, maxY))
+			.tickValues(tickValuesY);
 
-			const bottomAxis = axisBottom(xAxis)
-				.disableDomain()
-				.disableTicks()
-				.tickFormat((d) => formatDate(d as Date, axisRange))
-				.tickValues(tickValuesX);
+		let tickValuesX = xAxis.ticks(xCount);
+		if (xAxis(tickValuesX[0]) < 20) tickValuesX = tickValuesX.slice(1);
+		if (xAxis(tickValuesX[tickValuesX.length - 1]) > dimensions.width - 20) tickValuesX = tickValuesX.slice(0, -1);
 
-			xAxisElement
-				.transition()
-				.ease(easeCubic)
-				.duration(transition)
-				.call((ax) => {
-					bottomAxis(ax);
-					ax.attr("transform", `translate(0, ${dimensions.height - paddingBottom + 10})`);
-				});
+		const bottomAxis = axisBottom(xAxis)
+			.disableDomain()
+			.disableTicks()
+			.tickFormat((d) => formatDate(d as Date, axisRange))
+			.tickValues(tickValuesX);
 
-			yAxisElement.call((ax) => {
-				leftAxis(ax);
-				ax.attr("transform", `translate(0, ${paddingTop})`);
-
-				// make the ticks take up the full width of the graph
-				ax.selectAll(".tick line")
-					.attr("x2", dimensions.width)
-					.attr("stroke", "var(--pico-secondary-background)")
-					.attr("stroke-width", 0.5)
-					.attr("stroke-dasharray", "2, 2");
-
-				// move the labels to the right side of the graph, keeping the text right-aligned
-				ax.selectAll(".tick text")
-					.attr("x", dimensions.width - 35)
-					.attr("text-anchor", "end")
-					.attr("dx", "2em")
-					.attr("dy", "0.3em");
-
-				// remove existing blocks
-				ax.selectAll("rect").remove();
-
-				// add black blocks before the lables with the same width as the text
-				ax.selectAll(".tick text").each(function () {
-					const text = select(this as SVGTextElement);
-					const textWidth = text.node()?.getBBox().width || 0;
-					// biome-ignore lint/suspicious/noExplicitAny: can't infer the type of the parent node
-					select((this as any)?.parentNode as SVGGElement)
-						.insert("rect", ":nth-child(2)")
-						.attr("x", dimensions.width - textWidth - 19)
-						.attr("y", -11)
-						.attr("width", textWidth + 10)
-						.attr("opacity", 0.6)
-						.attr("height", 20)
-						.attr("rx", 6)
-						.attr("fill", "var(--pico-card-background-color)");
-				});
+		let xAxisTransition = 200;
+		if (firstRender.current) xAxisTransition = 0;
+		xAxisElement
+			.transition()
+			.ease(easeCubic)
+			.duration(xAxisTransition)
+			.call((ax) => {
+				bottomAxis(ax);
+				ax.attr("transform", `translate(0, ${dimensions.height - paddingBottom + 10})`);
 			});
-		},
-		[dimensions, data, axisRange, metric],
-	);
+
+		yAxisElement.call((ax) => {
+			leftAxis(ax);
+			ax.attr("transform", `translate(0, ${paddingTop})`);
+
+			// make the ticks take up the full width of the graph
+			ax.selectAll(".tick line")
+				.attr("x2", dimensions.width)
+				.attr("stroke", "var(--pico-secondary-background)")
+				.attr("stroke-width", 0.5)
+				.attr("stroke-dasharray", "2, 2");
+
+			// move the labels to the right side of the graph, keeping the text right-aligned
+			ax.selectAll(".tick text")
+				.attr("x", dimensions.width - 35)
+				.attr("text-anchor", "end")
+				.attr("dx", "2em")
+				.attr("dy", "0.3em");
+
+			// remove existing blocks
+			ax.selectAll("rect").remove();
+
+			// add black blocks before the labels with the same width as the text
+			ax.selectAll(".tick text").each(function () {
+				const text = select(this as SVGTextElement);
+				const textWidth = text.node()?.getBBox().width || 0;
+				// biome-ignore lint/suspicious/noExplicitAny: can't infer the type of the parent node
+				select((this as any)?.parentNode as SVGGElement)
+					.insert("rect", ":nth-child(2)")
+					.attr("x", dimensions.width - textWidth - 19)
+					.attr("y", -11)
+					.attr("width", textWidth + 10)
+					.attr("opacity", 0.6)
+					.attr("height", 20)
+					.attr("rx", 6)
+					.attr("fill", "var(--pico-card-background-color)");
+			});
+
+			firstRender.current = false;
+		});
+	}, [dimensions, state, axisRange]);
 
 	useEffect(() => {
 		if (!svgRef.current || !dimensions) return;
@@ -260,8 +240,8 @@ export const LineGraph = ({
 
 			const needle = select(svgRef.current).selectChild("#needle");
 			const x = event.clientX - svgRect.left - 1;
-			const step = (dimensions.width - 2) / (data.length - 1);
-			const index = Math.min(Math.max(Math.round(x / step), 0), data.length - 1); // Clamp index
+			const step = (dimensions.width - 2) / (state.data.length - 1);
+			const index = Math.min(Math.max(Math.round(x / step), 0), state.data.length - 1); // Clamp index
 
 			const snappedX = 1 + index * step; // Snap to the clamped index
 			needle
@@ -270,14 +250,14 @@ export const LineGraph = ({
 				.ease(easeCubicOut)
 				.attr("d", `M ${snappedX} 0 L ${snappedX} ${svgHeight - 40}`);
 
-			const point = data[index];
+			const point = state.data[index];
 			const value = point.y;
 
 			const date = new Date(point.x);
 			const dateRange = range.getTooltipRange();
 
 			const tooltipDate = formatDate(date, dateRange);
-			const tooltipValue = formatMetricVal(value, metric);
+			const tooltipValue = formatMetricVal(value, state.metric);
 
 			tooltip.select(".date").text(tooltipDate);
 			tooltip.select(".value").text(tooltipValue);
@@ -297,17 +277,8 @@ export const LineGraph = ({
 		};
 	});
 
-	const firstRender = useRef(true);
-
 	useEffect(() => {
-		if (firstRender.current && dimensions && data) {
-			firstRender.current = false;
-			updateGraph(0);
-		}
-	}, [dimensions, updateGraph, data]);
-
-	useEffect(() => {
-		if (!firstRender.current) updateGraph(300);
+		updateGraph();
 	}, [updateGraph]);
 
 	return (
@@ -334,7 +305,7 @@ export const LineGraph = ({
 				/>
 				<foreignObject id="tooltip" width="170" height="100" opacity="0">
 					<div data-theme="dark" className={styles.tooltip}>
-						<h2>{title}</h2>
+						<h2>{state.title}</h2>
 						<h3>
 							<span className="date" /> <span className="value" />
 							{/* <span>{formatDate(new Date(data[data.length - 1].x), range.getTooltipRange())}</span>{" "}

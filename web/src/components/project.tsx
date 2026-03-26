@@ -73,7 +73,11 @@ export const Project = () => {
 	}, []);
 
 	const { project } = useProject(projectId);
-	const { graph } = useProjectGraph({ projectId, metric, range, filters });
+	const {
+		graph,
+		isUpdating: graphUpdating,
+		isLoading: graphLoading,
+	} = useProjectGraph({ projectId, metric, range, filters });
 	const { stats } = useProjectStats({ projectId, metric, range, filters });
 
 	const query = useMemo<ProjectQuery>(
@@ -115,7 +119,14 @@ export const Project = () => {
 					<SelectFilters value={filters} onChange={setFilters} />
 				</div>
 				<article className={cls(cardStyles.card, styles.graphCard)}>
-					<LineGraph data={graph ?? []} metric={metric} title={metricNames[metric]} range={range} />
+					<LineGraph
+						data={graph}
+						title={metricNames[metric]}
+						metric={metric}
+						range={range}
+						isLoading={graphLoading}
+						isUpdating={graphUpdating}
+					/>
 				</article>
 				<div className={styles.tables}>
 					<PageDimensionTabsCard query={query} onSelect={onSelectDimRow} />

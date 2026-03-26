@@ -108,7 +108,6 @@ export const useDimension = ({
 		return { data: data?.data, biggest, order, isLoading, error };
 	}, [data, isLoading, error]);
 };
-
 export const useProjectGraph = ({
 	projectId,
 	metric,
@@ -127,16 +126,19 @@ export const useProjectGraph = ({
 		staleTime = 0;
 	}
 	const dataPoints = range.getGraphDataPoints();
+	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, dataPoints];
 
 	const {
 		data: graph,
 		isError,
 		isLoading,
+		isFetching,
+		isPlaceholderData,
 	} = useQuery({
 		refetchInterval,
 		staleTime,
 		enabled: projectId !== undefined,
-		queryKey: ["project_graph", projectId, range.cacheKey(), metric, filters, dataPoints],
+		queryKey,
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
 				.post({
@@ -154,10 +156,13 @@ export const useProjectGraph = ({
 		placeholderData: (prev) => prev,
 	});
 
+	const isUpdating = isFetching && isPlaceholderData;
+
 	return {
 		graph,
 		isLoading,
 		isError,
+		isUpdating,
 	};
 };
 

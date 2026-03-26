@@ -77,8 +77,6 @@ const { class: className, ...rest } = Astro.props;
     }
 
     button.addEventListener("click", () => {
-        console.log("click");
-
       if (theme === "dark") {
         setTheme("light");
         sun.style.display = "block";
