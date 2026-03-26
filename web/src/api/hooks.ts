@@ -95,6 +95,7 @@ export const useDimension = ({
 				.json()
 				.then((req) => {
 					if (typeof req === "string") {
+						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
 					return req;
@@ -145,9 +146,10 @@ export const useProjectGraph = ({
 				.json()
 				.then((req) => {
 					if (typeof req === "string") {
+						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
-					toDataPoints(req.data, range);
+					return toDataPoints(req.data, range);
 				}),
 		placeholderData: (prev) => prev,
 	});
@@ -184,6 +186,7 @@ export const useProjectStats = ({
 				.json()
 				.then((req) => {
 					if (typeof req === "string") {
+						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
 					return req;
