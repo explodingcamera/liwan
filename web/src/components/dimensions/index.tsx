@@ -53,38 +53,14 @@ export const PageDimensionTabsCard = ({
 	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
 }) => {
 	const showSessionPageDimensions = query.metric === "views" || query.metric === "unique_visitors";
-	const dimensions: Dimension[] = showSessionPageDimensions
-		? ["url", "url_entry", "url_exit", "fqdn"]
-		: ["url", "fqdn"];
 
-	return (
-		<article className={styles.card}>
-			<Tabs.Root
-				className={styles.tabs}
-				defaultValue="url"
-				key={showSessionPageDimensions ? "session-pages" : "basic-pages"}
-			>
-				<Tabs.List className={styles.tabsList}>
-					<div className={styles.pageTabGroup}>
-						<Tabs.Tab value="url">URL</Tabs.Tab>
-						{showSessionPageDimensions && (
-							<>
-								<Tabs.Tab value="url_entry">Entry</Tabs.Tab>
-								<Tabs.Tab value="url_exit">Exit</Tabs.Tab>
-							</>
-						)}
-					</div>
-					<Tabs.Tab value="fqdn">Domain</Tabs.Tab>
-					<div>{metricNames[query.metric]}</div>
-				</Tabs.List>
-				{dimensions.map((dimension) => (
-					<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
-						<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
-					</Tabs.Panel>
-				))}
-			</Tabs.Root>
-		</article>
-	);
+	if (showSessionPageDimensions) {
+		return (
+			<DimensionDropdownCard dimensions={["url", "url_entry", "url_exit", "fqdn"]} query={query} onSelect={onSelect} />
+		);
+	} else {
+		return <DimensionCard dimension="url" query={query} onSelect={(value) => onSelect(value, "url")} />;
+	}
 };
 
 export const DimensionDropdownCard = ({
@@ -96,50 +72,36 @@ export const DimensionDropdownCard = ({
 	query: ProjectQuery;
 	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
 }) => {
-	return (
-		<article className={styles.card}>
-			<DimensionDropdown dimensions={dimensions} query={query} onSelect={onSelect} />
-		</article>
-	);
-};
-
-export const DimensionDropdown = ({
-	dimensions,
-	query,
-	onSelect,
-}: {
-	dimensions: Dimension[];
-	query: ProjectQuery;
-	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
-}) => {
 	const [selectedDimension, setSelectedDimension] = useState(dimensions[0]);
 
 	return (
-		<Tabs.Root
-			className={styles.tabs}
-			value={selectedDimension}
-			onValueChange={(value) => setSelectedDimension(value as Dimension)}
-		>
-			<Tabs.List className={styles.tabsList}>
-				<select
-					className={styles.dimensionSelect}
-					value={selectedDimension}
-					onChange={(e) => setSelectedDimension(e.target.value as Dimension)}
-				>
-					{dimensions.map((dimension) => (
-						<option key={dimension} value={dimension}>
-							{dimensionNames[dimension]}
-						</option>
-					))}
-				</select>
-				<div>{metricNames[query.metric]}</div>
-			</Tabs.List>
-			{dimensions.map((dimension) => (
-				<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
-					<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
-				</Tabs.Panel>
-			))}
-		</Tabs.Root>
+		<article className={styles.card}>
+			<Tabs.Root
+				className={styles.tabs}
+				value={selectedDimension}
+				onValueChange={(value) => setSelectedDimension(value as Dimension)}
+			>
+				<Tabs.List className={styles.tabsList}>
+					<select
+						className={styles.dimensionSelect}
+						value={selectedDimension}
+						onChange={(e) => setSelectedDimension(e.target.value as Dimension)}
+					>
+						{dimensions.map((dimension) => (
+							<option key={dimension} value={dimension}>
+								{dimensionNames[dimension]}
+							</option>
+						))}
+					</select>
+					<div>{metricNames[query.metric]}</div>
+				</Tabs.List>
+				{dimensions.map((dimension) => (
+					<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
+						<DimensionTable dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />
+					</Tabs.Panel>
+				))}
+			</Tabs.Root>
+		</article>
 	);
 };
 

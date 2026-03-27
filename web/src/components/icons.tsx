@@ -107,5 +107,5 @@ export const Favicon = ({
 	if (config.isLoading || config.config?.disableFavicons) return <SearchIcon size={size} />;
 
 	fqdn = fqdn.replace(/[^a-zA-Z0-9.-]/g, "");
-	return <img src={`https://icons.duckduckgo.com/ip3/${fqdn}.ico`} alt="favicon" height={size} width={size} />;
+	return <img src={`https://icons.duckduckgo.com/ip3/${fqdn}.ico`} alt="" height={size} width={size} />;
 };

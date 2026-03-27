@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Tooltip } from "react-tooltip";
 import styles from "./graph.module.css";
 
 import { extent } from "d3-array";
@@ -84,30 +83,12 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 				? scaleLinear([0, 1], [dimensions.height - paddingBottom - paddingTop, 0])
 				: scaleLinear([0, Math.max(maxY * 1.25 || 0, 20)], [dimensions.height - paddingBottom - paddingTop, 0]);
 
-		const bounceTolerance = 0.01;
-		const isExtremeBouncePoint = (d: DataPoint) =>
-			state.metric === "bounce_rate" && (d.y <= bounceTolerance || d.y >= 1 - bounceTolerance);
-		const isNormalPoint = (d: DataPoint) => !isExtremeBouncePoint(d);
-
 		const svgArea = area<DataPoint>()
-			.defined(isNormalPoint)
-			.x((d) => xAxis(d.x))
-			.y0(yAxis(0))
-			.y1((d) => yAxis(d.y));
-
-		const svgAreaFaded = area<DataPoint>()
-			.defined(() => state.metric === "bounce_rate")
 			.x((d) => xAxis(d.x))
 			.y0(yAxis(0))
 			.y1((d) => yAxis(d.y));
 
 		const svgLine = area<DataPoint>()
-			.defined(isNormalPoint)
-			.x((d) => xAxis(d.x))
-			.y((d) => yAxis(d.y));
-
-		const svgLineFaded = area<DataPoint>()
-			.defined(() => state.metric === "bounce_rate")
 			.x((d) => xAxis(d.x))
 			.y((d) => yAxis(d.y));
 
@@ -117,19 +98,9 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 			.attr("d", svgArea(state.data) || "");
 
 		svg
-			.selectChild("#background-faded")
-			.attr("transform", `translate(0, ${paddingTop})`)
-			.attr("d", svgAreaFaded(state.data) || "");
-
-		svg
 			.selectChild("#line")
 			.attr("transform", `translate(0, ${paddingTop})`)
 			.attr("d", svgLine(state.data) || "");
-
-		svg
-			.selectChild("#line-faded")
-			.attr("transform", `translate(0, ${paddingTop})`)
-			.attr("d", svgLineFaded(state.data) || "");
 
 		const yAxisElement = svg.selectChild<SVGGElement>("#y-axis");
 		const xAxisElement = svg.selectChild<SVGGElement>("#x-axis");
@@ -287,15 +258,12 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 				<title>Graph</title>
 				<defs>
 					<linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
-						<stop offset="0%" stopColor="rgba(166, 206, 227, 0.4)" />
+						<stop offset="0%" stopColor="rgba(166, 206, 227, 0.25)" />
 						<stop offset="100%" stopColor="rgba(166, 206, 227, 0)" />
 					</linearGradient>
 				</defs>
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
-				<path id="background-faded" fill="url(#graphGradient)" stroke="none" opacity="0.14" />
 				<path id="line" fill="none" stroke="#a6cee3" />
-				<path id="line-faded" fill="none" stroke="#a6cee3" opacity="0.15" />
-				{/* doted line */}
 				<path
 					id="needle"
 					fill="none"
@@ -308,24 +276,12 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 						<h2>{state.title}</h2>
 						<h3>
 							<span className="date" /> <span className="value" />
-							{/* <span>{formatDate(new Date(data[data.length - 1].x), range.getTooltipRange())}</span>{" "}
-							{formatMetricVal(0, metric)} */}
 						</h3>
 					</div>
 				</foreignObject>
 				<g id="y-axis" />
 				<g id="x-axis" />
 			</svg>
-
-			<Tooltip id="map" className={styles.tooltipContainer} classNameArrow={styles.reset} disableStyleInjection>
-				{/* <div data-theme="dark" className={styles.tooltip}>
-                    <h2>{props.title}</h2>
-                    <h3>
-                        <span>{formatDate(new Date(point.x), props.range.getTooltipRange())}</span>{" "}
-                        {formatMetricVal(value, props.metric)}
-                    </h3>
-                </div> */}
-			</Tooltip>
 		</div>
 	);
 };

@@ -51,13 +51,13 @@
 .close {
   position: fixed;
   z-index: 1000;
-  background-color: white;
+  background-color: var(--pico-dropdown-color);
   border: none;
   right: 0;
   top: 0;
-  margin: 1rem;
+  margin: 0.5rem;
   pointer-events: auto;
-  border-radius: 1rem;
+  border-radius: 3rem;
   display: flex;
   width: 2.5rem;
   height: 2.5rem;

@@ -47,7 +47,7 @@ button.card {
   z-index: 0;
 
   margin: 0;
-  padding: 0.6rem 0.5rem 0.4rem 0.6rem;
+  padding: 0.5rem 0.6rem 0.3rem 0.6rem;
 
   transition: background-color 0.2s ease;
   border-radius: var(--pico-border-radius);

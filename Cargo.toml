@@ -27,7 +27,7 @@ hex={version="0.4"}
 bs58="0.5"
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
-md-5={version="0.11.0-rc.5"}
+md-5={version= "0.11.0" }
 async-compression={version="0.4", default-features=false, features=["gzip", "tokio"]}
 tokio-tar={package="astral-tokio-tar", version="0.6"}
 blake3={version="1.8"}
