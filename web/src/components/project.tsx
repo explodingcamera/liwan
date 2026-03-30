@@ -138,6 +138,7 @@ export const Project = () => {
 					<GeoCard query={query} onSelect={onSelectDimRow} />
 					<DimensionTabsCard dimensions={["platform", "browser"]} query={query} onSelect={onSelectDimRow} />
 					<DimensionCard dimension={"mobile"} query={query} onSelect={(v) => onSelectDimRow(v, "mobile")} />
+					<DimensionCard dimension={"screen_size"} query={query} onSelect={(v) => onSelectDimRow(v, "screen_size")} />
 				</div>
 			</Suspense>
 		</div>

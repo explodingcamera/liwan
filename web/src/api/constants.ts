@@ -24,6 +24,7 @@ export const dimensionNames: Record<Dimension, string> = {
 	utm_medium: "UTM Medium",
 	utm_source: "UTM Source",
 	utm_term: "UTM Term",
+	screen_size: "Screen Size",
 };
 
 export const filterNames: Record<DimensionFilter["filterType"], string> = {
