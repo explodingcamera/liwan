@@ -17,7 +17,7 @@ path="src/main.rs"
 [dependencies]
 # async/concurrency
 arc-swap="1.9"
-tokio={version="1.50", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
+tokio={version="1.51", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
 quick_cache={version="0.6", features=["ahash"]}
@@ -27,7 +27,7 @@ hex={version="0.4"}
 bs58="0.5"
 serde={version="1.0", features=["derive"]}
 serde_json={version="1.0"}
-md-5={version= "0.11.0" }
+md-5={version="0.11.0"}
 async-compression={version="0.4", default-features=false, features=["gzip", "tokio"]}
 tokio-tar={package="astral-tokio-tar", version="0.6"}
 blake3={version="1.8"}
@@ -94,7 +94,7 @@ mimalloc={version="0.1", features=["v3"]}
 figment={version="*", features=["test"]}
 cookie={version="*", default-features=false}
 tower={version="*", features=["util"]}
-axum-test={version="19"}
+axum-test={version="20"}
 
 [features]
 default=["geoip"]
