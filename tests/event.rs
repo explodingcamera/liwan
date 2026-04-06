@@ -148,7 +148,7 @@ async fn test_screen_size_dimension_api() -> Result<()> {
         },
         Event {
             entity_id: "entity-1".to_string(),
-            visitor_id: "visitor-1".to_string(),
+            visitor_id: "visitor-2".to_string(),
             event: "pageview".to_string(),
             created_at: Utc::now(),
             fqdn: Some("example.com".to_string()),
