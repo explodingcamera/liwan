@@ -11,6 +11,7 @@ type Payload = {
 	url: string;
 	referrer?: string;
 	utm?: { campaign?: string; content?: string; medium?: string; source?: string; term?: string };
+	screen_width?: number;
 };
 
 export type EventOptions = {
@@ -107,6 +108,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 				source: utm.get("utm_source"),
 				term: utm.get("utm_term"),
 			},
+			screen_width: !noWindow ? window.screen?.width : undefined,
 		}),
 	});
 

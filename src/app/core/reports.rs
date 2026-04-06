@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::fmt::{Debug, Display};
 
 use crate::app::DuckDBConn;
-use crate::utils::duckdb::{repeat_vars, ParamVec};
-use anyhow::{bail, Result};
+use crate::utils::duckdb::{ParamVec, repeat_vars};
+use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use duckdb::params_from_iter;
 use schemars::JsonSchema;
@@ -66,6 +66,7 @@ pub enum Dimension {
     UtmCampaign,
     UtmContent,
     UtmTerm,
+    ScreenSize,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
@@ -191,6 +192,7 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
                 Dimension::UtmCampaign => format!("utm_campaign {filter_value}"),
                 Dimension::UtmContent => format!("utm_content {filter_value}"),
                 Dimension::UtmTerm => format!("utm_term {filter_value}"),
+                Dimension::ScreenSize => format!("screen_size {filter_value}"),
             })
         })
         .collect::<Result<Vec<String>>>()?;
@@ -481,6 +483,7 @@ pub fn dimension_report(
         Dimension::UtmCampaign => ("utm_campaign", "utm_campaign", None),
         Dimension::UtmContent => ("utm_content", "utm_content", None),
         Dimension::UtmTerm => ("utm_term", "utm_term", None),
+        Dimension::ScreenSize => ("screen_size", "screen_size", None),
     };
     let filters_sql = match (filters_sql.is_empty(), dimension_scope_sql) {
         (true, Some(scope)) => format!("and ({scope})"),
