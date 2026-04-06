@@ -23,7 +23,8 @@ pub struct Event {
     pub utm_campaign: Option<String>,
     pub utm_content: Option<String>,
     pub utm_term: Option<String>,
-    pub screen_size: Option<String>,
+    pub screen_width: Option<String>,
+    pub orientation: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -101,7 +102,8 @@ macro_rules! event_params {
             $event.utm_term,
             None::<std::time::Duration>,
             None::<std::time::Duration>,
-            $event.screen_size,
+            $event.screen_width,
+            $event.orientation,
         ]
     };
 }

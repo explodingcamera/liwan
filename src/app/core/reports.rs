@@ -66,7 +66,8 @@ pub enum Dimension {
     UtmCampaign,
     UtmContent,
     UtmTerm,
-    ScreenSize,
+    ScreenWidth,
+    Orientation,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
@@ -192,7 +193,8 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
                 Dimension::UtmCampaign => format!("utm_campaign {filter_value}"),
                 Dimension::UtmContent => format!("utm_content {filter_value}"),
                 Dimension::UtmTerm => format!("utm_term {filter_value}"),
-                Dimension::ScreenSize => format!("screen_size {filter_value}"),
+                Dimension::ScreenWidth => format!("screen_width {filter_value}"),
+                Dimension::Orientation => format!("orientation {filter_value}"),
             })
         })
         .collect::<Result<Vec<String>>>()?;
@@ -483,7 +485,8 @@ pub fn dimension_report(
         Dimension::UtmCampaign => ("utm_campaign", "utm_campaign", None),
         Dimension::UtmContent => ("utm_content", "utm_content", None),
         Dimension::UtmTerm => ("utm_term", "utm_term", None),
-        Dimension::ScreenSize => ("screen_size", "screen_size", None),
+        Dimension::ScreenWidth => ("screen_width", "screen_width", None),
+        Dimension::Orientation => ("orientation", "orientation", None),
     };
     let filters_sql = match (filters_sql.is_empty(), dimension_scope_sql) {
         (true, Some(scope)) => format!("and ({scope})"),

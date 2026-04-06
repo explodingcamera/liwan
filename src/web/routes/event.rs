@@ -31,7 +31,8 @@ struct EventRequest {
     url: String,
     referrer: Option<String>,
     utm: Option<Utm>,
-    screen_width: Option<u32>,
+    screen_width: Option<String>,
+    orientation: Option<String>,
 }
 
 #[derive(serde::Deserialize, JsonSchema)]
@@ -41,15 +42,6 @@ struct Utm {
     medium: Option<String>,
     campaign: Option<String>,
     term: Option<String>,
-}
-
-fn screen_size_bucket(width: u32) -> &'static str {
-    match width {
-        0..=767 => "mobile",
-        768..=1023 => "tablet",
-        1024..=2559 => "desktop",
-        _ => "ultrawide",
-    }
 }
 
 static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
@@ -141,45 +133,10 @@ fn process_event(
         utm_medium: event.utm.as_ref().and_then(|u| u.medium.clone()),
         utm_source: event.utm.as_ref().and_then(|u| u.source.clone()),
         utm_term: event.utm.as_ref().and_then(|u| u.term.clone()),
-        screen_size: event.screen_width.map(|w| screen_size_bucket(w).to_string()),
+        screen_width: event.screen_width,
+        orientation: event.orientation,
     };
 
     events.send(event)?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::screen_size_bucket;
-
-    #[test]
-    fn test_screen_size_bucket_mobile() {
-        assert_eq!(screen_size_bucket(0), "mobile");
-        assert_eq!(screen_size_bucket(375), "mobile");
-        assert_eq!(screen_size_bucket(430), "mobile");
-        assert_eq!(screen_size_bucket(767), "mobile");
-    }
-
-    #[test]
-    fn test_screen_size_bucket_tablet() {
-        assert_eq!(screen_size_bucket(768), "tablet");
-        assert_eq!(screen_size_bucket(810), "tablet");
-        assert_eq!(screen_size_bucket(1023), "tablet");
-    }
-
-    #[test]
-    fn test_screen_size_bucket_desktop() {
-        assert_eq!(screen_size_bucket(1024), "desktop");
-        assert_eq!(screen_size_bucket(1280), "desktop");
-        assert_eq!(screen_size_bucket(1920), "desktop");
-        assert_eq!(screen_size_bucket(2559), "desktop");
-    }
-
-    #[test]
-    fn test_screen_size_bucket_ultrawide() {
-        assert_eq!(screen_size_bucket(2560), "ultrawide");
-        assert_eq!(screen_size_bucket(3440), "ultrawide");
-        assert_eq!(screen_size_bucket(3840), "ultrawide");
-        assert_eq!(screen_size_bucket(7680), "ultrawide");
-    }
 }

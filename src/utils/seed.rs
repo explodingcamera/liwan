@@ -22,6 +22,8 @@ const UTM_CONTENTS: &[&str] = &["", "banner", "sidebar", "footer", "popup"];
 const UTM_MEDIUMS: &[&str] = &["", "cpc", "organic", "referral", "email"];
 const UTM_SOURCES: &[&str] = &["", "google", "bing", "facebook", "twitter"];
 const UTM_TERMS: &[&str] = &["", "liwan", "analytics", "tracking", "web"];
+const SCREEN_WIDTH_BUCKETS: &[&str] = &["xs", "sm", "md", "lg", "xl", "2xl"];
+const ORIENTATIONS: &[&str] = &["portrait", "landscape"];
 
 pub fn random_events(
     time_range: (DateTime<Utc>, DateTime<Utc>),
@@ -106,6 +108,8 @@ pub fn random_events(
         let browser = random_el(BROWSERS, 0.0);
         let mobile = rng.random_bool(0.48);
         let (city, country) = random_el(CITIES, 0.8);
+        let screen_width = random_el(SCREEN_WIDTH_BUCKETS, 0.0);
+        let orientation = random_el(ORIENTATIONS, 0.0);
 
         Some(Event {
             browser: if browser.is_empty() { None } else { Some(browser.to_string()) },
@@ -125,7 +129,8 @@ pub fn random_events(
             utm_medium: Some(random_el(UTM_MEDIUMS, 0.6).to_string()),
             utm_source: Some(random_el(UTM_SOURCES, 0.6).to_string()),
             utm_term: Some(random_el(UTM_TERMS, 0.6).to_string()),
-            screen_size: None,
+            screen_width: Some(screen_width.to_string()),
+            orientation: Some(orientation.to_string()),
         })
     })
 }

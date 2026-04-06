@@ -1,8 +1,6 @@
 declare global {
 	interface Window {
 		__liwan_loaded?: boolean;
-		// biome-ignore lint/suspicious/noExplicitAny: no
-		navigation?: any;
 	}
 }
 
@@ -11,8 +9,10 @@ type Payload = {
 	url: string;
 	referrer?: string;
 	utm?: { campaign?: string; content?: string; medium?: string; source?: string; term?: string };
-	screen_width?: number;
-};
+	screen_width?: string;
+	orientation?: string;
+	// biome-ignore lint/suspicious/noExplicitAny: no
+} & Record<string, any>;
 
 export type EventOptions = {
 	/**
@@ -92,6 +92,18 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 	if (/^localhost$|^127(?:\.\d+){0,2}\.\d+$|^\[::1?\]$/.test(location.hostname) || location.protocol === "file:")
 		return ignore("localhost");
 
+	const w = !noWindow ? window.screen?.width : undefined;
+
+	// biome-ignore format: no
+	const screen_width =
+        w == null ? undefined :
+        w < 480 ? "xs" :
+        w < 768 ? "sm" :
+        w < 1024 ? "md" :
+        w < 1280 ? "lg" :
+        w < 1536 ? "xl" :
+        "2xl";
+
 	const utm = new URLSearchParams(location.search);
 	const response = await fetch(endpoint_url, {
 		method: "POST",
@@ -108,7 +120,8 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 				source: utm.get("utm_source"),
 				term: utm.get("utm_term"),
 			},
-			screen_width: !noWindow ? window.screen?.width : undefined,
+			screen_width,
+			orientation: !noWindow && window.screen.orientation.type.startsWith("portrait") ? "portrait" : "landscape",
 		}),
 	});
 
@@ -128,26 +141,7 @@ const trackPageviews = () => {
 	};
 
 	if (window.navigation) {
-		// best case scenario, we can listen for navigation events
-		// sadly this is not available on firefox or safari
 		window.navigation.addEventListener("navigate", () => page());
-	} else {
-		// duplicate navigation events don't matter
-		// as we check if the page has changed above
-
-		// try to intercept history.pushState, but it's not always possible
-		window.history.pushState = new Proxy(window.history.pushState, {
-			apply: (func, target, args) => {
-				Reflect.apply(func, target, args);
-				page();
-			},
-		});
-
-		// popstate is pretty buggy
-		window.addEventListener("popstate", page);
-
-		// astro copies history.pushState, so we need to listen for astro:page-load
-		document.addEventListener("astro:page-load", () => page());
 	}
 
 	// initial pageview

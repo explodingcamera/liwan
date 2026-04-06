@@ -9,13 +9,7 @@ import type { DateRange } from "../api/ranges";
 
 import { useMetric, useRange } from "../hooks/persist";
 import { cls } from "../utils";
-import {
-	DimensionCard,
-	DimensionDropdownCard,
-	DimensionTabs,
-	DimensionTabsCard,
-	PageDimensionTabsCard,
-} from "./dimensions";
+import { DimensionDropdownCard, DimensionTabs, DimensionTabsCard, PageDimensionTabsCard } from "./dimensions";
 import { LineGraph } from "./graph";
 import { SelectFilters } from "./project/filter";
 import { SelectMetrics } from "./project/metric";
@@ -137,8 +131,11 @@ export const Project = () => {
 					/>
 					<GeoCard query={query} onSelect={onSelectDimRow} />
 					<DimensionTabsCard dimensions={["platform", "browser"]} query={query} onSelect={onSelectDimRow} />
-					<DimensionCard dimension={"mobile"} query={query} onSelect={(v) => onSelectDimRow(v, "mobile")} />
-					<DimensionCard dimension={"screen_size"} query={query} onSelect={(v) => onSelectDimRow(v, "screen_size")} />
+					<DimensionTabsCard
+						dimensions={["mobile", "screen_width", "orientation"]}
+						query={query}
+						onSelect={(v) => onSelectDimRow(v, "mobile")}
+					/>
 				</div>
 			</Suspense>
 		</div>

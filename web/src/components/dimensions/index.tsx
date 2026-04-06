@@ -298,10 +298,18 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
 		</>
 	),
-	screen_size: (value, onSelect) => (
+	screen_width: (value, onSelect) => (
 		<>
 			<MonitorIcon size={16} />
 			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown"}</DimensionValueButton>
+		</>
+	),
+	orientation: (value, onSelect) => (
+		<>
+			<MonitorIcon size={16} />
+			<DimensionValueButton onSelect={onSelect}>
+				{value.displayName || value.dimensionValue || "Unknown"}
+			</DimensionValueButton>
 		</>
 	),
 };
