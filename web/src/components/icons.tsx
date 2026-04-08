@@ -4,7 +4,17 @@ import styles from "./icons.module.css";
 // biome-ignore format: no
 import { SiAndroid, SiBadoo, SiBluesky, SiDouban, SiDribbble, SiDuckduckgo, SiFacebook, SiFirefox, SiFlickr, SiFoursquare, SiGithub, SiGoogle, SiGooglechrome, SiInstagram, SiIos, SiLastdotfm, SiLinux, SiLivejournal, SiMacos, SiMaildotru, SiMastodon, SiOdnoklassniki, SiOpera, SiPinterest, SiPixelfed, SiReddit, SiRenren, SiSafari, SiSinaweibo, SiSnapchat, SiSourceforge, SiStackoverflow, SiTelegram, SiThreads, SiTiktok, SiTumblr, SiTwitch, SiV2ex, SiViadeo, SiVimeo, SiVk, SiWorkplace, SiX, SiXing, SiYcombinator, SiYoutube } from "@icons-pack/react-simple-icons";
 // biome-ignore format: no
-import { AppWindowIcon, EarthIcon, LayoutGridIcon, MonitorIcon, SearchIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
+import {
+	AppWindowIcon,
+	EarthIcon,
+	LayoutGridIcon,
+	MonitorIcon,
+	RectangleHorizontalIcon,
+	RectangleVerticalIcon,
+	SearchIcon,
+	SmartphoneIcon,
+	TabletIcon,
+} from "lucide-react";
 // biome-ignore format: no
 const brandIcons = { foursquare: SiFoursquare, vk: SiVk, sinaweibo: SiSinaweibo, telegram: SiTelegram, pixelfed: SiPixelfed, workplace: SiWorkplace, x: SiX, threads: SiThreads, Ru: SiMaildotru, News: SiYcombinator, tiktok: SiTiktok, facebook: SiFacebook, lastdotfm: SiLastdotfm, dribbble: SiDribbble, reddit: SiReddit, flickr: SiFlickr, github: SiGithub, pinterest: SiPinterest, stackoverflow: SiStackoverflow, bluesky: SiBluesky, livejournal: SiLivejournal, v2ex: SiV2ex, douban: SiDouban, renren: SiRenren, tumblr: SiTumblr, snapchat: SiSnapchat, badoo: SiBadoo, youtube: SiYoutube, instagram: SiInstagram, viadeo: SiViadeo, odnoklassniki: SiOdnoklassniki, vimeo: SiVimeo, mastodon: SiMastodon, sourceforge: SiSourceforge, twitch: SiTwitch, xing: SiXing, google: SiGoogle, duckduckgo: SiDuckduckgo,};
 
@@ -73,6 +83,19 @@ export const OSIcon = ({ os, ...props }: { os: string } & IconProps) => {
 export const MobileDeviceIcon = ({ isMobile, ...props }: { isMobile: boolean } & IconProps) => {
 	const Icon = isMobile ? deviceIcons.phone : deviceIcons.desktop;
 	return <Icon {...props} />;
+};
+
+export const OrientationIcon = ({ orientation, ...props }: { orientation: string } & IconProps) => {
+	const value = orientation.toLowerCase();
+	if (value === "portrait") {
+		return <RectangleVerticalIcon {...props} />;
+	}
+
+	if (value === "landscape") {
+		return <RectangleHorizontalIcon {...props} />;
+	}
+
+	return <MonitorIcon {...props} />;
 };
 
 export const ReferrerIcon = ({

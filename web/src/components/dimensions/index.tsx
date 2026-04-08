@@ -7,7 +7,7 @@ import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, us
 import { useState } from "react";
 import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
 import { formatMetricVal } from "../../utils";
-import { BrowserIcon, MobileDeviceIcon, OSIcon, ReferrerIcon } from "../icons";
+import { BrowserIcon, MobileDeviceIcon, OrientationIcon, OSIcon, ReferrerIcon } from "../icons";
 import type { ProjectQuery } from "../project";
 import { DetailsModal } from "./modal";
 
@@ -192,6 +192,28 @@ const renderUrlDimensionLabel = (value: DimensionTableRow, onSelect: () => void)
 	);
 };
 
+const screenWidthRanges: Record<string, [number, number]> = {
+	xs: [0, 479],
+	sm: [480, 767],
+	md: [768, 1023],
+	lg: [1024, 1279],
+	xl: [1280, 1535],
+	"2xl": [1536, Number.POSITIVE_INFINITY],
+};
+
+const formatScreenWidth = (value: string) => {
+	const key = value.toLowerCase();
+	const range = screenWidthRanges[key];
+
+	if (!range) {
+		return value;
+	}
+
+	const [min, max] = range;
+	const upper = Number.isFinite(max) ? `${max}px` : "∞";
+	return `${key.toUpperCase()} (${min}px - ${upper})`;
+};
+
 const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: () => void) => React.ReactNode> = {
 	utm_campaign: (value, onSelect) => (
 		<>
@@ -301,14 +323,16 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 	screen_width: (value, onSelect) => (
 		<>
 			<MonitorIcon size={16} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>
+				{value.dimensionValue ? formatScreenWidth(value.dimensionValue) : "Unknown"}
+			</DimensionValueButton>
 		</>
 	),
 	orientation: (value, onSelect) => (
 		<>
-			<MonitorIcon size={16} />
+			<OrientationIcon orientation={value.dimensionValue} size={24} />
 			<DimensionValueButton onSelect={onSelect}>
-				{value.displayName || value.dimensionValue || "Unknown"}
+				{value.displayName ? value.displayName : "Unknown"}
 			</DimensionValueButton>
 		</>
 	),
