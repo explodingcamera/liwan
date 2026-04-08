@@ -6,6 +6,20 @@ listen=9042 # The port to listen on (http)
 # # defaults to ./liwan-data on other platforms
 # data_dir="./liwan-data"
 
+# Trusted client IP headers (used in order).
+# Defaults to all supported headers.
+# trusted_headers=["cf-connecting-ip", "fly-client-ip", "true-client-ip", "x-real-ip", "cloudfront-viewer-address", "x-forwarded-for", "forwarded"]
+# You can also include custom headers. Names are case-insensitive.
+# trusted_headers=["X-Forwarded-For", "X-Client-IP"]
+
+# Trusted reverse proxies (IP or CIDR).
+# Empty by default, meaning all proxies are trusted.
+# trusted_proxies=["127.0.0.1", "10.0.0.0/8"]
+
+# Whether to use forwarded IP headers at all.
+# If false, only the direct peer IP is used.
+# use_forward_headers=true
+
 # GeoIp settings (Optional)
 [geoip]
 # # MaxMind account ID and license key

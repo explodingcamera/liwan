@@ -1,3 +1,4 @@
+use crate::utils::ip_headers::{TrustedHeader, TrustedProxy, deserialize_trusted_headers, deserialize_trusted_proxies};
 use anyhow::{Context, Result, bail};
 use figment::Figment;
 use figment::providers::{Env, Format, Toml};
@@ -36,6 +37,14 @@ fn default_data_dir() -> String {
     "./liwan-data".to_string()
 }
 
+fn default_trusted_headers() -> Vec<TrustedHeader> {
+    TrustedHeader::all().to_vec()
+}
+
+fn default_use_forward_headers() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default = "default_base")]
@@ -59,6 +68,15 @@ pub struct Config {
 
     #[serde(default)]
     pub duckdb: DuckdbConfig,
+
+    #[serde(default = "default_trusted_headers", deserialize_with = "deserialize_trusted_headers")]
+    pub trusted_headers: Vec<TrustedHeader>,
+
+    #[serde(default, deserialize_with = "deserialize_trusted_proxies")]
+    pub trusted_proxies: Vec<TrustedProxy>,
+
+    #[serde(default = "default_use_forward_headers")]
+    pub use_forward_headers: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -87,6 +105,9 @@ impl Default for Config {
             disable_favicons: false,
             listen: None,
             port: None,
+            trusted_headers: default_trusted_headers(),
+            trusted_proxies: Vec::new(),
+            use_forward_headers: default_use_forward_headers(),
         }
     }
 }
@@ -194,6 +215,7 @@ impl Config {
 #[allow(clippy::result_large_err)]
 mod test {
     use super::*;
+    use crate::utils::ip_headers::{TrustedHeader, TrustedProxy};
     use figment::Jail;
 
     #[test]
@@ -285,10 +307,28 @@ mod test {
             jail.set_env("LIWAN_DATA_DIR", "/data");
             jail.set_env("LIWAN_BASE_URL", "https://example.com");
             jail.set_env("LIWAN_MAXMIND_ACCOUNT_ID", 123);
+            jail.set_env("LIWAN_TRUSTED_HEADERS", "X_Forwarded_For,Forwarded");
+            jail.set_env("LIWAN_TRUSTED_PROXIES", "127.0.0.1,10.0.0.0/8");
             let config = Config::load(None).expect("failed to load config");
             assert_eq!(config.data_dir, "/data");
             assert_eq!(config.base_url, "https://example.com");
             assert_eq!(config.geoip.maxmind_account_id, Some("123".to_string()));
+            assert_eq!(config.trusted_headers, vec![TrustedHeader::XForwardedFor, TrustedHeader::Forwarded]);
+            assert_eq!(
+                config.trusted_proxies,
+                vec![TrustedProxy::Ip("127.0.0.1".parse().unwrap()), TrustedProxy::Cidr("10.0.0.0/8".parse().unwrap())]
+            );
+            assert!(config.use_forward_headers);
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_env_custom_trusted_header() {
+        Jail::expect_with(|jail| {
+            jail.set_env("LIWAN_TRUSTED_HEADERS", "X_CLIENT_IP");
+            let config = Config::load(None).expect("failed to load config");
+            assert_eq!(config.trusted_headers, vec![TrustedHeader::Other("x-client-ip".to_string())]);
             Ok(())
         });
     }

@@ -5,7 +5,9 @@ use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use crate::utils::ip_headers::{parse_header_ip, public_ip, should_trust_forwarded_headers};
 use crate::web::Files;
+use crate::web::RouterState;
 use aide::axum::IntoApiResponse;
 use aide::{OperationInput, OperationOutput};
 use axum::body::Body;
@@ -211,42 +213,24 @@ pub(crate) use http_bail;
 pub struct ClientIp(pub Option<IpAddr>);
 impl OperationInput for ClientIp {}
 
-impl<S: Send + Sync> FromRequestParts<S> for ClientIp {
+impl FromRequestParts<RouterState> for ClientIp {
     type Rejection = Infallible;
 
-    async fn from_request_parts(parts: &mut http::request::Parts, state: &S) -> Result<Self, Self::Rejection> {
-        if let Some(ip) = [
-            "cf-connecting-ip",
-            "fly-client-ip",
-            "true-client-ip",
-            "x-real-ip",
-            "cloudfront-viewer-address",
-            "x-forwarded-for",
-            "forwarded",
-        ]
-        .iter()
-        .find_map(|&name| {
-            let v = parts.headers.get(name)?.to_str().ok()?.trim();
-            match name {
-                "cloudfront-viewer-address" => v.rsplit_once(':')?.0.parse().ok(),
-                "x-forwarded-for" => v.split(',').next_back()?.trim().parse().ok(),
-                "forwarded" => v
-                    .split(',')
-                    .next_back()?
-                    .split(';')
-                    .find_map(|p| p.trim().strip_prefix("for="))
-                    .map(|p| p.trim_matches('"'))
-                    .and_then(|p| p.parse().ok()),
-                _ => v.parse().ok(),
+    async fn from_request_parts(
+        parts: &mut http::request::Parts,
+        state: &RouterState,
+    ) -> Result<Self, Self::Rejection> {
+        let peer_ip =
+            ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await.ok().map(|ConnectInfo(addr)| addr.ip());
+
+        if should_trust_forwarded_headers(state.config.use_forward_headers, peer_ip, &state.config.trusted_proxies) {
+            for header in &state.config.trusted_headers {
+                if let Some(ip) = public_ip(parse_header_ip(parts, header)) {
+                    return Ok(ClientIp(Some(ip)));
+                }
             }
-        }) {
-            return Ok(ClientIp(Some(ip)));
         }
 
-        if let Ok(ConnectInfo(addr)) = ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await {
-            return Ok(ClientIp(Some(addr.ip())));
-        }
-
-        Ok(ClientIp(None))
+        Ok(ClientIp(public_ip(peer_ip)))
     }
 }

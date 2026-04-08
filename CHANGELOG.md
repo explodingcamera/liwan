@@ -18,16 +18,29 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ## [Unreleased]
 
-- Added new entry/exit page metric
+### Features
+
+- Added new `trusted_headers`, `trusted_proxies`, and `use_forward_headers` config options
+- Added new entry page and exit page dimensions
+- Added new screen width and orientation dimensions
+
+### Bug Fixes
+
+- Fixed error when both `listen` and `port` config options are set
+- Added retry logic when opening the DuckDB database to handle potential locking issues on startup (e.g. when the database is being updated by another process or when using a shared network drive)
+- Fixed an issue where users with invalid session tokens would show up in the UI as logged in
+
+### Other
+
+- Added `?ref` / `?referrer` / `?source` as fallbacks for UTM source
 - Updated to the latest version of DuckDB (1.5.1)
-- Fixed error when both `listen` and `port` configuration options are set
-- Added retry logic when loading the DuckDB database to handle potential locking issues on startup (e.g. when the database is being updated by another process or when using a shared network drive)
 - Improved filtering out invalid referrers
 - Improved world map rendering & graph for bounce rate metric
+- Improved UI error messages / loading states
 
 ## [v1.4.0] - 2026-03-14
 
-- Updated to the latest version of DuckDB (1.5)
+- Updated to the latest version of DuckDB (1.5.0)
 - GeoIP database now automatically reloads if it has been updated on disk / fixed an issue where the GeoIP database would not be updated on the first boot
 - Switched to using `axum` as the web framework and `ua-parser` for user-agent parsing
 - Added new `listen` configuration option to specify the address and port to listen on (can be a socket address or just a port number). The old `port` option is still supported for backwards compatibility.
@@ -69,7 +82,7 @@ If you map a folder to `/data` and encounter permission issues, ensure it’s ow
 
 ## [v1.0.0] - 2024-12-06
 
-### 🚀 Features
+### Features
 
 - **UTM parameters**: Added support for UTM parameters. You can filter and search by UTM source, medium, campaign, content, and term. ([#13](https://github.com/explodingcamera/liwan/pull/13))
 - **New Date Ranges**: Fully reworked date ranges. Data is more accurate and consistent now, and you can move to the next or previous time range. Also includes some new time ranges like `Week to Date` and `All Time`. You can now also select a custom date range to view your data. ([97cdfce](https://github.com/explodingcamera/liwan/commit/97cdfce509ed2fd2fd74b23c73726a5e01b7b288), [391c580](https://github.com/explodingcamera/liwan/commit/391c580c926e2b4ca250e08bbe725210774d99b2))
@@ -78,7 +91,7 @@ If you map a folder to `/data` and encounter permission issues, ensure it’s ow
 - **Favicons can be disabled**: You can now disable fetching favicons from DuckDuckGo (`config.toml` setting: `disable_favicons`) ([2100bfe](https://github.com/explodingcamera/liwan/commit/2100bfe6ba868b59d2b383220f22b0dbf23a6712))
 - **New Graphs**: Graphs are now custom-built using d3 directly to improve performance and flexibility. ([eb1415d](https://github.com/explodingcamera/liwan/commit/eb1415d6bdf6d3be9509b0b4fa743b6f112b2c0a))
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - Fixed a potential panic when entities are not found in the database ([`31405a7`](https://github.com/explodingcamera/liwan/commit/31405a721dc5c5493098e211927281cca7816fec))
 - Fixed issues with the `Yesterday` Date Range ([`76278b57`](https://github.com/explodingcamera/liwan/commit/76278b579c5fe1557bf1c184542ed6ed2aba57cd))

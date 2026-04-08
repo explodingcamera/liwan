@@ -80,6 +80,7 @@ url="2.5"
 ua-parser="0.2"
 rust-embed={version="8.11", features=["mime-guess"]}
 reqwest={version="0.13", default-features=false, features=["json", "stream", "charset", "rustls"]}
+ipnet="2.11"
 
 # database
 duckdb={version="1.10501", features=["chrono", "bundled", "r2d2"]}
