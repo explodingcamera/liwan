@@ -2,7 +2,6 @@ use std::{sync::LazyLock, time::Duration};
 
 use aide::OperationInput;
 use axum::{
-    extract::FromRequestParts,
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
 };
@@ -34,75 +33,79 @@ pub static SESSION_COOKIE: LazyLock<Cookie<'static>> = LazyLock::new(|| {
     session_cookie
 });
 
-#[derive(Debug, Clone)]
-pub struct SessionId(pub String);
+pub static LOGOUT_COOKIES: LazyLock<CookieJar> = LazyLock::new(|| {
+    let mut session_cookie = SESSION_COOKIE.clone();
+    session_cookie.make_removal();
+    let mut public_cookie = PUBLIC_COOKIE.clone();
+    public_cookie.make_removal();
+    CookieJar::new().add(session_cookie).add(public_cookie)
+});
 
 #[derive(Debug, Clone)]
-pub struct SessionUser(pub User);
+pub struct MaybeSessionId(pub Option<String>);
 
-// aide doesn't seem to support Option<T> extraction yet
 #[derive(Debug, Clone)]
-pub struct MaybeExtract<T>(pub Option<T>);
+pub struct Auth(pub User);
 
-impl OperationInput for SessionId {}
-impl OperationInput for SessionUser {}
-impl<T> OperationInput for MaybeExtract<T> {}
+#[derive(Debug, Clone)]
+pub struct MaybeAuth(pub Option<User>);
 
-impl<S: Send + Sync> axum::extract::FromRequestParts<S> for SessionId {
+impl OperationInput for Auth {}
+impl OperationInput for MaybeAuth {}
+impl OperationInput for MaybeSessionId {}
+
+fn logout_response() -> Response {
+    (LOGOUT_COOKIES.clone(), StatusCode::UNAUTHORIZED).into_response()
+}
+
+impl axum::extract::FromRequestParts<RouterState> for MaybeSessionId {
     type Rejection = Response;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
         let jar = CookieJar::from_headers(&parts.headers);
-
         let session_cookie = jar.get(SESSION_COOKIE_NAME);
         let username_cookie = jar.get(PUBLIC_COOKIE_NAME);
 
-        if username_cookie.is_some() && session_cookie.is_none() {
-            let mut cookie = PUBLIC_COOKIE.clone();
-            cookie.make_removal();
-            return Err(Response::builder()
-                .header("Set-Cookie", cookie.encoded().to_string())
-                .status(StatusCode::UNAUTHORIZED)
-                .body("Session expired".into())
-                .unwrap());
+        // log out if the cookies are in an inconsistent state (one is present but not the other)
+        if let Some(username_cookie) = username_cookie
+            && session_cookie.is_none()
+        {
+            let username = username_cookie.value();
+            tracing::info!(username, "user has username cookie but no session cookie, logging out");
+            return Err(logout_response());
         }
 
-        if session_cookie.is_some() && username_cookie.is_none() {
-            let mut cookie = SESSION_COOKIE.clone();
-            cookie.make_removal();
-            return Err(Response::builder()
-                .header("Set-Cookie", cookie.encoded().to_string())
-                .status(StatusCode::UNAUTHORIZED)
-                .body("Invalid session".into())
-                .unwrap());
+        if let Some(session_cookie) = session_cookie
+            && username_cookie.is_none()
+        {
+            let session_id = session_cookie.value();
+            tracing::info!(session_id, "user has session cookie but no username cookie, logging out");
+            let _ = state.app.sessions.delete(session_cookie.value());
+            return Err(logout_response());
         }
 
-        jar.get(SESSION_COOKIE_NAME)
-            .map(|c| SessionId(c.value().to_string()))
-            .ok_or(StatusCode::UNAUTHORIZED.into_response())
+        Ok(MaybeSessionId(jar.get(SESSION_COOKIE_NAME).map(|c| c.value().to_string())))
     }
 }
 
-impl axum::extract::FromRequestParts<RouterState> for SessionUser {
+impl axum::extract::FromRequestParts<RouterState> for Auth {
     type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
-        let session_id = SessionId::from_request_parts(parts, state).await?.0;
-        let user = state
-            .app
-            .sessions
-            .get(&session_id)
-            .map_err(|_| StatusCode::UNAUTHORIZED.into_response())?
-            .ok_or(StatusCode::UNAUTHORIZED.into_response())?;
-
-        Ok(SessionUser(user))
+        let session_id = MaybeSessionId::from_request_parts(parts, state).await?.0.ok_or_else(logout_response)?;
+        let user = state.app.sessions.get(&session_id).map_err(|_| logout_response())?.ok_or_else(logout_response)?;
+        Ok(Auth(user))
     }
 }
 
-impl<T: FromRequestParts<RouterState>> axum::extract::FromRequestParts<RouterState> for MaybeExtract<T> {
-    type Rejection = std::convert::Infallible;
+impl axum::extract::FromRequestParts<RouterState> for MaybeAuth {
+    type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
-        T::from_request_parts(parts, state).await.map(|su| Self(Some(su))).or_else(|_| Ok(Self(None)))
+        let MaybeSessionId(Some(session_id)) = MaybeSessionId::from_request_parts(parts, state).await? else {
+            return Ok(MaybeAuth(None));
+        };
+        let user = state.app.sessions.get(&session_id).map_err(|_| logout_response())?.ok_or_else(logout_response)?;
+        Ok(MaybeAuth(Some(user)))
     }
 }

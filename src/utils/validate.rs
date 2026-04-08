@@ -1,8 +1,4 @@
-use crate::{
-    app::models::{Project, UserRole},
-    web::SessionUser,
-};
-
+use crate::app::models::{Project, User, UserRole};
 pub const MAX_DATAPOINTS: u32 = 2000;
 
 pub fn is_valid_id(id: &str) -> bool {
@@ -13,8 +9,8 @@ pub fn is_valid_username(name: &str) -> bool {
     name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') && name.len() <= 64 && name.len() >= 3
 }
 
-pub fn can_access_project(project: &Project, user: Option<&SessionUser>) -> bool {
-    project.public || user.is_some_and(|u| u.0.role == UserRole::Admin || u.0.projects.contains(&project.id))
+pub fn can_access_project(project: &Project, user: Option<&User>) -> bool {
+    project.public || user.is_some_and(|u| u.role == UserRole::Admin || u.projects.contains(&project.id))
 }
 
 #[cfg(test)]
@@ -32,11 +28,7 @@ mod tests {
         };
         assert!(can_access_project(&project, None), "Public project should be accessible without a user.");
 
-        let user = SessionUser(User {
-            username: "test".to_string(),
-            role: UserRole::User,
-            projects: vec!["other".to_string()],
-        });
+        let user = User { username: "test".to_string(), role: UserRole::User, projects: vec!["other".to_string()] };
         assert!(can_access_project(&project, Some(&user)), "Public project should be accessible with any user.");
 
         let project = Project {
@@ -45,7 +37,7 @@ mod tests {
             secret: None,
             public: false,
         };
-        let admin_user = SessionUser(User { username: "admin".to_string(), role: UserRole::Admin, projects: vec![] });
+        let admin_user = User { username: "admin".to_string(), role: UserRole::Admin, projects: vec![] };
         assert!(can_access_project(&project, Some(&admin_user)), "Admin should have access to any project.");
 
         let project = Project {

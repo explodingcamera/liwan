@@ -16,8 +16,8 @@ use crate::{
     app::models::UserRole,
     utils::hash::session_token,
     web::{
-        MaybeExtract, RouterState, SessionUser,
-        session::{MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE, SessionId},
+        MaybeSessionId, RouterState,
+        session::{Auth, LOGOUT_COOKIES, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE},
         webext::{ApiResult, AxumErrExt, empty_response, http_bail},
     },
 };
@@ -61,7 +61,7 @@ pub struct MeResponse {
     pub role: UserRole,
 }
 
-async fn me(SessionUser(user): SessionUser) -> UseApi<impl IntoApiResponse, Json<MeResponse>> {
+async fn me(Auth(user): Auth) -> UseApi<impl IntoApiResponse, Json<MeResponse>> {
     ([(header::CACHE_CONTROL, "private")], Json(MeResponse { username: user.username, role: user.role })).into()
 }
 
@@ -114,20 +114,10 @@ async fn login(
 
 async fn logout(
     app: State<RouterState>,
-    cookies: CookieJar,
-    MaybeExtract(session_id): MaybeExtract<SessionId>,
+    MaybeSessionId(session_id): MaybeSessionId,
 ) -> ApiResult<impl IntoApiResponse> {
     if let Some(session_id) = session_id {
-        let _ = app.sessions.delete(&session_id.0);
+        let _ = app.sessions.delete(&session_id);
     }
-
-    let mut public_cookie = PUBLIC_COOKIE.clone();
-    let mut session_cookie = SESSION_COOKIE.clone();
-    public_cookie.set_secure(app.config.secure());
-    public_cookie.make_removal();
-    session_cookie.set_secure(app.config.secure());
-    session_cookie.make_removal();
-
-    let cookies = cookies.add(public_cookie).add(session_cookie);
-    Ok((cookies, empty_response()))
+    Ok((LOGOUT_COOKIES.clone(), empty_response()))
 }

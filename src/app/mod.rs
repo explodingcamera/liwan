@@ -38,8 +38,6 @@ mod embedded {
     pub(super) mod events { refinery::embed_migrations!("src/migrations/events"); }
 }
 
-const EVENT_BATCH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
-
 impl Liwan {
     pub fn try_new(config: Config) -> Result<Arc<Self>> {
         tracing::debug!("Initializing app");
@@ -114,7 +112,7 @@ impl Liwan {
     }
 }
 
-#[cfg(any(debug_assertions, test, feature = "_enable_seeding"))]
+#[cfg(any(debug_assertions, test, feature = "__dev"))]
 impl Liwan {
     pub fn seed_database(&self, count_per_entity: usize) -> Result<()> {
         use chrono::{Days, Utc};

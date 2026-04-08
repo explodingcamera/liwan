@@ -13,8 +13,8 @@ pub fn app() -> std::sync::Arc<Liwan> {
     Liwan::new_memory(Config::default()).unwrap()
 }
 
-pub fn events() -> (std::sync::mpsc::Sender<Event>, std::sync::mpsc::Receiver<Event>) {
-    std::sync::mpsc::channel::<Event>()
+pub fn events() -> (tokio::sync::mpsc::Sender<Event>, tokio::sync::mpsc::Receiver<Event>) {
+    tokio::sync::mpsc::channel::<Event>(1024 * 10)
 }
 
 pub struct TestClient {
@@ -22,7 +22,7 @@ pub struct TestClient {
 }
 
 impl TestClient {
-    pub fn new(app: Arc<Liwan>, events: std::sync::mpsc::Sender<Event>) -> Self {
+    pub fn new(app: Arc<Liwan>, events: tokio::sync::mpsc::Sender<Event>) -> Self {
         let (router, _) = liwan::web::router(app, events).unwrap();
         let server = TestServer::new(router);
         Self { server }

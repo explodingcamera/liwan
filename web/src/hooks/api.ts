@@ -8,25 +8,6 @@ import { queryClient, useQuery } from "../api/query";
 import type { DateRange } from "../api/ranges";
 
 const getStatusCode = (error: unknown) => (error as { status?: number } | undefined)?.status;
-
-// If theres an auth error on any api call, but we somehow still have the username cookie
-// reload the page to clear the cookie and reset the state
-const useReloadOnUnauthorized = (error: unknown) => {
-	useEffect(() => {
-		if (!error) return;
-		if (getStatusCode(error) === 401) {
-			cookieStore.get("liwan-username").then((cookie) => {
-				if (cookie) {
-					// this forces a logout / makes sure we never have a username cookie without a valid session cookie
-					return cookieStore.delete("liwan-username").then(() => {
-						window.location.reload();
-					});
-				}
-			});
-		}
-	}, [error]);
-};
-
 export const useMe = () => {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["me"],
@@ -42,7 +23,6 @@ export const useMe = () => {
 	}, []);
 
 	const authError = getStatusCode(error) === 401;
-	useReloadOnUnauthorized(error);
 	return { role: data?.role, username: data?.username, isLoading: isLoading || !mounted, authError };
 };
 
@@ -60,6 +40,7 @@ export const useProjects = () => {
 		queryKey: ["projects"],
 		queryFn: () => api["/api/dashboard/projects"].get().json(),
 	});
+
 	return { projects: data?.projects ?? [], isLoading, error };
 };
 
@@ -70,6 +51,7 @@ export const useProject = (projectId?: string) => {
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}"].get({ params: { project_id: projectId as string } }).json(),
 	});
+
 	return { project: data, isLoading, error, notFound: getStatusCode(error) === 404 };
 };
 
@@ -82,8 +64,6 @@ export const useEntities = () => {
 	});
 
 	const authError = getStatusCode(error) === 401;
-	useReloadOnUnauthorized(error);
-
 	return { entities: data?.entities ?? [], isLoading, error, authError };
 };
 
@@ -96,8 +76,6 @@ export const useUsers = () => {
 	});
 
 	const authError = getStatusCode(error) === 401;
-	useReloadOnUnauthorized(error);
-
 	return { users: data?.users ?? [], isLoading, error, authError };
 };
 

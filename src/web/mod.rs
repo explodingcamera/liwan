@@ -4,7 +4,7 @@ pub mod webext;
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::ops::Deref;
-use std::sync::{Arc, mpsc::Sender};
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use axum::handler::{Handler, HandlerWithoutStateExt};
@@ -12,6 +12,7 @@ use rust_embed::RustEmbed;
 
 use aide::{axum::ApiRouter, openapi};
 use http::{HeaderValue, Method, header};
+use tokio::sync::mpsc::Sender;
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
@@ -21,7 +22,7 @@ use tower_http::{
 use crate::app::{Liwan, models::Event};
 use crate::web::webext::serve;
 
-pub use session::{MaybeExtract, SessionId, SessionUser};
+pub use session::MaybeSessionId;
 use webext::StaticFile;
 
 #[derive(RustEmbed, Clone)]

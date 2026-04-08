@@ -16,7 +16,7 @@ async fn main() -> Result<()> {
     setup_logger(args.log_level)?;
 
     let config = Config::load(args.config)?;
-    let (s, r) = std::sync::mpsc::channel::<Event>();
+    let (s, r) = tokio::sync::mpsc::channel::<Event>(1024 * 10);
 
     if let Some(cmd) = args.cmd {
         return cli::handle_command(config, cmd);
@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
         biased;
         _ = liwan::utils::signals::shutdown() => app_copy.shutdown(),
         res = web::start_webserver(app.clone(), s) => res,
-        res = tokio::task::spawn_blocking(move || app.clone().events.process(r)) => res?
+        res = tokio::task::spawn(async move { app.events.process(r).await }) => res?,
     }
 }
 

@@ -16,7 +16,6 @@ use http::StatusCode;
 use schemars::JsonSchema;
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::sync::mpsc::Sender;
 use std::sync::{Arc, LazyLock};
 use url::Url;
 
@@ -58,10 +57,15 @@ async fn event_handler(
     let events = state.events.clone();
 
     // run the event processing in the background
-    tokio::task::spawn_blocking(move || {
-        if let Err(e) = process_event(app, events, event, url, ip, user_agent) {
-            tracing::error!("Failed to process event: {:?}", e);
+    tokio::task::spawn_blocking(move || match process_event(app, event, url, ip, user_agent) {
+        Ok(Some(event)) => {
+            if events.try_send(event).is_err() {
+                tracing::warn!("Failed to send event, channel full");
+            }
         }
+        // event was filtered out, do nothing
+        Ok(None) => {}
+        Err(e) => tracing::warn!("Failed to process event: {:?}", e),
     });
 
     Ok(empty_response())
@@ -69,24 +73,23 @@ async fn event_handler(
 
 fn process_event(
     app: Arc<Liwan>,
-    events: Sender<Event>,
     event: EventRequest,
     url: Url,
     ip: Option<IpAddr>,
     user_agent: headers::UserAgent,
-) -> Result<()> {
+) -> Result<Option<Event>> {
     let referrer = match process_referer(event.referrer.as_deref()) {
         Referrer::Fqdn(fqdn) => Some(fqdn),
         Referrer::Unknown(r) => r,
-        Referrer::Spammer => return Ok(()),
-        Referrer::Local => return Ok(()),
+        Referrer::Spammer => return Ok(None),
+        Referrer::Local => return Ok(None),
     };
     let referrer = referrer.map(|r| r.trim_start_matches("www.").to_string()); // remove www. prefix
     let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
 
     if EXISTING_ENTITIES.get(&event.entity_id).is_none() {
         if !app.entities.exists(&event.entity_id).unwrap_or(false) {
-            return Ok(());
+            return Ok(None);
         }
         EXISTING_ENTITIES.insert(event.entity_id.clone(), ());
     }
@@ -94,7 +97,7 @@ fn process_event(
     // we delay the user agent parsing as much as possible since it's by far the most expensive operation
     let client = useragent::parse(user_agent.as_str());
     if client.is_bot() {
-        return Ok(());
+        return Ok(None);
     }
 
     let visitor_id = match ip {
@@ -137,6 +140,5 @@ fn process_event(
         orientation: event.orientation,
     };
 
-    events.send(event)?;
-    Ok(())
+    Ok(Some(event))
 }

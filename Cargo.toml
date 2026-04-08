@@ -99,7 +99,7 @@ axum-test={version="20"}
 [features]
 default=["geoip"]
 geoip=["dep:maxminddb"]
-_enable_seeding=[]
+__dev=[]
 
 [profile.dev]
 opt-level=1

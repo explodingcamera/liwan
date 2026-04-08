@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
 use rand::distr::{SampleString, StandardUniform};
-use std::sync::mpsc::Receiver;
+use tokio::sync::mpsc::Receiver;
 
 use crate::app::models::{Event, event_params};
-use crate::app::{DuckDBPool, EVENT_BATCH_INTERVAL, SqlitePool};
+use crate::app::{DuckDBPool, SqlitePool};
 
 #[derive(Clone)]
 pub struct LiwanEvents {
@@ -48,49 +48,50 @@ impl LiwanEvents {
     /// Append events in batch
     pub fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
         let conn = self.duckdb.get()?;
-        let mut appender = conn.appender("events")?;
+        let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
         let mut first_event_time = Utc::now();
         for event in events {
-            appender.append_row(event_params![event])?;
-            if first_event_time > event.created_at {
+            if event.created_at < first_event_time {
                 first_event_time = event.created_at;
             }
+            appender.append_row(event_params![event]).context("Failed to append event to DuckDB")?;
         }
-        appender.flush()?;
-        update_event_times(&conn, first_event_time)?;
+        appender.flush().context("Failed to flush events to DuckDB")?;
+        update_event_times(&conn, first_event_time).context("Failed to update event times in DuckDB")?;
         Ok(())
     }
 
     /// Start processing events from the given channel. Blocks until the channel is closed.
-    pub fn process(&self, events: Receiver<Event>) -> Result<()> {
-        let conn = self.duckdb.get()?;
+    pub async fn process(&self, mut events: Receiver<Event>) -> Result<()> {
+        let mut buffer = Vec::with_capacity(1024);
 
         loop {
-            match events.recv() {
-                Ok(event) => {
-                    let mut appender = conn.appender("events")?;
-                    let mut first_event_time = event.created_at;
-                    appender.append_row(event_params![event])?;
+            let count = events.recv_many(&mut buffer, 1024).await;
 
-                    // Non-blockingly drain the remaining events in the queue if there are any
-                    let mut count = 1;
-                    for event in events.try_iter() {
-                        appender.append_row(event_params![event])?;
-                        count += 1;
+            if count == 0 {
+                tracing::info!("Event channel closed, stopping event processing");
+                break Ok(());
+            }
 
-                        if first_event_time > event.created_at {
-                            first_event_time = event.created_at;
-                        }
-                    }
+            let first_event_time = buffer.first().map(|e| e.created_at).unwrap_or_else(Utc::now);
+            let events = std::mem::take(&mut buffer).into_iter();
 
-                    appender.flush()?;
-                    update_event_times(&conn, first_event_time)?;
-                    tracing::debug!("Processed {} events", count);
-
-                    // Sleep to allow more events to be received before the next batch
-                    std::thread::sleep(EVENT_BATCH_INTERVAL);
+            let conn = self.duckdb.clone();
+            let res = tokio::task::spawn_blocking(move || {
+                let conn = conn.get().context("Failed to get DuckDB connection")?;
+                let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
+                for event in events {
+                    appender.append_row(event_params![event]).context("Failed to append event to DuckDB")?;
                 }
-                Err(_) => bail!("event channel closed"),
+                appender.flush().context("Failed to flush events to DuckDB")?;
+                update_event_times(&conn, first_event_time)?;
+                anyhow::Ok(())
+            })
+            .await?;
+
+            match res {
+                Err(err) => tracing::error!("Event processing task panicked: {:?}", err),
+                _ => tracing::debug!("Processed {} events", count),
             }
         }
     }

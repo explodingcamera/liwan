@@ -5,7 +5,7 @@ use serde_json::json;
 #[tokio::test]
 async fn test_event() -> Result<()> {
     let app = common::app();
-    let (tx, rx) = common::events();
+    let (tx, mut rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
     app.seed_database(0)?;
 
@@ -23,7 +23,11 @@ async fn test_event() -> Result<()> {
     let res = client.post_with_headers("/api/event", event, vec![("user-agent".to_string(), "test".to_string())]).await;
     res.assert_status_success();
 
-    let event = rx.recv_timeout(std::time::Duration::from_secs(1)).expect("event should be received");
+    let event = tokio::time::timeout(std::time::Duration::from_secs(1), rx.recv())
+        .await
+        .expect("event should be received")
+        .expect("event channel should not be closed");
+
     app.events.append(std::iter::once(event))?;
 
     let start = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();

@@ -1,8 +1,8 @@
 use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, Metric, ReportStats};
 use crate::utils::validate::{self, can_access_project};
-use crate::web::session::SessionUser;
+use crate::web::RouterState;
+use crate::web::session::MaybeAuth;
 use crate::web::webext::{ApiResult, AxumErrExt, http_bail};
-use crate::web::{MaybeExtract, RouterState};
 
 use aide::axum::{ApiRouter, routing::*};
 use axum::Json;
@@ -91,7 +91,7 @@ struct EarliestResponse {
 
 async fn project_earliest_handler(
     app: State<RouterState>,
-    MaybeExtract(user): MaybeExtract<SessionUser>,
+    MaybeAuth(user): MaybeAuth,
     Path(project_id): Path<String>,
 ) -> ApiResult<Json<EarliestResponse>> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -110,7 +110,7 @@ async fn project_earliest_handler(
 async fn project_graph_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
-    MaybeExtract(user): MaybeExtract<SessionUser>,
+    MaybeAuth(user): MaybeAuth,
     Json(req): Json<GraphRequest>,
 ) -> ApiResult<Json<GraphResponse>> {
     if req.data_points > validate::MAX_DATAPOINTS {
@@ -139,7 +139,7 @@ async fn project_graph_handler(
 async fn project_stats_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
-    MaybeExtract(user): MaybeExtract<SessionUser>,
+    MaybeAuth(user): MaybeAuth,
     Json(req): Json<StatsRequest>,
 ) -> ApiResult<Json<StatsResponse>> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
@@ -176,7 +176,7 @@ async fn project_stats_handler(
 
 async fn project_detailed_handler(
     app: State<RouterState>,
-    MaybeExtract(user): MaybeExtract<SessionUser>,
+    MaybeAuth(user): MaybeAuth,
     Path(project_id): Path<String>,
     Json(req): Json<DimensionRequest>,
 ) -> ApiResult<Json<DimensionResponse>> {

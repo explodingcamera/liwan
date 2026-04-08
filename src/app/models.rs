@@ -32,7 +32,7 @@ pub struct Project {
     pub id: String,
     pub display_name: String,
     pub public: bool,
-    pub secret: Option<String>, // enable public access with password protection
+    pub secret: Option<String>, // currently unused
 }
 
 #[derive(Debug, Clone)]
