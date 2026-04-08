@@ -20,7 +20,8 @@ export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | Cl
 		.join(" ");
 
 // get the username cookie or undefined if not set
-export const getUsername = () => document.cookie.match(/username=(.*?)(;|$)/)?.[1];
+export const getUsername = () =>
+	typeof document !== "undefined" ? document.cookie.match(/liwan-username=(.*?)(;|$)/)?.[1] : undefined;
 
 export const formatMetricValEvenly = (value: number, metric: Metric, biggest: number) => {
 	if (metric === "bounce_rate") return formatPercent(Math.floor(value * 1000) / 10);

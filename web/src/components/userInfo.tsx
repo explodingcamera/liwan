@@ -1,7 +1,7 @@
 import styles from "./userInfo.module.css";
 
 import { HelpCircle, LogOutIcon, SettingsIcon, SquareArrowOutUpRightIcon, UserIcon } from "lucide-react";
-import { api } from "../api";
+import { api, queryClient } from "../api";
 import { cls, getUsername } from "../utils";
 
 export const LoginButton = () => {
@@ -53,6 +53,7 @@ export const LoginButton = () => {
 						href="#"
 						onClick={() => {
 							api["/api/dashboard/auth/logout"].post().then(() => {
+								queryClient.clear();
 								window.location.href = "/";
 							});
 						}}

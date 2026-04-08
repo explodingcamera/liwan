@@ -66,7 +66,7 @@ export const Project = () => {
 		setProjectId(window?.document.location.pathname.split("/").pop());
 	}, []);
 
-	const { project } = useProject(projectId);
+	const { project, notFound } = useProject(projectId);
 	const {
 		graph,
 		isUpdating: graphUpdating,
@@ -98,6 +98,10 @@ export const Project = () => {
 		},
 		[toggleFilter],
 	);
+
+	if (notFound) {
+		return <div className={styles.notFound}>Project not found</div>;
+	}
 
 	if (!project) return null;
 
@@ -131,7 +135,7 @@ export const Project = () => {
 					/>
 					<GeoCard query={query} onSelect={onSelectDimRow} />
 					<DimensionTabsCard dimensions={["platform", "browser"]} query={query} onSelect={onSelectDimRow} />
-					<DimensionTabsCard
+					<DimensionDropdownCard
 						dimensions={["mobile", "screen_width", "orientation"]}
 						query={query}
 						onSelect={(v) => onSelectDimRow(v, "mobile")}

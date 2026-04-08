@@ -1,4 +1,4 @@
-import { Fragment, type ReactElement, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactElement, useRef } from "react";
 import styles from "./tables.module.css";
 
 import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, TrashIcon } from "lucide-react";
@@ -14,7 +14,7 @@ import {
 	useProjects,
 	useUsers,
 } from "../../api";
-import { cls } from "../../utils";
+import { cls, getUsername } from "../../utils";
 import { createToast } from "../toast";
 
 type DropdownOptions = Record<string, ((close: () => void) => ReactElement) | null>;
@@ -74,6 +74,7 @@ const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
 
 export const ProjectsTable = () => {
 	const { projects, isLoading } = useProjects();
+
 	const columns: Column<(typeof projects)[number]>[] = [
 		{
 			id: "displayName",
@@ -164,9 +165,9 @@ const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
 };
 
 export const EntitiesTable = () => {
-	const { entities, isLoading } = useEntities();
+	const { entities, isLoading, authError } = useEntities();
 
-	if (!useAdminPerms()) {
+	if (authError) {
 		return "You don't have permission to view this page.";
 	}
 
@@ -211,7 +212,7 @@ export const EntitiesTable = () => {
 };
 
 const UserDropdown = ({ user }: { user: UserResponse }) => {
-	const { username } = useMe();
+	const username = getUsername();
 	const options: DropdownOptions = {
 		edit:
 			username !== user.username
@@ -256,20 +257,12 @@ const UserDropdown = ({ user }: { user: UserResponse }) => {
 	return <Dropdown options={options} />;
 };
 
-const useAdminPerms = () => {
-	const { role } = useMe();
-	const [isMounted, setIsMounted] = useState(false);
-	useEffect(() => {
-		setIsMounted(true);
-	});
-	return !isMounted || role === "admin";
-};
-
 export const UsersTable = () => {
-	const { users, isLoading } = useUsers();
+	const { users, isLoading, authError } = useUsers();
 	const rows = users.map((user) => ({ id: user.username, ...user })) ?? [];
 
-	if (!useAdminPerms()) {
+	// TODO: if the user isn't an admin, show no perms
+	if (authError) {
 		return "You don't have permission to view this page.";
 	}
 

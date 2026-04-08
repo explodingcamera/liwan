@@ -4,6 +4,7 @@ use aide::OperationInput;
 use axum::{
     extract::FromRequestParts,
     http::{StatusCode, request::Parts},
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 
@@ -48,16 +49,42 @@ impl OperationInput for SessionUser {}
 impl<T> OperationInput for MaybeExtract<T> {}
 
 impl<S: Send + Sync> axum::extract::FromRequestParts<S> for SessionId {
-    type Rejection = StatusCode;
+    type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let jar = CookieJar::from_headers(&parts.headers);
-        jar.get(SESSION_COOKIE_NAME).map(|c| SessionId(c.value().to_string())).ok_or(StatusCode::UNAUTHORIZED)
+
+        let session_cookie = jar.get(SESSION_COOKIE_NAME);
+        let username_cookie = jar.get(PUBLIC_COOKIE_NAME);
+
+        if username_cookie.is_some() && session_cookie.is_none() {
+            let mut cookie = PUBLIC_COOKIE.clone();
+            cookie.make_removal();
+            return Err(Response::builder()
+                .header("Set-Cookie", cookie.encoded().to_string())
+                .status(StatusCode::UNAUTHORIZED)
+                .body("Session expired".into())
+                .unwrap());
+        }
+
+        if session_cookie.is_some() && username_cookie.is_none() {
+            let mut cookie = SESSION_COOKIE.clone();
+            cookie.make_removal();
+            return Err(Response::builder()
+                .header("Set-Cookie", cookie.encoded().to_string())
+                .status(StatusCode::UNAUTHORIZED)
+                .body("Invalid session".into())
+                .unwrap());
+        }
+
+        jar.get(SESSION_COOKIE_NAME)
+            .map(|c| SessionId(c.value().to_string()))
+            .ok_or(StatusCode::UNAUTHORIZED.into_response())
     }
 }
 
 impl axum::extract::FromRequestParts<RouterState> for SessionUser {
-    type Rejection = StatusCode;
+    type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
         let session_id = SessionId::from_request_parts(parts, state).await?.0;
@@ -65,8 +92,8 @@ impl axum::extract::FromRequestParts<RouterState> for SessionUser {
             .app
             .sessions
             .get(&session_id)
-            .map_err(|_| StatusCode::UNAUTHORIZED)?
-            .ok_or(StatusCode::UNAUTHORIZED)?;
+            .map_err(|_| StatusCode::UNAUTHORIZED.into_response())?
+            .ok_or(StatusCode::UNAUTHORIZED.into_response())?;
 
         Ok(SessionUser(user))
     }

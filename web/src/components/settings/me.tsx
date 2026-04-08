@@ -1,5 +1,5 @@
 import { User2Icon } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 import { api, useMe, useMutation } from "../../api";
 import { createToast } from "../toast";
 import styles from "./me.module.css";
@@ -9,7 +9,8 @@ export const MyAccount = () => {
 	const confirmPasswordId = useId();
 
 	const formRef = useRef<HTMLFormElement>(null);
-	const { role, username, isLoading } = useMe();
+	const { role, username, isLoading, authError } = useMe();
+
 	const { mutate } = useMutation({
 		mutationFn: api["/api/dashboard/user/{username}/password"].put,
 		onSuccess: () => {
@@ -19,9 +20,11 @@ export const MyAccount = () => {
 		onError: console.error,
 	});
 
-	const [loading, setLoading] = useState(true);
-	useEffect(() => setLoading(isLoading), [isLoading]);
-	if (loading || !username) return <div className={"loading-spinner"} />;
+	if (authError) {
+		return "You don't have permission to view this page.";
+	}
+
+	if (isLoading || !username) return <div className={"loading-spinner"} />;
 
 	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();

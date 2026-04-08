@@ -1,18 +1,49 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { toDataPoints } from "../components/graph";
-import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "./types";
+import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api/types";
 
-import { api } from "./client";
-import { queryClient, useQuery } from "./query";
-import type { DateRange } from "./ranges";
+import { api } from "../api/client";
+import { queryClient, useQuery } from "../api/query";
+import type { DateRange } from "../api/ranges";
+
+const getStatusCode = (error: unknown) => (error as { status?: number } | undefined)?.status;
+
+// If theres an auth error on any api call, but we somehow still have the username cookie
+// reload the page to clear the cookie and reset the state
+const useReloadOnUnauthorized = (error: unknown) => {
+	useEffect(() => {
+		if (!error) return;
+		if (getStatusCode(error) === 401) {
+			cookieStore.get("liwan-username").then((cookie) => {
+				if (cookie) {
+					// this forces a logout / makes sure we never have a username cookie without a valid session cookie
+					return cookieStore.delete("liwan-username").then(() => {
+						window.location.reload();
+					});
+				}
+			});
+		}
+	}, [error]);
+};
+
 export const useMe = () => {
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		queryKey: ["me"],
+		staleTime: 30_000,
 		refetchOnMount: false,
+		retry: false,
 		queryFn: () => api["/api/dashboard/auth/me"].get().json(),
 	});
-	return { role: data?.role, username: data?.username, isLoading };
+
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	const authError = getStatusCode(error) === 401;
+	useReloadOnUnauthorized(error);
+	return { role: data?.role, username: data?.username, isLoading: isLoading || !mounted, authError };
 };
 
 export const useConfig = () => {
@@ -39,24 +70,35 @@ export const useProject = (projectId?: string) => {
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}"].get({ params: { project_id: projectId as string } }).json(),
 	});
-	return { project: data, isLoading, error };
+	return { project: data, isLoading, error, notFound: getStatusCode(error) === 404 };
 };
 
 export const useEntities = () => {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["entities"],
+		refetchOnMount: true,
+		retry: false,
 		queryFn: () => api["/api/dashboard/entities"].get().json(),
 	});
 
-	return { entities: data?.entities ?? [], isLoading, error };
+	const authError = getStatusCode(error) === 401;
+	useReloadOnUnauthorized(error);
+
+	return { entities: data?.entities ?? [], isLoading, error, authError };
 };
 
 export const useUsers = () => {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["users"],
+		refetchOnMount: true,
+		retry: false,
 		queryFn: () => api["/api/dashboard/users"].get().json(),
 	});
-	return { users: data?.users ?? [], isLoading, error };
+
+	const authError = getStatusCode(error) === 401;
+	useReloadOnUnauthorized(error);
+
+	return { users: data?.users ?? [], isLoading, error, authError };
 };
 
 export const useDimension = ({
