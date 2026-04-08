@@ -104,7 +104,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
         w < 1536 ? "xl" :
         "2xl";
 
-	const utm = new URLSearchParams(location.search);
+	const params = new URLSearchParams(location.search);
 	const response = await fetch(endpoint_url, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -114,11 +114,16 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 			referrer: options?.referrer || referrer,
 			url: options?.url || location.origin + location.pathname,
 			utm: {
-				campaign: utm.get("utm_campaign"),
-				content: utm.get("utm_content"),
-				medium: utm.get("utm_medium"),
-				source: utm.get("utm_source"),
-				term: utm.get("utm_term"),
+				campaign: params.get("utm_campaign") || params.get("campaign"),
+				content: params.get("utm_content") || params.get("content"),
+				medium: params.get("utm_medium") || params.get("medium"),
+				source:
+					params.get("utm_source") ||
+					params.get("source") ||
+					params.get("ref") ||
+					params.get("referrer") ||
+					params.get("referer"),
+				term: params.get("utm_term") || params.get("term"),
 			},
 			screen_width,
 			orientation: !noWindow && window.screen.orientation.type.startsWith("portrait") ? "portrait" : "landscape",
