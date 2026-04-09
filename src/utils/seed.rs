@@ -167,13 +167,15 @@ mod tests {
             want
         );
 
-        for i in 1..events.len() {
+        for (i, pair) in events.windows(2).enumerate() {
+            let prev = &pair[0];
+            let next = &pair[1];
             assert!(
-                events[i].created_at >= events[i - 1].created_at,
+                next.created_at >= prev.created_at,
                 "events not ordered at idx {}: {} before {}",
-                i,
-                events[i - 1].created_at,
-                events[i].created_at
+                i + 1,
+                prev.created_at,
+                next.created_at
             );
         }
 

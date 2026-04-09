@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
         biased;
         _ = liwan::utils::signals::shutdown() => app_copy.shutdown(),
         res = web::start_webserver(app.clone(), s) => res,
-        res = tokio::task::spawn(async move { app.events.process(r).await }) => res?,
+        res = app.events.process_events(r) => res,
     }
 }
 

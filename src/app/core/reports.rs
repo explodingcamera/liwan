@@ -11,6 +11,13 @@ use serde::{Deserialize, Serialize};
 
 const SESSION_DURATION_SQL: &str = "interval '30 minutes'";
 
+// Metric definitions:
+// - Session: contiguous events for a visitor with <= 30 minutes between events.
+// - Views: count of matching events.
+// - UniqueVisitors: distinct visitor_id count
+// - BounceRate: single-event sessions / all sessions, where a session boundary is 30 minutes.
+// - AvgTimeOnSite: average time_to_next_event (seconds) for intra-session event transitions (<= 30 minutes).
+
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
     pub start: DateTime<Utc>,
@@ -185,7 +192,7 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
                 Dimension::Referrer => format!("referrer {filter_value}"),
                 Dimension::Platform => format!("platform {filter_value}"),
                 Dimension::Browser => format!("browser {filter_value}"),
-                Dimension::Mobile => format!("mobile::text {filter_value}"),
+                Dimension::Mobile => format!("mobile {filter_value}"),
                 Dimension::Country => format!("country {filter_value}"),
                 Dimension::City => format!("city {filter_value}"),
                 Dimension::UtmSource => format!("utm_source {filter_value}"),
@@ -202,25 +209,23 @@ fn filter_sql(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
     Ok((format!("and ({})", filter_clauses.join(" and ")), params))
 }
 
-fn metric_sql(metric: Metric) -> String {
+fn metric_sql(metric: Metric, alias: &str) -> String {
     match metric {
-        Metric::Views => "count(sd.created_at)".to_owned(),
+        Metric::Views => format!("count({alias}.created_at)"),
         Metric::UniqueVisitors => {
             // Count the number of unique visitors as the number of distinct visitor IDs
-            "--sql
-            count(distinct sd.visitor_id)"
-                .to_owned()
+            format!("count(distinct {alias}.visitor_id)")
         }
         Metric::BounceRate => {
-            // total sessions: no time_to_next_event / time_to_next_event is null
-            // bounce sessions: time to next / time to prev are both null or both > session duration
+            // total sessions: entry events (no recent previous event)
+            // bounce sessions: entries that also have no next event within session duration
             format!(
                 "--sql
             coalesce(
-                count(distinct sd.visitor_id)
-                    filter (where (sd.time_to_next_event is null or sd.time_to_next_event > {SESSION_DURATION_SQL}) and
-                                 (sd.time_from_last_event is null or sd.time_from_last_event > {SESSION_DURATION_SQL})) /
-                nullif(count(distinct sd.visitor_id) filter (where sd.time_to_next_event is null or sd.time_to_next_event > {SESSION_DURATION_SQL}), 0),
+                count(*)
+                    filter (where ({alias}.time_from_last_event is null or {alias}.time_from_last_event > {SESSION_DURATION_SQL}) and
+                                 ({alias}.time_to_next_event is null or {alias}.time_to_next_event > {SESSION_DURATION_SQL}))::double /
+                nullif(count(*) filter (where {alias}.time_from_last_event is null or {alias}.time_from_last_event > {SESSION_DURATION_SQL}), 0),
                 1
             )
             "
@@ -230,7 +235,7 @@ fn metric_sql(metric: Metric) -> String {
             // avg time_to_next_event where time_to_next_event <= session duration and time_to_next_event is not null
             format!(
                 "--sql
-            coalesce(avg(extract(epoch from sd.time_to_next_event)) filter (where sd.time_to_next_event is not null and sd.time_to_next_event <= {SESSION_DURATION_SQL}), 0)"
+            coalesce(avg(extract(epoch from {alias}.time_to_next_event)) filter (where {alias}.time_to_next_event is not null and {alias}.time_to_next_event <= {SESSION_DURATION_SQL}), 0)"
             )
         }
     }
@@ -244,15 +249,15 @@ pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Opti
     let vars = repeat_vars(entities.len());
     let query = format!(
         "--sql
-            select min(created_at) from events
-            where entity_id in ({vars});
+            select min(e.created_at)
+            from events e
+            where e.entity_id in ({vars});
     "
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let rows = stmt.query_map(params_from_iter(entities), |row| row.get(0))?;
-    let earliest_timestamp = rows.collect::<Result<Vec<Option<DateTime<Utc>>>, duckdb::Error>>()?;
-    Ok(earliest_timestamp[0])
+    let earliest_timestamp = stmt.query_row(params_from_iter(entities), |row| row.get(0))?;
+    Ok(earliest_timestamp)
 }
 
 pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
@@ -263,17 +268,17 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     let vars = repeat_vars(entities.len());
     let query = format!(
         "--sql
-            select count(distinct visitor_id) from events
+            select count(distinct e.visitor_id)
+            from events e
             where
-                entity_id in ({vars}) and
-                created_at >= (now()::timestamp - (interval 5 minute));
+                e.entity_id in ({vars}) and
+                e.created_at >= (now()::timestamp - interval '5 minutes');
     "
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let rows = stmt.query_map(params_from_iter(entities), |row| row.get(0))?;
-    let online_users = rows.collect::<Result<Vec<u64>, duckdb::Error>>()?;
-    Ok(online_users[0])
+    let online_users = stmt.query_row(params_from_iter(entities), |row| row.get(0))?;
+    Ok(online_users)
 }
 
 pub fn overall_report(
@@ -285,6 +290,10 @@ pub fn overall_report(
     filters: &[DimensionFilter],
     metric: &Metric,
 ) -> Result<ReportGraph> {
+    if data_points == 0 {
+        return Ok(Vec::new());
+    }
+
     if entities.is_empty() {
         return Ok(vec![0.; data_points as usize]);
     }
@@ -292,18 +301,16 @@ pub fn overall_report(
     let mut params = ParamVec::new();
 
     let (filters_sql, filters_params) = filter_sql(filters)?;
-    let metric_sql = metric_sql(*metric);
+    let metric_sql = metric_sql(*metric, "sd");
 
     let entity_vars = repeat_vars(entities.len());
 
     params.push(range.start);
     params.push(range.end);
     params.push(data_points);
-    params.push(data_points);
     params.push(event);
     params.extend(entities);
     params.extend_from_params(filters_params);
-    params.push(range.end);
 
     let query = format!(
         "--sql
@@ -312,46 +319,57 @@ pub fn overall_report(
                 select
                     ?::timestamp as start_time,
                     ?::timestamp as end_time,
-                    ?::int as num_buckets,
+                    ?::bigint as num_buckets
             ),
             time_bins as (
                 select
-                    start_time + (i * (end_time - start_time) / num_buckets) as bin_start,
-                    start_time + ((i + 1) * (end_time - start_time) / num_buckets) as bin_end
-                from params, generate_series(0, ?::bigint - 1) as s(i)
+                    i as bucket_idx,
+                    p.start_time + (i * (p.end_time - p.start_time) / p.num_buckets) as bin_start
+                from params p, generate_series(0, p.num_buckets - 1) as s(i)
             ),
             session_data as (
                 select
-                    visitor_id,
-                    created_at,
-                    time_from_last_event,
-                    time_to_next_event,
-                from events, params
+                    e.visitor_id,
+                    e.created_at,
+                    e.time_from_last_event,
+                    e.time_to_next_event
+                from events e, params p
                 where
-                    event = ?::text and
-                    created_at between params.start_time and params.end_time and
-                    entity_id in ({entity_vars})
+                    e.event = ?::text and
+                    e.created_at >= p.start_time and e.created_at < p.end_time and
+                    e.entity_id in ({entity_vars})
                     {filters_sql}
+            ),
+            bucketed_events as (
+                select
+                    greatest(
+                        0,
+                        least(
+                            p.num_buckets - 1, floor((
+                            extract(epoch from (sd.created_at - p.start_time)) /
+                            nullif(extract(epoch from (p.end_time - p.start_time)), 0)
+                            ) * p.num_buckets)::bigint
+                        )
+                    ) as bucket_idx,
+                    sd.visitor_id,
+                    sd.created_at,
+                    sd.time_from_last_event,
+                    sd.time_to_next_event
+                from session_data sd, params p
             ),
             event_bins as (
                 select
-                    bin_start,
+                    sd.bucket_idx,
                     {metric_sql} as metric_value
-                from
-                    time_bins tb
-                    left join session_data sd
-                    on sd.created_at >= tb.bin_start and sd.created_at < coalesce(tb.bin_end, ?::timestamp)
-                group by
-                    bin_start
+                from bucketed_events sd
+                group by sd.bucket_idx
             )
         select
             tb.bin_start,
             coalesce(eb.metric_value, 0)
-        from
-            time_bins tb
-            left join event_bins eb on tb.bin_start = eb.bin_start
-        order by
-            tb.bin_start;
+        from time_bins tb
+        left join event_bins eb on tb.bucket_idx = eb.bucket_idx
+        order by tb.bucket_idx;
     "
     );
 
@@ -386,37 +404,32 @@ pub fn overall_stats(
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
-    let metric_total = metric_sql(Metric::Views);
-    let metric_unique_visitors = metric_sql(Metric::UniqueVisitors);
-    let metric_bounce_rate = metric_sql(Metric::BounceRate);
-    let metric_avg_time_on_site = metric_sql(Metric::AvgTimeOnSite);
+    let metric_total = metric_sql(Metric::Views, "sd");
+    let metric_unique_visitors = metric_sql(Metric::UniqueVisitors, "sd");
+    let metric_bounce_rate = metric_sql(Metric::BounceRate, "sd");
+    let metric_avg_time_on_site = metric_sql(Metric::AvgTimeOnSite, "sd");
 
     let mut params = ParamVec::new();
+    params.push(event);
     params.push(range.start);
     params.push(range.end);
-    params.push(event);
     params.extend(entities);
     params.extend_from_params(filters_params);
 
     let query = format!(
         "--sql
         with
-            params as (
-                select
-                    ?::timestamp as start_time,
-                    ?::timestamp as end_time,
-            ),
             session_data as (
                 select
-                    visitor_id,
-                    created_at,
-                    time_from_last_event,
-                    time_to_next_event,
-                from events, params
+                    e.visitor_id,
+                    e.created_at,
+                    e.time_from_last_event,
+                    e.time_to_next_event
+                from events e
                 where
-                    event = ?::text and
-                    created_at between params.start_time and params.end_time and
-                    entity_id in ({entity_vars})
+                    e.event = ?::text and
+                    e.created_at >= ?::timestamp and e.created_at < ?::timestamp and
+                    e.entity_id in ({entity_vars})
                     {filters_sql}
             )
         select
@@ -424,8 +437,7 @@ pub fn overall_stats(
             {metric_unique_visitors} as unique_visitors,
             {metric_bounce_rate} as bounce_rate,
             {metric_avg_time_on_site} as avg_time_on_site
-        from
-            session_data sd;
+        from session_data sd;
     "
     );
 
@@ -459,34 +471,32 @@ pub fn dimension_report(
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = filter_sql(filters)?;
 
-    let metric_column = metric_sql(*metric);
-    let (dimension_column, group_by_columns, dimension_scope_sql) = match dimension {
-        Dimension::Url => ("concat(fqdn, path)", "fqdn, path", None),
+    let metric_column = metric_sql(*metric, "sd");
+    let (dimension_column, dimension_scope_sql) = match dimension {
+        Dimension::Url => ("concat(fqdn, path)", None),
         Dimension::UrlEntry => (
             "concat(fqdn, path)",
-            "fqdn, path",
             Some(format!("time_from_last_event is null or time_from_last_event > {SESSION_DURATION_SQL}")),
         ),
         Dimension::UrlExit => (
             "concat(fqdn, path)",
-            "fqdn, path",
             Some(format!("time_to_next_event is null or time_to_next_event > {SESSION_DURATION_SQL}")),
         ),
-        Dimension::Path => ("path", "path", None),
-        Dimension::Fqdn => ("fqdn", "fqdn", None),
-        Dimension::Referrer => ("referrer", "referrer", None),
-        Dimension::Platform => ("platform", "platform", None),
-        Dimension::Browser => ("browser", "browser", None),
-        Dimension::Mobile => ("mobile::text", "mobile", None),
-        Dimension::Country => ("country", "country", None),
-        Dimension::City => ("concat(country, city)", "country, city", None),
-        Dimension::UtmSource => ("utm_source", "utm_source", None),
-        Dimension::UtmMedium => ("utm_medium", "utm_medium", None),
-        Dimension::UtmCampaign => ("utm_campaign", "utm_campaign", None),
-        Dimension::UtmContent => ("utm_content", "utm_content", None),
-        Dimension::UtmTerm => ("utm_term", "utm_term", None),
-        Dimension::ScreenWidth => ("screen_width", "screen_width", None),
-        Dimension::Orientation => ("orientation", "orientation", None),
+        Dimension::Path => ("path", None),
+        Dimension::Fqdn => ("fqdn", None),
+        Dimension::Referrer => ("referrer", None),
+        Dimension::Platform => ("platform", None),
+        Dimension::Browser => ("browser", None),
+        Dimension::Mobile => ("mobile::text", None),
+        Dimension::Country => ("country", None),
+        Dimension::City => ("concat(country, city)", None),
+        Dimension::UtmSource => ("utm_source", None),
+        Dimension::UtmMedium => ("utm_medium", None),
+        Dimension::UtmCampaign => ("utm_campaign", None),
+        Dimension::UtmContent => ("utm_content", None),
+        Dimension::UtmTerm => ("utm_term", None),
+        Dimension::ScreenWidth => ("screen_width", None),
+        Dimension::Orientation => ("orientation", None),
     };
     let filters_sql = match (filters_sql.is_empty(), dimension_scope_sql) {
         (true, Some(scope)) => format!("and ({scope})"),
@@ -494,45 +504,35 @@ pub fn dimension_report(
         (_, None) => filters_sql,
     };
 
+    params.push(event);
     params.push(range.start);
     params.push(range.end);
-    params.push(event);
     params.extend(entities);
     params.extend_from_params(filters_params);
 
     let query = format!(
         "--sql
         with
-            params as (
-                select
-                    ?::timestamp as start_time,
-                    ?::timestamp as end_time,
-            ),
             session_data as (
                 select
                     coalesce({dimension_column}, 'Unknown') as dimension_value,
                     visitor_id,
                     created_at,
                     time_from_last_event,
-                    time_to_next_event,
-                from events sd, params
+                    time_to_next_event
+                from events sd
                 where
-                    event = ?::text and
-                    created_at between params.start_time and params.end_time and
-                    entity_id in ({entity_vars})
+                    sd.event = ?::text and
+                    sd.created_at >= ?::timestamp and sd.created_at < ?::timestamp and
+                    sd.entity_id in ({entity_vars})
                     {filters_sql}
-                group by
-                    {group_by_columns}, visitor_id, created_at, time_from_last_event, time_to_next_event
             )
         select
             dimension_value,
             {metric_column} as metric_value
-        from
-            session_data sd
-        group by
-            dimension_value
-        order by
-            metric_value desc;
+        from session_data sd
+        group by dimension_value
+        order by metric_value desc;
     "
     );
 

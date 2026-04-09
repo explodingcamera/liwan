@@ -17,10 +17,24 @@ use schemars::JsonSchema;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::{Arc, LazyLock};
+use tower_governor::GovernorLayer;
+use tower_governor::governor::GovernorConfigBuilder;
 use url::Url;
 
 pub fn router() -> ApiRouter<RouterState> {
-    ApiRouter::new().route("/event", post(event_handler))
+    let limiter =
+        GovernorConfigBuilder::default().per_second(2).burst_size(10).finish().expect("valid governor config");
+    let governor_limiter = limiter.limiter().clone();
+
+    tokio::task::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_hours(1));
+        loop {
+            interval.tick().await;
+            governor_limiter.retain_recent();
+        }
+    });
+
+    ApiRouter::new().layer(GovernorLayer::new(limiter)).route("/event", post(event_handler))
 }
 
 #[derive(serde::Deserialize, JsonSchema)]
@@ -57,16 +71,20 @@ async fn event_handler(
     let events = state.events.clone();
 
     // run the event processing in the background
-    tokio::task::spawn_blocking(move || match process_event(app, event, url, ip, user_agent) {
+    let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, user_agent))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match res {
         Ok(Some(event)) => {
-            if events.try_send(event).is_err() {
+            if events.send_timeout(event, std::time::Duration::from_secs(2)).await.is_err() {
                 tracing::warn!("Failed to send event, channel full");
             }
         }
         // event was filtered out, do nothing
         Ok(None) => {}
         Err(e) => tracing::warn!("Failed to process event: {:?}", e),
-    });
+    };
 
     Ok(empty_response())
 }

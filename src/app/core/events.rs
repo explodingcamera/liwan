@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
+use duckdb::{Connection, Result as DuckResult, params};
 use rand::distr::{SampleString, StandardUniform};
 use tokio::sync::mpsc::Receiver;
 
@@ -48,56 +49,66 @@ impl LiwanEvents {
     /// Append events in batch
     pub fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
         let conn = self.duckdb.get()?;
-        let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
         let mut first_event_time = Utc::now();
+        let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
         for event in events {
             if event.created_at < first_event_time {
                 first_event_time = event.created_at;
             }
             appender.append_row(event_params![event]).context("Failed to append event to DuckDB")?;
         }
+
         appender.flush().context("Failed to flush events to DuckDB")?;
         update_event_times(&conn, first_event_time).context("Failed to update event times in DuckDB")?;
         Ok(())
     }
 
     /// Start processing events from the given channel. Blocks until the channel is closed.
-    pub async fn process(&self, mut events: Receiver<Event>) -> Result<()> {
+    pub async fn process_events(&self, events_rx: Receiver<Event>) -> Result<()> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let events = self.clone();
+        std::thread::spawn(move || {
+            let res = events.process_events_sync(events_rx).context("Event processing task failed");
+            let _ = tx.send(res);
+        });
+        rx.await??;
+        Ok(())
+    }
+
+    fn process_events_sync(&self, mut events: Receiver<Event>) -> Result<()> {
         let mut buffer = Vec::with_capacity(1024);
+        let conn = self.duckdb.clone();
 
         loop {
-            let count = events.recv_many(&mut buffer, 1024).await;
-
+            let count = events.blocking_recv_many(&mut buffer, 512);
             if count == 0 {
                 tracing::info!("Event channel closed, stopping event processing");
                 break Ok(());
             }
 
-            let first_event_time = buffer.first().map(|e| e.created_at).unwrap_or_else(Utc::now);
-            let events = std::mem::take(&mut buffer).into_iter();
-
-            let conn = self.duckdb.clone();
-            let res = tokio::task::spawn_blocking(move || {
+            let mut first_event_time = buffer.first().map(|e| e.created_at).unwrap_or_else(Utc::now);
+            let mut insert_events = || -> Result<()> {
                 let conn = conn.get().context("Failed to get DuckDB connection")?;
                 let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
-                for event in events {
+                for event in buffer.drain(..count) {
+                    if event.created_at < first_event_time {
+                        first_event_time = event.created_at;
+                    }
                     appender.append_row(event_params![event]).context("Failed to append event to DuckDB")?;
                 }
+
                 appender.flush().context("Failed to flush events to DuckDB")?;
                 update_event_times(&conn, first_event_time)?;
-                anyhow::Ok(())
-            })
-            .await?;
+                Ok(())
+            };
 
-            match res {
+            match insert_events() {
                 Err(err) => tracing::error!("Event processing task panicked: {:?}", err),
                 _ => tracing::debug!("Processed {} events", count),
             }
         }
     }
 }
-
-use duckdb::{Connection, Result as DuckResult, params};
 
 pub fn update_event_times(conn: &Connection, from_time: DateTime<Utc>) -> DuckResult<()> {
     // this can probably be simplified, sadly the where clause can't contain window functions

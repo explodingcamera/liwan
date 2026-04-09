@@ -1,10 +1,11 @@
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::convert::Infallible;
 use std::net::IpAddr;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TrustedHeader {
     CfConnectingIp,
     FlyClientIp,
@@ -143,13 +144,12 @@ pub fn deserialize_trusted_headers<'de, D: serde::Deserializer<'de>>(
         HeadersInput::Multiple(values) => values,
     };
 
-    let mut headers = Vec::new();
-    for value in values {
-        let header: TrustedHeader = value.parse().expect("TrustedHeader parsing is infallible");
-        if !headers.contains(&header) {
-            headers.push(header);
-        }
-    }
+    let mut seen = HashSet::new();
+    let headers = values
+        .into_iter()
+        .map(|value| value.parse::<TrustedHeader>().expect("TrustedHeader parsing is infallible"))
+        .filter(|header| seen.insert(header.clone()))
+        .collect();
 
     Ok(headers)
 }
@@ -170,11 +170,10 @@ pub fn deserialize_trusted_proxies<'de, D: serde::Deserializer<'de>>(
         ProxiesInput::Multiple(values) => values,
     };
 
-    let mut proxies = Vec::new();
-    for value in values {
-        let proxy = value.parse::<TrustedProxy>().map_err(serde::de::Error::custom)?;
-        proxies.push(proxy);
-    }
+    let proxies = values
+        .into_iter()
+        .map(|value| value.parse::<TrustedProxy>().map_err(serde::de::Error::custom))
+        .collect::<Result<Vec<_>, D::Error>>()?;
 
     Ok(proxies)
 }
