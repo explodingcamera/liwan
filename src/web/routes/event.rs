@@ -1,5 +1,5 @@
 use crate::app::{Liwan, models::Event};
-use crate::utils::hash::{hash_ip, visitor_id};
+use crate::utils::hash::{visitor_id, visitor_id_fallback};
 use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::RouterState;
@@ -119,8 +119,8 @@ fn process_event(
     }
 
     let visitor_id = match ip {
-        Some(ip) => hash_ip(&ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id),
-        None => visitor_id(),
+        Some(ip) => visitor_id(&ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id),
+        None => visitor_id_fallback(),
     };
 
     #[cfg(feature = "geoip")]

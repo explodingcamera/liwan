@@ -12,7 +12,7 @@ fn configure_group(group: &mut criterion::BenchmarkGroup<'_, criterion::measurem
 }
 
 fn benchmark_reports(c: &mut Criterion) {
-    let config = Config::load(None).expect("failed to load config");
+    let config = Config::load(None, std::env::vars()).expect("failed to load config");
     let app = Liwan::try_new(config).expect("failed to initialize app");
 
     let project = app

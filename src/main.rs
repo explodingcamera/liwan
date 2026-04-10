@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     let args = cli::args();
     setup_logger(args.log_level)?;
 
-    let config = Config::load(args.config)?;
+    let config = Config::load(args.config, std::env::vars())?;
     let (s, r) = tokio::sync::mpsc::channel::<Event>(1024 * 10);
 
     if let Some(cmd) = args.cmd {
