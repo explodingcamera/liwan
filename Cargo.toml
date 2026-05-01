@@ -21,7 +21,7 @@ harness=false
 [dependencies]
 # async/concurrency
 arc-swap="1.9"
-tokio={version="1.51", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
+tokio={version="1.52", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
 quick_cache={version="0.6", features=["ahash"]}
@@ -71,7 +71,7 @@ tower-http={version="0.6", default-features=false, features=[
     "set-header",
 ]}
 tower_governor={version="0.8", default-features=false, features=["axum"]}
-aide={version="0.16.0-alpha.3", default-features=false, features=[
+aide={version="0.16.0-alpha.4", default-features=false, features=[
     "axum",
     "axum-json",
     "axum-matched-path",
@@ -86,12 +86,12 @@ reqwest={version="0.13", default-features=false, features=["json", "stream", "ch
 ipnet="2.12"
 
 # database
-duckdb={version="1.10501", features=["chrono", "bundled", "r2d2"]}
+duckdb={version="1.10502", features=["chrono", "bundled", "r2d2"]}
 rusqlite={version="0.39", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 refinery={version="0.9", default-features=false}
 refinery-core={version="0.9", default-features=false}
-maxminddb={version="0.27", optional=true, features=["simdutf8"]}
+maxminddb={version="0.28", optional=true, features=["simdutf8"]}
 mimalloc={version="0.1", features=["v3"]}
 
 [dev-dependencies]
