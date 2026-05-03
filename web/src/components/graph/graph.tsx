@@ -5,7 +5,7 @@ import { extent } from "d3-array";
 import { easeCubic, easeCubicOut } from "d3-ease";
 import { scaleLinear, scaleTime } from "d3-scale";
 import { select } from "d3-selection";
-import { area } from "d3-shape";
+import { area, line } from "d3-shape";
 import "d3-transition";
 
 import { addMonths } from "date-fns";
@@ -16,6 +16,8 @@ import { debounce, formatMetricVal, formatMetricValEvenly } from "../../utils";
 import { axisBottom, axisLeft } from "./axis";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
+
+const keepMeridiemTogether = (value: string) => value.replace(/(\d)\s([AP]M)\b/g, "$1\u00A0$2");
 
 const formatDate = (date: Date, range: GraphRange | "day+hour" | "day+year" = "day") => {
 	switch (range) {
@@ -28,10 +30,48 @@ const formatDate = (date: Date, range: GraphRange | "day+hour" | "day+year" = "d
 		case "day":
 			return Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
 		case "day+hour":
-			return Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric" }).format(date);
+			return keepMeridiemTogether(
+				Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric" }).format(date),
+			);
 		case "hour":
-			return Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "numeric" }).format(date);
+			return keepMeridiemTogether(Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "numeric" }).format(date));
 	}
+};
+
+const getIncompleteBucketEnd = (data: DataPoint[], range: DateRange) => {
+	if (!range.endsToday() || data.length === 0) return undefined;
+
+	const lastPoint = data[data.length - 1];
+	const now = new Date();
+	const bucketEnd = range.getGraphBucketEnd(lastPoint.x);
+	if (now >= bucketEnd || now <= lastPoint.x) return undefined;
+
+	return bucketEnd;
+};
+
+const pickAxisTicks = (data: DataPoint[], count: number): Date[] => {
+	if (data.length <= count) return data.map((point) => point.x);
+
+	const ticks = new Set<number>();
+	for (let i = 0; i < count; i++) {
+		const index = Math.round((i * (data.length - 1)) / Math.max(count - 1, 1));
+		ticks.add(index);
+	}
+
+	return [...ticks].sort((a, b) => a - b).map((index) => data[index].x);
+};
+
+const getGraphRenderData = (data: DataPoint[], range: DateRange) => {
+	const incompleteBucketEnd = getIncompleteBucketEnd(data, range);
+	return {
+		domainMaxX: data[data.length - 1]?.x ?? new Date(),
+		solidLineData: incompleteBucketEnd ? data.slice(0, -1) : data,
+		dottedLineData: incompleteBucketEnd
+			? data.length > 1
+				? [data[data.length - 2], data[data.length - 1]]
+				: [data[data.length - 1]]
+			: [],
+	};
 };
 
 export const LineGraph = ({ state, range }: { state: GraphState; range: DateRange }) => {
@@ -62,8 +102,10 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 	const updateGraph = useCallback(() => {
 		if (!svgRef.current || !dimensions) return;
 		const svg = select(svgRef.current);
+		const { domainMaxX, dottedLineData, solidLineData } = getGraphRenderData(state.data, range);
 
-		const [minX, maxX] = extent(state.data, (d) => d.x).map((d) => d || new Date());
+		const [minX] = extent(state.data, (d) => d.x).map((d) => d || new Date());
+		const maxX = domainMaxX;
 		const [_minY, maxY] = extent(state.data, (d) => d.y).map((d) => d || 0);
 
 		let xCount = Math.min(state.data.length, 8);
@@ -88,7 +130,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 			.y0(yAxis(0))
 			.y1((d) => yAxis(d.y));
 
-		const svgLine = area<DataPoint>()
+		const svgLine = line<DataPoint>()
 			.x((d) => xAxis(d.x))
 			.y((d) => yAxis(d.y));
 
@@ -100,8 +142,14 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 		svg
 			.selectChild("#line")
 			.attr("transform", `translate(0, ${paddingTop})`)
-			.attr("d", svgLine(state.data) || "");
+			.attr("d", svgLine(solidLineData) || "");
 
+		svg
+			.selectChild("#line-dotted")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgLine(dottedLineData) || "");
+
+		const yGridElement = svg.selectChild<SVGGElement>("#y-grid");
 		const yAxisElement = svg.selectChild<SVGGElement>("#y-axis");
 		const xAxisElement = svg.selectChild<SVGGElement>("#x-axis");
 
@@ -116,9 +164,22 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 			.tickFormat((d) => formatMetricValEvenly(d as number, state.metric, maxY))
 			.tickValues(tickValuesY);
 
-		let tickValuesX = xAxis.ticks(xCount);
-		if (xAxis(tickValuesX[0]) < 20) tickValuesX = tickValuesX.slice(1);
-		if (xAxis(tickValuesX[tickValuesX.length - 1]) > dimensions.width - 20) tickValuesX = tickValuesX.slice(0, -1);
+		const leftGridAxis = axisLeft(yAxis)
+			.disableDomain()
+			.tickFormat(() => "")
+			.tickValues(tickValuesY);
+
+		const leftLabelAxis = axisLeft(yAxis)
+			.disableDomain()
+			.disableTicks()
+			.tickFormat((d) => formatMetricValEvenly(d as number, state.metric, maxY))
+			.tickValues(tickValuesY);
+
+		let tickValuesX = pickAxisTicks(state.data, xCount);
+		if (tickValuesX.length > 0 && xAxis(tickValuesX[0]) < 20) tickValuesX = tickValuesX.slice(1);
+		if (tickValuesX.length > 0 && xAxis(tickValuesX[tickValuesX.length - 1]) > dimensions.width - 20) {
+			tickValuesX = tickValuesX.slice(0, -1);
+		}
 
 		const bottomAxis = axisBottom(xAxis)
 			.disableDomain()
@@ -137,16 +198,22 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 				ax.attr("transform", `translate(0, ${dimensions.height - paddingBottom + 10})`);
 			});
 
-		yAxisElement.call((ax) => {
-			leftAxis(ax);
+		yGridElement.call((ax) => {
+			leftGridAxis(ax);
 			ax.attr("transform", `translate(0, ${paddingTop})`);
 
-			// make the ticks take up the full width of the graph
 			ax.selectAll(".tick line")
 				.attr("x2", dimensions.width)
 				.attr("stroke", "var(--pico-secondary-background)")
 				.attr("stroke-width", 0.5)
 				.attr("stroke-dasharray", "2, 2");
+
+			ax.selectAll("text").remove();
+		});
+
+		yAxisElement.call((ax) => {
+			leftLabelAxis(ax);
+			ax.attr("transform", `translate(0, ${paddingTop})`);
 
 			// move the labels to the right side of the graph, keeping the text right-aligned
 			ax.selectAll(".tick text")
@@ -176,13 +243,13 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 
 			firstRender.current = false;
 		});
-	}, [dimensions, state, axisRange]);
+	}, [dimensions, state, axisRange, range]);
 
 	useEffect(() => {
 		if (!svgRef.current || !dimensions) return;
 
 		const mouseMove = (event: MouseEvent) => {
-			if (!svgRef.current) return;
+			if (!svgRef.current || state.data.length === 0) return;
 			const tooltip = select(svgRef.current).selectChild("#tooltip");
 			const tooltipRect = (tooltip.node() as SVGForeignObjectElement | null)?.getBoundingClientRect();
 			const tooltipWidth = tooltipRect?.width || 0;
@@ -207,21 +274,28 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 				svgHeight - tooltipHeight - tooltipPadding,
 			);
 
+			const { domainMaxX } = getGraphRenderData(state.data, range);
+			const [minX] = extent(state.data, (d) => d.x).map((d) => d || new Date());
+			const maxX = domainMaxX;
+			const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
+
 			tooltip.transition().duration(200).ease(easeCubicOut).attr("x", tooltipX).attr("y", tooltipY).attr("opacity", 1);
 
 			const needle = select(svgRef.current).selectChild("#needle");
 			const x = event.clientX - svgRect.left - 1;
-			const step = (dimensions.width - 2) / (state.data.length - 1);
-			const index = Math.min(Math.max(Math.round(x / step), 0), state.data.length - 1); // Clamp index
+			const point = state.data.reduce((closestPoint, currentPoint) => {
+				const closestDistance = Math.abs(xAxis(closestPoint.x) - x);
+				const currentDistance = Math.abs(xAxis(currentPoint.x) - x);
+				return currentDistance < closestDistance ? currentPoint : closestPoint;
+			});
 
-			const snappedX = 1 + index * step; // Snap to the clamped index
+			const snappedX = xAxis(point.x);
 			needle
 				.transition()
 				.duration(200)
 				.ease(easeCubicOut)
 				.attr("d", `M ${snappedX} 0 L ${snappedX} ${svgHeight - 40}`);
 
-			const point = state.data[index];
 			const value = point.y;
 
 			const date = new Date(point.x);
@@ -262,8 +336,10 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 						<stop offset="100%" stopColor="rgba(166, 206, 227, 0)" />
 					</linearGradient>
 				</defs>
+				<g id="y-grid" />
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
 				<path id="line" fill="none" stroke="#a6cee3" />
+				<path id="line-dotted" fill="none" stroke="#a6cee3" strokeDasharray="5, 5" />
 				<path
 					id="needle"
 					fill="none"

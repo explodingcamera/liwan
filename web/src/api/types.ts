@@ -3,10 +3,13 @@ import type dashboardspec from "./dashboard";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
+export type GraphInterval = OASModel<DashboardSpec, "GraphInterval">;
 export type Dimension = OASModel<DashboardSpec, "Dimension">;
 export type DimensionFilter = OASModel<DashboardSpec, "DimensionFilter">;
 export type DimensionTableRow = OASModel<DashboardSpec, "DimensionTableRow">;
 export type FilterType = OASModel<DashboardSpec, "FilterType">;
+export type GraphResponse = OASModel<DashboardSpec, "GraphResponse">;
+export type ReportGraphPoint = OASModel<DashboardSpec, "ReportGraphPoint">;
 
 export const dimensions = [
 	"platform",

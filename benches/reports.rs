@@ -1,7 +1,7 @@
 use chrono::{Days, Utc};
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use liwan::app::Liwan;
-use liwan::app::reports::{self, DateRange, Dimension, Metric};
+use liwan::app::reports::{self, DateRange, Dimension, GraphInterval, Metric};
 use liwan::config::Config;
 use std::time::Duration;
 
@@ -30,6 +30,8 @@ fn benchmark_reports(c: &mut Criterion) {
         start: Utc::now().checked_sub_days(Days::new(365)).expect("failed to build range start"),
         end: Utc::now(),
     };
+    let day_buckets = reports::build_graph_buckets(&range, GraphInterval::Day, Some("UTC"))
+        .expect("failed to build day buckets for benchmark");
 
     let conn = app.events_conn().expect("failed to get events connection");
 
@@ -51,7 +53,7 @@ fn benchmark_reports(c: &mut Criterion) {
         for metric in [Metric::Views, Metric::UniqueVisitors, Metric::BounceRate, Metric::AvgTimeOnSite] {
             group.bench_with_input(BenchmarkId::new("metric", format!("{metric:?}")), &metric, |b, metric| {
                 b.iter(|| {
-                    reports::overall_report(&conn, &entities, "pageview", &range, 365, &[], metric)
+                    reports::overall_report(&conn, &entities, "pageview", &range, &day_buckets, &[], metric)
                         .expect("overall_report failed")
                 });
             });

@@ -46,6 +46,7 @@ argh={version="0.1", default-features=false, features=["help"]}
 anyhow={version="1.0"}
 rand={version="0.10", default-features=false, features=["std", "thread_rng"]}
 chrono={version="0.4", default-features=false, features=["std", "now", "serde"]}
+chrono-tz="0.10"
 config={version="0.15", default-features=false, features=["toml"]}
 tracing={version="0.1", default-features=false, features=["std"]}
 tracing-subscriber={version="0.3", features=["env-filter"]}

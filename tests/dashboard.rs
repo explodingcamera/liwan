@@ -26,8 +26,8 @@ async fn test_dashboard() -> Result<()> {
     ];
 
     let graph_requests = [
-        json!({"range":{"start": start_date ,"end": end_date},"metric":"views","dataPoints":395,"filters":[]}),
-        json!({"range":{"start": start_date ,"end": end_date},"metric":"views","dataPoints":30,"filters":[{"dimension":"fqdn","filterType":"equal","value":"example.org"},{"dimension":"url","filterType":"equal","value":"example.org/contact"},{"dimension":"referrer","filterType":"equal","value":"liwan.dev"},{"dimension":"country","filterType":"equal","value":"AU"},{"dimension":"city","filterType":"equal","value":"Sydney"},{"dimension":"platform","filterType":"equal","value":"iOS"},{"dimension":"browser","filterType":"equal","value":"Safari"}]}),
+        json!({"range":{"start": start_date ,"end": end_date},"metric":"views","interval":"day","timezone":"UTC","filters":[]}),
+        json!({"range":{"start": start_date ,"end": end_date},"metric":"views","interval":"day","timezone":"UTC","filters":[{"dimension":"fqdn","filterType":"equal","value":"example.org"},{"dimension":"url","filterType":"equal","value":"example.org/contact"},{"dimension":"referrer","filterType":"equal","value":"liwan.dev"},{"dimension":"country","filterType":"equal","value":"AU"},{"dimension":"city","filterType":"equal","value":"Sydney"},{"dimension":"platform","filterType":"equal","value":"iOS"},{"dimension":"browser","filterType":"equal","value":"Safari"}]}),
     ];
 
     let dimensions_requests = [

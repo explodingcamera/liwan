@@ -1,14 +1,13 @@
 import {
 	addDays,
 	addHours,
+	addMilliseconds,
 	addMonths,
-	addSeconds,
 	addWeeks,
 	addYears,
-	differenceInDays,
+	differenceInCalendarDays,
 	differenceInHours,
 	differenceInMonths,
-	differenceInSeconds,
 	differenceInYears,
 	endOfDay,
 	endOfMonth,
@@ -26,15 +25,16 @@ import {
 	startOfYear,
 	subDays,
 	subMonths,
-	subSeconds,
 	subWeeks,
 	subYears,
 } from "date-fns";
 
 import { formatDateRange } from "little-date";
+import type { GraphInterval } from "./types";
 import type { GraphRange } from "../components/graph/graph";
 
 type DateRangeValue = { start: Date; end: Date };
+const WEEK_STARTS_ON = { weekStartsOn: 1 as const };
 
 export class DateRange {
 	#value: RangeName | { start: Date; end: Date };
@@ -88,35 +88,83 @@ export class DateRange {
 		return isEqual(endOfDay(new Date()), endOfDay(this.value.end)) || this.value.end > new Date();
 	}
 
+	getBucketBounds(): { start: Date; end: Date } {
+		return {
+			start: this.value.start,
+			end: addMilliseconds(this.value.end, 1),
+		};
+	}
+
+	#getDayCount(): number {
+		return differenceInCalendarDays(this.value.end, this.value.start) + 1;
+	}
+
+	#isCalendarDayRange(): boolean {
+		return isEqual(startOfDay(this.value.start), this.value.start) && isEqual(endOfDay(this.value.end), this.value.end);
+	}
+
+	#shiftByCalendarDays(direction: -1 | 1): DateRange {
+		const dayCount = this.#getDayCount();
+		return new DateRange({
+			start: addDays(this.value.start, direction * dayCount),
+			end: addDays(this.value.end, direction * dayCount),
+		});
+	}
+
+	#shiftByExactDuration(direction: -1 | 1): DateRange {
+		const { start, end } = this.getBucketBounds();
+		const durationMs = end.getTime() - start.getTime();
+		return new DateRange({
+			start: new Date(this.value.start.getTime() + direction * durationMs),
+			end: new Date(this.value.end.getTime() + direction * durationMs),
+		});
+	}
+
+	#shiftByRange(direction: -1 | 1): DateRange {
+		if (this.#isCalendarDayRange()) {
+			return this.#shiftByCalendarDays(direction);
+		}
+
+		return this.#shiftByExactDuration(direction);
+	}
+
 	toAPI(): { start: string; end: string } {
-		const start = this.value.start.toISOString();
-		const end = this.value.end.toISOString();
-		return { start, end };
+		const { start, end } = this.getBucketBounds();
+		const startIso = start.toISOString();
+		const endIso = end.toISOString();
+		return { start: startIso, end: endIso };
 	}
 
 	getGraphRange(): GraphRange {
-		if (differenceInDays(this.value.end, this.value.start) < 7) return "hour";
+		return this.getGraphInterval();
+	}
+
+	getGraphInterval(): GraphInterval {
+		if (this.variant === "last7DaysHourly") return "hour";
+		if (this.variant === "weekToDate") return this.#getDayCount() < 4 ? "hour" : "day";
+		if (this.variant === "monthToDate") return this.#getDayCount() < 7 ? "hour" : "day";
+		if (this.#getDayCount() < 7) return "hour";
 		return "day";
 	}
 
+	getGraphBucketEnd(bucketStart: Date): Date {
+		const bucketEnd = this.getGraphInterval() === "hour" ? addHours(bucketStart, 1) : addDays(bucketStart, 1);
+		const { end } = this.getBucketBounds();
+		return bucketEnd < end ? bucketEnd : end;
+	}
+
 	getAxisRange(): "hour" | "day" | "day+year" {
-		if (differenceInDays(this.value.end, this.value.start) < 1) return "hour";
+		const { end } = this.getBucketBounds();
+		if (differenceInHours(end, this.value.start) <= 24) return "hour";
 		if (differenceInYears(this.value.end, addHours(this.value.start, 1)) > 1) return "day+year";
 		return "day";
 	}
 
 	getTooltipRange(): "hour" | "day+hour" | "day" {
-		if (differenceInDays(this.value.end, this.value.start) < 1) return "hour";
-		if (differenceInDays(this.value.end, this.value.start) < 6) return "day+hour";
-		return "day";
-	}
-
-	getGraphDataPoints(): number {
-		const diff = differenceInDays(this.value.end, this.value.start);
-
-		if (diff >= 6) return diff;
-		if (diff >= 1) return differenceInHours(this.value.end, this.value.start);
-		return 24;
+		if (this.getGraphInterval() === "day") return "day";
+		const dayCount = this.#getDayCount();
+		if (dayCount === 1) return "hour";
+		return "day+hour";
 	}
 
 	#isDayBeforeYesterday() {
@@ -128,9 +176,9 @@ export class DateRange {
 		if (this.#value === "today") return new DateRange("yesterday");
 
 		if (
-			isEqual(startOfWeek(this.value.start), this.value.start) &&
-			isEqual(endOfWeek(this.value.end), this.value.end) &&
-			isSameWeek(this.value.start, this.value.end)
+			isEqual(startOfWeek(this.value.start, WEEK_STARTS_ON), this.value.start) &&
+			isEqual(endOfWeek(this.value.end, WEEK_STARTS_ON), this.value.end) &&
+			isSameWeek(this.value.start, this.value.end, WEEK_STARTS_ON)
 		) {
 			const start = subWeeks(this.value.start, 1);
 			const end = subWeeks(this.value.end, 1);
@@ -158,28 +206,12 @@ export class DateRange {
 		}
 
 		if (differenceInMonths(this.value.end, this.value.start) === 12) {
-			// if (isSameDay(this.value.start, startOfMonth(this.value.start))) {
-			// 	const start = startOfMonth(subYears(this.value.start, 1));
-			// 	const end = endOfMonth(subYears(this.value.end, 1));
-			// 	return new DateRange({ start, end });
-			// }
-
 			const start = subYears(this.value.start, 1);
 			const end = subYears(this.value.end, 1);
 			return new DateRange({ start, end });
 		}
 
-		if (differenceInHours(this.value.end, this.value.start) < 23) {
-			const start = subSeconds(this.value.start, differenceInSeconds(this.value.end, this.value.start));
-			const end = subSeconds(this.value.end, differenceInSeconds(this.value.end, this.value.start));
-			return new DateRange({ start, end });
-		}
-
-		const size = differenceInDays(this.value.end, this.value.start);
-		const start = subDays(this.value.start, size + 1);
-		const end = subDays(this.value.end, size + 1);
-
-		return new DateRange({ start, end });
+		return this.#shiftByRange(-1);
 	}
 
 	next() {
@@ -188,9 +220,9 @@ export class DateRange {
 		if (this.#isDayBeforeYesterday()) return new DateRange("yesterday");
 
 		if (
-			isEqual(startOfWeek(this.value.start), this.value.start) &&
-			isEqual(endOfWeek(this.value.end), this.value.end) &&
-			isSameWeek(this.value.start, this.value.end)
+			isEqual(startOfWeek(this.value.start, WEEK_STARTS_ON), this.value.start) &&
+			isEqual(endOfWeek(this.value.end, WEEK_STARTS_ON), this.value.end) &&
+			isSameWeek(this.value.start, this.value.end, WEEK_STARTS_ON)
 		) {
 			const start = addWeeks(this.value.start, 1);
 			const end = addWeeks(this.value.end, 1);
@@ -218,34 +250,19 @@ export class DateRange {
 		}
 
 		if (differenceInMonths(this.value.end, this.value.start) === 12) {
-			// if (isSameDay(this.value.start, startOfMonth(this.value.start))) {
-			// 	const start = startOfMonth(addYears(this.value.start, 1));
-			// 	const end = endOfMonth(addYears(this.value.end, 1));
-			// 	return new DateRange({ start, end });
-			// }
-
 			const start = addYears(this.value.start, 1);
 			const end = addYears(this.value.end, 1);
 			return new DateRange({ start, end });
 		}
 
-		if (differenceInHours(this.value.end, this.value.start) < 23) {
-			const start = addSeconds(this.value.start, differenceInSeconds(this.value.end, this.value.start));
-			const end = addSeconds(this.value.end, differenceInSeconds(this.value.end, this.value.start));
-			return new DateRange({ start, end });
-		}
-
-		const size = differenceInDays(this.value.end, this.value.start);
-		const start = addDays(this.value.start, size + 1);
-		const end = addDays(this.value.end, size + 1);
-
-		return new DateRange({ start, end });
+		return this.#shiftByRange(1);
 	}
 }
 
 export const wellKnownRanges = {
 	today: "Today",
 	yesterday: "Yesterday",
+	last7DaysHourly: "Last 7 Days (hourly)",
 	last7Days: "Last 7 Days",
 	last30Days: "Last 30 Days",
 	last12Months: "Last 12 Months",
@@ -257,7 +274,7 @@ export type RangeName = keyof typeof wellKnownRanges;
 
 const lastXDays = (days: number) => {
 	const end = endOfDay(new Date());
-	const start = startOfDay(subDays(end, days));
+	const start = startOfDay(subDays(end, days - 1));
 	return { start, end };
 };
 
@@ -275,6 +292,7 @@ export const ranges: Record<RangeName, () => { range: { start: Date; end: Date }
 		const end = endOfDay(start);
 		return { range: { start: start, end } };
 	},
+	last7DaysHourly: () => ({ range: lastXDays(7) }),
 	last7Days: () => ({ range: lastXDays(7) }),
 	last30Days: () => ({ range: lastXDays(30) }),
 	last12Months: () => {
@@ -284,20 +302,20 @@ export const ranges: Record<RangeName, () => { range: { start: Date; end: Date }
 	},
 	weekToDate: () => {
 		const now = new Date();
-		const start = startOfWeek(now);
-		const end = endOfWeek(now);
+		const start = startOfWeek(now, WEEK_STARTS_ON);
+		const end = endOfDay(now);
 		return { range: { start, end } };
 	},
 	monthToDate: () => {
 		const now = new Date();
 		const start = startOfMonth(now);
-		const end = endOfMonth(now);
+		const end = endOfDay(now);
 		return { range: { start, end } };
 	},
 	yearToDate: () => {
 		const now = new Date();
 		const start = startOfYear(now);
-		const end = endOfYear(now);
+		const end = endOfDay(now);
 		return { range: { start, end: end } };
 	},
 };

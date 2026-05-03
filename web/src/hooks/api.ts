@@ -145,8 +145,9 @@ export const useProjectGraph = ({
 		refetchInterval = 1000 * 60;
 		staleTime = 0;
 	}
-	const dataPoints = range.getGraphDataPoints();
-	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, dataPoints];
+	const interval = range.getGraphInterval();
+	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, interval, timezone];
 
 	const {
 		data: graph,
@@ -162,7 +163,7 @@ export const useProjectGraph = ({
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
 				.post({
-					json: { range: range.toAPI(), metric, dataPoints, filters },
+					json: { range: range.toAPI(), metric, interval, timezone, filters },
 					params: { project_id: projectId ?? "" },
 				})
 				.json()
@@ -171,7 +172,7 @@ export const useProjectGraph = ({
 						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
-					return toDataPoints(req.data, range);
+					return toDataPoints(req.data);
 				}),
 		placeholderData: (prev) => prev,
 	});

@@ -1,4 +1,4 @@
-use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, Metric, ReportStats};
+use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, GraphInterval, Metric, ReportStats};
 use crate::utils::validate::{self, can_access_project};
 use crate::web::RouterState;
 use crate::web::session::MaybeAuth;
@@ -24,7 +24,7 @@ pub fn router() -> ApiRouter<RouterState> {
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 struct GraphResponse {
-    data: Vec<f64>,
+    data: reports::ReportGraph,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -38,7 +38,8 @@ struct StatsRequest {
 struct GraphRequest {
     range: DateRange,
     filters: Vec<DimensionFilter>,
-    data_points: u32,
+    interval: GraphInterval,
+    timezone: Option<String>,
     metric: Metric,
 }
 
@@ -113,10 +114,6 @@ async fn project_graph_handler(
     MaybeAuth(user): MaybeAuth,
     Json(req): Json<GraphRequest>,
 ) -> ApiResult<Json<GraphResponse>> {
-    if req.data_points > validate::MAX_DATAPOINTS {
-        http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
-    }
-
     let project = app.projects.get(&project_id).http_status(StatusCode::IM_A_TEAPOT)?;
     let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -125,9 +122,15 @@ async fn project_graph_handler(
     }
 
     let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let buckets = reports::build_graph_buckets(&req.range, req.interval, req.timezone.as_deref())
+        .http_status(StatusCode::BAD_REQUEST)?;
+
+    if buckets.len() > validate::MAX_DATAPOINTS as usize {
+        http_bail!(StatusCode::BAD_REQUEST, "Too many data points")
+    }
 
     let report = spawn_blocking(move || {
-        reports::overall_report(&conn, &entities, "pageview", &req.range, req.data_points, &req.filters, &req.metric)
+        reports::overall_report(&conn, &entities, "pageview", &req.range, &buckets, &req.filters, &req.metric)
     })
     .await
     .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
