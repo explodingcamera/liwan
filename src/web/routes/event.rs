@@ -43,18 +43,52 @@ struct EventRequest {
     name: String,
     url: String,
     referrer: Option<String>,
-    utm: Option<Utm>,
     screen_width: Option<String>,
     orientation: Option<String>,
 }
 
-#[derive(serde::Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Eq)]
 struct Utm {
     source: Option<String>,
     content: Option<String>,
     medium: Option<String>,
     campaign: Option<String>,
     term: Option<String>,
+}
+
+fn extract_query(url: &mut Url, keys: &[&str]) -> Option<String> {
+    let value = keys
+        .iter()
+        .find_map(|key| url.query_pairs().find(|(name, _)| name == *key).map(|(_, value)| value.into_owned()));
+
+    if value.is_some() {
+        let filtered = url
+            .query_pairs()
+            .filter(|(name, _)| !keys.contains(&name.as_ref()))
+            .map(|(name, value)| (name.into_owned(), value.into_owned()))
+            .collect::<Vec<_>>();
+
+        let mut pairs = url.query_pairs_mut();
+        pairs.clear();
+        drop(pairs);
+
+        if !filtered.is_empty() {
+            let mut pairs = url.query_pairs_mut();
+            pairs.extend_pairs(filtered.iter().map(|(name, value)| (name.as_str(), value.as_str())));
+        }
+    }
+
+    value
+}
+
+fn extract_utm(url: &mut Url) -> Utm {
+    Utm {
+        campaign: extract_query(url, &["utm_campaign", "campaign"]),
+        content: extract_query(url, &["utm_content", "content"]),
+        medium: extract_query(url, &["utm_medium", "medium"]),
+        source: extract_query(url, &["utm_source", "source", "ref", "referrer", "referer"]),
+        term: extract_query(url, &["utm_term", "term"]),
+    }
 }
 
 static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
@@ -92,7 +126,7 @@ async fn event_handler(
 fn process_event(
     app: Arc<Liwan>,
     event: EventRequest,
-    url: Url,
+    mut url: Url,
     ip: Option<IpAddr>,
     user_agent: headers::UserAgent,
 ) -> Result<Option<Event>> {
@@ -132,6 +166,8 @@ fn process_event(
     #[cfg(not(feature = "geoip"))]
     let (country, city) = (None, None);
 
+    let utm = extract_utm(&mut url);
+    url.set_query(None);
     let path = url.path().to_string();
     let path = if path.len() > 1 && path.ends_with('/') { path.trim_end_matches('/').to_string() } else { path };
     let fqdn = url.host_str().unwrap_or_default().to_string();
@@ -149,14 +185,37 @@ fn process_event(
         event: event.name,
         fqdn: fqdn.into(),
         path: path.into(),
-        utm_campaign: event.utm.as_ref().and_then(|u| u.campaign.clone()),
-        utm_content: event.utm.as_ref().and_then(|u| u.content.clone()),
-        utm_medium: event.utm.as_ref().and_then(|u| u.medium.clone()),
-        utm_source: event.utm.as_ref().and_then(|u| u.source.clone()),
-        utm_term: event.utm.as_ref().and_then(|u| u.term.clone()),
+        utm_campaign: utm.campaign,
+        utm_content: utm.content,
+        utm_medium: utm.medium,
+        utm_source: utm.source,
+        utm_term: utm.term,
         screen_width: event.screen_width,
         orientation: event.orientation,
     };
 
     Ok(Some(event))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn extract_utm_clears_all_query_params() {
+        let mut url = Url::parse(
+            "https://example.com/path/?utm_source=newsletter&source=ignored&campaign=spring&utm_medium=email&foo=bar&ref=backup",
+        )
+        .expect("valid url");
+
+        let utm = extract_utm(&mut url);
+        url.set_query(None);
+
+        assert_eq!(utm.source.as_deref(), Some("newsletter"));
+        assert_eq!(utm.medium.as_deref(), Some("email"));
+        assert_eq!(utm.campaign.as_deref(), Some("spring"));
+        assert_eq!(utm.content, None);
+        assert_eq!(utm.term, None);
+        assert_eq!(url.as_str(), "https://example.com/path/");
+    }
 }

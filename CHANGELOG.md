@@ -23,6 +23,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Added new `trusted_headers`, `trusted_proxies`, and `use_forward_headers` config options
 - Added new entry page and exit page dimensions
 - Added new screen width and orientation dimensions
+- New timezone-aware graphs with improved accuracy
 
 ### Bug Fixes
 
@@ -32,8 +33,10 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### Other
 
+- Events are now rate-limited to 2 per second (with a burst of up to 10)
 - Added `?ref` / `?referrer` / `?source` as fallbacks for UTM source
-- Updated to the latest version of DuckDB (1.5.1)
+- UTM parameters are now extracted on the server side
+- Updated to the latest version of DuckDB (1.5.2)
 - Improved filtering out invalid referrers
 - Improved world map rendering & graph for bounce rate metric
 - Improved UI error messages / loading states

@@ -8,7 +8,6 @@ type Payload = {
 	name: string;
 	url: string;
 	referrer?: string;
-	utm?: { campaign?: string; content?: string; medium?: string; source?: string; term?: string };
 	screen_width?: string;
 	orientation?: string;
 	// biome-ignore lint/suspicious/noExplicitAny: no
@@ -18,7 +17,7 @@ export type EventOptions = {
 	/**
 	 * The URL of the page where the event occurred.
 	 *
-	 * If not provided, the current page URL with hash and search parameters removed will be used.
+	 * If not provided, the current page URL with only attribution query parameters preserved will be used.
 	 */
 	url?: string;
 
@@ -65,13 +64,44 @@ const reject = (message: string) => {
 	throw new Error(`Failed to send event: ${message}`);
 };
 
+const ATTRIBUTION_QUERY_PARAMS = [
+	"utm_campaign",
+	"utm_content",
+	"utm_medium",
+	"utm_source",
+	"utm_term",
+	"campaign",
+	"content",
+	"medium",
+	"source",
+	"term",
+	"ref",
+	"referrer",
+	"referer",
+];
+
+const sanitizeUrl = (value: string) => {
+	const url = !noWindow ? new URL(value, location.href) : new URL(value);
+	const params = new URLSearchParams();
+
+	for (const [key, paramValue] of url.searchParams) {
+		if (ATTRIBUTION_QUERY_PARAMS.includes(key)) {
+			params.append(key, paramValue);
+		}
+	}
+
+	url.search = params.toString();
+	url.hash = "";
+	return url.toString();
+};
+
 /**
- * Sends an event to the Liwan API.
- *
- * @param name The name of the event. Defaults to "pageview".
- * @param options Additional options for the event. See {@link EventOptions}.
- * @returns A promise that resolves with the status code of the response or void if the event was ignored.
- * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
+	 * Sends an event to the Liwan API.
+	 *
+	 * @param name The name of the event. Defaults to "pageview".
+	 * @param options Additional options for the event. See {@link EventOptions}.
+	 * @returns A promise that resolves with the status code of the response or void if the event was ignored.
+	 * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
  *
  * @example
  * ```ts
@@ -104,7 +134,6 @@ export async function event(name: string = "pageview", options?: EventOptions): 
         w < 1536 ? "xl" :
         "2xl";
 
-	const params = new URLSearchParams(location.search);
 	const response = await fetch(endpoint_url, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -112,19 +141,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 			name,
 			entity_id: options?.entity || entity,
 			referrer: options?.referrer || referrer,
-			url: options?.url || location.origin + location.pathname,
-			utm: {
-				campaign: params.get("utm_campaign") || params.get("campaign"),
-				content: params.get("utm_content") || params.get("content"),
-				medium: params.get("utm_medium") || params.get("medium"),
-				source:
-					params.get("utm_source") ||
-					params.get("source") ||
-					params.get("ref") ||
-					params.get("referrer") ||
-					params.get("referer"),
-				term: params.get("utm_term") || params.get("term"),
-			},
+			url: sanitizeUrl(options?.url || location.href),
 			screen_width,
 			orientation: !noWindow && window.screen.orientation.type.startsWith("portrait") ? "portrait" : "landscape",
 		}),

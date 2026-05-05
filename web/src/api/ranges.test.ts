@@ -108,7 +108,10 @@ describe("DateRange", () => {
 		weekLong.variant = "weekToDate";
 		expect(weekLong.getGraphInterval()).toBe("day");
 
-		const monthShort = new DateRange({ start: startOfDay(new Date(2024, 10, 1)), end: endOfDay(new Date(2024, 10, 6)) });
+		const monthShort = new DateRange({
+			start: startOfDay(new Date(2024, 10, 1)),
+			end: endOfDay(new Date(2024, 10, 6)),
+		});
 		monthShort.variant = "monthToDate";
 		expect(monthShort.getGraphInterval()).toBe("hour");
 

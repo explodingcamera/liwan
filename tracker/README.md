@@ -37,7 +37,7 @@ export type EventOptions = {
   /**
    * The URL of the page where the event occurred.
    *
-   * If not provided, the current page URL with hash and search parameters removed will be used.
+   * If not provided, the current page URL with only attribution query parameters preserved will be used.
    */
   url?: string;
 

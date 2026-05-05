@@ -159,11 +159,6 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 			tickValuesY = tickValuesY.filter((_, i) => i % 2 === 0);
 		}
 
-		const leftAxis = axisLeft(yAxis)
-			.disableDomain()
-			.tickFormat((d) => formatMetricValEvenly(d as number, state.metric, maxY))
-			.tickValues(tickValuesY);
-
 		const leftGridAxis = axisLeft(yAxis)
 			.disableDomain()
 			.tickFormat(() => "")

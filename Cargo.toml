@@ -93,7 +93,7 @@ r2d2={version="0.8", default-features=false}
 refinery={version="0.9", default-features=false}
 refinery-core={version="0.9", default-features=false}
 maxminddb={version="0.28", optional=true, features=["simdutf8"]}
-mimalloc={version="0.1", features=["v3"]}
+mimalloc={version="0.1"}
 
 [dev-dependencies]
 tempfile={version="3"}
