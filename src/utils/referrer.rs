@@ -1,4 +1,4 @@
-use std::sync::LazyLock;
+use std::{io::Cursor, sync::LazyLock};
 
 use ahash::{HashMap, HashSet};
 
@@ -14,8 +14,10 @@ static REFERRERS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
         .collect()
 });
 
-static SPAMMERS: LazyLock<HashSet<String>> =
-    LazyLock::new(|| include_str!("../../data/spammers.txt").lines().map(ToString::to_string).collect());
+static SPAMMERS: LazyLock<HashSet<String>> = LazyLock::new(|| {
+    let data = zstd::decode_all(Cursor::new(include_bytes!("../../data/spammers.txt.zstd"))).expect("valid data");
+    String::from_utf8(data).expect("valid utf-8").lines().map(ToString::to_string).collect()
+});
 
 static REFERRER_ICONS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
     include_str!("../../data/referrer_icons.txt")
