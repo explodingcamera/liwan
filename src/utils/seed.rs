@@ -123,7 +123,7 @@ pub fn random_events(
             platform: if platform.is_empty() { None } else { Some(platform.to_string()) },
             referrer: if referrer.is_empty() { None } else { Some(referrer.to_string()) },
             path: Some(path.to_string()),
-            visitor_id: visitor_ids[visitor_idx].clone(),
+            visitor_group_id: visitor_ids[visitor_idx].clone(),
             utm_campaign: Some(random_el(UTM_CAMPAIGNS, 0.6).to_string()),
             utm_content: Some(random_el(UTM_CONTENTS, 0.6).to_string()),
             utm_medium: Some(random_el(UTM_MEDIUMS, 0.6).to_string()),
@@ -131,6 +131,7 @@ pub fn random_events(
             utm_term: Some(random_el(UTM_TERMS, 0.6).to_string()),
             screen_width: Some(screen_width.to_string()),
             orientation: Some(orientation.to_string()),
+            track_sessions: true,
         })
     })
 }

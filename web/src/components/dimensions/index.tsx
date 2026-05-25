@@ -4,7 +4,7 @@ import styles from "./dimensions.module.css";
 
 import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
 import { formatMetricVal } from "../../utils";
 import { BrowserIcon, MobileDeviceIcon, OrientationIcon, OSIcon, ReferrerIcon } from "../icons";
@@ -46,21 +46,22 @@ export const DimensionTabsCard = ({
 };
 
 export const PageDimensionTabsCard = ({
+	dimensions = ["url", "url_entry", "url_exit", "fqdn"],
 	query,
 	onSelect,
 }: {
+	dimensions?: Dimension[];
 	query: ProjectQuery;
 	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
 }) => {
 	const showSessionPageDimensions = query.metric === "views" || query.metric === "unique_visitors";
 
-	if (showSessionPageDimensions) {
-		return (
-			<DimensionDropdownCard dimensions={["url", "url_entry", "url_exit", "fqdn"]} query={query} onSelect={onSelect} />
-		);
-	} else {
-		return <DimensionCard dimension="url" query={query} onSelect={(value) => onSelect(value, "url")} />;
+	if (!showSessionPageDimensions || dimensions.length === 1) {
+		const dimension = dimensions.includes("url") ? "url" : dimensions[0];
+		return <DimensionCard dimension={dimension} query={query} onSelect={(value) => onSelect(value, dimension)} />;
 	}
+
+	return <DimensionDropdownCard dimensions={dimensions} query={query} onSelect={onSelect} />;
 };
 
 export const DimensionDropdownCard = ({
@@ -73,6 +74,10 @@ export const DimensionDropdownCard = ({
 	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
 }) => {
 	const [selectedDimension, setSelectedDimension] = useState(dimensions[0]);
+
+	useEffect(() => {
+		if (!dimensions.includes(selectedDimension)) setSelectedDimension(dimensions[0]);
+	}, [dimensions, selectedDimension]);
 
 	return (
 		<article className={styles.card}>
@@ -115,7 +120,7 @@ export const DimensionTabs = ({
 	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
 }) => {
 	return (
-		<Tabs.Root className={styles.tabs} defaultValue={dimensions[0]}>
+		<Tabs.Root key={dimensions.join(":")} className={styles.tabs} defaultValue={dimensions[0]}>
 			<Tabs.List className={styles.tabsList}>
 				{Object.entries(dimensions).map(([key, value]) => (
 					<Tabs.Tab key={key} value={value}>

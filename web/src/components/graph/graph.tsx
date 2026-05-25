@@ -322,7 +322,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 	}, [updateGraph]);
 
 	return (
-		<div ref={containerRef} className={styles.graph} data-tooltip-float={true} data-tooltip-id="graph">
+		<div ref={containerRef} className={styles.graph}>
 			<svg ref={svgRef} style={{ display: "block", width: "100%", height: "100%" }}>
 				<title>Graph</title>
 				<defs>

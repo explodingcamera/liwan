@@ -1,11 +1,13 @@
-import { CircleIcon, LockIcon } from "lucide-react";
+import { CircleIcon, LockIcon, SettingsIcon } from "lucide-react";
 import styles from "./project.module.css";
 
-import type { ProjectResponse, StatsResponse } from "../../api";
+import { type ProjectResponse, type StatsResponse, useMe } from "../../api";
 import { formatMetricVal } from "../../utils";
 import { CardLink } from "../card";
 
 export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; project: ProjectResponse }) => {
+	const { role } = useMe();
+
 	return (
 		<h1 className={styles.statsHeader}>
 			<span>
@@ -14,6 +16,11 @@ export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; proje
 					{project.displayName}
 				</CardLink>
 				&nbsp;
+				{role === "admin" && (
+					<a href={`/settings/projects/${project.id}`} className={styles.settingsButton} aria-label="Project settings">
+						<SettingsIcon size={16} />
+					</a>
+				)}
 			</span>
 			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
 		</h1>

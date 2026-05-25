@@ -93,7 +93,7 @@ pub(super) fn build_filter_clause(filters: &[DimensionFilter]) -> Result<(String
 pub(super) fn metric_aggregate_sql(metric: Metric, alias: &str) -> String {
     match metric {
         Metric::Views => format!("count({alias}.created_at)"),
-        Metric::UniqueVisitors => format!("count(distinct {alias}.visitor_id)"),
+        Metric::UniqueVisitors => format!("count(distinct {alias}.visitor_group_id)"),
         Metric::BounceRate => {
             format!(
 				"--sql

@@ -3,6 +3,7 @@ import { useId, useRef } from "react";
 import { api, useMe, useMutation } from "../../api";
 import { createToast } from "../toast";
 import styles from "./me.module.css";
+import { Snippet } from "./snippet";
 
 export const MyAccount = () => {
 	const newPasswordId = useId();
@@ -59,15 +60,7 @@ export const MyAccount = () => {
 					You can copy the tracking snippet for a specific entity <a href="/settings/entities">here</a>, use the{" "}
 					<a href="https://npmjs.com/package/liwan-tracker">liwan-tracker</a> npm package, or use the following code:
 				</p>
-				<code>
-					<span className={styles.tag}>{"<script"}</span> type="module" data-entity="
-					<span className={styles.entity}>YOUR_ENTITY_ID</span>" src="
-					{window.location.origin}/script.js"
-					<span className={styles.tag}>
-						{">"}
-						{"</script>"}
-					</span>
-				</code>
+				<Snippet entityId="YOUR_ENTITY_ID" />
 			</article>
 			<article>
 				<form className={styles.password} onSubmit={handleSubmit} ref={formRef}>

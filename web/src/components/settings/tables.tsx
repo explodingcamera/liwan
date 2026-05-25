@@ -1,21 +1,12 @@
 import { Fragment, type ReactElement, useRef } from "react";
 import styles from "./tables.module.css";
 
-import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, TrashIcon } from "lucide-react";
+import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, SettingsIcon, TrashIcon } from "lucide-react";
 import { type Column, Table } from "../table";
-import { DeleteDialog, EditEntity, EditPassword, EditProject, EditUser } from "./dialogs";
+import { DeleteDialog, EditPassword, EditUser } from "./dialogs";
 
-import {
-	type EntityResponse,
-	type ProjectResponse,
-	type UserResponse,
-	useEntities,
-	useMe,
-	useProjects,
-	useUsers,
-} from "../../api";
+import { type UserResponse, useEntities, useMe, useProjects, useUsers } from "../../api";
 import { cls, getUsername } from "../../utils";
-import { createToast } from "../toast";
 
 type DropdownOptions = Record<string, ((close: () => void) => ReactElement) | null>;
 
@@ -37,39 +28,17 @@ const Dropdown = ({ options }: { options: DropdownOptions }) => {
 	);
 };
 
-const ProjectDropdown = ({ project }: { project: ProjectResponse }) => {
+const SettingsLink = ({ href, label }: { href: string; label: string }) => {
 	const { role } = useMe();
 	if (role === "user") {
 		return null;
 	}
 
-	const options: DropdownOptions = {
-		edit: (close) => (
-			<EditProject
-				project={project}
-				trigger={
-					<button type="button" onClick={close}>
-						<EditIcon size={18} />
-						Edit
-					</button>
-				}
-			/>
-		),
-		delete: (close) => (
-			<DeleteDialog
-				id={project.id}
-				displayName={project.displayName}
-				type="project"
-				trigger={
-					<button type="button" onClick={close} className={styles.danger}>
-						<TrashIcon size={18} />
-						Delete
-					</button>
-				}
-			/>
-		),
-	};
-	return <Dropdown options={options} />;
+	return (
+		<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
+			<SettingsIcon size={18} />
+		</a>
+	);
 };
 
 export const ProjectsTable = () => {
@@ -79,7 +48,7 @@ export const ProjectsTable = () => {
 		{
 			id: "displayName",
 			header: "Name",
-			render: (row) => <span data-tooltip={`ID: ${row.id}`}>{row.displayName}</span>,
+			render: (row) => <a href={`/settings/projects/${row.id}`}>{row.displayName}</a>,
 			nowrap: true,
 		},
 		{
@@ -95,7 +64,7 @@ export const ProjectsTable = () => {
 					{row.entities.map((entity, i) => (
 						<Fragment key={entity.id}>
 							{i > 0 && ", "}
-							<u data-tooltip={`ID: ${entity.id}`}>{entity.displayName}</u>
+							<a href={`/settings/entities/${entity.id}`}>{entity.displayName}</a>
 						</Fragment>
 					))}
 				</>
@@ -104,64 +73,13 @@ export const ProjectsTable = () => {
 		},
 		{
 			id: "edit",
-			render: (row) => <ProjectDropdown project={row} />,
+			render: (row) => (
+				<SettingsLink href={`/settings/projects/${row.id}`} label={`Open ${row.displayName} settings`} />
+			),
 		},
 	];
 
 	return <Table columns={columns} rows={projects} isLoading={isLoading} />;
-};
-
-const EntityDropdown = ({ entity }: { entity: EntityResponse }) => {
-	const { role } = useMe();
-	if (role === "user") {
-		return null;
-	}
-
-	const options: DropdownOptions = {
-		copy: (close) => (
-			<button
-				type="button"
-				onClick={() => {
-					navigator.clipboard
-						.writeText(
-							`<script type="module" data-entity="${entity.id}" src="${window.location.origin}/script.js"></script>`,
-						)
-						.then(() => createToast("Snippet copied to clipboard", "info"))
-						.catch(() => createToast("Failed to copy snippet to clipboard", "error"));
-
-					close();
-				}}
-			>
-				<RectangleEllipsisIcon size={18} />
-				Copy Snippet
-			</button>
-		),
-		edit: (close) => (
-			<EditEntity
-				entity={entity}
-				trigger={
-					<button type="button" onClick={close}>
-						<EditIcon size={18} />
-						Edit
-					</button>
-				}
-			/>
-		),
-		delete: (close) => (
-			<DeleteDialog
-				id={entity.id}
-				displayName={entity.displayName}
-				type="entity"
-				trigger={
-					<button type="button" onClick={close} className={styles.danger}>
-						<TrashIcon size={18} />
-						Delete
-					</button>
-				}
-			/>
-		),
-	};
-	return <Dropdown options={options} />;
 };
 
 export const EntitiesTable = () => {
@@ -176,7 +94,7 @@ export const EntitiesTable = () => {
 			id: "displayName",
 			// icon: <TagIcon size={18} />,
 			header: "Name",
-			render: (row) => <span>{row.displayName}</span>,
+			render: (row) => <a href={`/settings/entities/${row.id}`}>{row.displayName}</a>,
 			nowrap: true,
 		},
 		{
@@ -195,7 +113,7 @@ export const EntitiesTable = () => {
 					{row.projects.map((project, i) => (
 						<Fragment key={project.id}>
 							{i > 0 && ", "}
-							<u data-tooltip={`ID: ${project.id}`}>{project.displayName}</u>
+							<a href={`/settings/projects/${project.id}`}>{project.displayName}</a>
 						</Fragment>
 					))}
 				</>
@@ -204,7 +122,9 @@ export const EntitiesTable = () => {
 		},
 		{
 			id: "edit",
-			render: (row) => <EntityDropdown entity={row} />,
+			render: (row) => (
+				<SettingsLink href={`/settings/entities/${row.id}`} label={`Open ${row.displayName} settings`} />
+			),
 		},
 	];
 

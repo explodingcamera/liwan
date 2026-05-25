@@ -34,7 +34,7 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     let vars = repeat_vars(entities.len());
     let query = format!(
         "--sql
-			select count(distinct e.visitor_id)
+			select count(distinct e.visitor_group_id)
 			from events e
 			where
 				e.entity_id in ({vars}) and
@@ -78,7 +78,7 @@ pub fn overall_stats(
 		with
 			session_data as (
 				select
-					e.visitor_id,
+					e.visitor_group_id,
 					e.created_at,
 					e.time_from_last_event,
 					e.time_to_next_event
@@ -103,8 +103,8 @@ pub fn overall_stats(
         Ok(ReportStats {
             total_views: row.get(0)?,
             unique_visitors: row.get(1)?,
-            bounce_rate: row.get::<_, Option<f64>>(2)?.unwrap_or(0.0),
-            avg_time_on_site: row.get::<_, Option<f64>>(3)?.unwrap_or(0.0),
+            bounce_rate: row.get(2)?,
+            avg_time_on_site: row.get(3)?,
         })
     })?;
 

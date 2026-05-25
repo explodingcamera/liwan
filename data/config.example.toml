@@ -20,6 +20,10 @@ listen=9042 # The port to listen on (http)
 # If false, only the direct peer IP is used.
 # use_forward_headers=true
 
+# Hour of day, in the server's local timezone, when visitor grouping salts rotate.
+# Defaults to 4, meaning 4am local time.
+# visitor_group_rotation_hour=4
+
 # GeoIp settings (Optional)
 [geoip]
 # # MaxMind account ID and license key

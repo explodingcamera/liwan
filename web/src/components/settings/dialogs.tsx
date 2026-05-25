@@ -1,4 +1,5 @@
 import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import type { OASModel } from "fets";
 
 import { Dialog } from "../dialog";
 import { type Tag, Tags } from "../tags";
@@ -13,26 +14,61 @@ import {
 	invalidateProjects,
 	invalidateUsers,
 	queryClient,
+	dimensions,
+	metrics,
+	type Metric,
+	type DashboardSpec,
 	useEntities,
 	useMe,
 	useMutation,
 	useProjects,
 } from "../../api";
+import { FiltersEditor, GeoSelect, VisitorModeSelect } from "./collection";
 import { cls } from "../../utils";
 import { createToast } from "../toast";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
+
+type EntityCollectionSettings = OASModel<DashboardSpec, "EntityCollectionSettings">;
+type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
+type EntityHistoryMode = EntityCollectionSettings["historyMode"];
+type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
+type GeoDetail = CollectionSettings["trackGeo"];
+type ProjectDisplaySettings = OASModel<DashboardSpec, "ProjectDisplaySettings">;
+type DisplayOverride = ProjectDisplaySettings["metricDisplayOverrides"][string];
+
+const displayOverrides = ["auto", "show", "hide"] as const satisfies readonly DisplayOverride[];
+const entityRetentionOptions = [
+	{ value: "inherit", label: "Inherit global" },
+	{ value: "keep_all", label: "Keep all history" },
+	{ value: "30", label: "1 month" },
+	{ value: "90", label: "3 months" },
+	{ value: "180", label: "6 months" },
+	{ value: "365", label: "1 year" },
+	{ value: "730", label: "2 years" },
+] as const;
+const entityRetentionValues = entityRetentionOptions.map((option) => option.value);
+const entityRetentionValue = (mode: EntityHistoryMode, days?: number | null) => {
+	if (mode === "inherit" || mode === "keep_all") return mode;
+	const value = String(days ?? 365);
+	return isOneOf(entityRetentionValues, value) ? value : "365";
+};
+const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
+	values.some((item) => item === value);
 
 export const DeleteDialog = ({
 	id,
 	displayName,
 	type,
 	trigger,
+	onDeleted,
 }: {
 	id: string;
 	displayName: string;
 	type: "project" | "entity" | "user";
 	trigger: ReactElement;
+	onDeleted?: () => void;
 }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
@@ -59,6 +95,7 @@ export const DeleteDialog = ({
 					break;
 			}
 			createToast(`${toTitleCase(type)} deleted successfully`, "success");
+			onDeleted?.();
 		},
 		onError: console.error,
 	});
@@ -104,20 +141,35 @@ export const DeleteDialog = ({
 export const EditProject = ({ project, trigger }: { project: ProjectResponse; trigger: ReactElement }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
+	const [tab, setTab] = useState<"general" | "display">("general");
+	const [projectSettings, setProjectSettings] = useState<ProjectDisplaySettings>();
+	const [error, setError] = useState<Error>();
 
 	const { entities } = useEntities();
 	const entityTags = useMemo(() => entities.map((p) => ({ value: p.id, label: p.displayName })), [entities]);
 	const [selectedEntities, setSelectedEntities] = useState<Tag[]>([]);
 
-	const { mutate, error, reset } = useMutation({
-		mutationFn: api["/api/dashboard/project/{project_id}"].put,
-		onSuccess: () => {
-			closeRef?.current?.click();
-			queryClient.invalidateQueries({ queryKey: ["projects"] });
-			createToast("Project updated successfully", "success");
-		},
-		onError: console.error,
-	});
+	const updateMetricDisplay = (metric: Metric, value: string) => {
+		if (!isOneOf(displayOverrides, value)) return;
+		setProjectSettings((settings) => {
+			if (!settings) return settings;
+			const metricDisplayOverrides = { ...settings.metricDisplayOverrides };
+			if (value === "auto") delete metricDisplayOverrides[metric];
+			else metricDisplayOverrides[metric] = value;
+			return { ...settings, metricDisplayOverrides };
+		});
+	};
+
+	const updateDimensionDisplay = (dimension: string, value: string) => {
+		if (!isOneOf(displayOverrides, value)) return;
+		setProjectSettings((settings) => {
+			if (!settings) return settings;
+			const dimensionDisplayOverrides = { ...settings.dimensionDisplayOverrides };
+			if (value === "auto") delete dimensionDisplayOverrides[dimension];
+			else dimensionDisplayOverrides[dimension] = value;
+			return { ...settings, dimensionDisplayOverrides };
+		});
+	};
 
 	useEffect(() => {
 		setSelectedEntities(
@@ -128,7 +180,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 		);
 	}, [project.entities]);
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
@@ -137,45 +189,129 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 			isPublic: string;
 		};
 
-		mutate({
-			params: { project_id: project.id },
-			json: {
-				project: {
-					displayName,
-					public: isPublic === "on",
+		try {
+			await api["/api/dashboard/project/{project_id}"].put({
+				params: { project_id: project.id },
+				json: {
+					project: { displayName, public: isPublic === "on" },
+					entities: selectedEntities.map((tag) => tag.value as string),
 				},
-				entities: selectedEntities.map((tag) => tag.value as string),
-			},
-		});
+			});
+
+			if (projectSettings) {
+				await api["/api/dashboard/project/{project_id}/settings"].put({
+					params: { project_id: project.id },
+					json: {
+						projectId: project.id,
+						metricDisplayOverrides: projectSettings.metricDisplayOverrides,
+						dimensionDisplayOverrides: projectSettings.dimensionDisplayOverrides,
+					},
+				});
+			}
+
+			closeRef.current?.click();
+			queryClient.invalidateQueries({ queryKey: ["projects"] });
+			createToast("Project updated successfully", "success");
+		} catch (err) {
+			setError(err instanceof Error ? err : new Error("Failed to update project"));
+		}
 	};
 
 	return (
 		<Dialog
-			onOpenChange={() => reset()}
-			title={`Edit Project: ${project.displayName}`}
+			onOpenChange={(open) => {
+				setError(undefined);
+				if (open) {
+					setTab("general");
+					api["/api/dashboard/project/{project_id}/settings"]
+						.get({ params: { project_id: project.id } })
+						.json()
+						.then(setProjectSettings)
+						.catch((err) => setError(err instanceof Error ? err : new Error("Failed to load project settings")));
+				}
+			}}
+			title={project.displayName}
 			description="Edit the project's name or change its visibility."
 			hideDescription
 			trigger={role === "admin" && trigger}
+			autoOverflow
+			className={styles.editDialog}
 		>
 			<form onSubmit={handleSubmit}>
-				<label>
-					Project Name <small>(Used in the dashboard)</small>
-					<input required name="displayName" type="text" defaultValue={project.displayName} autoComplete="off" />
-				</label>
-				<Tags
-					labelText="Associated Entities"
-					selected={selectedEntities}
-					suggestions={entityTags}
-					onAdd={(tag) => setSelectedEntities((rest) => [...rest, tag])}
-					onDelete={(i) => setSelectedEntities(selectedEntities.filter((_, index) => index !== i))}
-					noOptionsText="No matching entities"
-				/>
-				<label>
-					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
-					<input type="checkbox" role="switch" name="isPublic" defaultChecked={project.public} />
-					Make Public <br />
-					<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
-				</label>
+				<div className={styles.tabs}>
+					<button
+						type="button"
+						className={cls(styles.tab, tab === "general" && styles.activeTab)}
+						onClick={() => setTab("general")}
+					>
+						General
+					</button>
+					<button
+						type="button"
+						className={cls(styles.tab, tab === "display" && styles.activeTab)}
+						onClick={() => setTab("display")}
+					>
+						Display
+					</button>
+				</div>
+				<section className={styles.tabPanel} hidden={tab !== "general"}>
+					<label>
+						Project Name <small>(Used in the dashboard)</small>
+						<input required name="displayName" type="text" defaultValue={project.displayName} autoComplete="off" />
+					</label>
+					<Tags
+						labelText="Associated Entities"
+						selected={selectedEntities}
+						suggestions={entityTags}
+						onAdd={(tag) => setSelectedEntities((rest) => [...rest, tag])}
+						onDelete={(i) => setSelectedEntities(selectedEntities.filter((_, index) => index !== i))}
+						noOptionsText="No matching entities"
+					/>
+					<label>
+						{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
+						<input type="checkbox" role="switch" name="isPublic" defaultChecked={project.public} />
+						Make Public <br />
+						<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
+					</label>
+				</section>
+				{projectSettings && (
+					<section className={styles.tabPanel} hidden={tab !== "display"}>
+						<p>
+							Auto hides metrics or dimensions when project data is incomplete. Use Show anyway only when partial
+							results are acceptable.
+						</p>
+						<h3>Metrics</h3>
+						{metrics.map((metric) => (
+							<label key={metric}>
+								{title(metric)}
+								<select
+									name={`metric:${metric}`}
+									value={projectSettings.metricDisplayOverrides[metric] ?? "auto"}
+									onChange={(event) => updateMetricDisplay(metric, event.currentTarget.value)}
+								>
+									<option value="auto">Auto</option>
+									<option value="show">Show anyway</option>
+									<option value="hide">Hide</option>
+								</select>
+							</label>
+						))}
+						<h3>Dimensions</h3>
+						{dimensions.map((dimension) => (
+							<label key={dimension}>
+								{title(dimension)}
+								<select
+									name={`dimension:${dimension}`}
+									value={projectSettings.dimensionDisplayOverrides[dimension] ?? "auto"}
+									onChange={(event) => updateDimensionDisplay(dimension, event.currentTarget.value)}
+								>
+									<option value="auto">Auto</option>
+									<option value="show">Show anyway</option>
+									<option value="hide">Hide</option>
+								</select>
+							</label>
+						))}
+					</section>
+				)}
 				<br />
 				<div className="grid">
 					<Dialog.Close className="secondary outline" ref={closeRef}>
@@ -285,16 +421,15 @@ export const CreateProject = () => {
 export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigger: ReactElement }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
-
-	const { mutate, error, reset } = useMutation({
-		mutationFn: api["/api/dashboard/entity/{entity_id}"].put,
-		onSuccess: () => {
-			closeRef?.current?.click();
-			createToast("Entity updated successfully", "success");
-			invalidateEntities();
-		},
-		onError: console.error,
-	});
+	const [error, setError] = useState<Error>();
+	const [tab, setTab] = useState<"general" | "collection" | "filters">("general");
+	const [entitySettings, setEntitySettings] = useState<EntityCollectionSettings>();
+	const [visitorGroupMode, setVisitorGroupMode] = useState<VisitorGroupMode | null>(null);
+	const [trackSessions, setTrackSessions] = useState<boolean | null>(null);
+	const [trackUtmParams, setTrackUtmParams] = useState<boolean | null>(null);
+	const [trackGeo, setTrackGeo] = useState<GeoDetail | null>(null);
+	const [historyMode, setHistoryMode] = useState<EntityHistoryMode>("inherit");
+	const [historyDays, setHistoryDays] = useState<number | null>(null);
 
 	const { projects } = useProjects();
 	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
@@ -309,7 +444,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 		);
 	}, [entity.projects]);
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
@@ -322,33 +457,196 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 				.sort()
 				.join() === submitProjects.sort().join();
 
-		mutate({
-			params: { entity_id: entity.id },
-			json: { displayName, projects: updateProjects ? undefined : submitProjects },
-		});
+		try {
+			await api["/api/dashboard/entity/{entity_id}"].put({
+				params: { entity_id: entity.id },
+				json: { displayName, projects: updateProjects ? undefined : submitProjects },
+			});
+
+			if (entitySettings) {
+				await api["/api/dashboard/entity/{entity_id}/settings"].put({
+					params: { entity_id: entity.id },
+					json: {
+						entityId: entity.id,
+						visitorGroupMode,
+						trackSessions,
+						trackUtmParams,
+						trackGeo,
+						historyMode,
+						historyDays: historyMode === "days" ? (historyDays ?? 365) : null,
+						ingestFilters: entitySettings.ingestFilters,
+					},
+				});
+			}
+
+			closeRef.current?.click();
+			createToast("Entity updated successfully", "success");
+			invalidateEntities();
+		} catch (err) {
+			setError(err instanceof Error ? err : new Error("Failed to update entity"));
+		}
 	};
 
 	return (
 		<Dialog
-			onOpenChange={() => reset()}
-			title={`Edit Entity: ${entity.displayName}`}
-			description="Edit the entity's name or change the projects it is associated with."
+			onOpenChange={(open) => {
+				setError(undefined);
+				if (open) {
+					setTab("general");
+					api["/api/dashboard/entity/{entity_id}/settings"]
+						.get({ params: { entity_id: entity.id } })
+						.json()
+						.then((res) => {
+							setEntitySettings(res.settings);
+							setVisitorGroupMode(res.settings.visitorGroupMode ?? null);
+							setTrackSessions(res.settings.trackSessions ?? null);
+							setTrackUtmParams(res.settings.trackUtmParams ?? null);
+							setTrackGeo(res.settings.trackGeo ?? null);
+							setHistoryMode(res.settings.historyMode);
+							setHistoryDays(res.settings.historyMode === "days" ? (res.settings.historyDays ?? 365) : null);
+						})
+						.catch((err) => setError(err instanceof Error ? err : new Error("Failed to load entity settings")));
+				}
+			}}
+			title={entity.displayName}
+			description="Edit the entity and how its data is collected."
 			hideDescription
 			trigger={role === "admin" && trigger}
+			autoOverflow
+			className={styles.editDialog}
 		>
 			<form onSubmit={handleSubmit}>
-				<label>
-					Entity Name <small>(Used in the dashboard)</small>
-					<input required name="displayName" type="text" defaultValue={entity.displayName} autoComplete="off" />
-				</label>
-				<Tags
-					labelText="Associated Projects"
-					selected={selectedProjects}
-					suggestions={projectTags}
-					onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
-					onDelete={(i) => setSelectedProjects(selectedProjects.filter((_, index) => index !== i))}
-					noOptionsText="No matching projects"
-				/>
+				<div className={styles.tabs}>
+					<button
+						type="button"
+						className={cls(styles.tab, tab === "general" && styles.activeTab)}
+						onClick={() => setTab("general")}
+					>
+						General
+					</button>
+					<button
+						type="button"
+						className={cls(styles.tab, tab === "collection" && styles.activeTab)}
+						onClick={() => setTab("collection")}
+					>
+						Collection
+					</button>
+					<button
+						type="button"
+						className={cls(styles.tab, tab === "filters" && styles.activeTab)}
+						onClick={() => setTab("filters")}
+					>
+						Filters
+					</button>
+				</div>
+
+				<section className={styles.tabPanel} hidden={tab !== "general"}>
+					<label>
+						Entity Name <small>(Used in the dashboard)</small>
+						<input required name="displayName" type="text" defaultValue={entity.displayName} autoComplete="off" />
+					</label>
+					<Tags
+						labelText="Associated Projects"
+						selected={selectedProjects}
+						suggestions={projectTags}
+						onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
+						onDelete={(i) => setSelectedProjects(selectedProjects.filter((_, index) => index !== i))}
+						noOptionsText="No matching projects"
+					/>
+				</section>
+
+				{entitySettings && (
+					<>
+						<section className={styles.tabPanel} hidden={tab !== "collection"}>
+							<label htmlFor="entityVisitorGroupMode">
+								Visitor grouping
+								<VisitorModeSelect
+									id="entityVisitorGroupMode"
+									value={visitorGroupMode}
+									onChange={setVisitorGroupMode}
+									allowInherit
+								/>
+								<small>Controls how repeat visits are grouped for this entity.</small>
+							</label>
+							<label>
+								Session metrics
+								<select
+									name="trackSessions"
+									value={trackSessions == null ? "inherit" : String(trackSessions)}
+									onChange={(event) =>
+										setTrackSessions(
+											event.currentTarget.value === "inherit" ? null : event.currentTarget.value === "true",
+										)
+									}
+								>
+									<option value="inherit">Inherit global</option>
+									<option value="true">Track</option>
+									<option value="false">Do not track</option>
+								</select>
+								<small>Required for bounce rate, time on site, entry URL, and exit URL.</small>
+							</label>
+							<label>
+								UTM parameters
+								<select
+									name="trackUtmParams"
+									value={trackUtmParams == null ? "inherit" : String(trackUtmParams)}
+									onChange={(event) =>
+										setTrackUtmParams(
+											event.currentTarget.value === "inherit" ? null : event.currentTarget.value === "true",
+										)
+									}
+								>
+									<option value="inherit">Inherit global</option>
+									<option value="true">Track</option>
+									<option value="false">Do not track</option>
+								</select>
+								<small>Stores campaign fields like source, medium, campaign, term, and content.</small>
+							</label>
+							<label htmlFor="entityTrackGeo">
+								Geolocation detail
+								<GeoSelect id="entityTrackGeo" value={trackGeo} onChange={setTrackGeo} allowInherit />
+								<small>Choose how much location data is stored for this entity.</small>
+							</label>
+							<fieldset>
+								<div className="grid">
+									<label>
+										History retention
+										<select
+											name="historyRetention"
+											value={entityRetentionValue(historyMode, historyDays)}
+											onChange={(event) => {
+												const next = event.currentTarget.value;
+												if (!isOneOf(entityRetentionValues, next)) return;
+												if (next === "inherit" || next === "keep_all") {
+													setHistoryMode(next);
+													setHistoryDays(null);
+												} else {
+													setHistoryMode("days");
+													setHistoryDays(Number(next));
+												}
+											}}
+										>
+											{entityRetentionOptions.map((option) => (
+												<option key={option.value} value={option.value}>
+													{option.label}
+												</option>
+											))}
+										</select>
+									</label>
+								</div>
+								<small>Automatically prune older event data after the selected period.</small>
+							</fieldset>
+						</section>
+
+						<section className={styles.tabPanel} hidden={tab !== "filters"}>
+							<FiltersEditor
+								filters={entitySettings.ingestFilters}
+								setFilters={(ingestFilters) => setEntitySettings({ ...entitySettings, ingestFilters })}
+							/>
+						</section>
+					</>
+				)}
+
 				<div className="grid">
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel

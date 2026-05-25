@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import styles from "./projects.module.css";
 
 import { ChevronDownIcon } from "lucide-react";
@@ -8,6 +8,7 @@ import {
 	type Metric,
 	type ProjectResponse,
 	api,
+	metrics,
 	metricNames,
 	useMe,
 	useProjectGraph,
@@ -57,6 +58,14 @@ export const Projects = () => {
 	const { metric, setMetric } = useMetric();
 	const { range, setRange } = useRange();
 	const [hiddenProjects, setHiddenProjects] = useState<string[]>([]);
+	const visibleMetrics = metrics.filter((metric) =>
+		data?.projects.some((project) => !project.hiddenMetrics.includes(metric)),
+	);
+	const activeMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
+
+	useEffect(() => {
+		if (activeMetric && activeMetric !== metric) setMetric(activeMetric);
+	}, [activeMetric, metric, setMetric]);
 
 	if (isLoading) return null;
 	if (isError)
@@ -96,7 +105,7 @@ export const Projects = () => {
 				>
 					{data?.projects.map((project) => (
 						<Accordion.Item key={project.id} value={project.id}>
-							<Project project={project} metric={metric} setMetric={setMetric} range={range} />
+							<Project project={project} metric={activeMetric ?? "views"} setMetric={setMetric} range={range} />
 						</Accordion.Item>
 					))}
 				</Accordion.Root>
@@ -116,18 +125,30 @@ const Project = ({
 	setMetric: (value: Metric) => void;
 	range: DateRange;
 }) => {
+	const visibleMetrics = metrics.filter((metric) => !project.hiddenMetrics.includes(metric));
+	const reportMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
 	const {
 		graph,
 		isError: graphError,
 		isLoading: graphLoading,
 		isUpdating: graphUpdating,
-	} = useProjectGraph({ projectId: project.id, metric, range });
+	} = useProjectGraph({
+		projectId: project.id,
+		metric: reportMetric ?? "views",
+		range,
+		enabled: Boolean(reportMetric),
+	});
 
 	const {
 		stats,
 		isError: statsError,
 		isLoading: statsLoading,
-	} = useProjectStats({ projectId: project.id, metric, range });
+	} = useProjectStats({
+		projectId: project.id,
+		metric: reportMetric ?? "views",
+		range,
+		enabled: Boolean(reportMetric),
+	});
 
 	const isLoading = graphLoading || statsLoading;
 	const isError = graphError || statsError;
@@ -141,20 +162,22 @@ const Project = ({
 						<ChevronDownIcon size={35} strokeWidth={2} color="var(--pico-h1-color)" />
 					</Accordion.Trigger>
 				</div>
-				<SelectMetrics data={stats} metric={metric} setMetric={setMetric} />
+				<SelectMetrics data={stats} metric={reportMetric ?? "views"} metrics={visibleMetrics} setMetric={setMetric} />
 			</div>
-			<Accordion.Panel className={styles.AccordionContent}>
-				<div className={styles.graph}>
-					<LineGraph
-						data={graph}
-						title={metricNames[metric]}
-						metric={metric}
-						isLoading={graphLoading}
-						isUpdating={graphUpdating}
-						range={range}
-					/>
-				</div>
-			</Accordion.Panel>
+			{reportMetric && (
+				<Accordion.Panel className={styles.AccordionContent}>
+					<div className={styles.graph}>
+						<LineGraph
+							data={graph}
+							title={metricNames[reportMetric]}
+							metric={reportMetric}
+							isLoading={graphLoading}
+							isUpdating={graphUpdating}
+							range={range}
+						/>
+					</div>
+				</Accordion.Panel>
+			)}
 		</article>
 	);
 };

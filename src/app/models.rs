@@ -1,13 +1,14 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct Event {
     pub entity_id: String,
-    pub visitor_id: String,
+    pub visitor_group_id: String,
     pub event: String,
     pub created_at: DateTime<Utc>,
     pub fqdn: Option<String>,
@@ -25,6 +26,7 @@ pub struct Event {
     pub utm_term: Option<String>,
     pub screen_width: Option<String>,
     pub orientation: Option<String>,
+    pub track_sessions: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -41,11 +43,346 @@ pub struct Entity {
     pub display_name: String,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum VisitorGroupMode {
+    #[default]
+    Accurate,
+    RandomPerRequest,
+    NetworkStandard,
+    NetworkBalanced,
+    NetworkAccurate,
+}
+
+impl VisitorGroupMode {
+    pub fn cidr_prefixes(self) -> Option<(u8, u8)> {
+        match self {
+            Self::NetworkStandard => Some((24, 56)),
+            Self::NetworkBalanced => Some((28, 64)),
+            Self::NetworkAccurate => Some((32, 128)),
+            Self::Accurate | Self::RandomPerRequest => None,
+        }
+    }
+}
+
+impl Display for VisitorGroupMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Accurate => "accurate",
+            Self::RandomPerRequest => "random_per_request",
+            Self::NetworkStandard => "network_standard",
+            Self::NetworkBalanced => "network_balanced",
+            Self::NetworkAccurate => "network_accurate",
+        })
+    }
+}
+
+impl FromStr for VisitorGroupMode {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "accurate" => Ok(Self::Accurate),
+            "random_per_request" => Ok(Self::RandomPerRequest),
+            "network_standard" => Ok(Self::NetworkStandard),
+            "network_balanced" => Ok(Self::NetworkBalanced),
+            "network_accurate" => Ok(Self::NetworkAccurate),
+            _ => Err(format!("invalid visitor group mode: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum GeoDetail {
+    None,
+    Country,
+    #[default]
+    City,
+}
+
+impl Display for GeoDetail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::None => "none",
+            Self::Country => "country",
+            Self::City => "city",
+        })
+    }
+}
+
+impl FromStr for GeoDetail {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "none" => Ok(Self::None),
+            "country" => Ok(Self::Country),
+            "city" => Ok(Self::City),
+            _ => Err(format!("invalid geo detail: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum HistoryMode {
+    #[default]
+    KeepAll,
+    Days,
+}
+
+impl Display for HistoryMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::KeepAll => "keep_all",
+            Self::Days => "days",
+        })
+    }
+}
+
+impl FromStr for HistoryMode {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "keep_all" => Ok(Self::KeepAll),
+            "days" => Ok(Self::Days),
+            _ => Err(format!("invalid history mode: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum EntityHistoryMode {
+    #[default]
+    Inherit,
+    KeepAll,
+    Days,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
+pub enum FilterType {
+    IsNull,
+    Equal,
+    Contains,
+    StartsWith,
+    EndsWith,
+    IsTrue,
+    IsFalse,
+}
+
+impl Display for FilterType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::IsNull => "is_null",
+            Self::Equal => "equal",
+            Self::Contains => "contains",
+            Self::StartsWith => "starts_with",
+            Self::EndsWith => "ends_with",
+            Self::IsTrue => "is_true",
+            Self::IsFalse => "is_false",
+        })
+    }
+}
+
+impl FromStr for FilterType {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "is_null" => Ok(Self::IsNull),
+            "equal" => Ok(Self::Equal),
+            "contains" => Ok(Self::Contains),
+            "starts_with" => Ok(Self::StartsWith),
+            "ends_with" => Ok(Self::EndsWith),
+            "is_true" => Ok(Self::IsTrue),
+            "is_false" => Ok(Self::IsFalse),
+            _ => Err(format!("invalid filter type: {value}")),
+        }
+    }
+}
+
+impl Display for EntityHistoryMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Inherit => "inherit",
+            Self::KeepAll => "keep_all",
+            Self::Days => "days",
+        })
+    }
+}
+
+impl FromStr for EntityHistoryMode {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "inherit" => Ok(Self::Inherit),
+            "keep_all" => Ok(Self::KeepAll),
+            "days" => Ok(Self::Days),
+            _ => Err(format!("invalid entity history mode: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionSettings {
+    pub visitor_group_mode: VisitorGroupMode,
+    pub track_sessions: bool,
+    pub track_utm_params: bool,
+    pub track_geo: GeoDetail,
+    pub history_mode: HistoryMode,
+    pub history_days: Option<u32>,
+    pub ingest_filters: Vec<IngestFilter>,
+}
+
+impl Default for CollectionSettings {
+    fn default() -> Self {
+        Self {
+            visitor_group_mode: VisitorGroupMode::Accurate,
+            track_sessions: true,
+            track_utm_params: true,
+            track_geo: GeoDetail::City,
+            history_mode: HistoryMode::KeepAll,
+            history_days: None,
+            ingest_filters: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityCollectionSettings {
+    pub entity_id: String,
+    pub visitor_group_mode: Option<VisitorGroupMode>,
+    pub track_sessions: Option<bool>,
+    pub track_utm_params: Option<bool>,
+    pub track_geo: Option<GeoDetail>,
+    pub history_mode: EntityHistoryMode,
+    pub history_days: Option<u32>,
+    pub ingest_filters: Vec<IngestFilter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedCollectionSettings {
+    pub visitor_group_mode: VisitorGroupMode,
+    pub track_sessions: bool,
+    pub track_utm_params: bool,
+    pub track_geo: GeoDetail,
+    pub history_mode: HistoryMode,
+    pub history_days: Option<u32>,
+    pub ingest_filters: Vec<IngestFilter>,
+}
+
+impl From<CollectionSettings> for ResolvedCollectionSettings {
+    fn from(settings: CollectionSettings) -> Self {
+        Self {
+            visitor_group_mode: settings.visitor_group_mode,
+            track_sessions: settings.track_sessions,
+            track_utm_params: settings.track_utm_params,
+            track_geo: settings.track_geo,
+            history_mode: settings.history_mode,
+            history_days: settings.history_days,
+            ingest_filters: settings.ingest_filters,
+        }
+    }
+}
+
+impl ResolvedCollectionSettings {
+    pub fn resolve(global: CollectionSettings, entity: Option<EntityCollectionSettings>) -> Self {
+        let Some(entity) = entity else {
+            return global.into();
+        };
+
+        let (history_mode, history_days) = match entity.history_mode {
+            EntityHistoryMode::Inherit => (global.history_mode, global.history_days),
+            EntityHistoryMode::KeepAll => (HistoryMode::KeepAll, None),
+            EntityHistoryMode::Days => (HistoryMode::Days, entity.history_days),
+        };
+
+        let mut ingest_filters = global.ingest_filters;
+        ingest_filters.extend(entity.ingest_filters);
+
+        Self {
+            visitor_group_mode: entity.visitor_group_mode.unwrap_or(global.visitor_group_mode),
+            track_sessions: entity.track_sessions.unwrap_or(global.track_sessions),
+            track_utm_params: entity.track_utm_params.unwrap_or(global.track_utm_params),
+            track_geo: entity.track_geo.unwrap_or(global.track_geo),
+            history_mode,
+            history_days: if history_mode == HistoryMode::Days { history_days } else { None },
+            ingest_filters,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct IngestFilter {
+    pub dimension: String,
+    pub filter_type: FilterType,
+    pub value: Option<String>,
+    pub action: IngestFilterAction,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum IngestFilterAction {
+    #[default]
+    Drop,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum DisplayOverride {
+    #[default]
+    Auto,
+    Show,
+    Hide,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectDisplaySettings {
+    pub project_id: String,
+    pub metric_display_overrides: BTreeMap<String, DisplayOverride>,
+    pub dimension_display_overrides: BTreeMap<String, DisplayOverride>,
+}
+
 #[derive(Debug, Clone)]
 pub struct User {
     pub username: String,
     pub role: UserRole,
     pub projects: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inherited_entity_retention_ignores_stale_entity_days() {
+        let resolved = ResolvedCollectionSettings::resolve(
+            CollectionSettings { history_mode: HistoryMode::KeepAll, history_days: None, ..Default::default() },
+            Some(EntityCollectionSettings {
+                entity_id: "entity".to_string(),
+                visitor_group_mode: None,
+                track_sessions: None,
+                track_utm_params: None,
+                track_geo: None,
+                history_mode: EntityHistoryMode::Inherit,
+                history_days: Some(30),
+                ingest_filters: Vec::new(),
+            }),
+        );
+
+        assert_eq!(resolved.history_mode, HistoryMode::KeepAll);
+        assert_eq!(resolved.history_days, None);
+    }
 }
 
 #[derive(Debug, JsonSchema, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Default)]
@@ -84,7 +421,7 @@ macro_rules! event_params {
     ($event:expr) => {
         duckdb::params![
             $event.entity_id,
-            $event.visitor_id,
+            $event.visitor_group_id,
             $event.event,
             $event.created_at,
             $event.fqdn,

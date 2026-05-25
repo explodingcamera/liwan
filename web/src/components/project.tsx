@@ -3,7 +3,7 @@ import cardStyles from "./dimensions/dimensions.module.css";
 
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 
-import { metricNames, useDimension, useProject, useProjectGraph, useProjectStats } from "../api";
+import { dimensions, metrics, metricNames, useDimension, useProject, useProjectGraph, useProjectStats } from "../api";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api";
 import type { DateRange } from "../api/ranges";
 
@@ -17,7 +17,6 @@ import { ProjectHeader } from "./project/project";
 import { SelectRange } from "./project/range";
 
 const Worldmap = lazy(() => import("./worldmap").then((module) => ({ default: module.Worldmap })));
-
 export type ProjectQuery = {
 	project: ProjectResponse;
 	metric: Metric;
@@ -67,18 +66,44 @@ export const Project = () => {
 	}, []);
 
 	const { project, notFound } = useProject(projectId);
+	const visibleMetrics = useMemo(
+		() => metrics.filter((item) => !project?.hiddenMetrics.includes(item)),
+		[project?.hiddenMetrics],
+	);
+	const activeMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
+	const reportMetric = activeMetric ?? "views";
+	const visibleFilters = useMemo(
+		() => filters.filter((filter) => !project?.hiddenDimensions.includes(filter.dimension)),
+		[filters, project?.hiddenDimensions],
+	);
 	const {
 		graph,
 		isUpdating: graphUpdating,
 		isLoading: graphLoading,
-	} = useProjectGraph({ projectId, metric, range, filters });
-	const { stats } = useProjectStats({ projectId, metric, range, filters });
+	} = useProjectGraph({
+		projectId,
+		metric: reportMetric,
+		range,
+		filters: visibleFilters,
+		enabled: Boolean(activeMetric),
+	});
+	const { stats } = useProjectStats({
+		projectId,
+		metric: reportMetric,
+		range,
+		filters: visibleFilters,
+		enabled: Boolean(activeMetric),
+	});
 
 	const query = useMemo<ProjectQuery>(
 		// biome-ignore lint/style/noNonNullAssertion: this is safe because code using this query will only run when project is defined.
-		() => ({ project: project!, metric, range, filters }),
-		[project, metric, range, filters],
+		() => ({ project: project!, metric: reportMetric, range, filters: visibleFilters }),
+		[project, reportMetric, range, visibleFilters],
 	);
+
+	useEffect(() => {
+		if (activeMetric && activeMetric !== metric) setMetric(activeMetric);
+	}, [activeMetric, metric, setMetric]);
 
 	const toggleFilter = useCallback(
 		(filter: DimensionFilter) => {
@@ -104,6 +129,20 @@ export const Project = () => {
 	}
 
 	if (!project) return null;
+	const visibleDimensions = (items: Dimension[]) =>
+		items.filter((dimension) => !project.hiddenDimensions.includes(dimension));
+	const pageDimensions = visibleDimensions(["url", "url_entry", "url_exit", "fqdn"]);
+	const campaignDimensions = visibleDimensions([
+		"referrer",
+		"utm_source",
+		"utm_medium",
+		"utm_campaign",
+		"utm_content",
+		"utm_term",
+	]);
+	const geoDimensions = visibleDimensions(["country", "city"]);
+	const technologyDimensions = visibleDimensions(["platform", "browser"]);
+	const deviceDimensions = visibleDimensions(["mobile", "screen_width", "orientation"]);
 
 	return (
 		<div className={styles.project}>
@@ -113,33 +152,52 @@ export const Project = () => {
 						<ProjectHeader project={project} stats={stats} />
 						<SelectRange onSelect={setRange} range={range} projectId={project.id} />
 					</div>
-					<SelectMetrics data={stats} metric={metric} setMetric={setMetric} className={styles.projectStats} />
-					<SelectFilters value={filters} onChange={setFilters} />
+					<SelectMetrics
+						data={stats}
+						metric={reportMetric}
+						metrics={visibleMetrics}
+						setMetric={setMetric}
+						className={styles.projectStats}
+					/>
+					<SelectFilters
+						value={visibleFilters}
+						onChange={setFilters}
+						dimensions={dimensions.filter((dimension) => !project.hiddenDimensions.includes(dimension))}
+					/>
 				</div>
 				<article className={cls(cardStyles.card, styles.graphCard)}>
-					<LineGraph
-						data={graph}
-						title={metricNames[metric]}
-						metric={metric}
-						range={range}
-						isLoading={graphLoading}
-						isUpdating={graphUpdating}
-					/>
+					{activeMetric ? (
+						<LineGraph
+							data={graph}
+							title={metricNames[reportMetric]}
+							metric={reportMetric}
+							range={range}
+							isLoading={graphLoading}
+							isUpdating={graphUpdating}
+						/>
+					) : (
+						<div className={styles.emptyReport}>No metrics are visible for this project.</div>
+					)}
 				</article>
 				<div className={styles.tables}>
-					<PageDimensionTabsCard query={query} onSelect={onSelectDimRow} />
-					<DimensionDropdownCard
-						dimensions={["referrer", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]}
-						query={query}
-						onSelect={onSelectDimRow}
-					/>
-					<GeoCard query={query} onSelect={onSelectDimRow} />
-					<DimensionTabsCard dimensions={["platform", "browser"]} query={query} onSelect={onSelectDimRow} />
-					<DimensionDropdownCard
-						dimensions={["mobile", "screen_width", "orientation"]}
-						query={query}
-						onSelect={(v) => onSelectDimRow(v, "mobile")}
-					/>
+					{activeMetric && pageDimensions.length > 0 && (
+						<PageDimensionTabsCard dimensions={pageDimensions} query={query} onSelect={onSelectDimRow} />
+					)}
+					{activeMetric && campaignDimensions.length > 0 && (
+						<DimensionDropdownCard dimensions={campaignDimensions} query={query} onSelect={onSelectDimRow} />
+					)}
+					{activeMetric && geoDimensions.includes("country") && (
+						<GeoCard dimensions={geoDimensions} query={query} onSelect={onSelectDimRow} />
+					)}
+					{activeMetric && geoDimensions.length > 0 && !geoDimensions.includes("country") && (
+						<DimensionTabsCard dimensions={geoDimensions} query={query} onSelect={onSelectDimRow} />
+					)}
+					{activeMetric && technologyDimensions.length > 0 && (
+						<DimensionTabsCard dimensions={technologyDimensions} query={query} onSelect={onSelectDimRow} />
+					)}
+					{activeMetric && deviceDimensions.length > 0 && (
+						<DimensionDropdownCard dimensions={deviceDimensions} query={query} onSelect={onSelectDimRow} />
+					)}
 				</div>
 			</Suspense>
 		</div>
@@ -147,9 +205,11 @@ export const Project = () => {
 };
 
 const GeoCard = ({
+	dimensions,
 	query,
 	onSelect,
 }: {
+	dimensions: Dimension[];
 	query: ProjectQuery;
 	onSelect: (value: DimensionTableRow, dimension: Dimension) => void;
 }) => {
@@ -166,7 +226,7 @@ const GeoCard = ({
 				</Suspense>
 			</div>
 			<div className={styles.geoTable}>
-				<DimensionTabs dimensions={["country", "city"]} query={query} onSelect={onSelect} />
+				<DimensionTabs dimensions={dimensions} query={query} onSelect={onSelect} />
 			</div>
 		</article>
 	);

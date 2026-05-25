@@ -1,0 +1,41 @@
+.snippet {
+  min-width: 0;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-code-background-color, var(--pico-background-color));
+}
+
+.snippet code {
+  display: block;
+  min-width: 0;
+  padding: 0.9rem 3rem 0.9rem 0.9rem;
+  background: transparent;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-weight: 500;
+}
+
+.tag {
+  color: var(--pico-primary-hover);
+  font-weight: 900;
+}
+
+.entity {
+  font-weight: 900;
+}
+
+.snippet button {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+}

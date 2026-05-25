@@ -1,34 +1,178 @@
-.toastContainer {
+.viewport {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
-  z-index: 9999;
+  z-index: 20;
+  width: calc(100vw - 2rem);
+  max-width: 24rem;
+  margin: 0 auto;
+  right: 1rem;
+  bottom: 1rem;
+  left: auto;
+  top: auto;
+  outline: none;
 }
 
 .toast {
-  padding: 0.8rem 1.1rem;
-  font-size: 0.9rem;
-  color: #000;
+  --gap: 0.65rem;
+  --peek: 0.45rem;
+  --scale: calc(max(0, 1 - (var(--toast-index) * 0.06)));
+  --shrink: calc(1 - var(--scale));
+  --height: var(--toast-frontmost-height, var(--toast-height));
+  --offset-y: calc(var(--toast-offset-y) * -1 + (var(--toast-index) * var(--gap) * -1) + var(--toast-swipe-movement-y));
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--height);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-card-background-color) 92%, transparent);
+  color: var(--pico-color);
   box-shadow: var(--pico-card-box-shadow);
-  border-radius: var(--pico-border-radius, 0.5rem);
+  backdrop-filter: blur(12px);
+  cursor: default;
+  overflow: hidden;
+  transform-origin: bottom right;
+  user-select: none;
+  z-index: calc(1000 - var(--toast-index));
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(
+      calc(var(--toast-swipe-movement-y) - (var(--toast-index) * var(--peek)) - (var(--shrink) * var(--height)))
+    )
+    scale(var(--scale));
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s,
+    height 0.15s;
 }
 
-.success {
-  background-color: #4caf50;
+.toast::after {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: calc(var(--gap) + 1px);
+  content: "";
 }
 
-.error {
-  background-color: #f44336;
+.toast[data-expanded] {
+  height: var(--toast-height);
+  transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--offset-y));
 }
 
-.info {
-  background-color: var(--pico-primary-background);
+.toast[data-starting-style],
+.toast[data-ending-style] {
+  transform: translateY(150%);
 }
 
-.warning {
-  background-color: #ff9800;
+.toast[data-ending-style] {
+  opacity: 0;
+}
+
+.toast[data-limited] {
+  opacity: 0;
+}
+
+.toast[data-ending-style][data-swipe-direction="right"] {
+  transform: translateX(calc(var(--toast-swipe-movement-x) + 150%)) translateY(var(--offset-y));
+}
+
+.toast[data-ending-style][data-swipe-direction="down"] {
+  transform: translateY(calc(var(--toast-swipe-movement-y) + 150%));
+}
+
+.content {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 0.35rem minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 4.1rem;
+  padding: 0.75rem 0.75rem 0.75rem 0.6rem;
+  overflow: hidden;
+  transition: opacity 0.2s ease;
+}
+
+.content[data-behind] {
+  opacity: 0;
+}
+
+.content[data-expanded] {
+  opacity: 1;
+}
+
+.indicator {
+  width: 0.35rem;
+  border-radius: 999px;
+  background: var(--pico-primary-background);
+}
+
+.toast[data-type="success"] .indicator {
+  background: #57b882;
+}
+
+.toast[data-type="error"] .indicator {
+  background: #ff6b75;
+}
+
+.toast[data-type="warning"] .indicator {
+  background: #e8a84f;
+}
+
+.text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--pico-contrast);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.description {
+  margin: 0;
+  color: var(--pico-muted-color);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.close {
+  width: 2rem;
+  height: 2rem;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pico-muted-color);
+  box-shadow: none;
+}
+
+.close:hover {
+  background: var(--pico-secondary-background);
+  color: var(--pico-color);
+  box-shadow: none;
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
+}
+
+@media (min-width: 500px) {
+  .viewport {
+    right: 1.5rem;
+    bottom: 1.5rem;
+  }
 }

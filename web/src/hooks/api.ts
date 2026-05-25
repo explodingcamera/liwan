@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { toDataPoints } from "../components/graph";
-import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api/types";
+import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api/constants";
 
 import { api } from "../api/client";
 import { queryClient, useQuery } from "../api/query";
@@ -133,11 +133,13 @@ export const useProjectGraph = ({
 	metric,
 	range,
 	filters = [],
+	enabled = true,
 }: {
 	projectId?: string;
 	metric: Metric;
 	range: DateRange;
 	filters?: DimensionFilter[];
+	enabled?: boolean;
 }) => {
 	let refetchInterval: number | undefined;
 	let staleTime = 1000 * 60 * 10;
@@ -158,7 +160,7 @@ export const useProjectGraph = ({
 	} = useQuery({
 		refetchInterval,
 		staleTime,
-		enabled: projectId !== undefined,
+		enabled: projectId !== undefined && enabled,
 		queryKey,
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
@@ -192,11 +194,13 @@ export const useProjectStats = ({
 	metric,
 	range,
 	filters = [],
+	enabled = true,
 }: {
 	projectId?: string;
 	metric: Metric;
 	range: DateRange;
 	filters?: DimensionFilter[];
+	enabled?: boolean;
 }) => {
 	const {
 		data: stats,
@@ -205,7 +209,7 @@ export const useProjectStats = ({
 	} = useQuery({
 		queryKey: ["project_stats", projectId, range.cacheKey(), metric, filters],
 
-		enabled: projectId !== undefined,
+		enabled: projectId !== undefined && enabled,
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/stats"]
 				.post({ json: { range: range.toAPI(), filters }, params: { project_id: projectId ?? "" } })

@@ -1,5 +1,8 @@
+use crate::app::models::{
+    FilterType, GeoDetail, IngestFilter, IngestFilterAction, ResolvedCollectionSettings, VisitorGroupMode,
+};
 use crate::app::{Liwan, models::Event};
-use crate::utils::hash::{visitor_id, visitor_id_fallback};
+use crate::utils::hash::{visitor_group_id, visitor_group_id_cidr, visitor_group_id_fallback};
 use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::RouterState;
@@ -146,34 +149,41 @@ fn process_event(
         EXISTING_ENTITIES.insert(event.entity_id.clone(), ());
     }
 
+    let settings = app.settings.resolved_for_entity(&event.entity_id);
+
     // we delay the user agent parsing as much as possible since it's by far the most expensive operation
     let client = useragent::parse(user_agent.as_str());
     if client.is_bot() {
         return Ok(None);
     }
 
-    let visitor_id = match ip {
-        Some(ip) => visitor_id(&ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id),
-        None => visitor_id_fallback(),
-    };
+    let visitor_group_id =
+        resolve_visitor_group_id(&settings, ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id);
 
     #[cfg(feature = "geoip")]
-    let (country, city) = ip
-        .and_then(|ip| app.geoip.lookup(&ip).ok())
-        .map(|lookup| (lookup.country_code, lookup.city))
-        .unwrap_or((None, None));
+    let (country, city) = match settings.track_geo {
+        GeoDetail::None => (None, None),
+        GeoDetail::Country => ip
+            .and_then(|ip| app.geoip.lookup(&ip).ok())
+            .map(|lookup| (lookup.country_code, None))
+            .unwrap_or((None, None)),
+        GeoDetail::City => ip
+            .and_then(|ip| app.geoip.lookup(&ip).ok())
+            .map(|lookup| (lookup.country_code, lookup.city))
+            .unwrap_or((None, None)),
+    };
 
     #[cfg(not(feature = "geoip"))]
     let (country, city) = (None, None);
 
-    let utm = extract_utm(&mut url);
+    let utm = if settings.track_utm_params { extract_utm(&mut url) } else { Utm::default() };
     url.set_query(None);
     let path = url.path().to_string();
     let path = if path.len() > 1 && path.ends_with('/') { path.trim_end_matches('/').to_string() } else { path };
     let fqdn = url.host_str().unwrap_or_default().to_string();
 
     let event = Event {
-        visitor_id,
+        visitor_group_id,
         referrer,
         country,
         city,
@@ -192,9 +202,89 @@ fn process_event(
         utm_term: utm.term,
         screen_width: event.screen_width,
         orientation: event.orientation,
+        track_sessions: settings.track_sessions,
     };
 
+    if settings
+        .ingest_filters
+        .iter()
+        .any(|filter| filter.action == IngestFilterAction::Drop && ingest_filter_matches(&event, filter))
+    {
+        return Ok(None);
+    }
+
     Ok(Some(event))
+}
+
+fn ingest_filter_matches(event: &Event, filter: &IngestFilter) -> bool {
+    if filter.dimension == "mobile" {
+        return match filter.filter_type {
+            FilterType::IsNull => event.mobile.is_none(),
+            FilterType::IsTrue => event.mobile == Some(true),
+            FilterType::IsFalse => event.mobile == Some(false),
+            _ => false,
+        };
+    }
+
+    let url;
+    let value = match filter.dimension.as_str() {
+        "event" => Some(event.event.as_str()),
+        "url" => {
+            url = format!("{}{}", event.fqdn.as_deref().unwrap_or_default(), event.path.as_deref().unwrap_or_default());
+            Some(url.as_str())
+        }
+        "fqdn" => event.fqdn.as_deref(),
+        "path" => event.path.as_deref(),
+        "referrer" => event.referrer.as_deref(),
+        "country" => event.country.as_deref(),
+        "city" => event.city.as_deref(),
+        "platform" => event.platform.as_deref(),
+        "browser" => event.browser.as_deref(),
+        "utm_source" => event.utm_source.as_deref(),
+        "utm_medium" => event.utm_medium.as_deref(),
+        "utm_campaign" => event.utm_campaign.as_deref(),
+        "utm_content" => event.utm_content.as_deref(),
+        "utm_term" => event.utm_term.as_deref(),
+        "screen_width" => event.screen_width.as_deref(),
+        "orientation" => event.orientation.as_deref(),
+        _ => return false,
+    };
+
+    match filter.filter_type {
+        FilterType::IsNull => value.is_none(),
+        FilterType::Equal => {
+            value.zip(filter.value.as_deref()).is_some_and(|(value, filter)| value.eq_ignore_ascii_case(filter))
+        }
+        FilterType::Contains => value
+            .zip(filter.value.as_deref())
+            .is_some_and(|(value, filter)| value.to_ascii_lowercase().contains(&filter.to_ascii_lowercase())),
+        FilterType::StartsWith => value
+            .zip(filter.value.as_deref())
+            .is_some_and(|(value, filter)| value.to_ascii_lowercase().starts_with(&filter.to_ascii_lowercase())),
+        FilterType::EndsWith => value
+            .zip(filter.value.as_deref())
+            .is_some_and(|(value, filter)| value.to_ascii_lowercase().ends_with(&filter.to_ascii_lowercase())),
+        _ => false,
+    }
+}
+
+fn resolve_visitor_group_id(
+    settings: &ResolvedCollectionSettings,
+    ip: Option<IpAddr>,
+    user_agent: &str,
+    daily_salt: &str,
+    entity_id: &str,
+) -> String {
+    match (settings.visitor_group_mode, ip) {
+        (VisitorGroupMode::RandomPerRequest, _) | (_, None) => visitor_group_id_fallback(),
+        (VisitorGroupMode::Accurate, Some(ip)) => visitor_group_id(&ip, user_agent, daily_salt, entity_id),
+        (mode, Some(ip)) => {
+            let Some((ipv4_prefix, ipv6_prefix)) = mode.cidr_prefixes() else {
+                return visitor_group_id_fallback();
+            };
+            visitor_group_id_cidr(&ip, ipv4_prefix, ipv6_prefix, daily_salt, entity_id)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -217,5 +307,41 @@ mod test {
         assert_eq!(utm.content, None);
         assert_eq!(utm.term, None);
         assert_eq!(url.as_str(), "https://example.com/path/");
+    }
+
+    #[test]
+    fn unknown_ingest_filter_dimension_does_not_match_null() {
+        let event = Event {
+            entity_id: "entity".to_string(),
+            visitor_group_id: "visitor".to_string(),
+            event: "pageview".to_string(),
+            created_at: Utc::now(),
+            fqdn: None,
+            path: None,
+            referrer: None,
+            platform: None,
+            browser: None,
+            mobile: None,
+            country: None,
+            city: None,
+            utm_source: None,
+            utm_medium: None,
+            utm_campaign: None,
+            utm_content: None,
+            utm_term: None,
+            screen_width: None,
+            orientation: None,
+            track_sessions: true,
+        };
+
+        assert!(!ingest_filter_matches(
+            &event,
+            &IngestFilter {
+                dimension: "unknown".to_string(),
+                filter_type: FilterType::IsNull,
+                value: None,
+                action: IngestFilterAction::Drop,
+            },
+        ));
     }
 }

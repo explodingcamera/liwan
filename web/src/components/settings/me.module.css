@@ -39,20 +39,4 @@ form.password {
   h2 {
     font-size: 1.2rem;
   }
-
-  code {
-    font-size: 0.9rem;
-    background-color: var(--pico-background-color);
-    padding: 1rem 1rem;
-    border-radius: var(--pico-border-radius);
-    font-weight: 500;
-
-    .tag {
-      color: var(--pico-primary-hover);
-      font-weight: 900;
-    }
-    .entity {
-      font-weight: 900;
-    }
-  }
 }
