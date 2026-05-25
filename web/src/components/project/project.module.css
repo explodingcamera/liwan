@@ -24,6 +24,16 @@
   }
 }
 
+.settingsButton {
+  display: inline-flex;
+  vertical-align: middle;
+  color: var(--pico-muted-color);
+}
+
+.settingsButton:hover {
+  color: var(--pico-color);
+}
+
 @keyframes pulse {
   0% {
     transform: scale(1);

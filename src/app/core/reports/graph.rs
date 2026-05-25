@@ -139,7 +139,7 @@ pub fn overall_report(
 			),
 			session_data as (
 				select
-					e.visitor_id,
+					e.visitor_group_id,
 					e.created_at,
 					e.time_from_last_event,
 					e.time_to_next_event
@@ -153,7 +153,7 @@ pub fn overall_report(
 			bucketed_events as (
 				select
 					tb.bucket_idx,
-					sd.visitor_id,
+					sd.visitor_group_id,
 					sd.created_at,
 					sd.time_from_last_event,
 					sd.time_to_next_event
@@ -215,7 +215,7 @@ mod tests {
     fn test_event(created_at: DateTime<Utc>) -> Event {
         Event {
             entity_id: "entity-1".to_string(),
-            visitor_id: format!("visitor-{created_at}"),
+            visitor_group_id: format!("visitor-{created_at}"),
             event: "pageview".to_string(),
             created_at,
             fqdn: Some("example.com".to_string()),
@@ -233,6 +233,7 @@ mod tests {
             utm_term: None,
             screen_width: None,
             orientation: None,
+            track_sessions: true,
         }
     }
 

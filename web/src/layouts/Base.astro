@@ -4,6 +4,7 @@ import "../global.css";
 
 import { ClientRouter } from "astro:transitions";
 import ThemeSwitcher from "../components/ThemeSwitcher.astro";
+import { ToastHost } from "../components/toast-host";
 
 type Props = { title: string; hideFooter?: boolean; noSwitcher?: boolean };
 ---
@@ -20,6 +21,7 @@ type Props = { title: string; hideFooter?: boolean; noSwitcher?: boolean };
   </head>
   <body>
     <slot />
+    <ToastHost client:only="react" />
     {
       !Astro.props.hideFooter && (
         <footer class="container-fluid footer">

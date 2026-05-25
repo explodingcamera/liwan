@@ -1,3 +1,4 @@
+use crate::app::models::{DisplayOverride, GeoDetail};
 use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, GraphInterval, Metric, ReportStats};
 use crate::utils::validate::{self, can_access_project};
 use crate::web::RouterState;
@@ -81,6 +82,62 @@ struct ConfigResponse {
     disable_favicons: bool,
 }
 
+pub(super) fn metric_hidden(app: &crate::app::Liwan, project_id: &str, entities: &[String], metric: Metric) -> bool {
+    match app
+        .project_settings
+        .get(project_id)
+        .ok()
+        .and_then(|settings| settings.metric_display_overrides.get(&metric.to_string()).copied())
+        .unwrap_or(DisplayOverride::Auto)
+    {
+        DisplayOverride::Show => false,
+        DisplayOverride::Hide => true,
+        DisplayOverride::Auto => match metric {
+            Metric::Views | Metric::UniqueVisitors => false,
+            Metric::BounceRate | Metric::AvgTimeOnSite => {
+                entities.iter().any(|entity_id| !app.settings.resolved_for_entity(entity_id).track_sessions)
+            }
+        },
+    }
+}
+
+pub(super) fn dimension_hidden(
+    app: &crate::app::Liwan,
+    project_id: &str,
+    entities: &[String],
+    dimension: Dimension,
+) -> bool {
+    match app
+        .project_settings
+        .get(project_id)
+        .ok()
+        .and_then(|settings| settings.dimension_display_overrides.get(&dimension.to_string()).copied())
+        .unwrap_or(DisplayOverride::Auto)
+    {
+        DisplayOverride::Show => false,
+        DisplayOverride::Hide => true,
+        DisplayOverride::Auto => match dimension {
+            Dimension::UrlEntry | Dimension::UrlExit => {
+                entities.iter().any(|entity_id| !app.settings.resolved_for_entity(entity_id).track_sessions)
+            }
+            Dimension::Country => entities
+                .iter()
+                .any(|entity_id| app.settings.resolved_for_entity(entity_id).track_geo == GeoDetail::None),
+            Dimension::City => entities
+                .iter()
+                .any(|entity_id| app.settings.resolved_for_entity(entity_id).track_geo != GeoDetail::City),
+            Dimension::UtmSource
+            | Dimension::UtmMedium
+            | Dimension::UtmCampaign
+            | Dimension::UtmContent
+            | Dimension::UtmTerm => {
+                entities.iter().any(|entity_id| !app.settings.resolved_for_entity(entity_id).track_utm_params)
+            }
+            _ => false,
+        },
+    }
+}
+
 async fn config_handler(State(app): State<RouterState>) -> ApiResult<Json<ConfigResponse>> {
     Ok(Json(ConfigResponse { disable_favicons: app.config.disable_favicons }))
 }
@@ -119,6 +176,10 @@ async fn project_graph_handler(
 
     if !can_access_project(&project, user.as_ref()) {
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
+    }
+
+    if metric_hidden(&app, &project.id, &entities, req.metric) {
+        http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
     }
 
     let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -166,10 +227,19 @@ async fn project_stats_handler(
     )
     .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let (stats, stats_prev) = (
+    let (mut stats, mut stats_prev) = (
         stats.http_status(StatusCode::INTERNAL_SERVER_ERROR)?,
         stats_prev.http_status(StatusCode::INTERNAL_SERVER_ERROR)?,
     );
+
+    if metric_hidden(&app, &project.id, &entities3, Metric::BounceRate) {
+        stats.bounce_rate = None;
+        stats_prev.bounce_rate = None;
+    }
+    if metric_hidden(&app, &project.id, &entities3, Metric::AvgTimeOnSite) {
+        stats.avg_time_on_site = None;
+        stats_prev.avg_time_on_site = None;
+    }
 
     let online = reports::online_users(&app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?, &entities3)
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -188,6 +258,13 @@ async fn project_detailed_handler(
 
     if !can_access_project(&project, user.as_ref()) {
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
+    }
+
+    if metric_hidden(&app, &project.id, &entities, req.metric) {
+        http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
+    }
+    if dimension_hidden(&app, &project.id, &entities, req.dimension) {
+        http_bail!(StatusCode::BAD_REQUEST, "Dimension is hidden for this project")
     }
 
     let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;

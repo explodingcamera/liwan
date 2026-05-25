@@ -31,8 +31,18 @@ pub enum Command {
     UpdatePassword(UpdatePassword),
     AddUser(AddUser),
     Users(ListUsers),
+    Prune(Prune),
     #[cfg(any(debug_assertions, test, feature = "__dev"))]
     SeedDatabase(SeedDatabase),
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand, name = "prune")]
+/// Prune collection data according to current UI-managed settings
+pub struct Prune {
+    #[argh(switch)]
+    /// show what would be pruned without changing data
+    dry_run: bool,
 }
 
 #[cfg(any(debug_assertions, test, feature = "__dev"))]
@@ -128,6 +138,39 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
 
             std::fs::write(&output, DEFAULT_CONFIG)?;
             println!("Configuration file written to liwan.config.toml");
+        }
+        Command::Prune(prune) => {
+            let app = Liwan::try_new(config)?;
+            let mut totals = crate::app::PruneStats::default();
+            for entity in app.entities.all()? {
+                let settings = app.settings.resolved_for_entity(&entity.id);
+                let stats = app.events.prune_entity(&entity.id, &settings, prune.dry_run)?;
+                println!(
+                    "{}: total={}, delete={}, clear_utm={}, clear_geo={}, clear_sessions={}",
+                    entity.id,
+                    stats.total_events,
+                    stats.deleted_events,
+                    stats.cleared_utm_events,
+                    stats.cleared_geo_events,
+                    stats.cleared_session_events
+                );
+                totals.total_events += stats.total_events;
+                totals.deleted_events += stats.deleted_events;
+                totals.cleared_utm_events += stats.cleared_utm_events;
+                totals.cleared_geo_events += stats.cleared_geo_events;
+                totals.cleared_session_events += stats.cleared_session_events;
+            }
+            println!(
+                "total: total={}, delete={}, clear_utm={}, clear_geo={}, clear_sessions={}",
+                totals.total_events,
+                totals.deleted_events,
+                totals.cleared_utm_events,
+                totals.cleared_geo_events,
+                totals.cleared_session_events
+            );
+            if prune.dry_run {
+                println!("Dry run only. Re-run without --dry-run to apply changes.");
+            }
         }
         #[cfg(any(debug_assertions, test, feature = "__dev"))]
         Command::SeedDatabase(_) => {

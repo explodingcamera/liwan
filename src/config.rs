@@ -39,6 +39,9 @@ pub struct Config {
 
     #[serde(default = "default_use_forward_headers")]
     pub use_forward_headers: bool,
+
+    #[serde(default = "default_visitor_group_rotation_hour")]
+    pub visitor_group_rotation_hour: u8,
 }
 
 impl Default for Config {
@@ -54,6 +57,7 @@ impl Default for Config {
             trusted_headers: default_trusted_headers(),
             trusted_proxies: Vec::new(),
             use_forward_headers: default_use_forward_headers(),
+            visitor_group_rotation_hour: default_visitor_group_rotation_hour(),
         }
     }
 }
@@ -110,6 +114,10 @@ fn default_trusted_headers() -> Vec<TrustedHeader> {
 
 fn default_use_forward_headers() -> bool {
     true
+}
+
+fn default_visitor_group_rotation_hour() -> u8 {
+    4
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -194,6 +202,9 @@ impl Config {
             tracing::warn!(
                 "Both `listen` and `port` configuration options are set. The `listen` option will take precedence over `port`."
             );
+        }
+        if config.visitor_group_rotation_hour > 23 {
+            bail!("Invalid visitor_group_rotation_hour: must be between 0 and 23");
         }
 
         Ok(config)

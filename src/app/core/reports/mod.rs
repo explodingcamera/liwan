@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Display};
 
+pub use crate::app::models::FilterType;
+
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
     pub start: DateTime<Utc>,
@@ -49,6 +51,17 @@ pub enum Metric {
     AvgTimeOnSite,
 }
 
+impl Display for Metric {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Views => "views",
+            Self::UniqueVisitors => "unique_visitors",
+            Self::BounceRate => "bounce_rate",
+            Self::AvgTimeOnSite => "avg_time_on_site",
+        })
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum GraphInterval {
@@ -79,16 +92,29 @@ pub enum Dimension {
     Orientation,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[serde(rename_all = "snake_case")]
-pub enum FilterType {
-    IsNull,
-    Equal,
-    Contains,
-    StartsWith,
-    EndsWith,
-    IsTrue,
-    IsFalse,
+impl Display for Dimension {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Url => "url",
+            Self::UrlEntry => "url_entry",
+            Self::UrlExit => "url_exit",
+            Self::Fqdn => "fqdn",
+            Self::Path => "path",
+            Self::Referrer => "referrer",
+            Self::Platform => "platform",
+            Self::Browser => "browser",
+            Self::Mobile => "mobile",
+            Self::Country => "country",
+            Self::City => "city",
+            Self::UtmSource => "utm_source",
+            Self::UtmMedium => "utm_medium",
+            Self::UtmCampaign => "utm_campaign",
+            Self::UtmContent => "utm_content",
+            Self::UtmTerm => "utm_term",
+            Self::ScreenWidth => "screen_width",
+            Self::Orientation => "orientation",
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -106,8 +132,8 @@ pub type ReportTable = BTreeMap<String, f64>;
 pub struct ReportStats {
     pub total_views: u64,
     pub unique_visitors: u64,
-    pub bounce_rate: f64,
-    pub avg_time_on_site: f64,
+    pub bounce_rate: Option<f64>,
+    pub avg_time_on_site: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]

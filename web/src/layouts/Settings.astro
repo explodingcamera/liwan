@@ -1,5 +1,5 @@
 ---
-import { CodeIcon, TablePropertiesIcon, UserIcon, UsersIcon } from "lucide-react";
+import { CodeIcon, DatabaseIcon, TablePropertiesIcon, UserIcon, UsersIcon } from "lucide-react";
 import Layout from "./Layout.astro";
 
 type Props = {
@@ -21,6 +21,7 @@ const { title, noContainer } = Astro.props;
         <optgroup label="Admin">
           <option selected={path.startsWith("/settings/projects") ? true: undefined} value="/settings/projects">Projects</option>
           <option selected={path.startsWith("/settings/entities") ? true: undefined} value="/settings/entities">Entities</option>
+          <option selected={path.startsWith("/settings/collection") ? true: undefined} value="/settings/collection">Collection</option>
           <option selected={path.startsWith("/settings/users") ? true: undefined} value="/settings/users">Users</option>
         </optgroup>
       </select>
@@ -56,6 +57,15 @@ const { title, noContainer } = Astro.props;
             href="/settings/entities">
               <CodeIcon size="20" />
             Entities</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/collection") ? "true" : "false"}
+            class="secondary"
+            href="/settings/collection">
+              <DatabaseIcon size="20" />
+            Collection</a
           >
         </li>
         <li>

@@ -1,8 +1,9 @@
 import styles from "./map.module.css";
 
+import { autoUpdate, flip, FloatingPortal, offset, shift, useFloating } from "@floating-ui/react";
 import { RotateCcwIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Tooltip } from "react-tooltip";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 
 import { geoMercator, geoPath } from "d3-geo";
 import { select } from "d3-selection";
@@ -47,6 +48,13 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 
 	const [moved, setMoved] = useState(false);
 	const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
+	const { refs, floatingStyles, update } = useFloating({
+		open: currentLocation !== null,
+		placement: "right",
+		strategy: "fixed",
+		middleware: [offset({ mainAxis: 12, crossAxis: 6 }), flip(), shift({ padding: 8 })],
+		whileElementsMounted: autoUpdate,
+	});
 
 	const biggest = useMemo(() => data?.reduce((a, b) => (a.value > b.value ? a : b), data[0]), [data]);
 	const countries = useMemo(() => getCountries(data ?? []), [data]);
@@ -66,6 +74,16 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 		select(svgRef.current).call(zoomBehavior.current);
 	}, []);
 
+	const updateTooltipPosition = useCallback(
+		(event: MouseEvent<SVGPathElement>) => {
+			refs.setPositionReference({
+				getBoundingClientRect: () => new DOMRect(event.clientX, event.clientY, 0, 0),
+			});
+			update();
+		},
+		[refs, update],
+	);
+
 	const landmasses = useMemo(
 		() =>
 			features.map((feature, index) => (
@@ -75,10 +93,11 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 					countries={countries}
 					biggest={biggest}
 					onSetLocation={setCurrentLocation}
+					onTooltipMove={updateTooltipPosition}
 					metric={metric}
 				/>
 			)),
-		[countries, biggest, metric],
+		[countries, biggest, metric, updateTooltipPosition],
 	);
 
 	const resetZoom = () => {
@@ -99,7 +118,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 	);
 
 	return (
-		<div ref={containerRef} className={styles.worldmap} data-tooltip-float={true} data-tooltip-id="map">
+		<div ref={containerRef} className={styles.worldmap}>
 			<button type="button" className={cls(styles.reset, moved && styles.moved)} onClick={resetZoom}>
 				<RotateCcwIcon size={18} />
 			</button>
@@ -109,16 +128,18 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 				<g>{landmasses}</g>
 			</svg>
 
-			<Tooltip id="map" className={styles.tooltipContainer} classNameArrow={styles.reset} disableStyleInjection>
-				{currentLocation && (
-					<div className={styles.tooltip} data-theme="dark">
-						<h2>{metricNames[metric]}</h2>
-						<h3>
-							{currentTooltip?.name} <span>{currentTooltip?.value}</span>
-						</h3>
+			{currentLocation && (
+				<FloatingPortal>
+					<div ref={refs.setFloating} className={styles.tooltipContainer} style={floatingStyles}>
+						<div className={styles.tooltip} data-theme="dark">
+							<h2>{metricNames[metric]}</h2>
+							<h3>
+								{currentTooltip?.name} <span>{currentTooltip?.value}</span>
+							</h3>
+						</div>
 					</div>
-				)}
-			</Tooltip>
+				</FloatingPortal>
+			)}
 		</div>
 	);
 };
@@ -128,12 +149,14 @@ const Landmass = ({
 	countries,
 	biggest,
 	onSetLocation,
+	onTooltipMove,
 	metric,
 }: {
 	feature: (typeof features)[number];
 	countries: Map<string, number>;
 	biggest?: DimensionTableRow;
 	onSetLocation: (location: Location | null) => void;
+	onTooltipMove: (event: MouseEvent<SVGPathElement>) => void;
 	metric: Metric;
 }) => {
 	const percent = useMemo(
@@ -147,8 +170,12 @@ const Landmass = ({
 			className={styles.geo}
 			data-inverted={metric === "bounce_rate"}
 			data-ignored={metric === "bounce_rate" && (percent === 0 || percent === 100)}
-			style={{ "--percent": percent } as React.CSSProperties}
-			onMouseEnter={() => onSetLocation({ name: feature.name, iso: feature.iso })}
+			style={{ "--percent": percent } as CSSProperties}
+			onMouseEnter={(event) => {
+				onTooltipMove(event);
+				onSetLocation({ name: feature.name, iso: feature.iso });
+			}}
+			onMouseMove={onTooltipMove}
 			onMouseLeave={() => onSetLocation(null)}
 		/>
 	);

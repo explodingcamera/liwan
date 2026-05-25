@@ -11,6 +11,7 @@ export type DialogProps = {
 	hideDescription?: boolean;
 	trigger?: ReactElement | false;
 	children: React.ReactNode;
+	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	className?: string;
 	showClose?: boolean;
@@ -24,6 +25,7 @@ export const Dialog = ({
 	hideDescription,
 	trigger,
 	children,
+	open,
 	onOpenChange,
 	className,
 	showClose,
@@ -31,7 +33,7 @@ export const Dialog = ({
 	autoOverflow,
 }: DialogProps) => {
 	return (
-		<Dia.Root onOpenChange={onOpenChange}>
+		<Dia.Root open={open} onOpenChange={onOpenChange}>
 			{trigger && <Dia.Trigger nativeButton={trigger.type === "button"} render={trigger} />}
 			<Dia.Portal>
 				<Dia.Backdrop className={styles.overlay} />

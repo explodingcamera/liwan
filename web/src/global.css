@@ -1,6 +1,5 @@
 @import "@explodingcamera/css/all.css" layer(base);
 @import "@picocss/pico/css/pico.slate.min.css" layer(pico);
-@import "react-tooltip/dist/react-tooltip.css" layer(tooltip);
 
 :root {
   --pico-background-color: #f7f8ff;
@@ -55,10 +54,6 @@ html body[data-scroll-locked] {
 
 .full {
   min-height: 100%;
-}
-
-.react-tooltip {
-  z-index: 10;
 }
 
 [type="search"] {

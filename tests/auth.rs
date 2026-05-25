@@ -151,7 +151,7 @@ async fn private_projects() -> Result<()> {
     let res = client
         .get_with_headers("/api/dashboard/projects", vec![("cookie".to_string(), common::cookie_header(&login2))])
         .await;
-    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "public": false, "entities": []}]}));
+    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "public": false, "entities": [], "hiddenMetrics": [], "hiddenDimensions": []}]}));
 
     Ok(())
 }

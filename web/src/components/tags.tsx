@@ -1,25 +1,11 @@
-import { useId } from "react";
+import { Combobox } from "@base-ui/react/combobox";
+import { CheckIcon, XIcon } from "lucide-react";
+import { Fragment, useId } from "react";
 import styles from "./tags.module.css";
 
-export type { Tag } from "react-tag-autocomplete";
-import { ReactTags, type TagSelected, type TagSuggestion } from "react-tag-autocomplete";
-
-const classNames = {
-	root: styles["react-tags"],
-	rootIsActive: styles["is-active"],
-	rootIsDisabled: styles["is-disabled"],
-	rootIsInvalid: styles["is-invalid"],
-	label: styles["react-tags__label"],
-	tagList: styles["react-tags__list"],
-	tagListItem: styles["react-tags__list-item"],
-	tag: styles["react-tags__tag"],
-	tagName: styles["react-tags__tag-name"],
-	comboBox: styles["react-tags__combobox"],
-	input: styles["react-tags__combobox-input"],
-	listBox: styles["react-tags__listbox"],
-	option: styles["react-tags__listbox-option"],
-	optionIsActive: styles["is-active"],
-	highlight: styles["react-tags__listbox-option-highlight"],
+export type Tag = {
+	value: string;
+	label: string;
 };
 
 export const Tags = ({
@@ -31,41 +17,88 @@ export const Tags = ({
 	placeholderText,
 	noOptionsText,
 }: {
-	onAdd: (tag: TagSuggestion) => void;
+	onAdd: (tag: Tag) => void;
 	onDelete: (i: number) => void;
-	selected: TagSelected[];
-	suggestions: TagSuggestion[];
+	selected: Tag[];
+	suggestions: Tag[];
 	noOptionsText: string;
 	placeholderText?: string;
 	labelText?: string | React.ReactNode;
 }) => {
 	const id = useId();
+	const items = suggestions.filter((suggestion) => !selected.some((tag) => tag.value === suggestion.value));
+
+	const handleValueChange = (next: Tag[]) => {
+		const added = next.find((tag) => !selected.some((selectedTag) => selectedTag.value === tag.value));
+		if (added) {
+			onAdd(added);
+			return;
+		}
+
+		const removedIndex = selected.findIndex((tag) => !next.some((nextTag) => nextTag.value === tag.value));
+		if (removedIndex >= 0) onDelete(removedIndex);
+	};
+
 	return (
-		<>
-			{labelText && (
-				<label htmlFor={id} className={styles.label}>
-					{labelText}
-				</label>
-			)}
-			<ReactTags
-				id={id}
-				onAdd={onAdd}
-				onDelete={onDelete}
-				selected={selected}
-				suggestions={suggestions.filter((suggestion) => !selected.some((tag) => tag.value === suggestion.value))}
-				noOptionsText={noOptionsText ?? "No matching options..."}
-				placeholderText={placeholderText ?? "Type to search..."}
-				collapseOnSelect
-				activateFirstOption
-				renderInput={({ classNames, inputWidth, "aria-invalid": _, ...props }) => (
-					<input
-						{...props}
-						className={classNames.input}
-						style={{ "--input-width": `${inputWidth}px` } as React.CSSProperties}
-					/>
+		<Combobox.Root
+			items={items}
+			value={selected}
+			onValueChange={handleValueChange}
+			itemToStringLabel={(item) => item.label}
+			itemToStringValue={(item) => item.value}
+			isItemEqualToValue={(item, value) => item.value === value.value}
+			multiple
+		>
+			<div className={styles.container}>
+				{labelText && (
+					<label htmlFor={id} className={styles.label}>
+						{labelText}
+					</label>
 				)}
-				classNames={classNames}
-			/>
-		</>
+				<Combobox.InputGroup className={styles.inputGroup}>
+					<Combobox.Chips className={styles.chips}>
+						<Combobox.Value>
+							{(value: Tag[]) => (
+								<Fragment>
+									{value.map((tag) => (
+										<Combobox.Chip key={tag.value} className={styles.chip} aria-label={tag.label}>
+											{tag.label}
+											<Combobox.ChipRemove className={styles.chipRemove} aria-label={`Remove ${tag.label}`}>
+												<XIcon size={14} />
+											</Combobox.ChipRemove>
+										</Combobox.Chip>
+									))}
+									<Combobox.Input
+										id={id}
+										placeholder={value.length > 0 ? "" : (placeholderText ?? "Type to search...")}
+										className={styles.input}
+									/>
+								</Fragment>
+							)}
+						</Combobox.Value>
+					</Combobox.Chips>
+				</Combobox.InputGroup>
+			</div>
+
+			<Combobox.Portal>
+				<Combobox.Positioner className={styles.positioner} sideOffset={4}>
+					<Combobox.Popup className={styles.popup}>
+						<Combobox.Empty>
+							<div className={styles.empty}>{noOptionsText ?? "No matching options..."}</div>
+						</Combobox.Empty>
+						<Combobox.List className={styles.list}>
+							{(tag: Tag) => (
+								<Combobox.Item key={tag.value} value={tag} className={styles.item}>
+									<Combobox.ItemIndicator className={styles.itemIndicator}>
+										<CheckIcon size={14} />
+									</Combobox.ItemIndicator>
+									<span className={styles.itemText}>{tag.label}</span>
+								</Combobox.Item>
+							)}
+						</Combobox.List>
+					</Combobox.Popup>
+				</Combobox.Positioner>
+			</Combobox.Portal>
+		</Combobox.Root>
 	);
 };

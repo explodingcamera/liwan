@@ -9,12 +9,16 @@ use crate::{config::Config, utils::writable::check_directory_writable};
 
 use crate::utils::r2d2_sqlite::SqliteConnectionManager;
 use anyhow::{Context, Result};
-use core::{LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjects, LiwanSessions, LiwanUsers};
+use core::{
+    LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjectSettings, LiwanProjects, LiwanSessions, LiwanSettings,
+    LiwanUsers,
+};
 use duckdb::DuckdbConnectionManager;
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
 pub type SqlitePool = r2d2::Pool<SqliteConnectionManager>;
+pub use core::PruneStats;
 
 pub struct Liwan {
     events_pool: r2d2::Pool<DuckdbConnectionManager>,
@@ -25,6 +29,8 @@ pub struct Liwan {
     pub onboarding: core::onboarding::LiwanOnboarding,
     pub entities: core::entities::LiwanEntities,
     pub projects: core::projects::LiwanProjects,
+    pub settings: core::settings::LiwanSettings,
+    pub project_settings: core::settings::LiwanProjectSettings,
 
     #[cfg(feature = "geoip")]
     pub geoip: Arc<core::geoip::LiwanGeoIP>,
@@ -61,11 +67,13 @@ impl Liwan {
             #[cfg(feature = "geoip")]
             geoip: core::geoip::LiwanGeoIP::try_new(config.clone())?.into(),
 
-            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
+            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
+            settings: LiwanSettings::try_new(conn_app.clone())?,
+            project_settings: LiwanProjectSettings::new(conn_app.clone()),
             users: LiwanUsers::new(conn_app),
 
             events_pool: conn_events,
@@ -83,11 +91,13 @@ impl Liwan {
             #[cfg(feature = "geoip")]
             geoip: core::geoip::LiwanGeoIP::try_new(config.clone())?.into(),
 
-            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone())?,
+            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
+            settings: LiwanSettings::try_new(conn_app.clone())?,
+            project_settings: LiwanProjectSettings::new(conn_app.clone()),
             users: LiwanUsers::new(conn_app),
 
             events_pool: conn_events,

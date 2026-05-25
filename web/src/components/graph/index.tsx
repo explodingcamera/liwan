@@ -1,6 +1,6 @@
 import { lazy, useEffect, useState } from "react";
 import type { DateRange } from "../../api/ranges.ts";
-import type { GraphResponse, Metric } from "../../api/types.ts";
+import type { GraphResponse, Metric } from "../../api/constants.ts";
 
 import styles from "./graph.module.css";
 

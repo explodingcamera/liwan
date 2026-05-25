@@ -109,6 +109,18 @@ pub(super) async fn serve(orig_uri: extract::OriginalUri, req: Request) -> Resul
         path = parts.join("/");
     }
 
+    if path.starts_with("settings/projects/") {
+        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
+        parts[2] = "project";
+        path = parts.join("/");
+    }
+
+    if path.starts_with("settings/entities/") {
+        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
+        parts[2] = "entity";
+        path = parts.join("/");
+    }
+
     let file = if let Some(content) = Files::get(&path) {
         Some(content)
     } else {

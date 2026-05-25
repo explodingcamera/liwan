@@ -70,7 +70,7 @@ pub fn dimension_report(
 			session_data as (
 				select
 					coalesce({dimension_column}, 'Unknown') as dimension_value,
-					visitor_id,
+					visitor_group_id,
 					created_at,
 					time_from_last_event,
 					time_to_next_event

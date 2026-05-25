@@ -9,5 +9,14 @@ import Settings from "../../layouts/Settings.astro";
     <h1>Entities</h1>
     <CreateEntity client:only="react" />
   </nav>
+  <p class="description">Entities identify each website or application sending analytics events.</p>
   <EntitiesTable client:load />
 </Settings>
+
+<style>
+  .description {
+    max-width: 46rem;
+    margin-bottom: 1rem;
+    color: var(--pico-muted-color);
+  }
+</style>

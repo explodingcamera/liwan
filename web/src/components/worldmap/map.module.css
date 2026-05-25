@@ -1,6 +1,6 @@
-.tooltipContainer.tooltipContainer {
-  padding: 0;
-  background: none;
+.tooltipContainer {
+  z-index: 10;
+  pointer-events: none;
 }
 
 button.reset {

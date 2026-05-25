@@ -23,7 +23,12 @@ function setPrerender(): AstroIntegration {
 				isDev = command === "dev";
 			},
 			"astro:route:setup": ({ route }) => {
-				if (isDev && route.component.endsWith("/pages/p/[...project].astro")) {
+				if (
+					isDev &&
+					(route.component.endsWith("/pages/p/[...project].astro") ||
+						route.component.endsWith("/pages/settings/projects/[projectId].astro") ||
+						route.component.endsWith("/pages/settings/entities/[entityId].astro"))
+				) {
 					route.prerender = false;
 				}
 			},

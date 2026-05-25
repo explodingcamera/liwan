@@ -18,7 +18,8 @@ details.edit summary + ul {
   left: unset;
   overflow: hidden;
 
-  button {
+  button,
+  a {
     all: unset;
     cursor: pointer;
     margin: calc(var(--pico-form-element-spacing-vertical) * -0.5)
@@ -31,7 +32,8 @@ details.edit summary + ul {
     display: flex;
   }
 
-  button:hover {
+  button:hover,
+  a:hover {
     background-color: var(--pico-dropdown-hover-background-color);
   }
 }
@@ -40,4 +42,19 @@ details.edit summary + ul {
   svg {
     color: var(--pico-del-color);
   }
+}
+
+.settingsLink {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: var(--pico-muted-color);
+}
+
+.settingsLink:hover {
+  background: var(--pico-secondary-background);
+  color: var(--pico-color);
+  text-decoration: none;
 }

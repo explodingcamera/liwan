@@ -1,0 +1,16 @@
+---
+import type { GetStaticPaths } from "astro";
+
+import { EntitySettingsPage } from "../../../components/settings/resource-pages";
+import Settings from "../../../layouts/Settings.astro";
+
+export const getStaticPaths = (() => {
+	return [{ params: { entityId: "entity" } }];
+}) satisfies GetStaticPaths;
+
+const { entityId } = Astro.params;
+---
+
+<Settings title="Entity Settings">
+  <EntitySettingsPage entityId={entityId ?? ""} client:load />
+</Settings>

@@ -87,7 +87,7 @@ reqwest={version="0.13", default-features=false, features=["json", "stream", "ch
 ipnet="2.12"
 
 # database
-duckdb={version="1.10502", features=["chrono", "bundled", "r2d2"]}
+duckdb={version="1.10503", features=["chrono", "bundled", "r2d2"]}
 rusqlite={version="0.39", features=["bundled", "modern_sqlite", "chrono"]}
 r2d2={version="0.8", default-features=false}
 refinery={version="0.9", default-features=false}

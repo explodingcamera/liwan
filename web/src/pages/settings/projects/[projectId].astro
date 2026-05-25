@@ -1,0 +1,16 @@
+---
+import type { GetStaticPaths } from "astro";
+
+import { ProjectSettingsPage } from "../../../components/settings/resource-pages";
+import Settings from "../../../layouts/Settings.astro";
+
+export const getStaticPaths = (() => {
+	return [{ params: { projectId: "project" } }];
+}) satisfies GetStaticPaths;
+
+const { projectId } = Astro.params;
+---
+
+<Settings title="Project Settings">
+  <ProjectSettingsPage projectId={projectId ?? ""} client:load />
+</Settings>

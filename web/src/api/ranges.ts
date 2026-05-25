@@ -30,7 +30,7 @@ import {
 } from "date-fns";
 
 import { formatDateRange } from "little-date";
-import type { GraphInterval } from "./types";
+import type { GraphInterval } from "./constants";
 import type { GraphRange } from "../components/graph/graph";
 
 type DateRangeValue = { start: Date; end: Date };

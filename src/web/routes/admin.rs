@@ -11,7 +11,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::models::{Entity, Project, UserRole},
+    app::models::{
+        CollectionSettings, Entity, EntityCollectionSettings, Project, ProjectDisplaySettings,
+        ResolvedCollectionSettings, UserRole,
+    },
+    app::reports::{Dimension, Metric},
     utils::validate::can_access_project,
     web::{
         RouterState,
@@ -19,6 +23,8 @@ use crate::{
         webext::{ApiResult, AxumErrExt, empty_response, http_bail},
     },
 };
+
+use super::dashboard::{dimension_hidden, metric_hidden};
 
 pub fn router() -> ApiRouter<RouterState> {
     ApiRouter::new()
@@ -29,13 +35,20 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/user", post(create_user))
         .api_route("/project/{project_id}", post(project_create_handler))
         .api_route("/project/{project_id}", put(project_update_handler))
+        .api_route("/project/{project_id}/settings", get(project_settings_handler))
+        .api_route("/project/{project_id}/settings", put(project_settings_update_handler))
         .api_route("/projects", get(projects_handler))
         .api_route("/project/{project_id}", get(project_handler))
         .api_route("/project/{project_id}", delete(project_delete_handler))
         .api_route("/entities", get(entities_handler))
         .api_route("/entity", post(entity_create_handler))
         .api_route("/entity/{entity_id}", put(entity_update_handler))
+        .api_route("/entity/{entity_id}/settings", get(entity_settings_handler))
+        .api_route("/entity/{entity_id}/settings", put(entity_settings_update_handler))
         .api_route("/entity/{entity_id}", delete(entity_delete_handler))
+        .api_route("/settings", get(settings_handler))
+        .api_route("/settings", put(settings_update_handler))
+        .api_route("/settings/prune", post(prune_handler))
 }
 
 pub struct AdminAPI;
@@ -101,6 +114,8 @@ pub struct ProjectResponse {
     pub display_name: String,
     pub entities: Vec<ProjectEntity>,
     pub public: bool,
+    pub hidden_metrics: Vec<Metric>,
+    pub hidden_dimensions: Vec<Dimension>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -149,6 +164,85 @@ struct UpdateEntityRequest {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 struct EntitiesResponse {
     entities: Vec<EntityResponse>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct EntityCollectionSettingsResponse {
+    settings: EntityCollectionSettings,
+    resolved: ResolvedCollectionSettings,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct PruneRequest {
+    dry_run: bool,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+struct PruneEntityStats {
+    entity_id: String,
+    total_events: u64,
+    deleted_events: u64,
+    cleared_utm_events: u64,
+    cleared_geo_events: u64,
+    cleared_session_events: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+struct PruneResponse {
+    dry_run: bool,
+    entities: Vec<PruneEntityStats>,
+    total: PruneEntityStats,
+}
+
+const PROJECT_METRICS: &[Metric] = &[Metric::Views, Metric::UniqueVisitors, Metric::BounceRate, Metric::AvgTimeOnSite];
+const PROJECT_DIMENSIONS: &[Dimension] = &[
+    Dimension::Platform,
+    Dimension::Browser,
+    Dimension::Url,
+    Dimension::UrlEntry,
+    Dimension::UrlExit,
+    Dimension::Path,
+    Dimension::Mobile,
+    Dimension::Referrer,
+    Dimension::City,
+    Dimension::Country,
+    Dimension::Fqdn,
+    Dimension::UtmCampaign,
+    Dimension::UtmContent,
+    Dimension::UtmMedium,
+    Dimension::UtmSource,
+    Dimension::UtmTerm,
+    Dimension::ScreenWidth,
+    Dimension::Orientation,
+];
+
+fn project_response(app: &crate::app::Liwan, project: Project) -> anyhow::Result<ProjectResponse> {
+    let entities = app.projects.entities(&project.id)?;
+    let entity_ids: Vec<String> = entities.iter().map(|entity| entity.id.clone()).collect();
+
+    Ok(ProjectResponse {
+        id: project.id.clone(),
+        display_name: project.display_name.clone(),
+        entities: entities
+            .into_iter()
+            .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
+            .collect(),
+        public: project.public,
+        hidden_metrics: PROJECT_METRICS
+            .iter()
+            .copied()
+            .filter(|metric| metric_hidden(app, &project.id, &entity_ids, *metric))
+            .collect(),
+        hidden_dimensions: PROJECT_DIMENSIONS
+            .iter()
+            .copied()
+            .filter(|dimension| dimension_hidden(app, &project.id, &entity_ids, *dimension))
+            .collect(),
+    })
 }
 
 async fn get_users(
@@ -235,7 +329,7 @@ async fn create_user(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    let app = app.clone();
+    let app = app.app.clone();
     tokio::task::spawn_blocking(move || app.users.create(&user.username, &user.password, user.role, &[]))
         .await
         .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?
@@ -308,18 +402,9 @@ async fn projects_handler(
 
     let mut resp = Vec::new();
     for project in projects {
-        resp.push(ProjectResponse {
-            id: project.id.clone(),
-            display_name: project.display_name.clone(),
-            entities: app
-                .projects
-                .entities(&project.id)
-                .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
-                .into_iter()
-                .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
-                .collect(),
-            public: project.public,
-        });
+        resp.push(
+            project_response(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?,
+        );
     }
 
     Ok(([(http::header::CACHE_CONTROL, "private")], Json(ProjectsResponse { projects: resp })).into())
@@ -335,20 +420,152 @@ async fn project_handler(
         return Err(StatusCode::NOT_FOUND.into());
     }
 
-    let resp = Json(ProjectResponse {
-        id: project.id.clone(),
-        display_name: project.display_name.clone(),
-        entities: app
-            .projects
-            .entities(&project.id)
-            .http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?
-            .into_iter()
-            .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
-            .collect(),
-        public: project.public,
-    });
+    let resp =
+        Json(project_response(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?);
 
     Ok(([(http::header::CACHE_CONTROL, "private")], resp).into())
+}
+
+async fn settings_handler(
+    app: State<RouterState>,
+    Auth(user): Auth,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<CollectionSettings>>> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(app.settings.global())).into())
+}
+
+async fn settings_update_handler(
+    app: State<RouterState>,
+    Auth(user): Auth,
+    Json(settings): Json<CollectionSettings>,
+) -> ApiResult<impl IntoApiResponse> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    app.settings.update_global(&settings).http_err("Failed to update collection settings", StatusCode::BAD_REQUEST)?;
+
+    Ok(empty_response())
+}
+
+async fn prune_handler(
+    app: State<RouterState>,
+    Auth(user): Auth,
+    Json(req): Json<PruneRequest>,
+) -> ApiResult<Json<PruneResponse>> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    let app = app.app.clone();
+    let response = tokio::task::spawn_blocking(move || {
+        let mut response = PruneResponse { dry_run: req.dry_run, ..Default::default() };
+        for entity in app.entities.all()? {
+            let settings = app.settings.resolved_for_entity(&entity.id);
+            let stats = app.events.prune_entity(&entity.id, &settings, req.dry_run)?;
+            let entity_stats = PruneEntityStats {
+                entity_id: entity.id,
+                total_events: stats.total_events,
+                deleted_events: stats.deleted_events,
+                cleared_utm_events: stats.cleared_utm_events,
+                cleared_geo_events: stats.cleared_geo_events,
+                cleared_session_events: stats.cleared_session_events,
+            };
+            response.total.total_events += entity_stats.total_events;
+            response.total.deleted_events += entity_stats.deleted_events;
+            response.total.cleared_utm_events += entity_stats.cleared_utm_events;
+            response.total.cleared_geo_events += entity_stats.cleared_geo_events;
+            response.total.cleared_session_events += entity_stats.cleared_session_events;
+            response.entities.push(entity_stats);
+        }
+        anyhow::Ok(response)
+    })
+    .await
+    .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+    .http_err("Failed to prune collection data", StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(response))
+}
+
+async fn project_settings_handler(
+    app: State<RouterState>,
+    Path(project_id): Path<String>,
+    Auth(user): Auth,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectDisplaySettings>>> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    let settings = app
+        .project_settings
+        .get(&project_id)
+        .http_err("Failed to get project display settings", StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(settings)).into())
+}
+
+async fn project_settings_update_handler(
+    app: State<RouterState>,
+    Path(project_id): Path<String>,
+    Auth(user): Auth,
+    Json(mut settings): Json<ProjectDisplaySettings>,
+) -> ApiResult<impl IntoApiResponse> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    settings.project_id = project_id;
+    app.project_settings
+        .update(&settings)
+        .http_err("Failed to update project display settings", StatusCode::BAD_REQUEST)?;
+
+    Ok(empty_response())
+}
+
+async fn entity_settings_handler(
+    app: State<RouterState>,
+    Path(entity_id): Path<String>,
+    Auth(user): Auth,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<EntityCollectionSettingsResponse>>> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    if !app.entities.exists(&entity_id).http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
+        http_bail!(StatusCode::NOT_FOUND, "Entity not found")
+    }
+
+    let settings = app.settings.entity(&entity_id);
+    let resolved = app.settings.resolved_for_entity(&entity_id);
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(EntityCollectionSettingsResponse { settings, resolved }))
+        .into())
+}
+
+async fn entity_settings_update_handler(
+    app: State<RouterState>,
+    Path(entity_id): Path<String>,
+    Auth(user): Auth,
+    Json(mut settings): Json<EntityCollectionSettings>,
+) -> ApiResult<impl IntoApiResponse> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+
+    if !app.entities.exists(&entity_id).http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
+        http_bail!(StatusCode::NOT_FOUND, "Entity not found")
+    }
+
+    settings.entity_id = entity_id;
+    app.settings
+        .update_entity(&settings)
+        .http_err("Failed to update entity collection settings", StatusCode::BAD_REQUEST)?;
+
+    Ok(empty_response())
 }
 
 async fn project_delete_handler(

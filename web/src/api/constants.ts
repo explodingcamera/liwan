@@ -1,4 +1,57 @@
-import type { Dimension, DimensionFilter, Metric } from "./types";
+import type { NormalizeOAS, OASModel } from "fets";
+import type dashboardspec from "./dashboard";
+
+export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
+export type Metric = OASModel<DashboardSpec, "Metric">;
+export type GraphInterval = OASModel<DashboardSpec, "GraphInterval">;
+export type Dimension = OASModel<DashboardSpec, "Dimension">;
+export type DimensionFilter = OASModel<DashboardSpec, "DimensionFilter">;
+export type DimensionTableRow = OASModel<DashboardSpec, "DimensionTableRow">;
+export type FilterType = OASModel<DashboardSpec, "FilterType">;
+export type GraphResponse = OASModel<DashboardSpec, "GraphResponse">;
+export type ReportGraphPoint = OASModel<DashboardSpec, "ReportGraphPoint">;
+export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
+export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;
+export type UserResponse = OASModel<DashboardSpec, "UserResponse">;
+export type StatsResponse = OASModel<DashboardSpec, "StatsResponse">;
+
+export const dimensions = [
+	"platform",
+	"browser",
+	"url",
+	"url_entry",
+	"url_exit",
+	"path",
+	"mobile",
+	"referrer",
+	"city",
+	"country",
+	"fqdn",
+	"utm_campaign",
+	"utm_content",
+	"utm_medium",
+	"utm_source",
+	"utm_term",
+	"screen_width",
+	"orientation",
+] as const satisfies Dimension[];
+
+export const filterTypes = [
+	"contains",
+	"equal",
+	"is_null",
+	"ends_with",
+	"is_false",
+	"is_true",
+	"starts_with",
+] as const satisfies FilterType[];
+
+export const metrics = [
+	"views",
+	"unique_visitors",
+	"avg_time_on_site",
+	"bounce_rate",
+] as const satisfies readonly Metric[];
 
 export const metricNames: Record<Metric, string> = {
 	views: "Total Views",

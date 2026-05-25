@@ -9,9 +9,11 @@ import styles from "./filter.module.css";
 export const SelectFilters = ({
 	value,
 	onChange,
+	dimensions,
 }: {
 	value: DimensionFilter[];
 	onChange: (filters: DimensionFilter[]) => void;
+	dimensions?: string[];
 }) => {
 	return (
 		<div className={styles.filters}>
@@ -20,12 +22,12 @@ export const SelectFilters = ({
 					<div className={styles.filterField}>
 						<span>{dimensionNames[filter.dimension]}</span>
 						<span className={styles.filterType}>
-							{filters?.[filter.dimension].displayType?.(filter) ??
+							{filterOptions[filter.dimension]?.displayType?.(filter) ??
 								(filter.inversed ? filterNamesInverted[filter.filterType] : filterNames[filter.filterType])}
 						</span>
 						{filter.filterType === "is_null" ? null : (
 							<span className={styles.filterValue}>
-								{filters?.[filter.dimension].displayValue?.(filter) ?? filter.value}
+								{filterOptions[filter.dimension]?.displayValue?.(filter) ?? filter.value}
 							</span>
 						)}
 					</div>
@@ -35,77 +37,125 @@ export const SelectFilters = ({
 				</article>
 			))}
 			<article className={styles.filter}>
-				<FilterDialog onAdd={(filter) => onChange([...value, filter])} />
+				<FilterDialog
+					dimensions={dimensions}
+					onAdd={(filter) => {
+						if (!isFilterDimension(filter.dimension)) return;
+						onChange([
+							...value,
+							{
+								dimension: filter.dimension,
+								filterType: filter.filterType,
+								value: filter.value,
+								inversed: filter.inversed ?? false,
+							},
+						]);
+					}}
+				/>
 			</article>
 		</div>
 	);
 };
 
-const filters = {
+type FilterDimension = keyof typeof dimensionNames;
+
+const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
+	values.some((item) => item === value);
+
+const isFilterDimension = (value: string): value is FilterDimension => Object.hasOwn(dimensionNames, value);
+
+export type FilterOption = {
+	label: string;
+	filterTypes?: readonly FilterType[];
+	invertable?: boolean;
+	custom?: boolean;
+	render?: () => ReactElement;
+	getFilter?: (data: FormData) => Pick<DimensionFilter, "filterType" | "value">;
+	displayValue?: (filter: Pick<DimensionFilter, "filterType" | "value">) => string;
+	displayType?: (filter: Pick<DimensionFilter, "filterType" | "inversed">) => string;
+};
+
+export const filterOptions: Record<string, FilterOption> = {
 	platform: {
+		label: dimensionNames.platform,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	browser: {
+		label: dimensionNames.browser,
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
 	},
 	url: {
+		label: dimensionNames.url,
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
 	},
 	url_entry: {
+		label: dimensionNames.url_entry,
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
 	},
 	url_exit: {
+		label: dimensionNames.url_exit,
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
 	},
 	fqdn: {
+		label: dimensionNames.fqdn,
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
 	},
 	path: {
+		label: dimensionNames.path,
 		invertable: true,
 		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
 	},
 	referrer: {
+		label: dimensionNames.referrer,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	city: {
+		label: dimensionNames.city,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	country: {
+		label: dimensionNames.country,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	utm_campaign: {
+		label: dimensionNames.utm_campaign,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	utm_content: {
+		label: dimensionNames.utm_content,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	utm_medium: {
+		label: dimensionNames.utm_medium,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	utm_source: {
+		label: dimensionNames.utm_source,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	utm_term: {
+		label: dimensionNames.utm_term,
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
 	mobile: {
+		label: dimensionNames.mobile,
 		custom: true,
-		displayValue: (filter: DimensionFilter) => (filter.filterType === "is_true" ? "Mobile" : "Desktop"),
-		displayType: (filter: DimensionFilter) => (filter.inversed ? "is not" : "is"),
+		displayValue: (filter) => (filter.filterType === "is_true" ? "Mobile" : "Desktop"),
+		displayType: (filter) => (filter.inversed ? "is not" : "is"),
 		render: () => (
 			<label>
 				Device Type
@@ -117,52 +167,67 @@ const filters = {
 		),
 		getFilter: (data: FormData) => {
 			return {
-				dimension: "mobile",
 				filterType: data.get("mobile") === "true" ? "is_true" : "is_false",
 				value: undefined,
 			};
 		},
 	},
-} as Record<
-	keyof typeof dimensionNames,
-	{
-		filterTypes: FilterType[];
-		invertable?: boolean;
-		custom?: boolean;
-		render?: () => ReactElement;
-		getFilter?: (data: FormData) => DimensionFilter;
-		displayValue?: (filter: DimensionFilter) => string;
-		displayType?: (filter: DimensionFilter) => string;
-	}
->;
+};
 
-type filterDimension = keyof typeof filters;
-const displayFilters = (Object.keys(filters) as filterDimension[]).filter(
+const displayFilters = Object.keys(filterOptions).filter(
 	(dimension) => dimension !== "url_entry" && dimension !== "url_exit",
 );
 
-const FilterDialog = ({ onAdd }: { onAdd: (filter: DimensionFilter) => void }) => {
-	const closeRef = useRef<HTMLButtonElement>(null);
-	const [dimension, setDimension] = useState<filterDimension>("url");
-	const filter = filters[dimension];
+export type GenericFilter = {
+	dimension: string;
+	filterType: FilterType;
+	value?: string | null;
+	inversed?: boolean;
+};
 
-	const handleSubmit = (e: React.FormEvent) => {
+export const FilterDialog = ({
+	onAdd,
+	dimensions = displayFilters,
+	options = filterOptions,
+	allowInverted = true,
+	buttonText = "Add Filter",
+	buttonIcon = <SearchIcon size={20} />,
+}: {
+	onAdd: (filter: GenericFilter) => void;
+	dimensions?: string[];
+	options?: Record<string, FilterOption>;
+	allowInverted?: boolean;
+	buttonText?: string;
+	buttonIcon?: ReactElement | null;
+}) => {
+	const closeRef = useRef<HTMLButtonElement>(null);
+	const selectableDimensions = dimensions.filter((dimension) => options[dimension]);
+	const [dimension, setDimension] = useState(selectableDimensions[0] ?? "url");
+	const selectedDimension = options[dimension] ? dimension : (selectableDimensions[0] ?? "");
+	const filter = options[selectedDimension];
+	if (!filter) return null;
+
+	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		const data = new FormData(e.currentTarget as HTMLFormElement);
+		const data = new FormData(e.currentTarget);
 
 		if (filter.getFilter) {
-			onAdd(filter.getFilter(data));
+			onAdd({ dimension: selectedDimension, ...filter.getFilter(data) });
 			closeRef.current?.click();
 			return;
 		}
 
+		const filterType = data.get("filterType");
+		if (typeof filterType !== "string" || !isOneOf(filter.filterTypes ?? [], filterType)) return;
+
+		const value = data.get("value");
 		onAdd({
-			dimension,
+			dimension: selectedDimension,
 			inversed: filter.invertable && data.get("show-matches") === "inverted",
-			filterType: data.get("filterType") as FilterType,
-			value: data.get("value") as string,
+			filterType,
+			value: typeof value === "string" ? value : null,
 		});
-		setDimension("url");
+		setDimension(selectableDimensions[0] ?? "url");
 		closeRef.current?.click();
 	};
 
@@ -173,18 +238,18 @@ const FilterDialog = ({ onAdd }: { onAdd: (filter: DimensionFilter) => void }) =
 			hideDescription
 			trigger={
 				<button type="button">
-					<h2>Add Filter</h2>
-					<SearchIcon size={20} />
+					<span>{buttonText}</span>
+					{buttonIcon}
 				</button>
 			}
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
 					Dimension
-					<select name="dimension" value={dimension} onChange={(e) => setDimension(e.target.value as filterDimension)}>
-						{displayFilters.map((dimension) => (
+					<select name="dimension" value={selectedDimension} onChange={(e) => setDimension(e.target.value)}>
+						{selectableDimensions.map((dimension) => (
 							<option key={dimension} value={dimension}>
-								{dimensionNames[dimension as filterDimension]}
+								{options[dimension].label}
 							</option>
 						))}
 					</select>
@@ -197,14 +262,14 @@ const FilterDialog = ({ onAdd }: { onAdd: (filter: DimensionFilter) => void }) =
 						<label>
 							Filter Type
 							<select name="filterType">
-								{filter.filterTypes.map((filterType) => (
+								{filter.filterTypes?.map((filterType) => (
 									<option key={filterType} value={filterType}>
 										{capitalizeAll(filterNames[filterType])}
 									</option>
 								))}
 							</select>
 						</label>
-						{filter.invertable && (
+						{allowInverted && filter.invertable && (
 							<div className={styles.inverted}>
 								<fieldset>
 									<label>
