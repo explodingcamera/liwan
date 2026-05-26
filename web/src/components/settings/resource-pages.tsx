@@ -31,7 +31,7 @@ type EntityCollectionSettings = OASModel<DashboardSpec, "EntityCollectionSetting
 type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
 type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
 type GeoDetail = CollectionSettings["trackGeo"];
-type EntityHistoryMode = EntityCollectionSettings["historyMode"];
+type DataRetention = EntityCollectionSettings["dataRetention"];
 type ProjectTab = "general" | "display";
 type EntityTab = "general" | "collection" | "filters";
 
@@ -48,9 +48,10 @@ const retentionOptions = [
 const retentionValues = retentionOptions.map((option) => option.value);
 const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
 	values.some((item) => item === value);
-const retentionValue = (mode: EntityHistoryMode, days?: number | null) => {
-	if (mode === "inherit" || mode === "keep_all") return mode;
-	const value = String(days ?? 365);
+const retentionValue = (retention: DataRetention) => {
+	if (retention.mode === "inherit") return "inherit";
+	if (retention.mode === "all") return "keep_all";
+	const value = String(retention.days);
 	return isOneOf(retentionValues, value) ? value : "365";
 };
 const getSettingsPathId = (prefix: string) => {
@@ -336,8 +337,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 	const [trackSessions, setTrackSessions] = useState<boolean | null>(null);
 	const [trackUtmParams, setTrackUtmParams] = useState<boolean | null>(null);
 	const [trackGeo, setTrackGeo] = useState<GeoDetail | null>(null);
-	const [historyMode, setHistoryMode] = useState<EntityHistoryMode>("inherit");
-	const [historyDays, setHistoryDays] = useState<number | null>(null);
+	const [dataRetention, setDataRetention] = useState<DataRetention>({ mode: "inherit" });
 	const [error, setError] = useState<string>();
 
 	const projectTags = useMemo(
@@ -359,8 +359,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 				setTrackSessions(res.settings.trackSessions ?? null);
 				setTrackUtmParams(res.settings.trackUtmParams ?? null);
 				setTrackGeo(res.settings.trackGeo ?? null);
-				setHistoryMode(res.settings.historyMode);
-				setHistoryDays(res.settings.historyMode === "days" ? (res.settings.historyDays ?? 365) : null);
+				setDataRetention(res.settings.dataRetention);
 			})
 			.catch((err) => setError(err instanceof Error ? err.message : "Failed to load entity settings"));
 	}, [entity]);
@@ -403,8 +402,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 			trackSessions,
 			trackUtmParams,
 			trackGeo,
-			historyMode,
-			historyDays: historyMode === "days" ? (historyDays ?? 365) : null,
+			dataRetention,
 			ingestFilters: settings.ingestFilters,
 			...next,
 		});
@@ -554,19 +552,22 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							>
 								<select
 									name="historyRetention"
-									value={retentionValue(historyMode, historyDays)}
+									value={retentionValue(dataRetention)}
 									onChange={(event) => {
 										const next = event.currentTarget.value;
 										if (!isOneOf(retentionValues, next)) return;
-										if (next === "inherit" || next === "keep_all") {
-											setHistoryMode(next);
-											setHistoryDays(null);
-											saveCollectionSettings({ historyMode: next, historyDays: null });
+										if (next === "inherit") {
+											const dataRetention = { mode: "inherit" } as const;
+											setDataRetention(dataRetention);
+											saveCollectionSettings({ dataRetention });
+										} else if (next === "keep_all") {
+											const dataRetention = { mode: "all" } as const;
+											setDataRetention(dataRetention);
+											saveCollectionSettings({ dataRetention });
 										} else {
-											const historyDays = Number(next);
-											setHistoryMode("days");
-											setHistoryDays(historyDays);
-											saveCollectionSettings({ historyMode: "days", historyDays });
+											const dataRetention = { mode: "days", days: Number(next) } as const;
+											setDataRetention(dataRetention);
+											saveCollectionSettings({ dataRetention });
 										}
 									}}
 								>

@@ -26,7 +26,7 @@
 		"d3-shape": "^3.2.0",
 		"d3-transition": "^3.0.1",
 		"d3-zoom": "^3.0.0",
-		"date-fns": "^4.2.1",
+		"date-fns": "^4.3.0",
 		"fets": "^0.8.6",
 		"fuzzysort": "^3.1.0",
 		"little-date": "^1.2.1",

@@ -1,5 +1,8 @@
 [build]
 
+[alias]
+dev = "run -- dev"
+
 [env]
 DUCKDB_STATIC="1"
 DUCKDB_DISABLE_EXTENSION_LOAD="1"

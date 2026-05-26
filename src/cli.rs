@@ -32,8 +32,8 @@ pub enum Command {
     AddUser(AddUser),
     Users(ListUsers),
     Prune(Prune),
-    #[cfg(any(debug_assertions, test, feature = "__dev"))]
-    SeedDatabase(SeedDatabase),
+    #[cfg(debug_assertions)]
+    Dev(Dev),
 }
 
 #[derive(FromArgs)]
@@ -45,11 +45,41 @@ pub struct Prune {
     dry_run: bool,
 }
 
-#[cfg(any(debug_assertions, test, feature = "__dev"))]
 #[derive(FromArgs)]
-#[argh(subcommand, name = "seed-database")]
+#[cfg(debug_assertions)]
+#[argh(subcommand, name = "dev")]
+/// Debug-only development commands
+pub struct Dev {
+    #[argh(subcommand)]
+    cmd: DevCommand,
+}
+
+#[derive(FromArgs)]
+#[cfg(debug_assertions)]
+#[argh(subcommand)]
+pub enum DevCommand {
+    Seed(SeedDatabase),
+    GenerateOpenApi(GenerateOpenApi),
+    ResetDb(ResetDb),
+}
+
+#[derive(FromArgs)]
+#[cfg(debug_assertions)]
+#[argh(subcommand, name = "seed")]
 /// Seed the database with some test data
 pub struct SeedDatabase {}
+
+#[derive(FromArgs)]
+#[cfg(debug_assertions)]
+#[argh(subcommand, name = "generate-openapi")]
+/// Regenerate the TypeScript OpenAPI definition
+pub struct GenerateOpenApi {}
+
+#[derive(FromArgs)]
+#[cfg(debug_assertions)]
+#[argh(subcommand, name = "reset-db")]
+/// Delete local app and events database files
+pub struct ResetDb {}
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "generate-config")]
@@ -172,12 +202,37 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
                 println!("Dry run only. Re-run without --dry-run to apply changes.");
             }
         }
-        #[cfg(any(debug_assertions, test, feature = "__dev"))]
-        Command::SeedDatabase(_) => {
-            let app = Liwan::try_new(config)?;
-            app.seed_database(10_000_000)?;
-            println!("Database seeded with test data");
-        }
+        #[cfg(debug_assertions)]
+        Command::Dev(dev) => match dev.cmd {
+            DevCommand::Seed(_) => {
+                let app = Liwan::try_new(config)?;
+                app.seed_database(10_000_000)?;
+                println!("Database seeded with test data");
+            }
+            DevCommand::GenerateOpenApi(_) => {
+                let app = Liwan::try_new(config)?;
+                let (events, _) = tokio::sync::mpsc::channel(1);
+                let (_, spec) = crate::web::router(app, events)?;
+                crate::web::save_spec(spec)?;
+                println!("OpenAPI definition generated");
+            }
+            DevCommand::ResetDb(_) => {
+                let dir = std::path::Path::new(&config.data_dir);
+                for file in [
+                    "liwan-app.sqlite",
+                    "liwan-app.sqlite-shm",
+                    "liwan-app.sqlite-wal",
+                    "liwan-events.duckdb",
+                    "liwan-events.duckdb.wal",
+                ] {
+                    let path = dir.join(file);
+                    if path.exists() {
+                        std::fs::remove_file(&path)?;
+                        println!("Deleted {}", path.display());
+                    }
+                }
+            }
+        },
     }
 
     Ok(())

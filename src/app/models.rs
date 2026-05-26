@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, num::NonZeroU32, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
@@ -124,44 +124,6 @@ impl FromStr for GeoDetail {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum HistoryMode {
-    #[default]
-    KeepAll,
-    Days,
-}
-
-impl Display for HistoryMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::KeepAll => "keep_all",
-            Self::Days => "days",
-        })
-    }
-}
-
-impl FromStr for HistoryMode {
-    type Err = String;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "keep_all" => Ok(Self::KeepAll),
-            "days" => Ok(Self::Days),
-            _ => Err(format!("invalid history mode: {value}")),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum EntityHistoryMode {
-    #[default]
-    Inherit,
-    KeepAll,
-    Days,
-}
-
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum FilterType {
@@ -172,6 +134,14 @@ pub enum FilterType {
     EndsWith,
     IsTrue,
     IsFalse,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case", tag = "mode", content = "days")]
+pub enum DataRetention {
+    Inherit,
+    All,
+    Days(NonZeroU32),
 }
 
 impl Display for FilterType {
@@ -205,29 +175,6 @@ impl FromStr for FilterType {
     }
 }
 
-impl Display for EntityHistoryMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::Inherit => "inherit",
-            Self::KeepAll => "keep_all",
-            Self::Days => "days",
-        })
-    }
-}
-
-impl FromStr for EntityHistoryMode {
-    type Err = String;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "inherit" => Ok(Self::Inherit),
-            "keep_all" => Ok(Self::KeepAll),
-            "days" => Ok(Self::Days),
-            _ => Err(format!("invalid entity history mode: {value}")),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CollectionSettings {
@@ -235,8 +182,7 @@ pub struct CollectionSettings {
     pub track_sessions: bool,
     pub track_utm_params: bool,
     pub track_geo: GeoDetail,
-    pub history_mode: HistoryMode,
-    pub history_days: Option<u32>,
+    pub data_retention: DataRetention,
     pub ingest_filters: Vec<IngestFilter>,
 }
 
@@ -247,8 +193,7 @@ impl Default for CollectionSettings {
             track_sessions: true,
             track_utm_params: true,
             track_geo: GeoDetail::City,
-            history_mode: HistoryMode::KeepAll,
-            history_days: None,
+            data_retention: DataRetention::All,
             ingest_filters: Vec::new(),
         }
     }
@@ -262,8 +207,7 @@ pub struct EntityCollectionSettings {
     pub track_sessions: Option<bool>,
     pub track_utm_params: Option<bool>,
     pub track_geo: Option<GeoDetail>,
-    pub history_mode: EntityHistoryMode,
-    pub history_days: Option<u32>,
+    pub data_retention: DataRetention,
     pub ingest_filters: Vec<IngestFilter>,
 }
 
@@ -274,8 +218,7 @@ pub struct ResolvedCollectionSettings {
     pub track_sessions: bool,
     pub track_utm_params: bool,
     pub track_geo: GeoDetail,
-    pub history_mode: HistoryMode,
-    pub history_days: Option<u32>,
+    pub data_retention: DataRetention,
     pub ingest_filters: Vec<IngestFilter>,
 }
 
@@ -286,8 +229,7 @@ impl From<CollectionSettings> for ResolvedCollectionSettings {
             track_sessions: settings.track_sessions,
             track_utm_params: settings.track_utm_params,
             track_geo: settings.track_geo,
-            history_mode: settings.history_mode,
-            history_days: settings.history_days,
+            data_retention: settings.data_retention,
             ingest_filters: settings.ingest_filters,
         }
     }
@@ -299,12 +241,6 @@ impl ResolvedCollectionSettings {
             return global.into();
         };
 
-        let (history_mode, history_days) = match entity.history_mode {
-            EntityHistoryMode::Inherit => (global.history_mode, global.history_days),
-            EntityHistoryMode::KeepAll => (HistoryMode::KeepAll, None),
-            EntityHistoryMode::Days => (HistoryMode::Days, entity.history_days),
-        };
-
         let mut ingest_filters = global.ingest_filters;
         ingest_filters.extend(entity.ingest_filters);
 
@@ -313,8 +249,10 @@ impl ResolvedCollectionSettings {
             track_sessions: entity.track_sessions.unwrap_or(global.track_sessions),
             track_utm_params: entity.track_utm_params.unwrap_or(global.track_utm_params),
             track_geo: entity.track_geo.unwrap_or(global.track_geo),
-            history_mode,
-            history_days: if history_mode == HistoryMode::Days { history_days } else { None },
+            data_retention: match entity.data_retention {
+                DataRetention::Inherit => global.data_retention,
+                retention => retention,
+            },
             ingest_filters,
         }
     }
@@ -365,23 +303,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn inherited_entity_retention_ignores_stale_entity_days() {
+    fn entity_retention_overrides_global_retention() {
         let resolved = ResolvedCollectionSettings::resolve(
-            CollectionSettings { history_mode: HistoryMode::KeepAll, history_days: None, ..Default::default() },
+            CollectionSettings { data_retention: DataRetention::All, ..Default::default() },
             Some(EntityCollectionSettings {
                 entity_id: "entity".to_string(),
                 visitor_group_mode: None,
                 track_sessions: None,
                 track_utm_params: None,
                 track_geo: None,
-                history_mode: EntityHistoryMode::Inherit,
-                history_days: Some(30),
+                data_retention: DataRetention::Days(NonZeroU32::new(30).unwrap()),
                 ingest_filters: Vec::new(),
             }),
         );
 
-        assert_eq!(resolved.history_mode, HistoryMode::KeepAll);
-        assert_eq!(resolved.history_days, None);
+        assert_eq!(resolved.data_retention, DataRetention::Days(NonZeroU32::new(30).unwrap()));
     }
 }
 
