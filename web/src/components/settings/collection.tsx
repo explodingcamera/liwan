@@ -20,7 +20,7 @@ type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
 type IngestFilter = OASModel<DashboardSpec, "IngestFilter">;
 type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
 type GeoDetail = CollectionSettings["trackGeo"];
-type HistoryMode = CollectionSettings["historyMode"];
+type DataRetention = CollectionSettings["dataRetention"];
 type CollectionTab = "tracking" | "filters" | "purging";
 
 const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -47,9 +47,9 @@ const retentionOptions = [
 	{ value: "730", label: "2 years" },
 ] as const;
 const retentionValues = retentionOptions.map((option) => option.value);
-const retentionValue = (mode: HistoryMode, days?: number | null) => {
-	if (mode === "keep_all") return "keep_all";
-	const value = String(days ?? 365);
+const retentionValue = (retention: DataRetention) => {
+	if (retention.mode === "all" || retention.mode === "inherit") return "keep_all";
+	const value = String(retention.days);
 	return isOneOf(retentionValues, value) ? value : "365";
 };
 const collectionTabs = ["tracking", "filters", "purging"] as const satisfies readonly CollectionTab[];
@@ -183,8 +183,7 @@ export const CollectionSettingsPage = () => {
 	const [trackSessions, setTrackSessions] = useState(true);
 	const [trackUtmParams, setTrackUtmParams] = useState(true);
 	const [trackGeo, setTrackGeo] = useState<GeoDetail>("city");
-	const [historyMode, setHistoryMode] = useState<HistoryMode>("keep_all");
-	const [historyDays, setHistoryDays] = useState<number | null>(null);
+	const [dataRetention, setDataRetention] = useState<DataRetention>({ mode: "all" });
 	const [pruneError, setPruneError] = useState<string>();
 
 	useEffect(() => {
@@ -197,8 +196,7 @@ export const CollectionSettingsPage = () => {
 				setTrackSessions(settings.trackSessions);
 				setTrackUtmParams(settings.trackUtmParams);
 				setTrackGeo(settings.trackGeo);
-				setHistoryMode(settings.historyMode);
-				setHistoryDays(settings.historyMode === "days" ? (settings.historyDays ?? 365) : null);
+				setDataRetention(settings.dataRetention);
 			})
 			.catch((err) => setError(err.message));
 	}, []);
@@ -305,19 +303,18 @@ export const CollectionSettingsPage = () => {
 						>
 							<select
 								name="historyRetention"
-								value={retentionValue(historyMode, historyDays)}
+								value={retentionValue(dataRetention)}
 								onChange={(event) => {
 									const next = event.currentTarget.value;
 									if (!isOneOf(retentionValues, next)) return;
 									if (next === "keep_all") {
-										setHistoryMode("keep_all");
-										setHistoryDays(null);
-										saveSettings({ ...settings, historyMode: "keep_all", historyDays: null });
+										const dataRetention = { mode: "all" } as const;
+										setDataRetention(dataRetention);
+										saveSettings({ ...settings, dataRetention });
 									} else {
-										const historyDays = Number(next);
-										setHistoryMode("days");
-										setHistoryDays(historyDays);
-										saveSettings({ ...settings, historyMode: "days", historyDays });
+										const dataRetention = { mode: "days", days: Number(next) } as const;
+										setDataRetention(dataRetention);
+										saveSettings({ ...settings, dataRetention });
 									}
 								}}
 							>

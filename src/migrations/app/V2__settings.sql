@@ -4,7 +4,6 @@ create table settings (
     track_sessions boolean not null,
     track_utm_params boolean not null,
     track_geo text not null,
-    history_mode text not null,
     history_days integer,
     ingest_filters_json text not null default '[]'
 );
@@ -15,10 +14,9 @@ insert into settings (
     track_sessions,
     track_utm_params,
     track_geo,
-    history_mode,
     history_days,
     ingest_filters_json
-) values (1, 'accurate', true, true, 'city', 'keep_all', null, '[]');
+) values (1, 'accurate', true, true, 'city', null, '[]');
 
 create table entity_settings (
     entity_id text primary key not null,

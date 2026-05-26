@@ -1,9 +1,19 @@
 import { User2Icon } from "lucide-react";
-import { useId, useRef } from "react";
-import { api, useMe, useMutation } from "../../api";
+import { useActionState, useId, useRef } from "react";
+import { useFormStatus } from "react-dom";
+import { api, useMe } from "../../api";
 import { createToast } from "../toast";
 import styles from "./me.module.css";
 import { Snippet } from "./snippet";
+
+const PasswordSubmit = () => {
+	const { pending } = useFormStatus();
+	return (
+		<button type="submit" className="secondary" disabled={pending}>
+			{pending ? "Updating..." : "Update Password"}
+		</button>
+	);
+};
 
 export const MyAccount = () => {
 	const newPasswordId = useId();
@@ -12,32 +22,28 @@ export const MyAccount = () => {
 	const formRef = useRef<HTMLFormElement>(null);
 	const { role, username, isLoading, authError } = useMe();
 
-	const { mutate } = useMutation({
-		mutationFn: api["/api/dashboard/user/{username}/password"].put,
-		onSuccess: () => {
-			createToast("Password updated successfully", "success");
-			formRef.current?.reset();
-		},
-		onError: console.error,
-	});
+	const [passwordError, updatePassword] = useActionState(async (_: string | null, data: FormData) => {
+		if (!username) return "You must be logged in to update your password";
+
+		const newPassword = data.get("newPassword") as string;
+		const confirmNewPassword = data.get("confirmNewPassword") as string;
+		if (newPassword !== confirmNewPassword) return "Passwords do not match";
+
+		return api["/api/dashboard/user/{username}/password"]
+			.put({ json: { password: newPassword }, params: { username } })
+			.then(() => {
+				createToast("Password updated successfully", "success");
+				formRef.current?.reset();
+				return null;
+			})
+			.catch((err) => (err instanceof Error ? err.message : "Failed to update password"));
+	}, null);
 
 	if (authError) {
 		return "You don't have permission to view this page.";
 	}
 
 	if (isLoading || !username) return <div className={"loading-spinner"} />;
-
-	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		const data = new FormData(e.currentTarget);
-		const newPassword = data.get("newPassword") as string;
-		const confirmNewPassword = data.get("confirmNewPassword") as string;
-		if (newPassword !== confirmNewPassword) {
-			createToast("Passwords do not match", "error");
-			return;
-		}
-		mutate({ json: { password: newPassword }, params: { username } });
-	};
 
 	return (
 		<div className={styles.container}>
@@ -63,8 +69,9 @@ export const MyAccount = () => {
 				<Snippet entityId="YOUR_ENTITY_ID" />
 			</article>
 			<article>
-				<form className={styles.password} onSubmit={handleSubmit} ref={formRef}>
+				<form className={styles.password} action={updatePassword} ref={formRef}>
 					<h2>Update Password</h2>
+					{passwordError && <article role="alert">{passwordError}</article>}
 					<label>
 						New Password
 						<input
@@ -90,9 +97,7 @@ export const MyAccount = () => {
 					</label>
 
 					<div>
-						<button type="submit" className="secondary">
-							Update Password
-						</button>
+						<PasswordSubmit />
 					</div>
 				</form>
 			</article>

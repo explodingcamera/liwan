@@ -7,7 +7,7 @@ use duckdb::{Connection, Result as DuckResult, params};
 use rand::distr::{SampleString, StandardUniform};
 use tokio::sync::mpsc::Receiver;
 
-use crate::app::models::{Event, GeoDetail, HistoryMode, ResolvedCollectionSettings, event_params};
+use crate::app::models::{Event, GeoDetail, ResolvedCollectionSettings, event_params};
 use crate::app::{DuckDBPool, SqlitePool};
 use crate::utils::duckdb::{ParamVec, repeat_vars};
 
@@ -148,10 +148,8 @@ impl LiwanEvents {
             ..Default::default()
         };
 
-        if settings.history_mode == HistoryMode::Days
-            && let Some(history_days) = settings.history_days
-        {
-            let cutoff = Utc::now() - chrono::Duration::days(i64::from(history_days));
+        if let crate::app::models::DataRetention::Days(data_retention_days) = settings.data_retention {
+            let cutoff = Utc::now() - chrono::Duration::days(i64::from(data_retention_days.get()));
             stats.deleted_events = count_rows(
                 &conn,
                 "select count(*) from events where entity_id = ? and created_at < ?::timestamp",

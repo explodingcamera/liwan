@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::num::NonZeroU32;
 use std::sync::{Arc, RwLock};
 
 use anyhow::{Result, bail};
@@ -41,8 +42,7 @@ impl LiwanSettings {
                 track_sessions: None,
                 track_utm_params: None,
                 track_geo: None,
-                history_mode: models::EntityHistoryMode::Inherit,
-                history_days: None,
+                data_retention: models::DataRetention::Inherit,
                 ingest_filters: Vec::new(),
             },
         )
@@ -54,24 +54,25 @@ impl LiwanSettings {
     }
 
     pub fn update_global(&self, settings: &models::CollectionSettings) -> Result<()> {
-        if settings.history_days == Some(0) {
-            bail!("history_days must be greater than zero");
-        }
-        if settings.history_mode == models::HistoryMode::Days && settings.history_days.is_none() {
-            bail!("history_days is required when history_mode is days");
+        if settings.data_retention == models::DataRetention::Inherit {
+            bail!("global data_retention cannot inherit");
         }
 
         let ingest_filters_json = serde_json::to_string(&settings.ingest_filters)?;
+        let data_retention_days = match settings.data_retention {
+            models::DataRetention::All => None,
+            models::DataRetention::Days(days) => Some(days.get()),
+            models::DataRetention::Inherit => unreachable!(),
+        };
         let conn = self.pool.get()?;
         conn.execute(
-            "update settings set visitor_group_mode = ?, track_sessions = ?, track_utm_params = ?, track_geo = ?, history_mode = ?, history_days = ?, ingest_filters_json = ? where id = 1",
+            "update settings set visitor_group_mode = ?, track_sessions = ?, track_utm_params = ?, track_geo = ?, history_days = ?, ingest_filters_json = ? where id = 1",
             rusqlite::params![
                 settings.visitor_group_mode.to_string(),
                 settings.track_sessions,
                 settings.track_utm_params,
                 settings.track_geo.to_string(),
-                settings.history_mode.to_string(),
-                settings.history_days,
+                data_retention_days,
                 ingest_filters_json,
             ],
         )?;
@@ -80,14 +81,16 @@ impl LiwanSettings {
     }
 
     pub fn update_entity(&self, settings: &models::EntityCollectionSettings) -> Result<()> {
-        if settings.history_days == Some(0) {
-            bail!("history_days must be greater than zero");
-        }
-        if settings.history_mode == models::EntityHistoryMode::Days && settings.history_days.is_none() {
-            bail!("history_days is required when history_mode is days");
-        }
-
         let ingest_filters_json = serde_json::to_string(&settings.ingest_filters)?;
+        let history_mode = match settings.data_retention {
+            models::DataRetention::Inherit => "inherit",
+            models::DataRetention::All => "keep_all",
+            models::DataRetention::Days(_) => "days",
+        };
+        let data_retention_days = match settings.data_retention {
+            models::DataRetention::Days(days) => Some(days.get()),
+            models::DataRetention::Inherit | models::DataRetention::All => None,
+        };
         let conn = self.pool.get()?;
         conn.execute(
             "insert into entity_settings (entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_filters_json)
@@ -106,8 +109,8 @@ impl LiwanSettings {
                 settings.track_sessions,
                 settings.track_utm_params,
                 settings.track_geo.map(|detail| detail.to_string()),
-                settings.history_mode.to_string(),
-                settings.history_days,
+                history_mode,
+                data_retention_days,
                 ingest_filters_json,
             ],
         )?;
@@ -171,7 +174,7 @@ impl SettingsCache {
     fn load(pool: &SqlitePool) -> Result<Self> {
         let conn = pool.get()?;
         let global = conn.query_row(
-            "select visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_filters_json from settings where id = 1",
+            "select visitor_group_mode, track_sessions, track_utm_params, track_geo, history_days, ingest_filters_json from settings where id = 1",
             [],
             Self::read_global,
         )?;
@@ -192,15 +195,21 @@ impl SettingsCache {
     fn read_global(row: &rusqlite::Row<'_>) -> rusqlite::Result<models::CollectionSettings> {
         let visitor_group_mode: String = row.get(0)?;
         let track_geo: String = row.get(3)?;
-        let history_mode: String = row.get(4)?;
-        let ingest_filters_json: String = row.get(6)?;
+        let history_days: Option<u32> = row.get(4)?;
+        let ingest_filters_json: String = row.get(5)?;
+        let data_retention = match history_days {
+            Some(days) => models::DataRetention::Days(
+                NonZeroU32::new(days)
+                    .ok_or_else(|| to_sql_msg("data retention days must be greater than zero".to_string()))?,
+            ),
+            None => models::DataRetention::All,
+        };
         Ok(models::CollectionSettings {
             visitor_group_mode: parse_db(visitor_group_mode)?,
             track_sessions: row.get(1)?,
             track_utm_params: row.get(2)?,
             track_geo: parse_db(track_geo)?,
-            history_mode: parse_db(history_mode)?,
-            history_days: row.get(5)?,
+            data_retention,
             ingest_filters: serde_json::from_str(&ingest_filters_json).map_err(to_sql_err)?,
         })
     }
@@ -209,15 +218,25 @@ impl SettingsCache {
         let visitor_group_mode: Option<String> = row.get(1)?;
         let track_geo: Option<String> = row.get(4)?;
         let history_mode: String = row.get(5)?;
+        let history_days: Option<u32> = row.get(6)?;
         let ingest_filters_json: String = row.get(7)?;
+        let data_retention = match history_mode.as_str() {
+            "inherit" => models::DataRetention::Inherit,
+            "keep_all" => models::DataRetention::All,
+            "days" => models::DataRetention::Days(
+                history_days
+                    .and_then(NonZeroU32::new)
+                    .ok_or_else(|| to_sql_msg("data retention days must be greater than zero".to_string()))?,
+            ),
+            _ => return Err(to_sql_msg(format!("invalid history mode: {history_mode}"))),
+        };
         Ok(models::EntityCollectionSettings {
             entity_id: row.get(0)?,
             visitor_group_mode: visitor_group_mode.map(parse_db).transpose()?,
             track_sessions: row.get(2)?,
             track_utm_params: row.get(3)?,
             track_geo: track_geo.map(parse_db).transpose()?,
-            history_mode: parse_db(history_mode)?,
-            history_days: row.get(6)?,
+            data_retention,
             ingest_filters: serde_json::from_str(&ingest_filters_json).map_err(to_sql_err)?,
         })
     }

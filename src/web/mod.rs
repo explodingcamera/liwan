@@ -103,7 +103,7 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()
 }
 
 #[cfg(debug_assertions)]
-fn save_spec(spec: openapi::OpenApi) -> Result<()> {
+pub fn save_spec(spec: openapi::OpenApi) -> Result<()> {
     use std::path::Path;
 
     let path = Path::new("./web/src/api/dashboard.ts");

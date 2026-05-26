@@ -31,9 +31,9 @@ const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 
 type EntityCollectionSettings = OASModel<DashboardSpec, "EntityCollectionSettings">;
 type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
-type EntityHistoryMode = EntityCollectionSettings["historyMode"];
 type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
 type GeoDetail = CollectionSettings["trackGeo"];
+type DataRetention = EntityCollectionSettings["dataRetention"];
 type ProjectDisplaySettings = OASModel<DashboardSpec, "ProjectDisplaySettings">;
 type DisplayOverride = ProjectDisplaySettings["metricDisplayOverrides"][string];
 
@@ -48,9 +48,10 @@ const entityRetentionOptions = [
 	{ value: "730", label: "2 years" },
 ] as const;
 const entityRetentionValues = entityRetentionOptions.map((option) => option.value);
-const entityRetentionValue = (mode: EntityHistoryMode, days?: number | null) => {
-	if (mode === "inherit" || mode === "keep_all") return mode;
-	const value = String(days ?? 365);
+const entityRetentionValue = (retention: DataRetention) => {
+	if (retention.mode === "inherit") return "inherit";
+	if (retention.mode === "all") return "keep_all";
+	const value = String(retention.days);
 	return isOneOf(entityRetentionValues, value) ? value : "365";
 };
 const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -428,8 +429,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 	const [trackSessions, setTrackSessions] = useState<boolean | null>(null);
 	const [trackUtmParams, setTrackUtmParams] = useState<boolean | null>(null);
 	const [trackGeo, setTrackGeo] = useState<GeoDetail | null>(null);
-	const [historyMode, setHistoryMode] = useState<EntityHistoryMode>("inherit");
-	const [historyDays, setHistoryDays] = useState<number | null>(null);
+	const [dataRetention, setDataRetention] = useState<DataRetention>({ mode: "inherit" });
 
 	const { projects } = useProjects();
 	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
@@ -472,8 +472,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 						trackSessions,
 						trackUtmParams,
 						trackGeo,
-						historyMode,
-						historyDays: historyMode === "days" ? (historyDays ?? 365) : null,
+						dataRetention,
 						ingestFilters: entitySettings.ingestFilters,
 					},
 				});
@@ -502,8 +501,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 							setTrackSessions(res.settings.trackSessions ?? null);
 							setTrackUtmParams(res.settings.trackUtmParams ?? null);
 							setTrackGeo(res.settings.trackGeo ?? null);
-							setHistoryMode(res.settings.historyMode);
-							setHistoryDays(res.settings.historyMode === "days" ? (res.settings.historyDays ?? 365) : null);
+							setDataRetention(res.settings.dataRetention);
 						})
 						.catch((err) => setError(err instanceof Error ? err : new Error("Failed to load entity settings")));
 				}
@@ -613,16 +611,16 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 										History retention
 										<select
 											name="historyRetention"
-											value={entityRetentionValue(historyMode, historyDays)}
+											value={entityRetentionValue(dataRetention)}
 											onChange={(event) => {
 												const next = event.currentTarget.value;
 												if (!isOneOf(entityRetentionValues, next)) return;
-												if (next === "inherit" || next === "keep_all") {
-													setHistoryMode(next);
-													setHistoryDays(null);
+												if (next === "inherit") {
+													setDataRetention({ mode: "inherit" });
+												} else if (next === "keep_all") {
+													setDataRetention({ mode: "all" });
 												} else {
-													setHistoryMode("days");
-													setHistoryDays(Number(next));
+													setDataRetention({ mode: "days", days: Number(next) });
 												}
 											}}
 										>
