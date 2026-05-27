@@ -19,7 +19,7 @@ import {
 } from "../../api";
 import { createToast } from "../toast";
 import { type Tag, Tags } from "../tags";
-import { FiltersEditor, GeoSelect, VisitorModeSelect } from "./collection";
+import { DocsLink, FiltersEditor, GeoSelect, VisitorModeSelect } from "./collection";
 import { DeleteDialog } from "./dialogs";
 import { SettingsField, SettingsFieldset, SettingsForm, SettingsHeader, SettingsPanel, SettingsTabs } from "./form";
 import styles from "./resource-pages.module.css";
@@ -479,7 +479,11 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 						<SettingsPanel value="collection">
 							<SettingsField
 								label="Visitor grouping"
-								description="Controls how repeat visits are grouped for this entity."
+								description={
+									<>
+										Controls how repeat visits are grouped for this entity. <DocsLink hash="visitor-grouping" />
+									</>
+								}
 								name="visitorGroupMode"
 							>
 								<VisitorModeSelect
@@ -494,7 +498,11 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							</SettingsField>
 							<SettingsField
 								label="Session metrics"
-								description="Required for bounce rate, time on site, entry URL, and exit URL."
+								description={
+									<>
+										Required for bounce rate, time on site, entry URL, and exit URL. <DocsLink hash="session-metrics" />
+									</>
+								}
 								name="trackSessions"
 							>
 								<select
@@ -513,7 +521,12 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							</SettingsField>
 							<SettingsField
 								label="UTM parameters"
-								description="Stores campaign fields like source, medium, campaign, term, and content."
+								description={
+									<>
+										Stores campaign fields like source, medium, campaign, term, and content.{" "}
+										<DocsLink hash="utm-parameters" />
+									</>
+								}
 								name="trackUtmParams"
 							>
 								<select
@@ -532,7 +545,11 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							</SettingsField>
 							<SettingsField
 								label="Geolocation detail"
-								description="Choose how much location data is stored for this entity."
+								description={
+									<>
+										Choose how much location data is stored for this entity. <DocsLink hash="geolocation" />
+									</>
+								}
 								name="trackGeo"
 							>
 								<GeoSelect
@@ -547,7 +564,12 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							</SettingsField>
 							<SettingsField
 								label="History retention"
-								description="Automatically prune older event data after the selected period."
+								description={
+									<>
+										Automatically prune older event data after the selected period.{" "}
+										<DocsLink hash="retention-and-pruning" />
+									</>
+								}
 								name="historyRetention"
 							>
 								<select

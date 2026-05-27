@@ -15,12 +15,6 @@ export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; proje
 					{project.public ? null : <LockIcon size={16} />}
 					{project.displayName}
 				</CardLink>
-				&nbsp;
-				{role === "admin" && (
-					<a href={`/settings/projects/${project.id}`} className={styles.settingsButton} aria-label="Project settings">
-						<SettingsIcon size={16} />
-					</a>
-				)}
 			</span>
 			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
 		</h1>

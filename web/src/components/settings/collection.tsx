@@ -27,6 +27,7 @@ type CollectionTab = "tracking" | "filters" | "purging";
 const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 const formatCount = new Intl.NumberFormat().format;
 const ingestDimensions = ["event", ...dimensions] as const;
+const docsUrl = (hash: string) => `https://liwan.dev/collected-data/#${hash}`;
 
 const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
 	values.some((item) => item === value);
@@ -63,6 +64,12 @@ const ingestFilterOptions: Record<string, FilterOption> = {
 	},
 	...filterOptions,
 };
+
+export const DocsLink = ({ hash }: { hash: string }) => (
+	<a href={docsUrl(hash)} target="_blank" rel="noopener noreferrer">
+		Learn more.
+	</a>
+);
 
 export const VisitorModeSelect = ({
 	id,
@@ -143,12 +150,12 @@ export const FiltersEditor = ({
 		{scope === "entity" ? (
 			<p>
 				Global drop rules still apply to this entity. Rules added here are extra rules for this entity only. Inside one
-				rule, all filters must match. Matching any rule drops the event.
+				rule, all filters must match. Matching any rule drops the event. <DocsLink hash="drop-rules" />
 			</p>
 		) : (
 			<p>
 				Events are dropped before they are stored when they match a rule. Inside one rule, all filters must match.
-				Multiple rules are checked separately, so matching any rule drops the event.
+				Multiple rules are checked separately, so matching any rule drops the event. <DocsLink hash="drop-rules" />
 			</p>
 		)}
 		{rules.length === 0 ? (
@@ -290,14 +297,27 @@ export const CollectionSettingsPage = () => {
 		<div className={styles.page}>
 			<SettingsHeader
 				title="Collection"
-				description="Global defaults for collection and retention. Entity settings can override these per source."
+				description={
+					<>
+						Global defaults for collection and retention. Entity settings can override these per source. See also{" "}
+						<a href="https://liwan.dev/guides/cookie-banners/" target="_blank" rel="noopener noreferrer">
+							cookie banner considerations
+						</a>
+						.
+					</>
+				}
 			/>
 			<SettingsForm id="collection-settings-form">
 				<SettingsTabs value={tab} onValueChange={setTab} tabs={collectionTabItems}>
 					<SettingsPanel value="tracking">
 						<SettingsField
 							label="Visitor grouping"
-							description="Controls how repeat visits are grouped without storing raw IP addresses."
+							description={
+								<>
+									Controls how repeat visits are grouped without storing raw IP addresses.{" "}
+									<DocsLink hash="visitor-grouping" />
+								</>
+							}
 							name="visitorGroupMode"
 						>
 							<VisitorModeSelect
@@ -312,7 +332,11 @@ export const CollectionSettingsPage = () => {
 						</SettingsField>
 						<SettingsField
 							label="Geolocation detail"
-							description="Choose how much location data is stored for new events."
+							description={
+								<>
+									Choose how much location data is stored for new events. <DocsLink hash="geolocation" />
+								</>
+							}
 							name="trackGeo"
 						>
 							<GeoSelect
@@ -328,7 +352,11 @@ export const CollectionSettingsPage = () => {
 						<SettingsSwitch
 							name="trackSessions"
 							label="Track session metrics"
-							description="Required for bounce rate, time on site, entry URL, and exit URL."
+							description={
+								<>
+									Required for bounce rate, time on site, entry URL, and exit URL. <DocsLink hash="session-metrics" />
+								</>
+							}
 							checked={trackSessions}
 							onCheckedChange={(checked) => {
 								setTrackSessions(checked);
@@ -338,7 +366,12 @@ export const CollectionSettingsPage = () => {
 						<SettingsSwitch
 							name="trackUtmParams"
 							label="Track UTM parameters"
-							description="Stores campaign fields like source, medium, campaign, term, and content."
+							description={
+								<>
+									Stores campaign fields like source, medium, campaign, term, and content.{" "}
+									<DocsLink hash="utm-parameters" />
+								</>
+							}
 							checked={trackUtmParams}
 							onCheckedChange={(checked) => {
 								setTrackUtmParams(checked);
@@ -355,7 +388,12 @@ export const CollectionSettingsPage = () => {
 					<SettingsPanel value="purging">
 						<SettingsField
 							label="History retention"
-							description="Automatically prune older event data after the selected period."
+							description={
+								<>
+									Automatically prune older event data after the selected period.{" "}
+									<DocsLink hash="retention-and-pruning" />
+								</>
+							}
 							name="historyRetention"
 						>
 							<select
@@ -384,7 +422,13 @@ export const CollectionSettingsPage = () => {
 						</SettingsField>
 						<SettingsFieldset
 							legend="Prune Data"
-							description="Pruning applies saved retention, UTM, geolocation, and session settings to historical data. Ingest filters only affect new events. Settings save automatically; run a dry run to preview."
+							description={
+								<>
+									Pruning applies saved retention, UTM, geolocation, and session settings to historical data. Drop rules
+									only affect new events. Settings save automatically; run a dry run to preview.{" "}
+									<DocsLink hash="retention-and-pruning" />
+								</>
+							}
 						>
 							<div className={styles.pruneActions}>
 								<button type="button" className="secondary outline" onClick={() => prune(true)}>
