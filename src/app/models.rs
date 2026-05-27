@@ -183,7 +183,7 @@ pub struct CollectionSettings {
     pub track_utm_params: bool,
     pub track_geo: GeoDetail,
     pub data_retention: DataRetention,
-    pub ingest_filters: Vec<IngestFilter>,
+    pub ingest_drop_rules: Vec<IngestDropRule>,
 }
 
 impl Default for CollectionSettings {
@@ -194,7 +194,7 @@ impl Default for CollectionSettings {
             track_utm_params: true,
             track_geo: GeoDetail::City,
             data_retention: DataRetention::All,
-            ingest_filters: Vec::new(),
+            ingest_drop_rules: Vec::new(),
         }
     }
 }
@@ -208,7 +208,7 @@ pub struct EntityCollectionSettings {
     pub track_utm_params: Option<bool>,
     pub track_geo: Option<GeoDetail>,
     pub data_retention: DataRetention,
-    pub ingest_filters: Vec<IngestFilter>,
+    pub ingest_drop_rules: Vec<IngestDropRule>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -219,7 +219,7 @@ pub struct ResolvedCollectionSettings {
     pub track_utm_params: bool,
     pub track_geo: GeoDetail,
     pub data_retention: DataRetention,
-    pub ingest_filters: Vec<IngestFilter>,
+    pub ingest_drop_rules: Vec<IngestDropRule>,
 }
 
 impl From<CollectionSettings> for ResolvedCollectionSettings {
@@ -230,7 +230,7 @@ impl From<CollectionSettings> for ResolvedCollectionSettings {
             track_utm_params: settings.track_utm_params,
             track_geo: settings.track_geo,
             data_retention: settings.data_retention,
-            ingest_filters: settings.ingest_filters,
+            ingest_drop_rules: settings.ingest_drop_rules,
         }
     }
 }
@@ -241,8 +241,8 @@ impl ResolvedCollectionSettings {
             return global.into();
         };
 
-        let mut ingest_filters = global.ingest_filters;
-        ingest_filters.extend(entity.ingest_filters);
+        let mut ingest_drop_rules = global.ingest_drop_rules;
+        ingest_drop_rules.extend(entity.ingest_drop_rules);
 
         Self {
             visitor_group_mode: entity.visitor_group_mode.unwrap_or(global.visitor_group_mode),
@@ -253,9 +253,15 @@ impl ResolvedCollectionSettings {
                 DataRetention::Inherit => global.data_retention,
                 retention => retention,
             },
-            ingest_filters,
+            ingest_drop_rules,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct IngestDropRule {
+    pub filters: Vec<IngestFilter>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -264,14 +270,6 @@ pub struct IngestFilter {
     pub dimension: String,
     pub filter_type: FilterType,
     pub value: Option<String>,
-    pub action: IngestFilterAction,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
-#[serde(rename_all = "snake_case")]
-pub enum IngestFilterAction {
-    #[default]
-    Drop,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
@@ -313,7 +311,7 @@ mod tests {
                 track_utm_params: None,
                 track_geo: None,
                 data_retention: DataRetention::Days(NonZeroU32::new(30).unwrap()),
-                ingest_filters: Vec::new(),
+                ingest_drop_rules: Vec::new(),
             }),
         );
 

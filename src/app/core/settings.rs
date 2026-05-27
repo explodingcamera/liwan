@@ -43,7 +43,7 @@ impl LiwanSettings {
                 track_utm_params: None,
                 track_geo: None,
                 data_retention: models::DataRetention::Inherit,
-                ingest_filters: Vec::new(),
+                ingest_drop_rules: Vec::new(),
             },
         )
     }
@@ -58,7 +58,7 @@ impl LiwanSettings {
             bail!("global data_retention cannot inherit");
         }
 
-        let ingest_filters_json = serde_json::to_string(&settings.ingest_filters)?;
+        let ingest_drop_rules_json = serde_json::to_string(&settings.ingest_drop_rules)?;
         let data_retention_days = match settings.data_retention {
             models::DataRetention::All => None,
             models::DataRetention::Days(days) => Some(days.get()),
@@ -66,22 +66,30 @@ impl LiwanSettings {
         };
         let conn = self.pool.get()?;
         conn.execute(
-            "update settings set visitor_group_mode = ?, track_sessions = ?, track_utm_params = ?, track_geo = ?, history_days = ?, ingest_filters_json = ? where id = 1",
-            rusqlite::params![
-                settings.visitor_group_mode.to_string(),
-                settings.track_sessions,
-                settings.track_utm_params,
-                settings.track_geo.to_string(),
-                data_retention_days,
-                ingest_filters_json,
-            ],
+            "update settings
+             set
+                visitor_group_mode = :visitor_group_mode,
+                track_sessions = :track_sessions,
+                track_utm_params = :track_utm_params,
+                track_geo = :track_geo,
+                history_days = :history_days,
+                ingest_drop_rules_json = :ingest_drop_rules_json
+             where id = 1",
+            rusqlite::named_params! {
+                ":visitor_group_mode": settings.visitor_group_mode.to_string(),
+                ":track_sessions": settings.track_sessions,
+                ":track_utm_params": settings.track_utm_params,
+                ":track_geo": settings.track_geo.to_string(),
+                ":history_days": data_retention_days,
+                ":ingest_drop_rules_json": ingest_drop_rules_json,
+            },
         )?;
         self.reload()?;
         Ok(())
     }
 
     pub fn update_entity(&self, settings: &models::EntityCollectionSettings) -> Result<()> {
-        let ingest_filters_json = serde_json::to_string(&settings.ingest_filters)?;
+        let ingest_drop_rules_json = serde_json::to_string(&settings.ingest_drop_rules)?;
         let history_mode = match settings.data_retention {
             models::DataRetention::Inherit => "inherit",
             models::DataRetention::All => "keep_all",
@@ -93,8 +101,8 @@ impl LiwanSettings {
         };
         let conn = self.pool.get()?;
         conn.execute(
-            "insert into entity_settings (entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_filters_json)
-             values (?, ?, ?, ?, ?, ?, ?, ?)
+            "insert into entity_settings (entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_drop_rules_json)
+             values (:entity_id, :visitor_group_mode, :track_sessions, :track_utm_params, :track_geo, :history_mode, :history_days, :ingest_drop_rules_json)
              on conflict(entity_id) do update set
                 visitor_group_mode = excluded.visitor_group_mode,
                 track_sessions = excluded.track_sessions,
@@ -102,17 +110,17 @@ impl LiwanSettings {
                 track_geo = excluded.track_geo,
                 history_mode = excluded.history_mode,
                 history_days = excluded.history_days,
-                ingest_filters_json = excluded.ingest_filters_json",
-            rusqlite::params![
-                settings.entity_id,
-                settings.visitor_group_mode.map(|mode| mode.to_string()),
-                settings.track_sessions,
-                settings.track_utm_params,
-                settings.track_geo.map(|detail| detail.to_string()),
-                history_mode,
-                data_retention_days,
-                ingest_filters_json,
-            ],
+                ingest_drop_rules_json = excluded.ingest_drop_rules_json",
+            rusqlite::named_params! {
+                ":entity_id": settings.entity_id,
+                ":visitor_group_mode": settings.visitor_group_mode.map(|mode| mode.to_string()),
+                ":track_sessions": settings.track_sessions,
+                ":track_utm_params": settings.track_utm_params,
+                ":track_geo": settings.track_geo.map(|detail| detail.to_string()),
+                ":history_mode": history_mode,
+                ":history_days": data_retention_days,
+                ":ingest_drop_rules_json": ingest_drop_rules_json,
+            },
         )?;
         self.reload()?;
         Ok(())
@@ -160,11 +168,15 @@ impl LiwanProjectSettings {
         let conn = self.pool.get()?;
         conn.execute(
             "insert into project_settings (project_id, metric_display_overrides_json, dimension_display_overrides_json)
-             values (?, ?, ?)
+             values (:project_id, :metric_display_overrides_json, :dimension_display_overrides_json)
              on conflict(project_id) do update set
                 metric_display_overrides_json = excluded.metric_display_overrides_json,
                 dimension_display_overrides_json = excluded.dimension_display_overrides_json",
-            rusqlite::params![settings.project_id, metric_json, dimension_json],
+            rusqlite::named_params! {
+                ":project_id": settings.project_id,
+                ":metric_display_overrides_json": metric_json,
+                ":dimension_display_overrides_json": dimension_json,
+            },
         )?;
         Ok(())
     }
@@ -174,13 +186,13 @@ impl SettingsCache {
     fn load(pool: &SqlitePool) -> Result<Self> {
         let conn = pool.get()?;
         let global = conn.query_row(
-            "select visitor_group_mode, track_sessions, track_utm_params, track_geo, history_days, ingest_filters_json from settings where id = 1",
+            "select visitor_group_mode, track_sessions, track_utm_params, track_geo, history_days, ingest_drop_rules_json from settings where id = 1",
             [],
             Self::read_global,
         )?;
 
         let mut stmt = conn.prepare(
-            "select entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_filters_json from entity_settings",
+            "select entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_drop_rules_json from entity_settings",
         )?;
         let entities = stmt
             .query_map([], Self::read_entity)?
@@ -196,7 +208,7 @@ impl SettingsCache {
         let visitor_group_mode: String = row.get(0)?;
         let track_geo: String = row.get(3)?;
         let history_days: Option<u32> = row.get(4)?;
-        let ingest_filters_json: String = row.get(5)?;
+        let ingest_drop_rules_json: String = row.get(5)?;
         let data_retention = match history_days {
             Some(days) => models::DataRetention::Days(
                 NonZeroU32::new(days)
@@ -210,7 +222,7 @@ impl SettingsCache {
             track_utm_params: row.get(2)?,
             track_geo: parse_db(track_geo)?,
             data_retention,
-            ingest_filters: serde_json::from_str(&ingest_filters_json).map_err(to_sql_err)?,
+            ingest_drop_rules: serde_json::from_str(&ingest_drop_rules_json).map_err(to_sql_err)?,
         })
     }
 
@@ -219,7 +231,7 @@ impl SettingsCache {
         let track_geo: Option<String> = row.get(4)?;
         let history_mode: String = row.get(5)?;
         let history_days: Option<u32> = row.get(6)?;
-        let ingest_filters_json: String = row.get(7)?;
+        let ingest_drop_rules_json: String = row.get(7)?;
         let data_retention = match history_mode.as_str() {
             "inherit" => models::DataRetention::Inherit,
             "keep_all" => models::DataRetention::All,
@@ -237,7 +249,7 @@ impl SettingsCache {
             track_utm_params: row.get(3)?,
             track_geo: track_geo.map(parse_db).transpose()?,
             data_retention,
-            ingest_filters: serde_json::from_str(&ingest_filters_json).map_err(to_sql_err)?,
+            ingest_drop_rules: serde_json::from_str(&ingest_drop_rules_json).map_err(to_sql_err)?,
         })
     }
 }

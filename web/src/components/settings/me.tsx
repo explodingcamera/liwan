@@ -1,19 +1,9 @@
 import { User2Icon } from "lucide-react";
-import { useActionState, useId, useRef } from "react";
-import { useFormStatus } from "react-dom";
+import { useId, useRef, useState } from "react";
 import { api, useMe } from "../../api";
 import { createToast } from "../toast";
 import styles from "./me.module.css";
 import { Snippet } from "./snippet";
-
-const PasswordSubmit = () => {
-	const { pending } = useFormStatus();
-	return (
-		<button type="submit" className="secondary" disabled={pending}>
-			{pending ? "Updating..." : "Update Password"}
-		</button>
-	);
-};
 
 export const MyAccount = () => {
 	const newPasswordId = useId();
@@ -21,23 +11,40 @@ export const MyAccount = () => {
 
 	const formRef = useRef<HTMLFormElement>(null);
 	const { role, username, isLoading, authError } = useMe();
+	const [passwordError, setPasswordError] = useState<string | null>(null);
+	const [passwordUpdating, setPasswordUpdating] = useState(false);
 
-	const [passwordError, updatePassword] = useActionState(async (_: string | null, data: FormData) => {
-		if (!username) return "You must be logged in to update your password";
+	const updatePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!username) {
+			setPasswordError("You must be logged in to update your password");
+			return;
+		}
 
-		const newPassword = data.get("newPassword") as string;
-		const confirmNewPassword = data.get("confirmNewPassword") as string;
-		if (newPassword !== confirmNewPassword) return "Passwords do not match";
+		const data = new FormData(event.currentTarget);
+		const newPassword = data.get("newPassword");
+		const confirmNewPassword = data.get("confirmNewPassword");
+		if (typeof newPassword !== "string" || typeof confirmNewPassword !== "string") return;
+		if (newPassword !== confirmNewPassword) {
+			setPasswordError("Passwords do not match");
+			return;
+		}
 
-		return api["/api/dashboard/user/{username}/password"]
-			.put({ json: { password: newPassword }, params: { username } })
-			.then(() => {
-				createToast("Password updated successfully", "success");
-				formRef.current?.reset();
-				return null;
-			})
-			.catch((err) => (err instanceof Error ? err.message : "Failed to update password"));
-	}, null);
+		setPasswordUpdating(true);
+		setPasswordError(null);
+		try {
+			await api["/api/dashboard/user/{username}/password"].put({
+				json: { password: newPassword },
+				params: { username },
+			});
+			createToast("Password updated successfully", "success");
+			formRef.current?.reset();
+		} catch (err) {
+			setPasswordError(err instanceof Error ? err.message : "Failed to update password");
+		} finally {
+			setPasswordUpdating(false);
+		}
+	};
 
 	if (authError) {
 		return "You don't have permission to view this page.";
@@ -69,7 +76,7 @@ export const MyAccount = () => {
 				<Snippet entityId="YOUR_ENTITY_ID" />
 			</article>
 			<article>
-				<form className={styles.password} action={updatePassword} ref={formRef}>
+				<form className={styles.password} onSubmit={updatePassword} ref={formRef}>
 					<h2>Update Password</h2>
 					{passwordError && <article role="alert">{passwordError}</article>}
 					<label>
@@ -97,7 +104,9 @@ export const MyAccount = () => {
 					</label>
 
 					<div>
-						<PasswordSubmit />
+						<button type="submit" className="secondary" disabled={passwordUpdating}>
+							{passwordUpdating ? "Updating..." : "Update Password"}
+						</button>
 					</div>
 				</form>
 			</article>

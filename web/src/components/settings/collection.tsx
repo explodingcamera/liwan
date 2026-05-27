@@ -18,6 +18,7 @@ import {
 
 type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
 type IngestFilter = OASModel<DashboardSpec, "IngestFilter">;
+type IngestDropRule = OASModel<DashboardSpec, "IngestDropRule">;
 type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
 type GeoDetail = CollectionSettings["trackGeo"];
 type DataRetention = CollectionSettings["dataRetention"];
@@ -122,56 +123,112 @@ export const GeoSelect = ({
 );
 
 export const FiltersEditor = ({
-	filters,
-	setFilters,
+	rules,
+	setRules,
+	scope = "global",
 }: {
-	filters: IngestFilter[];
-	setFilters: (filters: IngestFilter[]) => void;
+	rules: IngestDropRule[];
+	setRules: (rules: IngestDropRule[]) => void;
+	scope?: "global" | "entity";
 }) => (
 	<section className={styles.section}>
 		<div className={styles.sectionHeader}>
-			<h2 className={styles.sectionTitle}>Ingest filters</h2>
+			<h2 className={styles.sectionTitle}>{scope === "entity" ? "Additional drop rules" : "Global drop rules"}</h2>
 			<div className={styles.filterAction}>
-				<FilterDialog
-					buttonText="+"
-					buttonIcon={null}
-					dimensions={[...ingestDimensions]}
-					options={ingestFilterOptions}
-					allowInverted={false}
-					onAdd={(filter: GenericFilter) =>
-						setFilters([
-							...filters,
-							{ dimension: filter.dimension, filterType: filter.filterType, value: filter.value, action: "drop" },
-						])
-					}
-				/>
+				<button type="button" onClick={() => setRules([...rules, { filters: [] }])}>
+					Add rule
+				</button>
 			</div>
 		</div>
-		<p>Matching events are dropped before they are stored.</p>
-		{filters.length === 0 ? (
-			<small>No ingest filters right now.</small>
+		{scope === "entity" ? (
+			<p>
+				Global drop rules still apply to this entity. Rules added here are extra rules for this entity only. Inside one
+				rule, all filters must match. Matching any rule drops the event.
+			</p>
 		) : (
-			<div className={styles.filterList}>
-				{filters.map((filter, index) => (
-					<div className={styles.filterRow} key={`${filter.dimension}-${index}`}>
-						<div className={styles.filterText}>
-							<strong>{title(filter.dimension)}</strong>
-							<span>{title(filter.filterType)}</span>
-							{filter.value && <code>{filter.value}</code>}
+			<p>
+				Events are dropped before they are stored when they match a rule. Inside one rule, all filters must match.
+				Multiple rules are checked separately, so matching any rule drops the event.
+			</p>
+		)}
+		{rules.length === 0 ? (
+			<small>No drop rules right now.</small>
+		) : (
+			<div className={styles.ruleList}>
+				{rules.map((rule, ruleIndex) => (
+					<article className={styles.ruleCard} key={ruleIndex}>
+						<div className={styles.ruleHeader}>
+							<div className={styles.ruleTitle}>
+								<strong>Rule {ruleIndex + 1}</strong>
+								<small>Drop when all of these match</small>
+							</div>
+							<div className={styles.ruleActions}>
+								<FilterDialog
+									buttonText="Add filter"
+									buttonIcon={null}
+									dimensions={[...ingestDimensions]}
+									options={ingestFilterOptions}
+									allowInverted={false}
+									onAdd={(filter: GenericFilter) => {
+										const next = [...rules];
+										next[ruleIndex] = {
+											filters: [
+												...rule.filters,
+												{ dimension: filter.dimension, filterType: filter.filterType, value: filter.value },
+											],
+										};
+										setRules(next);
+									}}
+								/>
+								<button
+									type="button"
+									className="secondary outline"
+									onClick={() => setRules(rules.filter((_, i) => i !== ruleIndex))}
+								>
+									Remove rule
+								</button>
+							</div>
 						</div>
-						<button
-							type="button"
-							className="secondary outline"
-							onClick={() => setFilters(filters.filter((_, i) => i !== index))}
-						>
-							Remove
-						</button>
-					</div>
+						{rule.filters.length === 0 ? (
+							<small>Add at least one filter to activate this rule.</small>
+						) : (
+							<div className={styles.filterList}>
+								{rule.filters.map((filter, filterIndex) => (
+									<div className={styles.filterRow} key={`${filter.dimension}-${filterIndex}`}>
+										<div className={styles.filterText}>
+											<strong>{title(filter.dimension)}</strong>
+											<span>{ingestFilterTypeLabel(filter)}</span>
+											{filter.filterType !== "is_null" && <code>{ingestFilterValueLabel(filter)}</code>}
+										</div>
+										<button
+											type="button"
+											className="secondary outline"
+											onClick={() => {
+												const next = [...rules];
+												next[ruleIndex] = { filters: rule.filters.filter((_, i) => i !== filterIndex) };
+												setRules(next);
+											}}
+										>
+											Remove
+										</button>
+									</div>
+								))}
+							</div>
+						)}
+					</article>
 				))}
 			</div>
 		)}
 	</section>
 );
+
+const ingestFilterTypeLabel = (filter: IngestFilter) =>
+	ingestFilterOptions[filter.dimension]?.displayType?.({ filterType: filter.filterType, inversed: false }) ??
+	title(filter.filterType);
+
+const ingestFilterValueLabel = (filter: IngestFilter) =>
+	ingestFilterOptions[filter.dimension]?.displayValue?.({ filterType: filter.filterType, value: filter.value }) ??
+	filter.value;
 
 export const CollectionSettingsPage = () => {
 	const [settings, setSettings] = useState<CollectionSettings>();
@@ -291,8 +348,8 @@ export const CollectionSettingsPage = () => {
 					</SettingsPanel>
 					<SettingsPanel value="filters">
 						<FiltersEditor
-							filters={settings.ingestFilters}
-							setFilters={(ingestFilters) => saveSettings({ ...settings, ingestFilters })}
+							rules={settings.ingestDropRules}
+							setRules={(ingestDropRules) => saveSettings({ ...settings, ingestDropRules })}
 						/>
 					</SettingsPanel>
 					<SettingsPanel value="purging">

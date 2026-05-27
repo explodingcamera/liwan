@@ -1,7 +1,6 @@
 use crate::app::{SqlitePool, models};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use rusqlite::params;
 
 #[derive(Clone)]
 pub struct LiwanSessions {
@@ -16,8 +15,13 @@ impl LiwanSessions {
     /// Create a new session
     pub fn create(&self, session_id: &str, username: &str, expires_at: DateTime<Utc>) -> Result<()> {
         let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("insert into sessions (id, username, expires_at) values (?, ?, ?)")?;
-        stmt.execute(rusqlite::params![session_id, username, expires_at])?;
+        let mut stmt = conn
+            .prepare_cached("insert into sessions (id, username, expires_at) values (:id, :username, :expires_at)")?;
+        stmt.execute(rusqlite::named_params! {
+            ":id": session_id,
+            ":username": username,
+            ":expires_at": expires_at,
+        })?;
         Ok(())
     }
 
@@ -33,12 +37,12 @@ impl LiwanSessions {
             join users u
             on lower(u.username) = lower(s.username)
             where
-                s.id = ?
-                and s.expires_at > ?
+                s.id = :session_id
+                and s.expires_at > :now
         "#,
         )?;
 
-        let user = stmt.query_row(params![session_id, Utc::now()], |row| {
+        let user = stmt.query_row(rusqlite::named_params! { ":session_id": session_id, ":now": Utc::now() }, |row| {
             Ok(models::User {
                 username: row.get("username")?,
                 role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
@@ -61,8 +65,8 @@ impl LiwanSessions {
     /// Delete a session
     pub fn delete(&self, session_id: &str) -> Result<()> {
         let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("update sessions set expires_at = ? where id = ?")?;
-        stmt.execute(rusqlite::params![Utc::now(), session_id])?;
+        let mut stmt = conn.prepare_cached("update sessions set expires_at = :expires_at where id = :id")?;
+        stmt.execute(rusqlite::named_params! { ":expires_at": Utc::now(), ":id": session_id })?;
         Ok(())
     }
 }

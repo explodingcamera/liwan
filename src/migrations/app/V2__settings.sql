@@ -5,7 +5,7 @@ create table settings (
     track_utm_params boolean not null,
     track_geo text not null,
     history_days integer,
-    ingest_filters_json text not null default '[]'
+    ingest_drop_rules_json text not null default '[]'
 );
 
 insert into settings (
@@ -15,7 +15,7 @@ insert into settings (
     track_utm_params,
     track_geo,
     history_days,
-    ingest_filters_json
+    ingest_drop_rules_json
 ) values (1, 'accurate', true, true, 'city', null, '[]');
 
 create table entity_settings (
@@ -26,7 +26,7 @@ create table entity_settings (
     track_geo text,
     history_mode text not null default 'inherit',
     history_days integer,
-    ingest_filters_json text not null default '[]',
+    ingest_drop_rules_json text not null default '[]',
     foreign key (entity_id) references entities(id) on delete cascade
 );
 

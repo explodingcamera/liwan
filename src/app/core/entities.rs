@@ -31,13 +31,13 @@ impl LiwanEntities {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute(
-            "insert into entities (id, display_name) values (?, ?)",
-            rusqlite::params![entity.id, entity.display_name],
+            "insert into entities (id, display_name) values (:id, :display_name)",
+            rusqlite::named_params! { ":id": entity.id, ":display_name": entity.display_name },
         )?;
         for project_id in initial_projects {
             tx.execute(
-                "insert into project_entities (project_id, entity_id) values (?, ?)",
-                rusqlite::params![project_id, entity.id],
+                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity.id },
             )?;
         }
         tx.commit()?;
@@ -47,8 +47,8 @@ impl LiwanEntities {
     /// Update an entity
     pub fn update(&self, entity: &models::Entity) -> Result<models::Entity> {
         let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("update entities set display_name = ? where id = ?")?;
-        stmt.execute(rusqlite::params![entity.display_name, entity.id])?;
+        let mut stmt = conn.prepare_cached("update entities set display_name = :display_name where id = :id")?;
+        stmt.execute(rusqlite::named_params! { ":display_name": entity.display_name, ":id": entity.id })?;
         Ok(entity.clone())
     }
 
@@ -59,8 +59,8 @@ impl LiwanEntities {
         tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![entity_id])?;
         for project_id in project_ids {
             tx.execute(
-                "insert into project_entities (project_id, entity_id) values (?, ?)",
-                rusqlite::params![project_id, entity_id],
+                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity_id },
             )?;
         }
         tx.commit()?;

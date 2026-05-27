@@ -20,8 +20,8 @@ impl LiwanProjects {
         tx.execute("delete from project_entities where project_id = ?", rusqlite::params![project_id])?;
         for entity_id in entity_ids {
             tx.execute(
-                "insert into project_entities (project_id, entity_id) values (?, ?)",
-                rusqlite::params![project_id, entity_id],
+                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity_id },
             )?;
         }
         tx.commit()?;
@@ -89,13 +89,18 @@ impl LiwanProjects {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute(
-            "insert into projects (id, display_name, public, secret) values (?, ?, ?, ?)",
-            rusqlite::params![project.id, project.display_name, project.public, project.secret],
+            "insert into projects (id, display_name, public, secret) values (:id, :display_name, :public, :secret)",
+            rusqlite::named_params! {
+                ":id": project.id,
+                ":display_name": project.display_name,
+                ":public": project.public,
+                ":secret": project.secret,
+            },
         )?;
         for entity_id in initial_entities {
             tx.execute(
-                "insert into project_entities (project_id, entity_id) values (?, ?)",
-                rusqlite::params![project.id, entity_id],
+                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                rusqlite::named_params! { ":project_id": project.id, ":entity_id": entity_id },
             )?;
         }
         tx.commit()?;
@@ -105,9 +110,15 @@ impl LiwanProjects {
     /// Update a project
     pub fn update(&self, project: &models::Project) -> Result<models::Project> {
         let conn = self.pool.get()?;
-        let mut stmt =
-            conn.prepare_cached("update projects set display_name = ?, public = ?, secret = ? where id = ?")?;
-        stmt.execute(rusqlite::params![project.display_name, project.public, project.secret, project.id])?;
+        let mut stmt = conn.prepare_cached(
+            "update projects set display_name = :display_name, public = :public, secret = :secret where id = :id",
+        )?;
+        stmt.execute(rusqlite::named_params! {
+            ":display_name": project.display_name,
+            ":public": project.public,
+            ":secret": project.secret,
+            ":id": project.id,
+        })?;
         Ok(project.clone())
     }
 

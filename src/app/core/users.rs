@@ -69,17 +69,28 @@ impl LiwanUsers {
         let username = username.to_lowercase();
         let password_hash = hash_password(password)?;
         let conn = self.pool.get()?;
-        let mut stmt =
-            conn.prepare_cached("insert into users (username, password_hash, role, projects) values (?, ?, ?, ?)")?;
-        stmt.execute([username, password_hash, role.to_string(), projects.join(",")])?;
+        let mut stmt = conn.prepare_cached(
+            "insert into users (username, password_hash, role, projects) values (:username, :password_hash, :role, :projects)",
+        )?;
+        stmt.execute(rusqlite::named_params! {
+            ":username": username,
+            ":password_hash": password_hash,
+            ":role": role.to_string(),
+            ":projects": projects.join(","),
+        })?;
         Ok(())
     }
 
     /// Update a user
     pub fn update(&self, username: &str, role: models::UserRole, projects: &[String]) -> Result<()> {
         let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("update users set role = ?, projects = ? where username = ?")?;
-        stmt.execute([&role.to_string(), &projects.join(","), username])?;
+        let mut stmt =
+            conn.prepare_cached("update users set role = :role, projects = :projects where username = :username")?;
+        stmt.execute(rusqlite::named_params! {
+            ":role": role.to_string(),
+            ":projects": projects.join(","),
+            ":username": username,
+        })?;
         Ok(())
     }
 
@@ -87,8 +98,9 @@ impl LiwanUsers {
     pub fn update_password(&self, username: &str, password: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let password_hash = hash_password(password)?;
-        let mut stmt = conn.prepare_cached("update users set password_hash = ? where username = ?")?;
-        stmt.execute([&password_hash, username])?;
+        let mut stmt =
+            conn.prepare_cached("update users set password_hash = :password_hash where username = :username")?;
+        stmt.execute(rusqlite::named_params! { ":password_hash": password_hash, ":username": username })?;
         Ok(())
     }
 

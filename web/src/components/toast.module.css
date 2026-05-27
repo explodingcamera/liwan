@@ -25,12 +25,11 @@
   box-sizing: border-box;
   width: 100%;
   height: var(--height);
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid color-mix(in srgb, var(--pico-primary-background) 82%, var(--pico-primary-inverse));
   border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-card-background-color) 92%, transparent);
-  color: var(--pico-color);
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
   box-shadow: var(--pico-card-box-shadow);
-  backdrop-filter: blur(12px);
   cursor: default;
   overflow: hidden;
   transform-origin: bottom right;
@@ -61,8 +60,7 @@
   transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--offset-y));
 }
 
-.toast[data-starting-style],
-.toast[data-ending-style] {
+.toast[data-starting-style] {
   transform: translateY(150%);
 }
 
@@ -72,14 +70,6 @@
 
 .toast[data-limited] {
   opacity: 0;
-}
-
-.toast[data-ending-style][data-swipe-direction="right"] {
-  transform: translateX(calc(var(--toast-swipe-movement-x) + 150%)) translateY(var(--offset-y));
-}
-
-.toast[data-ending-style][data-swipe-direction="down"] {
-  transform: translateY(calc(var(--toast-swipe-movement-y) + 150%));
 }
 
 .content {
@@ -106,19 +96,7 @@
 .indicator {
   width: 0.35rem;
   border-radius: 999px;
-  background: var(--pico-primary-background);
-}
-
-.toast[data-type="success"] .indicator {
-  background: #57b882;
-}
-
-.toast[data-type="error"] .indicator {
-  background: #ff6b75;
-}
-
-.toast[data-type="warning"] .indicator {
-  background: #e8a84f;
+  background: color-mix(in srgb, var(--pico-primary-inverse) 78%, transparent);
 }
 
 .text {
@@ -131,7 +109,7 @@
 
 .title {
   margin: 0;
-  color: var(--pico-contrast);
+  color: var(--pico-primary-inverse);
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.25;
@@ -139,7 +117,7 @@
 
 .description {
   margin: 0;
-  color: var(--pico-muted-color);
+  color: color-mix(in srgb, var(--pico-primary-inverse) 92%, transparent);
   font-size: 0.86rem;
   line-height: 1.35;
 }
@@ -155,13 +133,13 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--pico-muted-color);
+  color: color-mix(in srgb, var(--pico-primary-inverse) 78%, transparent);
   box-shadow: none;
 }
 
 .close:hover {
-  background: var(--pico-secondary-background);
-  color: var(--pico-color);
+  background: color-mix(in srgb, var(--pico-primary-inverse) 14%, transparent);
+  color: var(--pico-primary-inverse);
   box-shadow: none;
 }
 
