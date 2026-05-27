@@ -47,7 +47,7 @@
   padding: 0 0.2rem 0 0.45rem;
   cursor: default;
   color: var(--pico-h1-color);
-  border: var(--pico-border-width) solid var(--pico-secondary);
+  border: var(--pico-border-width) solid var(--pico-form-element-border-color);
   border-radius: 0.5rem;
   background-color: var(--pico-card-background-color);
   outline: 0;

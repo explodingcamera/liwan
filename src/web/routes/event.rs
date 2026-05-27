@@ -1,5 +1,5 @@
 use crate::app::models::{
-    FilterType, GeoDetail, IngestFilter, IngestFilterAction, ResolvedCollectionSettings, VisitorGroupMode,
+    FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings, VisitorGroupMode,
 };
 use crate::app::{Liwan, models::Event};
 use crate::utils::hash::{visitor_group_id, visitor_group_id_cidr, visitor_group_id_fallback};
@@ -205,15 +205,15 @@ fn process_event(
         track_sessions: settings.track_sessions,
     };
 
-    if settings
-        .ingest_filters
-        .iter()
-        .any(|filter| filter.action == IngestFilterAction::Drop && ingest_filter_matches(&event, filter))
-    {
+    if settings.ingest_drop_rules.iter().any(|rule| ingest_drop_rule_matches(&event, rule)) {
         return Ok(None);
     }
 
     Ok(Some(event))
+}
+
+fn ingest_drop_rule_matches(event: &Event, rule: &IngestDropRule) -> bool {
+    !rule.filters.is_empty() && rule.filters.iter().all(|filter| ingest_filter_matches(event, filter))
 }
 
 fn ingest_filter_matches(event: &Event, filter: &IngestFilter) -> bool {
@@ -336,12 +336,93 @@ mod test {
 
         assert!(!ingest_filter_matches(
             &event,
-            &IngestFilter {
-                dimension: "unknown".to_string(),
-                filter_type: FilterType::IsNull,
-                value: None,
-                action: IngestFilterAction::Drop,
-            },
+            &IngestFilter { dimension: "unknown".to_string(), filter_type: FilterType::IsNull, value: None },
         ));
+    }
+
+    #[test]
+    fn ingest_drop_rule_requires_all_filters_to_match() {
+        let event = Event {
+            entity_id: "entity".to_string(),
+            visitor_group_id: "visitor".to_string(),
+            event: "pageview".to_string(),
+            created_at: Utc::now(),
+            fqdn: Some("example.com".to_string()),
+            path: Some("/pricing".to_string()),
+            referrer: None,
+            platform: None,
+            browser: None,
+            mobile: None,
+            country: None,
+            city: None,
+            utm_source: Some("newsletter".to_string()),
+            utm_medium: None,
+            utm_campaign: None,
+            utm_content: None,
+            utm_term: None,
+            screen_width: None,
+            orientation: None,
+            track_sessions: true,
+        };
+
+        let matching_rule = IngestDropRule {
+            filters: vec![
+                IngestFilter {
+                    dimension: "path".to_string(),
+                    filter_type: FilterType::Equal,
+                    value: Some("/pricing".to_string()),
+                },
+                IngestFilter {
+                    dimension: "utm_source".to_string(),
+                    filter_type: FilterType::Equal,
+                    value: Some("newsletter".to_string()),
+                },
+            ],
+        };
+        let non_matching_rule = IngestDropRule {
+            filters: vec![
+                IngestFilter {
+                    dimension: "path".to_string(),
+                    filter_type: FilterType::Equal,
+                    value: Some("/pricing".to_string()),
+                },
+                IngestFilter {
+                    dimension: "utm_source".to_string(),
+                    filter_type: FilterType::Equal,
+                    value: Some("ads".to_string()),
+                },
+            ],
+        };
+
+        assert!(ingest_drop_rule_matches(&event, &matching_rule));
+        assert!(!ingest_drop_rule_matches(&event, &non_matching_rule));
+    }
+
+    #[test]
+    fn empty_ingest_drop_rule_does_not_match() {
+        let event = Event {
+            entity_id: "entity".to_string(),
+            visitor_group_id: "visitor".to_string(),
+            event: "pageview".to_string(),
+            created_at: Utc::now(),
+            fqdn: None,
+            path: None,
+            referrer: None,
+            platform: None,
+            browser: None,
+            mobile: None,
+            country: None,
+            city: None,
+            utm_source: None,
+            utm_medium: None,
+            utm_campaign: None,
+            utm_content: None,
+            utm_term: None,
+            screen_width: None,
+            orientation: None,
+            track_sessions: true,
+        };
+
+        assert!(!ingest_drop_rule_matches(&event, &IngestDropRule { filters: Vec::new() }));
     }
 }

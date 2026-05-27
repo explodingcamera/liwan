@@ -473,7 +473,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 						trackUtmParams,
 						trackGeo,
 						dataRetention,
-						ingestFilters: entitySettings.ingestFilters,
+						ingestDropRules: entitySettings.ingestDropRules,
 					},
 				});
 			}
@@ -638,8 +638,9 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 
 						<section className={styles.tabPanel} hidden={tab !== "filters"}>
 							<FiltersEditor
-								filters={entitySettings.ingestFilters}
-								setFilters={(ingestFilters) => setEntitySettings({ ...entitySettings, ingestFilters })}
+								rules={entitySettings.ingestDropRules}
+								setRules={(ingestDropRules) => setEntitySettings({ ...entitySettings, ingestDropRules })}
+								scope="entity"
 							/>
 						</section>
 					</>

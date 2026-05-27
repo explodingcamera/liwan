@@ -111,22 +111,64 @@
 
 .filterAction {
   display: flex;
+  flex-shrink: 0;
   justify-content: flex-end;
 }
 
 .filterAction button {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  font-size: 1.2rem;
-  line-height: 1;
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
+  white-space: nowrap;
 }
 
 .filterList {
   display: grid;
   gap: 0.45rem;
+}
+
+.ruleList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ruleCard {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+  box-shadow: none;
+}
+
+.ruleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.ruleTitle {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.ruleTitle small {
+  color: var(--pico-muted-color);
+}
+
+.ruleActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.ruleActions button {
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
 }
 
 .filterRow {
@@ -189,6 +231,16 @@
 }
 
 @media (max-width: 700px) {
+  .ruleHeader,
+  .ruleActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ruleActions button {
+    width: 100%;
+  }
+
   .filterRow {
     grid-template-columns: 1fr;
   }

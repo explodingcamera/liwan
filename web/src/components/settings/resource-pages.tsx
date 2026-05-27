@@ -403,7 +403,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 			trackUtmParams,
 			trackGeo,
 			dataRetention,
-			ingestFilters: settings.ingestFilters,
+			ingestDropRules: settings.ingestDropRules,
 			...next,
 		});
 	};
@@ -583,8 +583,9 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 						</SettingsPanel>
 						<SettingsPanel value="filters">
 							<FiltersEditor
-								filters={settings.ingestFilters}
-								setFilters={(ingestFilters) => saveCollectionSettings({ ingestFilters })}
+								rules={settings.ingestDropRules}
+								setRules={(ingestDropRules) => saveCollectionSettings({ ingestDropRules })}
+								scope="entity"
 							/>
 						</SettingsPanel>
 					</>

@@ -86,9 +86,12 @@ export const SelectMetric = ({
 	const currentValue = value ?? 0;
 	const previousValue = prevValue ?? 0;
 	const change = currentValue - previousValue;
-	const changePercent = prevValue ? (change / prevValue) * 100 : value ? -1 : 0;
-	const color = change > 0 ? "#22c55e" : change < 0 ? "red" : "gray";
+	const changePercent =
+		metric === "bounce_rate" ? change * 100 : prevValue ? (change / prevValue) * 100 : value ? -1 : 0;
+	const changeIsGood = metric === "bounce_rate" ? change < 0 : change > 0;
+	const color = change === 0 ? "gray" : changeIsGood ? "#22c55e" : "red";
 	const icon = change > 0 ? <TrendingUpIcon size={14} /> : change < 0 ? <TrendingDownIcon size={14} /> : "—";
+	const formattedChange = changePercent > 0 ? `+${formatPercent(changePercent)}` : formatPercent(changePercent);
 
 	return (
 		<CardButton onClick={onSelect} active={selected} className={styles.metric}>
@@ -98,7 +101,7 @@ export const SelectMetric = ({
 				<span style={{ color }} className={styles.change}>
 					{!unavailable && (
 						<>
-							{icon} {formatPercent(changePercent)}
+							{icon} {formattedChange}
 						</>
 					)}
 				</span>

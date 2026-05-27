@@ -48,7 +48,10 @@ impl LiwanEvents {
             let new_salt = StandardUniform.sample_string(&mut rand::rng(), 16);
             let now = Utc::now();
             let conn = self.sqlite.get()?;
-            conn.execute("update salts set salt = ?, updated_at = ? where id = 1", rusqlite::params![&new_salt, now])?;
+            conn.execute(
+                "update salts set salt = :salt, updated_at = :updated_at where id = 1",
+                rusqlite::named_params! { ":salt": &new_salt, ":updated_at": now },
+            )?;
             self.daily_salt.store((new_salt.clone(), now).into());
             Ok(new_salt)
         } else {
@@ -152,13 +155,13 @@ impl LiwanEvents {
             let cutoff = Utc::now() - chrono::Duration::days(i64::from(data_retention_days.get()));
             stats.deleted_events = count_rows(
                 &conn,
-                "select count(*) from events where entity_id = ? and created_at < ?::timestamp",
-                params![entity_id, cutoff],
+                "select count(*) from events where entity_id = $entity_id and created_at < $cutoff::timestamp",
+                duckdb::named_params! { "entity_id": entity_id, "cutoff": cutoff },
             )?;
             if !dry_run {
                 conn.execute(
-                    "delete from events where entity_id = ? and created_at < ?::timestamp",
-                    params![entity_id, cutoff],
+                    "delete from events where entity_id = $entity_id and created_at < $cutoff::timestamp",
+                    duckdb::named_params! { "entity_id": entity_id, "cutoff": cutoff },
                 )?;
             }
         }
