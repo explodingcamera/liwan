@@ -24,8 +24,6 @@ use crate::{
     },
 };
 
-use super::dashboard::{dimension_hidden, metric_hidden};
-
 pub fn router() -> ApiRouter<RouterState> {
     ApiRouter::new()
         .api_route("/users", get(get_users))
@@ -130,6 +128,33 @@ pub struct ProjectEntity {
     pub display_name: String,
 }
 
+impl ProjectResponse {
+    fn new(app: &crate::app::Liwan, project: Project) -> anyhow::Result<Self> {
+        let entities = app.projects.entities(&project.id)?;
+        let entity_ids: Vec<String> = entities.iter().map(|entity| entity.id.clone()).collect();
+
+        Ok(Self {
+            id: project.id.clone(),
+            display_name: project.display_name.clone(),
+            entities: entities
+                .into_iter()
+                .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
+                .collect(),
+            public: project.public,
+            hidden_metrics: Metric::all()
+                .iter()
+                .copied()
+                .filter(|metric| app.is_metric_hidden(&project.id, &entity_ids, *metric))
+                .collect(),
+            hidden_dimensions: Dimension::all()
+                .iter()
+                .copied()
+                .filter(|dimension| app.is_dimension_hidden(&project.id, &entity_ids, *dimension))
+                .collect(),
+        })
+    }
+}
+
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 struct EntityResponse {
@@ -196,53 +221,6 @@ struct PruneResponse {
     dry_run: bool,
     entities: Vec<PruneEntityStats>,
     total: PruneEntityStats,
-}
-
-const PROJECT_METRICS: &[Metric] = &[Metric::Views, Metric::UniqueVisitors, Metric::BounceRate, Metric::AvgTimeOnSite];
-const PROJECT_DIMENSIONS: &[Dimension] = &[
-    Dimension::Platform,
-    Dimension::Browser,
-    Dimension::Url,
-    Dimension::UrlEntry,
-    Dimension::UrlExit,
-    Dimension::Path,
-    Dimension::Mobile,
-    Dimension::Referrer,
-    Dimension::City,
-    Dimension::Country,
-    Dimension::Fqdn,
-    Dimension::UtmCampaign,
-    Dimension::UtmContent,
-    Dimension::UtmMedium,
-    Dimension::UtmSource,
-    Dimension::UtmTerm,
-    Dimension::ScreenWidth,
-    Dimension::Orientation,
-];
-
-fn project_response(app: &crate::app::Liwan, project: Project) -> anyhow::Result<ProjectResponse> {
-    let entities = app.projects.entities(&project.id)?;
-    let entity_ids: Vec<String> = entities.iter().map(|entity| entity.id.clone()).collect();
-
-    Ok(ProjectResponse {
-        id: project.id.clone(),
-        display_name: project.display_name.clone(),
-        entities: entities
-            .into_iter()
-            .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
-            .collect(),
-        public: project.public,
-        hidden_metrics: PROJECT_METRICS
-            .iter()
-            .copied()
-            .filter(|metric| metric_hidden(app, &project.id, &entity_ids, *metric))
-            .collect(),
-        hidden_dimensions: PROJECT_DIMENSIONS
-            .iter()
-            .copied()
-            .filter(|dimension| dimension_hidden(app, &project.id, &entity_ids, *dimension))
-            .collect(),
-    })
 }
 
 async fn get_users(
@@ -403,7 +381,7 @@ async fn projects_handler(
     let mut resp = Vec::new();
     for project in projects {
         resp.push(
-            project_response(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?,
+            ProjectResponse::new(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?,
         );
     }
 
@@ -421,7 +399,7 @@ async fn project_handler(
     }
 
     let resp =
-        Json(project_response(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?);
+        Json(ProjectResponse::new(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?);
 
     Ok(([(http::header::CACHE_CONTROL, "private")], resp).into())
 }

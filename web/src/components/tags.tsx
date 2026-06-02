@@ -1,7 +1,8 @@
+import styles from "./tags.module.css";
+
+import { Fragment, useId } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { CheckIcon, XIcon } from "lucide-react";
-import { Fragment, useId } from "react";
-import styles from "./tags.module.css";
 
 export type Tag = {
 	value: string;

@@ -1,21 +1,14 @@
-import { Suspense, useEffect, useState } from "react";
 import styles from "./projects.module.css";
 
+import { Suspense, useEffect, useState } from "react";
+import { Accordion } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
 
-import { Accordion } from "@base-ui/react/accordion";
-import {
-	type Metric,
-	type ProjectResponse,
-	api,
-	metrics,
-	metricNames,
-	useMe,
-	useProjectGraph,
-	useProjectStats,
-	useQuery,
-} from "../api";
+import { api, useQuery } from "../api";
 import type { DateRange } from "../api/ranges";
+import type { Metric, ProjectResponse } from "../constants";
+import { metricNames, metrics } from "../constants";
+import { useMe, useProjectGraph, useProjectStats } from "../hooks/api";
 import { useMetric, useRange } from "../hooks/persist";
 import { getUsername } from "../utils";
 import { LineGraph } from "./graph";

@@ -68,7 +68,7 @@ impl LiwanGeoIP {
         }
     }
 
-    // Lookup the IP address in the GeoIP database
+    /// Lookup an IP address in the loaded GeoIP database
     pub fn lookup(&self, ip: &IpAddr) -> Result<LookupResult> {
         let Some(reader) = &*self.reader.load() else {
             return Ok(Default::default());
@@ -80,7 +80,7 @@ impl LiwanGeoIP {
         Ok(LookupResult { city, country_code })
     }
 
-    // Check for updates and download the latest database if available
+    /// Check for updates and download the latest database if available
     pub async fn check_for_updates(&self) -> Result<()> {
         if self.downloading.swap(true, Ordering::Acquire) {
             return Ok(());
@@ -137,6 +137,7 @@ impl LiwanGeoIP {
         Ok(())
     }
 
+    /// Reload the database from disk (as long as no update is currently in progress)
     pub fn reload(&self) -> Result<()> {
         if self.downloading.load(Ordering::Acquire) {
             return Ok(());
@@ -148,6 +149,7 @@ impl LiwanGeoIP {
     }
 }
 
+/// Keep the GeoIP database refreshed and reload it after local file changes
 pub async fn keep_updated(geoip: Arc<LiwanGeoIP>) {
     let path: PathBuf = geoip.path.clone();
     let mut last_meta = get_file_meta(&path);

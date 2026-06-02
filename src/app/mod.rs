@@ -14,6 +14,8 @@ use core::{
     LiwanUsers,
 };
 use duckdb::DuckdbConnectionManager;
+use models::{DisplayOverride, GeoDetail};
+use reports::{Dimension, Metric};
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
@@ -23,17 +25,17 @@ pub use core::PruneStats;
 pub struct Liwan {
     events_pool: r2d2::Pool<DuckdbConnectionManager>,
 
-    pub events: core::events::LiwanEvents,
-    pub users: core::users::LiwanUsers,
-    pub sessions: core::sessions::LiwanSessions,
-    pub onboarding: core::onboarding::LiwanOnboarding,
-    pub entities: core::entities::LiwanEntities,
-    pub projects: core::projects::LiwanProjects,
-    pub settings: core::settings::LiwanSettings,
-    pub project_settings: core::settings::LiwanProjectSettings,
+    pub events: LiwanEvents,
+    pub users: LiwanUsers,
+    pub sessions: LiwanSessions,
+    pub onboarding: LiwanOnboarding,
+    pub entities: LiwanEntities,
+    pub projects: LiwanProjects,
+    pub settings: LiwanSettings,
+    pub project_settings: LiwanProjectSettings,
 
     #[cfg(feature = "geoip")]
-    pub geoip: Arc<core::geoip::LiwanGeoIP>,
+    pub geoip: Arc<core::LiwanGeoIP>,
 
     pub config: Config,
 }
@@ -65,7 +67,7 @@ impl Liwan {
 
         Ok(Self {
             #[cfg(feature = "geoip")]
-            geoip: core::geoip::LiwanGeoIP::try_new(config.clone())?.into(),
+            geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
@@ -89,7 +91,7 @@ impl Liwan {
 
         Ok(Self {
             #[cfg(feature = "geoip")]
-            geoip: core::geoip::LiwanGeoIP::try_new(config.clone())?.into(),
+            geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
@@ -112,13 +114,64 @@ impl Liwan {
 
     pub fn run_background_tasks(&self) {
         #[cfg(feature = "geoip")]
-        tokio::task::spawn(core::geoip::keep_updated(self.geoip.clone()));
+        tokio::task::spawn(core::keep_updated(self.geoip.clone()));
     }
 
     pub fn shutdown(&self) -> Result<()> {
         self.events_pool.get()?.execute("FORCE CHECKPOINT", [])?; // normal checkpoints don't seem to work consistently on shutdown
         tracing::info!("Shutting down");
         Ok(())
+    }
+
+    pub fn is_metric_hidden(&self, project_id: &str, entities: &[String], metric: Metric) -> bool {
+        match self
+            .project_settings
+            .get(project_id)
+            .ok()
+            .and_then(|settings| settings.metric_display_overrides.get(&metric.to_string()).copied())
+            .unwrap_or(DisplayOverride::Auto)
+        {
+            DisplayOverride::Show => false,
+            DisplayOverride::Hide => true,
+            DisplayOverride::Auto => match metric {
+                Metric::Views | Metric::UniqueVisitors => false,
+                Metric::BounceRate | Metric::AvgTimeOnSite => {
+                    entities.iter().any(|entity_id| !self.settings.resolved_for_entity(entity_id).track_sessions)
+                }
+            },
+        }
+    }
+
+    pub fn is_dimension_hidden(&self, project_id: &str, entities: &[String], dimension: Dimension) -> bool {
+        match self
+            .project_settings
+            .get(project_id)
+            .ok()
+            .and_then(|settings| settings.dimension_display_overrides.get(&dimension.to_string()).copied())
+            .unwrap_or(DisplayOverride::Auto)
+        {
+            DisplayOverride::Show => false,
+            DisplayOverride::Hide => true,
+            DisplayOverride::Auto => match dimension {
+                Dimension::UrlEntry | Dimension::UrlExit => {
+                    entities.iter().any(|entity_id| !self.settings.resolved_for_entity(entity_id).track_sessions)
+                }
+                Dimension::Country => entities
+                    .iter()
+                    .any(|entity_id| self.settings.resolved_for_entity(entity_id).track_geo == GeoDetail::None),
+                Dimension::City => entities
+                    .iter()
+                    .any(|entity_id| self.settings.resolved_for_entity(entity_id).track_geo != GeoDetail::City),
+                Dimension::UtmSource
+                | Dimension::UtmMedium
+                | Dimension::UtmCampaign
+                | Dimension::UtmContent
+                | Dimension::UtmTerm => {
+                    entities.iter().any(|entity_id| !self.settings.resolved_for_entity(entity_id).track_utm_params)
+                }
+                _ => false,
+            },
+        }
     }
 }
 

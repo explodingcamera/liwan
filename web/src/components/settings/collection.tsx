@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
-import type { OASModel } from "fets";
-import { createToast } from "../toast";
-import type { DashboardSpec } from "../../api";
-import { api, dimensions } from "../../api";
-import { Dialog } from "../dialog";
-import { FilterDialog, filterOptions, type FilterOption, type GenericFilter } from "../project/filter";
 import styles from "./collection.module.css";
+
+import { useEffect, useState } from "react";
+
+import { api } from "../../api";
+import type {
+	CollectionSettings,
+	DataRetention,
+	GeoDetail,
+	IngestDropRule,
+	IngestFilter,
+	VisitorGroupMode,
+} from "../../constants";
+import { geoDetails, ingestDimensions, visitorGroupModes } from "../../constants";
+import { Dialog } from "../dialog";
+import type { FilterOption, GenericFilter } from "../project/filter";
+import { FilterDialog, filterOptions } from "../project/filter";
+import { createToast } from "../toast";
 import {
 	SettingsField,
 	SettingsFieldset,
@@ -16,33 +26,14 @@ import {
 	SettingsTabs,
 } from "./form";
 
-type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
-type IngestFilter = OASModel<DashboardSpec, "IngestFilter">;
-type IngestDropRule = OASModel<DashboardSpec, "IngestDropRule">;
-type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
-type GeoDetail = CollectionSettings["trackGeo"];
-type DataRetention = CollectionSettings["dataRetention"];
-type CollectionTab = "tracking" | "filters" | "retention";
+type CollectionTab = (typeof collectionTabs)[number];
 
 const formatCount = new Intl.NumberFormat().format;
 const docsUrl = (hash: string) => `https://liwan.dev/collected-data/#${hash}`;
 const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
-const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
-	values.some((item) => item === value);
-
-const collectionTabs = ["tracking", "filters", "retention"] as const satisfies readonly CollectionTab[];
+const collectionTabs = ["tracking", "filters", "retention"] as const;
 const collectionTabItems = collectionTabs.map((value) => ({ value, label: title(value) }));
-
-const visitorGroupModes = [
-	"accurate",
-	"random_per_request",
-	"network_standard",
-	"network_balanced",
-	"network_accurate",
-] as const satisfies readonly VisitorGroupMode[];
-
-const geoDetails = ["none", "country", "city"] as const satisfies readonly GeoDetail[];
 
 const retentionOptions = [
 	{ value: "keep_all", label: "Keep all history" },
@@ -52,16 +43,13 @@ const retentionOptions = [
 	{ value: "365", label: "1 year" },
 	{ value: "730", label: "2 years" },
 ] as const;
-
 const retentionValues = retentionOptions.map((option) => option.value);
 
 const retentionValue = (retention: DataRetention) => {
 	if (retention.mode === "all" || retention.mode === "inherit") return "keep_all";
 	const value = String(retention.days);
-	return isOneOf(retentionValues, value) ? value : "365";
+	return (retentionValues as readonly string[]).includes(value) ? value : "365";
 };
-
-const ingestDimensions = ["event", ...dimensions] as const;
 
 const ingestFilterOptions: Record<string, FilterOption> = {
 	event: {
@@ -104,7 +92,7 @@ export const VisitorModeSelect = ({
 		onChange={(event) => {
 			const next = event.currentTarget.value;
 			if (next === "inherit" && allowInherit) onChange?.(null);
-			if (isOneOf(visitorGroupModes, next)) onChange?.(next);
+			if ((visitorGroupModes as readonly string[]).includes(next)) onChange?.(next as VisitorGroupMode);
 		}}
 	>
 		{allowInherit && <option value="inherit">Inherit global</option>}
@@ -134,7 +122,7 @@ export const GeoSelect = ({
 		onChange={(event) => {
 			const next = event.currentTarget.value;
 			if (next === "inherit" && allowInherit) onChange?.(null);
-			if (isOneOf(geoDetails, next)) onChange?.(next);
+			if ((geoDetails as readonly string[]).includes(next)) onChange?.(next as GeoDetail);
 		}}
 	>
 		{allowInherit && <option value="inherit">Inherit global</option>}
@@ -272,29 +260,32 @@ export const CollectionSettingsPage = () => {
 			.catch((err) => setError(err.message));
 	}, []);
 
-	const saveSettings = async (next: CollectionSettings) => {
+	const saveSettings = (next: CollectionSettings) => {
 		setSettings(next);
-		try {
-			await api["/api/dashboard/settings"].put({ json: next });
-			createToast("Collection settings updated", "success");
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to update collection settings");
-			createToast("Failed to update collection settings", "error");
-		}
+		api["/api/dashboard/settings"]
+			.put({ json: next })
+			.then(() => createToast("Collection settings updated", "success"))
+			.catch((err) => {
+				setError(err instanceof Error ? err.message : "Failed to update collection settings");
+				createToast("Failed to update collection settings", "error");
+			});
 	};
 
-	const prune = async (dryRun: boolean) => {
-		try {
-			setPruneError(undefined);
-			const result = await api["/api/dashboard/settings/prune"].post({ json: { dryRun } }).json();
-			if (typeof result === "string") throw new Error(result);
-			setPruneResult(
-				`${dryRun ? "Would delete" : "Deleted"} ${formatCount(result.total.deletedEvents)} of ${formatCount(result.total.totalEvents)} events.`,
-			);
-			setPruneResultOpen(true);
-		} catch (err) {
-			setPruneError(err instanceof Error ? err.message : "Failed to prune data");
-		}
+	const prune = (dryRun: boolean) => {
+		setPruneError(undefined);
+		api["/api/dashboard/settings/prune"]
+			.post({ json: { dryRun } })
+			.json()
+			.then((result) => {
+				if (typeof result === "string") throw new Error(result);
+				setPruneResult(
+					`${dryRun ? "Would delete" : "Deleted"} ${formatCount(result.total.deletedEvents)} of ${formatCount(result.total.totalEvents)} events.`,
+				);
+				setPruneResultOpen(true);
+			})
+			.catch((err) => {
+				setPruneError(err instanceof Error ? err.message : "Failed to prune data");
+			});
 	};
 
 	if (error) return <article role="alert">{error}</article>;
@@ -408,7 +399,7 @@ export const CollectionSettingsPage = () => {
 								value={retentionValue(dataRetention)}
 								onChange={(event) => {
 									const next = event.currentTarget.value;
-									if (!isOneOf(retentionValues, next)) return;
+									if (!(retentionValues as readonly string[]).includes(next)) return;
 									if (next === "keep_all") {
 										const dataRetention = { mode: "all" } as const;
 										setDataRetention(dataRetention);

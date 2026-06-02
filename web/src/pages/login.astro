@@ -60,7 +60,7 @@ import Layout from "../layouts/Base.astro";
       api["/api/dashboard/auth/login"]
         .post({ json: { username, password } })
         .then((res) => {
-          if (!(res as {ok: boolean})?.ok)
+          if (!(res as { ok: boolean })?.ok)
             return Promise.reject(new Error("Invalid username or password"));
           queryClient.clear();
           document.location.href = "/";

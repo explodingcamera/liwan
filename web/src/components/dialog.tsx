@@ -1,9 +1,10 @@
+import styles from "./dialog.module.css";
+
+import type { ReactElement } from "react";
 import { Dialog as Dia } from "@base-ui/react";
 import { XIcon } from "lucide-react";
 
 import { cls } from "../utils";
-import styles from "./dialog.module.css";
-import type { ReactElement } from "react";
 
 export type DialogProps = {
 	title: string;

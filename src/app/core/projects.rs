@@ -13,7 +13,7 @@ impl LiwanProjects {
         Self { pool }
     }
 
-    /// Link an entity to a project
+    /// Replace the entities associated with a project
     pub fn update_entities(&self, project_id: &str, entity_ids: &[String]) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
@@ -122,7 +122,7 @@ impl LiwanProjects {
         Ok(project.clone())
     }
 
-    /// remove the project and all associated `project_entities`
+    /// Delete a project and its entity memberships
     pub fn delete(&self, id: &str) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;

@@ -1,5 +1,6 @@
 import { createClient } from "fets";
-import type { DashboardSpec } from "./constants";
+
+import type { DashboardSpec } from "../constants";
 
 export const api = createClient<DashboardSpec>({
 	globalParams: { credentials: "same-origin" },

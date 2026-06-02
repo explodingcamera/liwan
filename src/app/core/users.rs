@@ -13,7 +13,7 @@ impl LiwanUsers {
         Self { pool }
     }
 
-    /// Check if a users password is correct
+    /// Check whether a user's password is correct
     pub fn check_login(&self, username: &str, password: &str) -> Result<bool> {
         let username = username.to_lowercase();
         let conn = self.pool.get()?;
@@ -81,7 +81,7 @@ impl LiwanUsers {
         Ok(())
     }
 
-    /// Update a user
+    /// Update a user's role and project memberships
     pub fn update(&self, username: &str, role: models::UserRole, projects: &[String]) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt =

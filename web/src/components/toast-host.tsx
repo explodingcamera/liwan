@@ -1,7 +1,9 @@
+import styles from "./toast.module.css";
+
 import { Toast } from "@base-ui/react/toast";
 import { XIcon } from "lucide-react";
+
 import { toastManager } from "./toast";
-import styles from "./toast.module.css";
 
 export const ToastHost = () => (
 	<Toast.Provider toastManager={toastManager} timeout={3200} limit={4}>

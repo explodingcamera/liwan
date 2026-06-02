@@ -48,8 +48,9 @@ import Layout from "../layouts/Base.astro";
 </Layout>
 
 <script>
-  import { api } from "../api/client";
   import { navigate } from "astro:transitions/client";
+
+  import { api } from "../api/client";
 
   document.addEventListener("astro:page-load", () => {
     const form = document.getElementById("login-form") as HTMLFormElement;
@@ -71,7 +72,7 @@ import Layout from "../layouts/Base.astro";
       api["/api/dashboard/auth/setup"]
         .post({ json: { username, password, token } })
         .then((res) => {
-          if (!(res as {ok: boolean})?.ok)
+          if (!(res as { ok: boolean })?.ok)
             return Promise.reject(new Error("Invalid token or username"));
 
           navigate("/login");

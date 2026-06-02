@@ -1,10 +1,13 @@
-import { SearchIcon, XIcon } from "lucide-react";
-import { type ReactElement, useRef, useState } from "react";
+import styles from "./filter.module.css";
 
-import { type DimensionFilter, dimensionNames, type FilterType, filterNames, filterNamesInverted } from "../../api";
+import type { ReactElement } from "react";
+import { useRef, useState } from "react";
+import { SearchIcon, XIcon } from "lucide-react";
+
+import type { DimensionFilter, FilterType } from "../../constants";
+import { dimensionNames, filterNames, filterNamesInverted } from "../../constants";
 import { capitalizeAll, cls } from "../../utils";
 import { Dialog } from "../dialog";
-import styles from "./filter.module.css";
 
 export const SelectFilters = ({
 	value,
@@ -15,6 +18,18 @@ export const SelectFilters = ({
 	onChange: (filters: DimensionFilter[]) => void;
 	dimensions?: string[];
 }) => {
+	const addFilter = (filter: GenericFilter) => {
+		onChange([
+			...value,
+			{
+				dimension: filter.dimension as DimensionFilter["dimension"],
+				filterType: filter.filterType,
+				value: filter.value,
+				inversed: filter.inversed ?? false,
+			},
+		]);
+	};
+
 	return (
 		<div className={styles.filters}>
 			{value.map((filter, i) => (
@@ -37,32 +52,11 @@ export const SelectFilters = ({
 				</article>
 			))}
 			<article className={styles.filter}>
-				<FilterDialog
-					dimensions={dimensions}
-					onAdd={(filter) => {
-						if (!isFilterDimension(filter.dimension)) return;
-						onChange([
-							...value,
-							{
-								dimension: filter.dimension,
-								filterType: filter.filterType,
-								value: filter.value,
-								inversed: filter.inversed ?? false,
-							},
-						]);
-					}}
-				/>
+				<FilterDialog dimensions={dimensions} onAdd={addFilter} />
 			</article>
 		</div>
 	);
 };
-
-type FilterDimension = keyof typeof dimensionNames;
-
-const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
-	values.some((item) => item === value);
-
-const isFilterDimension = (value: string): value is FilterDimension => Object.hasOwn(dimensionNames, value);
 
 export type FilterOption = {
 	label: string;
@@ -218,13 +212,14 @@ export const FilterDialog = ({
 		}
 
 		const filterType = data.get("filterType");
-		if (typeof filterType !== "string" || !isOneOf(filter.filterTypes ?? [], filterType)) return;
+		if (typeof filterType !== "string" || !(filter.filterTypes as readonly string[] | undefined)?.includes(filterType))
+			return;
 
 		const value = data.get("value");
 		onAdd({
 			dimension: selectedDimension,
 			inversed: filter.invertable && data.get("show-matches") === "inverted",
-			filterType,
+			filterType: filterType as FilterType,
 			value: typeof value === "string" ? value : null,
 		});
 		setDimension(selectableDimensions[0] ?? "url");

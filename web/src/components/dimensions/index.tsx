@@ -1,12 +1,13 @@
-import { Tabs } from "@base-ui/react/tabs";
-import { LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
-import { type Dimension, type DimensionTableRow, dimensionNames, metricNames, useDimension } from "../../api";
-
 import { useEffect, useState } from "react";
-import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } from "../../utils";
-import { formatMetricVal } from "../../utils";
+import { Tabs } from "@base-ui/react/tabs";
+import { LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
+
+import type { Dimension, DimensionTableRow } from "../../constants";
+import { dimensionNames, metricNames } from "../../constants";
+import { useDimension } from "../../hooks/api";
+import { cls, countryCodeToFlag, formatHost, formatMetricVal, formatPath, getHref, tryParseUrl } from "../../utils";
 import { BrowserIcon, MobileDeviceIcon, OrientationIcon, OSIcon, ReferrerIcon } from "../icons";
 import type { ProjectQuery } from "../project";
 import { DetailsModal } from "./modal";
@@ -223,31 +224,31 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 	utm_campaign: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
 		</>
 	),
 	utm_content: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
 		</>
 	),
 	utm_medium: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
 		</>
 	),
 	utm_source: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
 		</>
 	),
 	utm_term: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
 		</>
 	),
 	platform: (value, onSelect) => (

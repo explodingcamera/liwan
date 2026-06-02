@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./graph.module.css";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { extent } from "d3-array";
 import { easeCubic, easeCubicOut } from "d3-ease";
 import { scaleLinear, scaleTime } from "d3-scale";
@@ -10,9 +10,9 @@ import "d3-transition";
 
 import { addMonths } from "date-fns";
 
-import type { DataPoint, GraphState } from ".";
 import type { DateRange } from "../../api/ranges";
 import { debounce, formatMetricVal, formatMetricValEvenly } from "../../utils";
+import type { DataPoint, GraphState } from ".";
 import { axisBottom, axisLeft } from "./axis";
 
 export type GraphRange = "year" | "month" | "day" | "hour";

@@ -1,8 +1,7 @@
 ---
-import licensesCargo from "../../../data/licenses-cargo.json" with { type: "json" };
-import licensesNpm from "../../../data/licenses-npm.json" with { type: "json" };
-
 import Layout from "../layouts/Layout.astro";
+import licensesNpm from "../../../data/licenses-npm.json" with { type: "json" };
+import licensesCargo from "../../../data/licenses-cargo.json" with { type: "json" };
 
 const getRepositoryUrl = (repository: (typeof licensesNpm)[0]["repository"]) => {
 	let repo = typeof repository === "object" ? (repository?.url ?? "") : repository;
@@ -50,10 +49,9 @@ const licenseText = (text: string) => {
 
   <h2>Liwan</h2>
   <p>
-    Liwan is an open source project, available under the Apache-2.0 license.
-    See <a href="https://liwan.dev">liwan.dev</a> and <a
-      href="https://github.com/explodingcamera/liwan">GitHub</a
-    > for more information.
+    Liwan is an open source project, available under the Apache-2.0 license. See <a
+      href="https://liwan.dev">liwan.dev</a
+    > and <a href="https://github.com/explodingcamera/liwan">GitHub</a> for more information.
   </p>
 
   <h2>Attributions</h2>

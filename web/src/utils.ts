@@ -1,4 +1,4 @@
-import type { Metric } from "./api";
+import type { Metric } from "./constants";
 
 type ClassName = string | undefined | null | false;
 

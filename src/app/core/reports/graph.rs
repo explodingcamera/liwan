@@ -47,6 +47,7 @@ fn resolve_local_day_start(timezone: Tz, date: NaiveDate) -> Result<DateTime<Utc
     Ok(resolved.with_timezone(&Utc))
 }
 
+/// Split a date range into graph buckets aligned to the selected timezone
 pub fn build_graph_buckets(
     range: &DateRange,
     interval: GraphInterval,
@@ -96,6 +97,7 @@ pub fn build_graph_buckets(
     Ok(buckets)
 }
 
+/// Build a graph report for a metric across precomputed time buckets
 pub fn overall_report(
     conn: &DuckDBConn,
     entities: &[String],

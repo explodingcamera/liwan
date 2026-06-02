@@ -1,41 +1,33 @@
+import styles from "./resource-pages.module.css";
+
 import { useEffect, useMemo, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import type { OASModel } from "fets";
 
-import {
-	api,
-	dimensionNames,
-	dimensions,
-	invalidateEntities,
-	invalidateProjects,
-	type DashboardSpec,
-	type Dimension,
-	type Metric,
-	metrics,
-	metricNames,
-	useEntities,
-	useProjects,
-} from "../../api";
+import { api } from "../../api";
+import type {
+	DataRetention,
+	Dimension,
+	DisplayOverride,
+	EntityCollectionSettings,
+	GeoDetail,
+	Metric,
+	ProjectDisplaySettings,
+	VisitorGroupMode,
+} from "../../constants";
+import { dimensionNames, dimensions, displayOverrides, metricNames, metrics } from "../../constants";
+import { invalidateEntities, invalidateProjects, useEntities, useProjects } from "../../hooks/api";
+import type { Tag } from "../tags";
+import { Tags } from "../tags";
 import { createToast } from "../toast";
-import { type Tag, Tags } from "../tags";
 import { DocsLink, FiltersEditor, GeoSelect, VisitorModeSelect } from "./collection";
 import { DeleteDialog } from "./dialogs";
 import { SettingsField, SettingsFieldset, SettingsForm, SettingsHeader, SettingsPanel, SettingsTabs } from "./form";
-import styles from "./resource-pages.module.css";
 import { Snippet } from "./snippet";
 
-type ProjectDisplaySettings = OASModel<DashboardSpec, "ProjectDisplaySettings">;
-type DisplayOverride = ProjectDisplaySettings["metricDisplayOverrides"][string];
-type EntityCollectionSettings = OASModel<DashboardSpec, "EntityCollectionSettings">;
-type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
-type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
-type GeoDetail = CollectionSettings["trackGeo"];
-type DataRetention = EntityCollectionSettings["dataRetention"];
 type ProjectTab = "general" | "display";
 type EntityTab = "general" | "collection" | "filters";
 
-const displayOverrides = ["auto", "show", "hide"] as const satisfies readonly DisplayOverride[];
 const retentionOptions = [
 	{ value: "inherit", label: "Inherit global" },
 	{ value: "keep_all", label: "Keep all history" },
@@ -46,13 +38,12 @@ const retentionOptions = [
 	{ value: "730", label: "2 years" },
 ] as const;
 const retentionValues = retentionOptions.map((option) => option.value);
-const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
-	values.some((item) => item === value);
+
 const retentionValue = (retention: DataRetention) => {
 	if (retention.mode === "inherit") return "inherit";
 	if (retention.mode === "all") return "keep_all";
 	const value = String(retention.days);
-	return isOneOf(retentionValues, value) ? value : "365";
+	return (retentionValues as readonly string[]).includes(value) ? value : "365";
 };
 const getSettingsPathId = (prefix: string) => {
 	const path = window.location.pathname.replace(/\/$/, "");
@@ -143,38 +134,42 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 			.catch((err) => setError(err instanceof Error ? err.message : "Failed to load project settings"));
 	}, [project]);
 
-	const saveProject = async (nextDisplayName: string, nextVisibility: "private" | "public", nextEntities: Tag[]) => {
+	const saveProject = (nextDisplayName: string, nextVisibility: "private" | "public", nextEntities: Tag[]) => {
 		if (!project) return;
-		try {
-			await api["/api/dashboard/project/{project_id}"].put({
+		api["/api/dashboard/project/{project_id}"]
+			.put({
 				params: { project_id: project.id },
 				json: {
 					project: { displayName: nextDisplayName, public: nextVisibility === "public" },
 					entities: nextEntities.map((tag) => String(tag.value)),
 				},
+			})
+			.then(() => {
+				invalidateProjects();
+				createToast("Project updated", "success");
+			})
+			.catch((err) => {
+				setError(err instanceof Error ? err.message : "Failed to update project");
+				createToast("Failed to update project", "error");
 			});
-			invalidateProjects();
-			createToast("Project updated", "success");
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to update project");
-			createToast("Failed to update project", "error");
-		}
 	};
 
-	const saveProjectSettings = async (next: ProjectDisplaySettings) => {
+	const saveProjectSettings = (next: ProjectDisplaySettings) => {
 		if (!project) return;
 		setSettings(next);
-		try {
-			await api["/api/dashboard/project/{project_id}/settings"].put({
+		api["/api/dashboard/project/{project_id}/settings"]
+			.put({
 				params: { project_id: project.id },
 				json: next,
+			})
+			.then(() => {
+				invalidateProjects();
+				createToast("Project display updated", "success");
+			})
+			.catch((err) => {
+				setError(err instanceof Error ? err.message : "Failed to update project display settings");
+				createToast("Failed to update project display", "error");
 			});
-			invalidateProjects();
-			createToast("Project display updated", "success");
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to update project display settings");
-			createToast("Failed to update project display", "error");
-		}
 	};
 
 	const updateMetricDisplay = (metric: Metric, value: DisplayOverride) => {
@@ -364,34 +359,36 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 			.catch((err) => setError(err instanceof Error ? err.message : "Failed to load entity settings"));
 	}, [entity]);
 
-	const saveEntity = async (nextDisplayName: string, nextProjects: Tag[]) => {
+	const saveEntity = (nextDisplayName: string, nextProjects: Tag[]) => {
 		if (!entity) return;
-		try {
-			await api["/api/dashboard/entity/{entity_id}"].put({
+		api["/api/dashboard/entity/{entity_id}"]
+			.put({
 				params: { entity_id: entity.id },
 				json: { displayName: nextDisplayName, projects: nextProjects.map((tag) => String(tag.value)) },
+			})
+			.then(() => {
+				invalidateEntities();
+				createToast("Entity updated", "success");
+			})
+			.catch((err) => {
+				setError(err instanceof Error ? err.message : "Failed to update entity");
+				createToast("Failed to update entity", "error");
 			});
-			invalidateEntities();
-			createToast("Entity updated", "success");
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to update entity");
-			createToast("Failed to update entity", "error");
-		}
 	};
 
-	const saveEntitySettings = async (next: EntityCollectionSettings) => {
+	const saveEntitySettings = (next: EntityCollectionSettings) => {
 		if (!entity) return;
 		setSettings(next);
-		try {
-			await api["/api/dashboard/entity/{entity_id}/settings"].put({
+		api["/api/dashboard/entity/{entity_id}/settings"]
+			.put({
 				params: { entity_id: entity.id },
 				json: next,
+			})
+			.then(() => createToast("Entity collection updated", "success"))
+			.catch((err) => {
+				setError(err instanceof Error ? err.message : "Failed to update entity collection settings");
+				createToast("Failed to update entity collection", "error");
 			});
-			createToast("Entity collection updated", "success");
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to update entity collection settings");
-			createToast("Failed to update entity collection", "error");
-		}
 	};
 
 	const saveCollectionSettings = (next: Partial<EntityCollectionSettings>) => {
@@ -578,7 +575,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 									value={retentionValue(dataRetention)}
 									onChange={(event) => {
 										const next = event.currentTarget.value;
-										if (!isOneOf(retentionValues, next)) return;
+										if (!(retentionValues as readonly string[]).includes(next)) return;
 										if (next === "inherit") {
 											const dataRetention = { mode: "inherit" } as const;
 											setDataRetention(dataRetention);

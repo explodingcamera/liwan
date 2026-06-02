@@ -1,5 +1,6 @@
 ---
 import { MoonIcon, SunIcon } from "lucide-react";
+
 const { class: className, ...rest } = Astro.props;
 ---
 
@@ -41,7 +42,7 @@ const { class: className, ...rest } = Astro.props;
 
 <script>
   let theme = window.localStorage?.getItem("theme") ?? "auto";
-  let prefers = window.matchMedia("(prefers-color-scheme: dark)").matches
+  const prefers = window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
   if (theme === "auto") theme = prefers;

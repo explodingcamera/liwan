@@ -7,6 +7,7 @@ use duckdb::params_from_iter;
 use super::shared::{build_filter_clause, metric_aggregate_sql};
 use super::{DateRange, DimensionFilter, Metric, ReportStats};
 
+/// Return the earliest event timestamp for the selected entities
 pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Option<DateTime<Utc>>> {
     if entities.is_empty() {
         return Ok(None);
@@ -26,6 +27,7 @@ pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Opti
     Ok(earliest_timestamp)
 }
 
+/// Count visitor groups active in the last five minutes
 pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     if entities.is_empty() {
         return Ok(0);
@@ -47,6 +49,7 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     Ok(online_users)
 }
 
+/// Build overall stats for a report range
 pub fn overall_stats(
     conn: &DuckDBConn,
     entities: &[String],

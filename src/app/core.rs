@@ -1,11 +1,11 @@
-pub mod entities;
-pub mod events;
-pub mod onboarding;
-pub mod projects;
+mod entities;
+mod events;
+mod onboarding;
+mod projects;
 pub mod reports;
-pub mod sessions;
-pub mod settings;
-pub mod users;
+mod sessions;
+mod settings;
+mod users;
 
 pub use entities::LiwanEntities;
 pub use events::{LiwanEvents, PruneStats};
@@ -16,4 +16,7 @@ pub use settings::{LiwanProjectSettings, LiwanSettings};
 pub use users::LiwanUsers;
 
 #[cfg(feature = "geoip")]
-pub mod geoip;
+mod geoip;
+
+#[cfg(feature = "geoip")]
+pub use geoip::{LiwanGeoIP, keep_updated};

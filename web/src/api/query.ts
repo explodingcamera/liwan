@@ -1,12 +1,5 @@
-import {
-	useMutation as _useMutation,
-	useQuery as _useQuery,
-	type DefaultError,
-	QueryClient,
-	type QueryKey,
-	type UseQueryOptions,
-	type UseQueryResult,
-} from "@tanstack/react-query";
+import type { DefaultError, QueryKey, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
+import { useMutation as _useMutation, useQuery as _useQuery, QueryClient } from "@tanstack/react-query";
 
 export const queryClient = new QueryClient();
 export const useMutation: typeof _useMutation = (options, c) => _useMutation(options, c || queryClient);
