@@ -1,12 +1,15 @@
-import { Fragment, type ReactElement, useRef } from "react";
 import styles from "./tables.module.css";
 
+import type { ReactElement } from "react";
+import { Fragment, useRef } from "react";
 import { EditIcon, EllipsisVerticalIcon, RectangleEllipsisIcon, SettingsIcon, TrashIcon } from "lucide-react";
-import { type Column, Table } from "../table";
-import { DeleteDialog, EditPassword, EditUser } from "./dialogs";
 
-import { type UserResponse, useEntities, useMe, useProjects, useUsers } from "../../api";
+import type { UserResponse } from "../../constants";
+import { useEntities, useMe, useProjects, useUsers } from "../../hooks/api";
 import { cls, getUsername } from "../../utils";
+import type { Column } from "../table";
+import { Table } from "../table";
+import { DeleteDialog, EditPassword, EditUser } from "./dialogs";
 
 type DropdownOptions = Record<string, ((close: () => void) => ReactElement) | null>;
 

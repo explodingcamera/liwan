@@ -1,8 +1,10 @@
-import { endOfDay, startOfDay, subWeeks } from "date-fns";
+import styles from "./daterange.module.css";
+
 import { useId, useRef, useState } from "react";
+import { endOfDay, startOfDay, subWeeks } from "date-fns";
+
 import { DateRange } from "../../api/ranges";
 import { Dialog } from "../dialog";
-import styles from "./daterange.module.css";
 
 export const DatePickerRange = ({ onSelect }: { onSelect: (range: DateRange) => void }) => {
 	const [start, setStart] = useState(() => toHtmlDate(subWeeks(new Date(), 1)));

@@ -25,8 +25,8 @@ impl LiwanSessions {
         Ok(())
     }
 
-    /// Get the user associated with a session ID, if the session is still valid.
-    /// Returns None if the session is expired
+    /// Get the user associated with a session ID, if the session is still valid
+    /// Returns `None` if the session is expired
     pub fn get(&self, session_id: &str) -> Result<Option<models::User>> {
         let conn = self.pool.get()?;
 
@@ -62,7 +62,7 @@ impl LiwanSessions {
         )
     }
 
-    /// Delete a session
+    /// Expire a session
     pub fn delete(&self, session_id: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("update sessions set expires_at = :expires_at where id = :id")?;

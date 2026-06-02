@@ -8,6 +8,7 @@ use duckdb::params_from_iter;
 use super::shared::{SESSION_DURATION_SQL, build_filter_clause, metric_aggregate_sql};
 use super::{DateRange, Dimension, DimensionFilter, Metric, ReportTable};
 
+/// Build a dimension table report for a metric
 pub fn dimension_report(
     conn: &DuckDBConn,
     entities: &[String],

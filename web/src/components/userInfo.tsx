@@ -1,6 +1,7 @@
 import styles from "./userInfo.module.css";
 
 import { HelpCircle, LogOutIcon, SettingsIcon, SquareArrowOutUpRightIcon, UserIcon } from "lucide-react";
+
 import { api, queryClient } from "../api";
 import { cls, getUsername } from "../utils";
 

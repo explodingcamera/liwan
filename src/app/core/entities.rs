@@ -52,7 +52,7 @@ impl LiwanEntities {
         Ok(entity.clone())
     }
 
-    /// Update an entity's projects
+    /// Update an entity's project memberships
     pub fn update_projects(&self, entity_id: &str, project_ids: &[String]) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
@@ -67,7 +67,7 @@ impl LiwanEntities {
         Ok(())
     }
 
-    /// Delete an entity (does not remove associated events)
+    /// Delete an entity without removing associated events
     pub fn delete(&self, id: &str) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;

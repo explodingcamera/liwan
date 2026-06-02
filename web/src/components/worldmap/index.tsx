@@ -1,19 +1,19 @@
 import styles from "./map.module.css";
 
-import { autoUpdate, flip, FloatingPortal, offset, shift, useFloating } from "@floating-ui/react";
-import { RotateCcwIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent } from "react";
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { geoMercator, geoPath } from "d3-geo";
 import { select } from "d3-selection";
-import { type ZoomBehavior, zoom as d3Zoom, zoomIdentity } from "d3-zoom";
-
+import type { ZoomBehavior } from "d3-zoom";
+import { zoom as d3Zoom, zoomIdentity } from "d3-zoom";
+import { autoUpdate, FloatingPortal, flip, offset, shift, useFloating } from "@floating-ui/react";
+import { RotateCcwIcon } from "lucide-react";
 import * as topo from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 
 import geo from "../../../../data/geo.json";
-import { type DimensionTableRow, type Metric, metricNames } from "../../api";
+import type { DimensionTableRow, Metric } from "../../constants";
+import { metricNames } from "../../constants";
 import { cls, formatMetricVal } from "../../utils";
 
 const projection = geoMercator().scale(125).center([45, 45]);

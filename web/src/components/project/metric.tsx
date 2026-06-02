@@ -1,7 +1,9 @@
-import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import styles from "./metric.module.css";
 
-import { metrics as defaultMetrics, type Metric, type StatsResponse } from "../../api";
+import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+
+import type { Metric, StatsResponse } from "../../constants";
+import { metrics as defaultMetrics } from "../../constants";
 import { cls, formatMetricVal, formatPercent } from "../../utils";
 import { CardButton } from "../card";
 

@@ -39,7 +39,7 @@ impl LiwanEvents {
         Ok(Self { duckdb, sqlite, daily_salt: ArcSwap::new(daily_salt.into()).into(), visitor_group_rotation_hour })
     }
 
-    /// Get the visitor group salt, generating a new one after the daily local rotation time.
+    /// Get the visitor group salt, generating a new one after the daily local rotation time
     pub fn get_salt(&self) -> Result<String> {
         let (salt, updated_at) = &**self.daily_salt.load();
 
@@ -59,7 +59,7 @@ impl LiwanEvents {
         }
     }
 
-    /// Append events in batch
+    /// Append events in a batch and update session timing fields when needed
     pub fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
         let conn = self.duckdb.get()?;
         let mut first_event_time = None;
@@ -85,7 +85,7 @@ impl LiwanEvents {
         Ok(())
     }
 
-    /// Start processing events from the given channel. Blocks until the channel is closed.
+    /// Start processing events from the given channel. Blocks until the channel is closed
     pub async fn process_events(&self, events_rx: Receiver<Event>) -> Result<()> {
         let (tx, rx) = tokio::sync::oneshot::channel();
         let events = self.clone();
@@ -139,6 +139,7 @@ impl LiwanEvents {
         }
     }
 
+    /// Preview or apply collection-setting pruning for a single entity
     pub fn prune_entity(
         &self,
         entity_id: &str,
@@ -234,14 +235,11 @@ fn should_rotate_salt(updated_at: DateTime<Utc>, rotation_hour: u8) -> bool {
     updated_at < latest_rotation.with_timezone(&Utc)
 }
 
-fn count_rows<P>(conn: &Connection, sql: &str, params: P) -> DuckResult<u64>
-where
-    P: duckdb::Params,
-{
+fn count_rows(conn: &Connection, sql: &str, params: impl duckdb::Params) -> DuckResult<u64> {
     conn.query_row(sql, params, |row| row.get(0))
 }
 
-pub fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[String]) -> DuckResult<()> {
+fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[String]) -> DuckResult<()> {
     if entities.is_empty() {
         return Ok(());
     }

@@ -1,12 +1,12 @@
-import styles from "./project.module.css";
 import cardStyles from "./dimensions/dimensions.module.css";
+import styles from "./project.module.css";
 
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
-import { dimensions, metrics, metricNames, useDimension, useProject, useProjectGraph, useProjectStats } from "../api";
-import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api";
 import type { DateRange } from "../api/ranges";
-
+import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../constants";
+import { dimensions, metricNames, metrics } from "../constants";
+import { useDimension, useProject, useProjectGraph, useProjectStats } from "../hooks/api";
 import { useMetric, useRange } from "../hooks/persist";
 import { cls } from "../utils";
 import { DimensionDropdownCard, DimensionTabs, DimensionTabsCard, PageDimensionTabsCard } from "./dimensions";
@@ -66,12 +66,12 @@ export const Project = () => {
 	}, []);
 
 	const { project, notFound } = useProject(projectId);
-	const visibleMetrics = useMemo(
+	const visibleMetrics: Metric[] = useMemo(
 		() => metrics.filter((item) => !project?.hiddenMetrics.includes(item)),
 		[project?.hiddenMetrics],
 	);
 	const activeMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
-	const reportMetric = activeMetric ?? "views";
+	const reportMetric: Metric = activeMetric ?? "views";
 	const visibleFilters = useMemo(
 		() => filters.filter((filter) => !project?.hiddenDimensions.includes(filter.dimension)),
 		[filters, project?.hiddenDimensions],

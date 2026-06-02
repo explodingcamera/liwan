@@ -9,7 +9,10 @@ import Settings from "../../layouts/Settings.astro";
     <h1>Projects</h1>
     <CreateProject client:only="react" />
   </nav>
-  <p class="description">Projects group one or more entities for dashboard reporting and access control.</p>
+  <p class="description">
+    Projects group one or more entities for dashboard reporting and access
+    control.
+  </p>
   <ProjectsTable client:load />
 </Settings>
 

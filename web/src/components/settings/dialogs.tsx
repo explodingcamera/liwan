@@ -1,43 +1,39 @@
-import { type ReactElement, useEffect, useMemo, useRef, useState } from "react";
-import type { OASModel } from "fets";
-
-import { Dialog } from "../dialog";
-import { type Tag, Tags } from "../tags";
 import styles from "./dialogs.module.css";
 
+import type { ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { api, queryClient, useMutation } from "../../api";
+import type {
+	DataRetention,
+	DisplayOverride,
+	EntityCollectionSettings,
+	EntityResponse,
+	GeoDetail,
+	Metric,
+	ProjectDisplaySettings,
+	ProjectResponse,
+	UserResponse,
+	VisitorGroupMode,
+} from "../../constants";
+import { dimensions, displayOverrides, metrics } from "../../constants";
 import {
-	type EntityResponse,
-	type ProjectResponse,
-	type UserResponse,
-	api,
 	invalidateEntities,
 	invalidateProjects,
 	invalidateUsers,
-	queryClient,
-	dimensions,
-	metrics,
-	type Metric,
-	type DashboardSpec,
 	useEntities,
 	useMe,
-	useMutation,
 	useProjects,
-} from "../../api";
-import { FiltersEditor, GeoSelect, VisitorModeSelect } from "./collection";
+} from "../../hooks/api";
 import { cls } from "../../utils";
+import { Dialog } from "../dialog";
+import type { Tag } from "../tags";
+import { Tags } from "../tags";
 import { createToast } from "../toast";
+import { FiltersEditor, GeoSelect, VisitorModeSelect } from "./collection";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 
-type EntityCollectionSettings = OASModel<DashboardSpec, "EntityCollectionSettings">;
-type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
-type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
-type GeoDetail = CollectionSettings["trackGeo"];
-type DataRetention = EntityCollectionSettings["dataRetention"];
-type ProjectDisplaySettings = OASModel<DashboardSpec, "ProjectDisplaySettings">;
-type DisplayOverride = ProjectDisplaySettings["metricDisplayOverrides"][string];
-
-const displayOverrides = ["auto", "show", "hide"] as const satisfies readonly DisplayOverride[];
 const entityRetentionOptions = [
 	{ value: "inherit", label: "Inherit global" },
 	{ value: "keep_all", label: "Keep all history" },
@@ -48,15 +44,14 @@ const entityRetentionOptions = [
 	{ value: "730", label: "2 years" },
 ] as const;
 const entityRetentionValues = entityRetentionOptions.map((option) => option.value);
+
 const entityRetentionValue = (retention: DataRetention) => {
 	if (retention.mode === "inherit") return "inherit";
 	if (retention.mode === "all") return "keep_all";
 	const value = String(retention.days);
-	return isOneOf(entityRetentionValues, value) ? value : "365";
+	return (entityRetentionValues as readonly string[]).includes(value) ? value : "365";
 };
 const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
-const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
-	values.some((item) => item === value);
 
 export const DeleteDialog = ({
 	id,
@@ -151,23 +146,25 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 	const [selectedEntities, setSelectedEntities] = useState<Tag[]>([]);
 
 	const updateMetricDisplay = (metric: Metric, value: string) => {
-		if (!isOneOf(displayOverrides, value)) return;
+		if (!(displayOverrides as readonly string[]).includes(value)) return;
 		setProjectSettings((settings) => {
 			if (!settings) return settings;
 			const metricDisplayOverrides = { ...settings.metricDisplayOverrides };
-			if (value === "auto") delete metricDisplayOverrides[metric];
-			else metricDisplayOverrides[metric] = value;
+			const display = value as DisplayOverride;
+			if (display === "auto") delete metricDisplayOverrides[metric];
+			else metricDisplayOverrides[metric] = display;
 			return { ...settings, metricDisplayOverrides };
 		});
 	};
 
 	const updateDimensionDisplay = (dimension: string, value: string) => {
-		if (!isOneOf(displayOverrides, value)) return;
+		if (!(displayOverrides as readonly string[]).includes(value)) return;
 		setProjectSettings((settings) => {
 			if (!settings) return settings;
 			const dimensionDisplayOverrides = { ...settings.dimensionDisplayOverrides };
-			if (value === "auto") delete dimensionDisplayOverrides[dimension];
-			else dimensionDisplayOverrides[dimension] = value;
+			const display = value as DisplayOverride;
+			if (display === "auto") delete dimensionDisplayOverrides[dimension];
+			else dimensionDisplayOverrides[dimension] = display;
 			return { ...settings, dimensionDisplayOverrides };
 		});
 	};
@@ -181,7 +178,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 		);
 	}, [project.entities]);
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
@@ -190,17 +187,17 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 			isPublic: string;
 		};
 
-		try {
-			await api["/api/dashboard/project/{project_id}"].put({
+		api["/api/dashboard/project/{project_id}"]
+			.put({
 				params: { project_id: project.id },
 				json: {
 					project: { displayName, public: isPublic === "on" },
 					entities: selectedEntities.map((tag) => tag.value as string),
 				},
-			});
-
-			if (projectSettings) {
-				await api["/api/dashboard/project/{project_id}/settings"].put({
+			})
+			.then(() => {
+				if (!projectSettings) return;
+				return api["/api/dashboard/project/{project_id}/settings"].put({
 					params: { project_id: project.id },
 					json: {
 						projectId: project.id,
@@ -208,14 +205,13 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 						dimensionDisplayOverrides: projectSettings.dimensionDisplayOverrides,
 					},
 				});
-			}
-
-			closeRef.current?.click();
-			queryClient.invalidateQueries({ queryKey: ["projects"] });
-			createToast("Project updated", "success");
-		} catch (err) {
-			setError(err instanceof Error ? err : new Error("Failed to update project"));
-		}
+			})
+			.then(() => {
+				closeRef.current?.click();
+				queryClient.invalidateQueries({ queryKey: ["projects"] });
+				createToast("Project updated", "success");
+			})
+			.catch((err) => setError(err instanceof Error ? err : new Error("Failed to update project")));
 	};
 
 	return (
@@ -443,7 +439,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 		);
 	}, [entity.projects]);
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
@@ -456,14 +452,14 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 				.sort()
 				.join() === submitProjects.sort().join();
 
-		try {
-			await api["/api/dashboard/entity/{entity_id}"].put({
+		api["/api/dashboard/entity/{entity_id}"]
+			.put({
 				params: { entity_id: entity.id },
 				json: { displayName, projects: updateProjects ? undefined : submitProjects },
-			});
-
-			if (entitySettings) {
-				await api["/api/dashboard/entity/{entity_id}/settings"].put({
+			})
+			.then(() => {
+				if (!entitySettings) return;
+				return api["/api/dashboard/entity/{entity_id}/settings"].put({
 					params: { entity_id: entity.id },
 					json: {
 						entityId: entity.id,
@@ -475,14 +471,13 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 						ingestDropRules: entitySettings.ingestDropRules,
 					},
 				});
-			}
-
-			closeRef.current?.click();
-			createToast("Entity updated", "success");
-			invalidateEntities();
-		} catch (err) {
-			setError(err instanceof Error ? err : new Error("Failed to update entity"));
-		}
+			})
+			.then(() => {
+				closeRef.current?.click();
+				createToast("Entity updated", "success");
+				invalidateEntities();
+			})
+			.catch((err) => setError(err instanceof Error ? err : new Error("Failed to update entity")));
 	};
 
 	return (
@@ -613,7 +608,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 											value={entityRetentionValue(dataRetention)}
 											onChange={(event) => {
 												const next = event.currentTarget.value;
-												if (!isOneOf(entityRetentionValues, next)) return;
+												if (!(entityRetentionValues as readonly string[]).includes(next)) return;
 												if (next === "inherit") {
 													setDataRetention({ mode: "inherit" });
 												} else if (next === "keep_all") {

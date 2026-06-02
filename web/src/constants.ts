@@ -1,5 +1,6 @@
 import type { NormalizeOAS, OASModel } from "fets";
-import type dashboardspec from "./dashboard";
+
+import type dashboardspec from "./api/dashboard";
 
 export type DashboardSpec = NormalizeOAS<typeof dashboardspec>;
 export type Metric = OASModel<DashboardSpec, "Metric">;
@@ -14,6 +15,15 @@ export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
 export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;
 export type UserResponse = OASModel<DashboardSpec, "UserResponse">;
 export type StatsResponse = OASModel<DashboardSpec, "StatsResponse">;
+export type CollectionSettings = OASModel<DashboardSpec, "CollectionSettings">;
+export type EntityCollectionSettings = OASModel<DashboardSpec, "EntityCollectionSettings">;
+export type ProjectDisplaySettings = OASModel<DashboardSpec, "ProjectDisplaySettings">;
+export type IngestFilter = OASModel<DashboardSpec, "IngestFilter">;
+export type IngestDropRule = OASModel<DashboardSpec, "IngestDropRule">;
+export type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
+export type GeoDetail = CollectionSettings["trackGeo"];
+export type DataRetention = CollectionSettings["dataRetention"] | EntityCollectionSettings["dataRetention"];
+export type DisplayOverride = ProjectDisplaySettings["metricDisplayOverrides"][string];
 
 export const dimensions = [
 	"platform",
@@ -52,6 +62,20 @@ export const metrics = [
 	"avg_time_on_site",
 	"bounce_rate",
 ] as const satisfies readonly Metric[];
+
+export const displayOverrides = ["auto", "show", "hide"] as const satisfies readonly DisplayOverride[];
+
+export const visitorGroupModes = [
+	"accurate",
+	"random_per_request",
+	"network_standard",
+	"network_balanced",
+	"network_accurate",
+] as const satisfies readonly VisitorGroupMode[];
+
+export const geoDetails = ["none", "country", "city"] as const satisfies readonly GeoDetail[];
+
+export const ingestDimensions = ["event", ...dimensions] as const;
 
 export const metricNames: Record<Metric, string> = {
 	views: "Total Views",

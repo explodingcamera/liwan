@@ -28,10 +28,10 @@ import {
 	subWeeks,
 	subYears,
 } from "date-fns";
-
 import { formatDateRange } from "little-date";
-import type { GraphInterval } from "./constants";
+
 import type { GraphRange } from "../components/graph/graph";
+import type { GraphInterval } from "../constants";
 
 type DateRangeValue = { start: Date; end: Date };
 const WEEK_STARTS_ON = { weekStartsOn: 1 as const };

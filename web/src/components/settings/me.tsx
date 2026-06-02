@@ -1,8 +1,11 @@
-import { User2Icon } from "lucide-react";
-import { useId, useRef, useState } from "react";
-import { api, useMe } from "../../api";
-import { createToast } from "../toast";
 import styles from "./me.module.css";
+
+import { useId, useRef } from "react";
+import { User2Icon } from "lucide-react";
+
+import { api, useMutation } from "../../api";
+import { useMe } from "../../hooks/api";
+import { createToast } from "../toast";
 import { Snippet } from "./snippet";
 
 export const MyAccount = () => {
@@ -11,39 +14,29 @@ export const MyAccount = () => {
 
 	const formRef = useRef<HTMLFormElement>(null);
 	const { role, username, isLoading, authError } = useMe();
-	const [passwordError, setPasswordError] = useState<string | null>(null);
-	const [passwordUpdating, setPasswordUpdating] = useState(false);
 
-	const updatePassword = async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		if (!username) {
-			setPasswordError("You must be logged in to update your password");
-			return;
-		}
-
-		const data = new FormData(event.currentTarget);
-		const newPassword = data.get("newPassword");
-		const confirmNewPassword = data.get("confirmNewPassword");
-		if (typeof newPassword !== "string" || typeof confirmNewPassword !== "string") return;
-		if (newPassword !== confirmNewPassword) {
-			setPasswordError("Passwords do not match");
-			return;
-		}
-
-		setPasswordUpdating(true);
-		setPasswordError(null);
-		try {
-			await api["/api/dashboard/user/{username}/password"].put({
-				json: { password: newPassword },
-				params: { username },
-			});
+	const { mutate, error } = useMutation({
+		mutationFn: api["/api/dashboard/user/{username}/password"].put,
+		onSuccess: () => {
 			createToast("Password updated", "success");
 			formRef.current?.reset();
-		} catch (err) {
-			setPasswordError(err instanceof Error ? err.message : "Failed to update password");
-		} finally {
-			setPasswordUpdating(false);
+		},
+		onError: console.error,
+	});
+
+	const updatePassword = (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!username) return;
+
+		const data = new FormData(event.currentTarget);
+		const newPassword = data.get("newPassword") as string;
+		const confirmNewPassword = data.get("confirmNewPassword") as string;
+		if (newPassword !== confirmNewPassword) {
+			createToast("Passwords do not match", "error");
+			return;
 		}
+
+		mutate({ json: { password: newPassword }, params: { username } });
 	};
 
 	if (authError) {
@@ -78,7 +71,7 @@ export const MyAccount = () => {
 			<article>
 				<form className={styles.password} onSubmit={updatePassword} ref={formRef}>
 					<h2>Update password</h2>
-					{passwordError && <article role="alert">{passwordError}</article>}
+					{error && <article role="alert">{error.message}</article>}
 					<label>
 						New password
 						<input
@@ -104,8 +97,8 @@ export const MyAccount = () => {
 					</label>
 
 					<div>
-						<button type="submit" className="secondary" disabled={passwordUpdating}>
-							{passwordUpdating ? "Updating..." : "Update password"}
+						<button type="submit" className="secondary">
+							Update password
 						</button>
 					</div>
 				</form>

@@ -1,13 +1,16 @@
-import fuzzysort from "fuzzysort";
-import { ZoomInIcon } from "lucide-react";
 import styles from "./dimensions.module.css";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import { DimensionLabel, DimensionValueBar } from ".";
-import { type Dimension, dimensionNames, metricNames, useDimension } from "../../api";
+import fuzzysort from "fuzzysort";
+import { ZoomInIcon } from "lucide-react";
+
+import type { Dimension } from "../../constants";
+import { dimensionNames, metricNames } from "../../constants";
+import { useDimension } from "../../hooks/api";
 import { cls, formatMetricVal } from "../../utils";
 import { Dialog } from "../dialog";
 import type { ProjectQuery } from "../project";
+import { DimensionLabel, DimensionValueBar } from ".";
 
 export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query: ProjectQuery }) => {
 	const { data, biggest, order, isLoading } = useDimension({ dimension, ...query });

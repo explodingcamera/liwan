@@ -1,6 +1,8 @@
-import { CopyIcon } from "lucide-react";
-import { createToast } from "../toast";
 import styles from "./snippet.module.css";
+
+import { CopyIcon } from "lucide-react";
+
+import { createToast } from "../toast";
 
 export const Snippet = ({ entityId }: { entityId: string }) => {
 	const code = `<script type="module" data-entity="${entityId}" src="${window.location.origin}/script.js"></script>`;

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { toDataPoints } from "../components/graph";
-import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../api/constants";
-
 import { api } from "../api/client";
 import { queryClient, useQuery } from "../api/query";
 import type { DateRange } from "../api/ranges";
+import { toDataPoints } from "../components/graph";
+import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "../constants";
 
 const getStatusCode = (error: unknown) => (error as { status?: number } | undefined)?.status;
 export const useMe = () => {

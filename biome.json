@@ -4,7 +4,23 @@
 		"enabled": true,
 		"actions": {
 			"recommended": true,
-			"source": { "recommended": true, "organizeImports": "off" }
+			"source": {
+				"recommended": true,
+				"organizeImports": {
+					"level": "on",
+					"options": {
+						"groups": [
+							"**/*.css",
+							":BLANK_LINE:",
+							[":BUN:", ":NODE:", "astro", "astro/**", "@astrojs/**", "react", "react/**", "react-dom", "react-dom/**"],
+							["d3-*", "d3/**"],
+							[":PACKAGE_WITH_PROTOCOL:", ":PACKAGE:"],
+							":BLANK_LINE:",
+							[":ALIAS:", ":PATH:"]
+						]
+					}
+				}
+			}
 		}
 	},
 	"formatter": {
@@ -34,7 +50,13 @@
 				"noStaticElementInteractions": "off"
 			},
 			"style": {
-				"noDescendingSpecificity": "off"
+				"noDescendingSpecificity": "off",
+				"useImportType": {
+					"level": "on",
+					"options": {
+						"style": "separatedType"
+					}
+				}
 			},
 			"complexity": {
 				"noImportantStyles": "off"
@@ -58,6 +80,9 @@
 	"overrides": [
 		{
 			"includes": ["**/*.astro"],
+			"assist": {
+				"enabled": false
+			},
 			"linter": {
 				"rules": {
 					"correctness": {

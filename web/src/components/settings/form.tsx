@@ -1,11 +1,12 @@
+import styles from "./form.module.css";
+
+import type { FormEvent, ReactNode } from "react";
 import { Field } from "@base-ui/react/field";
 import { Fieldset } from "@base-ui/react/fieldset";
 import { Form as BaseForm } from "@base-ui/react/form";
 import { Switch } from "@base-ui/react/switch";
 import { Tabs } from "@base-ui/react/tabs";
 import { ArrowLeftIcon } from "lucide-react";
-import type { FormEvent, ReactNode } from "react";
-import styles from "./form.module.css";
 
 type TabItem<T extends string> = { value: T; label: ReactNode };
 

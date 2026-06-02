@@ -1,5 +1,7 @@
-import { type ReactElement, useEffect, useState } from "react";
 import styles from "./table.module.css";
+
+import type { ReactElement } from "react";
+import { useEffect, useState } from "react";
 
 export type Column<T> = {
 	id: string;

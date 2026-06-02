@@ -1,11 +1,12 @@
 import styles from "./range.module.css";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useRef } from "react";
-
 import { endOfDay, startOfDay } from "date-fns";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+
 import { api, useQuery } from "../../api";
-import { DateRange, type RangeName, wellKnownRanges } from "../../api/ranges";
+import type { RangeName } from "../../api/ranges";
+import { DateRange, wellKnownRanges } from "../../api/ranges";
 import { cls } from "../../utils";
 import { DatePickerRange } from "../daterange";
 import { Dialog } from "../dialog";
