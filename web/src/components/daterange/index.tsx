@@ -20,11 +20,11 @@ export const DatePickerRange = ({ onSelect }: { onSelect: (range: DateRange) => 
 	return (
 		<div className={styles.container}>
 			<label htmlFor={startId}>
-				Start date:
+				Start date
 				<input
 					type="date"
 					id={startId}
-					name="trip-start"
+					name="startDate"
 					min="1997-01-01"
 					max="2030-12-31"
 					value={start}
@@ -32,11 +32,11 @@ export const DatePickerRange = ({ onSelect }: { onSelect: (range: DateRange) => 
 				/>
 			</label>
 			<label htmlFor={endId}>
-				End date:
+				End date
 				<input
 					type="date"
 					id={endId}
-					name="trip-start"
+					name="endDate"
 					min="1997-01-01"
 					max="2030-12-31"
 					value={end}
@@ -50,7 +50,7 @@ export const DatePickerRange = ({ onSelect }: { onSelect: (range: DateRange) => 
 				</Dialog.Close>
 
 				<button type="button" className="secondary" onClick={handleSelect}>
-					Select
+					Apply
 				</button>
 			</div>
 		</div>

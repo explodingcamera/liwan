@@ -16,6 +16,30 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
+## [v1.6.0] - 2026-06-02
+
+### Features
+
+- Added global and per-entity collection settings for visitor grouping, geolocation detail, session metrics, UTM parameters, and data retention
+- Added ingest drop rules to discard matching events before they are stored
+- Added project display settings to show or hide metrics and dimensions per project
+- Added a pruning tool to apply retention and collection settings to historical data
+
+### Bug Fixes
+
+- Fixed bounce rate deltas so lower bounce rates are shown as an improvement
+- Fixed the account settings form to avoid React form action runtime errors
+
+### Documentation
+
+- Added documentation for collected data, privacy-focused collection settings, cookie banner considerations, and projects/entities
+- Updated the docs site for clearer setup, configuration, metrics, GeoIP, reverse proxy, DuckDB, and ad blocker guidance
+
+### Other
+
+- Renamed the internal `visitor_id` event column to `visitor_group_id` to better describe how repeat visits are grouped
+- Existing installs are migrated automatically with collection settings that preserve the previous default behavior
+
 ## [v1.5.0] - 2026-06-15
 
 ### Features

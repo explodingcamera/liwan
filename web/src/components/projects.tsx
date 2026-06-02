@@ -82,7 +82,7 @@ export const Projects = () => {
 				<h3>
 					There are no public projects available.
 					<br />
-					<a href="/login">Sign in</a> to view all projects.
+					<a href="/login">Login</a> to view all projects.
 				</h3>
 			</div>
 		);
