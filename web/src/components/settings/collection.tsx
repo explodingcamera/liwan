@@ -22,15 +22,17 @@ type IngestDropRule = OASModel<DashboardSpec, "IngestDropRule">;
 type VisitorGroupMode = CollectionSettings["visitorGroupMode"];
 type GeoDetail = CollectionSettings["trackGeo"];
 type DataRetention = CollectionSettings["dataRetention"];
-type CollectionTab = "tracking" | "filters" | "purging";
+type CollectionTab = "tracking" | "filters" | "retention";
 
-const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 const formatCount = new Intl.NumberFormat().format;
-const ingestDimensions = ["event", ...dimensions] as const;
 const docsUrl = (hash: string) => `https://liwan.dev/collected-data/#${hash}`;
+const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 const isOneOf = <T extends string>(values: readonly T[], value: string): value is T =>
 	values.some((item) => item === value);
+
+const collectionTabs = ["tracking", "filters", "retention"] as const satisfies readonly CollectionTab[];
+const collectionTabItems = collectionTabs.map((value) => ({ value, label: title(value) }));
 
 const visitorGroupModes = [
 	"accurate",
@@ -39,7 +41,9 @@ const visitorGroupModes = [
 	"network_balanced",
 	"network_accurate",
 ] as const satisfies readonly VisitorGroupMode[];
+
 const geoDetails = ["none", "country", "city"] as const satisfies readonly GeoDetail[];
+
 const retentionOptions = [
 	{ value: "keep_all", label: "Keep all history" },
 	{ value: "30", label: "1 month" },
@@ -48,14 +52,17 @@ const retentionOptions = [
 	{ value: "365", label: "1 year" },
 	{ value: "730", label: "2 years" },
 ] as const;
+
 const retentionValues = retentionOptions.map((option) => option.value);
+
 const retentionValue = (retention: DataRetention) => {
 	if (retention.mode === "all" || retention.mode === "inherit") return "keep_all";
 	const value = String(retention.days);
 	return isOneOf(retentionValues, value) ? value : "365";
 };
-const collectionTabs = ["tracking", "filters", "purging"] as const satisfies readonly CollectionTab[];
-const collectionTabItems = collectionTabs.map((value) => ({ value, label: title(value) }));
+
+const ingestDimensions = ["event", ...dimensions] as const;
+
 const ingestFilterOptions: Record<string, FilterOption> = {
 	event: {
 		label: "Event",
@@ -64,6 +71,14 @@ const ingestFilterOptions: Record<string, FilterOption> = {
 	},
 	...filterOptions,
 };
+
+const ingestFilterTypeLabel = (filter: IngestFilter) =>
+	ingestFilterOptions[filter.dimension]?.displayType?.({ filterType: filter.filterType, inversed: false }) ??
+	title(filter.filterType);
+
+const ingestFilterValueLabel = (filter: IngestFilter) =>
+	ingestFilterOptions[filter.dimension]?.displayValue?.({ filterType: filter.filterType, value: filter.value }) ??
+	filter.value;
 
 export const DocsLink = ({ hash }: { hash: string }) => (
 	<a href={docsUrl(hash)} target="_blank" rel="noopener noreferrer">
@@ -95,8 +110,8 @@ export const VisitorModeSelect = ({
 		{allowInherit && <option value="inherit">Inherit global</option>}
 		<option value="accurate">Accurate</option>
 		<option value="random_per_request">Random per request</option>
-		<option value="network_standard">Network standard (/24 IPv4)</option>
-		<option value="network_balanced">Network balanced (/28 IPv4)</option>
+		<option value="network_standard">Network standard (/24 IPv4, /56 IPv6)</option>
+		<option value="network_balanced">Network balanced (/28 IPv4, /64 IPv6)</option>
 		<option value="network_accurate">Network accurate (full IP)</option>
 	</select>
 );
@@ -149,17 +164,17 @@ export const FiltersEditor = ({
 		</div>
 		{scope === "entity" ? (
 			<p>
-				Global drop rules still apply to this entity. Rules added here are extra rules for this entity only. Inside one
-				rule, all filters must match. Matching any rule drops the event. <DocsLink hash="drop-rules" />
+				Global drop rules still apply. Rules added here only apply to this entity. Within a rule, all filters must
+				match. Matching any rule drops the event. <DocsLink hash="drop-rules" />
 			</p>
 		) : (
 			<p>
-				Events are dropped before they are stored when they match a rule. Inside one rule, all filters must match.
-				Multiple rules are checked separately, so matching any rule drops the event. <DocsLink hash="drop-rules" />
+				Events are dropped before they are stored. Within a rule, all filters must match. Matching any rule drops the
+				event. <DocsLink hash="drop-rules" />
 			</p>
 		)}
 		{rules.length === 0 ? (
-			<small>No drop rules right now.</small>
+			<small>No drop rules yet.</small>
 		) : (
 			<div className={styles.ruleList}>
 				{rules.map((rule, ruleIndex) => (
@@ -197,7 +212,7 @@ export const FiltersEditor = ({
 							</div>
 						</div>
 						{rule.filters.length === 0 ? (
-							<small>Add at least one filter to activate this rule.</small>
+							<small>Add at least one filter to use this rule.</small>
 						) : (
 							<div className={styles.filterList}>
 								{rule.filters.map((filter, filterIndex) => (
@@ -228,14 +243,6 @@ export const FiltersEditor = ({
 		)}
 	</section>
 );
-
-const ingestFilterTypeLabel = (filter: IngestFilter) =>
-	ingestFilterOptions[filter.dimension]?.displayType?.({ filterType: filter.filterType, inversed: false }) ??
-	title(filter.filterType);
-
-const ingestFilterValueLabel = (filter: IngestFilter) =>
-	ingestFilterOptions[filter.dimension]?.displayValue?.({ filterType: filter.filterType, value: filter.value }) ??
-	filter.value;
 
 export const CollectionSettingsPage = () => {
 	const [settings, setSettings] = useState<CollectionSettings>();
@@ -299,7 +306,7 @@ export const CollectionSettingsPage = () => {
 				title="Collection"
 				description={
 					<>
-						Global defaults for collection and retention. Entity settings can override these per source. See also{" "}
+						Global defaults for collection and retention. Entity settings can override these per source. See{" "}
 						<a href="https://liwan.dev/guides/cookie-banners/" target="_blank" rel="noopener noreferrer">
 							cookie banner considerations
 						</a>
@@ -334,7 +341,7 @@ export const CollectionSettingsPage = () => {
 							label="Geolocation detail"
 							description={
 								<>
-									Choose how much location data is stored for new events. <DocsLink hash="geolocation" />
+									Choose how much location data to store for new events. <DocsLink hash="geolocation" />
 								</>
 							}
 							name="trackGeo"
@@ -354,7 +361,7 @@ export const CollectionSettingsPage = () => {
 							label="Track session metrics"
 							description={
 								<>
-									Required for bounce rate, time on site, entry URL, and exit URL. <DocsLink hash="session-metrics" />
+									Required for bounce rate, time on site, entry page, and exit page. <DocsLink hash="session-metrics" />
 								</>
 							}
 							checked={trackSessions}
@@ -385,12 +392,12 @@ export const CollectionSettingsPage = () => {
 							setRules={(ingestDropRules) => saveSettings({ ...settings, ingestDropRules })}
 						/>
 					</SettingsPanel>
-					<SettingsPanel value="purging">
+					<SettingsPanel value="retention">
 						<SettingsField
 							label="History retention"
 							description={
 								<>
-									Automatically prune older event data after the selected period.{" "}
+									Automatically delete event data older than the selected period.{" "}
 									<DocsLink hash="retention-and-pruning" />
 								</>
 							}
@@ -421,27 +428,27 @@ export const CollectionSettingsPage = () => {
 							</select>
 						</SettingsField>
 						<SettingsFieldset
-							legend="Prune Data"
+							legend="Prune data"
 							description={
 								<>
 									Pruning applies saved retention, UTM, geolocation, and session settings to historical data. Drop rules
-									only affect new events. Settings save automatically; run a dry run to preview.{" "}
+									only affect new events. Settings save automatically; run a dry run first to preview changes.{" "}
 									<DocsLink hash="retention-and-pruning" />
 								</>
 							}
 						>
 							<div className={styles.pruneActions}>
 								<button type="button" className="secondary outline" onClick={() => prune(true)}>
-									Dry Run
+									Dry run
 								</button>
 								<Dialog
 									title="Prune data?"
-									description="This permanently applies the current collection settings to historical data. Run a dry run first if you want to preview the changes."
-									trigger={<button type="button">Prune Now</button>}
+									description="This permanently applies the current collection settings to historical data. Run a dry run first to preview the changes."
+									trigger={<button type="button">Prune now</button>}
 								>
 									<div className="grid">
 										<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
-										<Dialog.Close onClick={() => prune(false)}>Prune Now</Dialog.Close>
+										<Dialog.Close onClick={() => prune(false)}>Prune now</Dialog.Close>
 									</div>
 								</Dialog>
 							</div>

@@ -1,13 +1,11 @@
-import { CircleIcon, LockIcon, SettingsIcon } from "lucide-react";
+import { CircleIcon, LockIcon } from "lucide-react";
 import styles from "./project.module.css";
 
-import { type ProjectResponse, type StatsResponse, useMe } from "../../api";
+import type { ProjectResponse, StatsResponse } from "../../api";
 import { formatMetricVal } from "../../utils";
 import { CardLink } from "../card";
 
 export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; project: ProjectResponse }) => {
-	const { role } = useMe();
-
 	return (
 		<h1 className={styles.statsHeader}>
 			<span>

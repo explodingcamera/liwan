@@ -234,7 +234,7 @@ export const FilterDialog = ({
 	return (
 		<Dialog
 			title="Add Filter"
-			description="Filter the data by a specific dimension"
+			description="Filter the report by a specific dimension."
 			hideDescription
 			trigger={
 				<button type="button">
@@ -260,7 +260,7 @@ export const FilterDialog = ({
 				{!filter.custom && (
 					<div className={styles.formInvertable}>
 						<label>
-							Filter Type
+							Filter type
 							<select name="filterType">
 								{filter.filterTypes?.map((filterType) => (
 									<option key={filterType} value={filterType}>
@@ -274,11 +274,11 @@ export const FilterDialog = ({
 								<fieldset>
 									<label>
 										<input name="show-matches" defaultChecked value="default" type="radio" aria-invalid="false" />
-										Show Matches
+										Show matches
 									</label>
 									<label>
 										<input name="show-matches" type="radio" value="inverted" aria-invalid="true" />
-										Exclude Matches
+										Exclude matches
 									</label>
 								</fieldset>
 							</div>
@@ -297,7 +297,7 @@ export const FilterDialog = ({
 					<Dialog.Close ref={closeRef} className="secondary outline">
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Add Filter</button>
+					<button type="submit">Add filter</button>
 				</div>
 			</form>
 		</Dialog>

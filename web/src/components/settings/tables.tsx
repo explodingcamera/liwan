@@ -154,7 +154,7 @@ const UserDropdown = ({ user }: { user: UserResponse }) => {
 				trigger={
 					<button type="button" onClick={close}>
 						<RectangleEllipsisIcon size={18} />
-						Update Password
+						Update password
 					</button>
 				}
 			/>

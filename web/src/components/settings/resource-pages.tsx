@@ -205,7 +205,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={projectTabs}>
 				<SettingsPanel value="general">
-					<SettingsField label="Project Name" description="Used in the dashboard." name="displayName">
+					<SettingsField label="Project name" description="Used in the dashboard." name="displayName">
 						<input
 							required
 							name="displayName"
@@ -239,7 +239,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 						</select>
 					</SettingsField>
 					<Tags
-						labelText="Associated Entities"
+						labelText="Associated entities"
 						selected={selectedEntities}
 						suggestions={entityTags}
 						onAdd={(tag) => {
@@ -264,7 +264,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 							}}
 							trigger={
 								<button type="button" className={styles.deleteButton}>
-									Delete Project
+									Delete project
 								</button>
 							}
 						/>
@@ -273,8 +273,8 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 				{settings && (
 					<SettingsPanel value="display">
 						<p className={styles.displayHelp}>
-							Auto uses Liwan's automatic visibility rules. Always forces an item to show for this project. Hidden
-							removes it from reports.
+							Auto uses Liwan's visibility rules. Always forces an item to show for this project. Hidden removes it from
+							reports.
 						</p>
 						<div className={styles.displaySections}>
 							<SettingsFieldset legend="Metrics">
@@ -421,7 +421,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={entityTabs}>
 				<SettingsPanel value="general">
-					<SettingsField label="Entity Name" description="Used in the dashboard." name="displayName">
+					<SettingsField label="Entity name" description="Used in the dashboard." name="displayName">
 						<input
 							required
 							name="displayName"
@@ -443,7 +443,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 						<Snippet entityId={entity.id} />
 					</SettingsFieldset>
 					<Tags
-						labelText="Associated Projects"
+						labelText="Associated projects"
 						selected={selectedProjects}
 						suggestions={projectTags}
 						onAdd={(tag) => {
@@ -468,7 +468,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							}}
 							trigger={
 								<button type="button" className={styles.deleteButton}>
-									Delete Entity
+									Delete entity
 								</button>
 							}
 						/>
@@ -500,7 +500,8 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 								label="Session metrics"
 								description={
 									<>
-										Required for bounce rate, time on site, entry URL, and exit URL. <DocsLink hash="session-metrics" />
+										Required for bounce rate, time on site, entry page, and exit page.{" "}
+										<DocsLink hash="session-metrics" />
 									</>
 								}
 								name="trackSessions"
@@ -547,7 +548,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 								label="Geolocation detail"
 								description={
 									<>
-										Choose how much location data is stored for this entity. <DocsLink hash="geolocation" />
+										Choose how much location data to store for this entity. <DocsLink hash="geolocation" />
 									</>
 								}
 								name="trackGeo"
@@ -566,7 +567,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 								label="History retention"
 								description={
 									<>
-										Automatically prune older event data after the selected period.{" "}
+										Automatically delete event data older than the selected period.{" "}
 										<DocsLink hash="retention-and-pruning" />
 									</>
 								}

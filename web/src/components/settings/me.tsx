@@ -37,7 +37,7 @@ export const MyAccount = () => {
 				json: { password: newPassword },
 				params: { username },
 			});
-			createToast("Password updated successfully", "success");
+			createToast("Password updated", "success");
 			formRef.current?.reset();
 		} catch (err) {
 			setPasswordError(err instanceof Error ? err.message : "Failed to update password");
@@ -56,7 +56,7 @@ export const MyAccount = () => {
 		<div className={styles.container}>
 			<article>
 				<nav>
-					<h1>My Account</h1>
+					<h1>My account</h1>
 				</nav>
 
 				<div className={styles.header}>
@@ -68,19 +68,19 @@ export const MyAccount = () => {
 				</div>
 			</article>
 			<article>
-				<h2>Snippet code</h2>
+				<h2>Tracking snippet</h2>
 				<p>
-					You can copy the tracking snippet for a specific entity <a href="/settings/entities">here</a>, use the{" "}
-					<a href="https://npmjs.com/package/liwan-tracker">liwan-tracker</a> npm package, or use the following code:
+					Copy the tracking snippet for a specific entity from <a href="/settings/entities">entity settings</a>, use the{" "}
+					<a href="https://npmjs.com/package/liwan-tracker">liwan-tracker</a> npm package, or start with this example:
 				</p>
 				<Snippet entityId="YOUR_ENTITY_ID" />
 			</article>
 			<article>
 				<form className={styles.password} onSubmit={updatePassword} ref={formRef}>
-					<h2>Update Password</h2>
+					<h2>Update password</h2>
 					{passwordError && <article role="alert">{passwordError}</article>}
 					<label>
-						New Password
+						New password
 						<input
 							minLength={8}
 							required
@@ -92,7 +92,7 @@ export const MyAccount = () => {
 					</label>
 
 					<label>
-						Confirm New Password
+						Confirm new password
 						<input
 							minLength={8}
 							required
@@ -105,7 +105,7 @@ export const MyAccount = () => {
 
 					<div>
 						<button type="submit" className="secondary" disabled={passwordUpdating}>
-							{passwordUpdating ? "Updating..." : "Update Password"}
+							{passwordUpdating ? "Updating..." : "Update password"}
 						</button>
 					</div>
 				</form>

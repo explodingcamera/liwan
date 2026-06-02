@@ -216,38 +216,38 @@ const formatScreenWidth = (value: string) => {
 
 	const [min, max] = range;
 	const upper = Number.isFinite(max) ? `${max}px` : "∞";
-	return `${key.toUpperCase()} (${min}px - ${upper})`;
+	return `${key.toUpperCase()} (${min}px to ${upper})`;
 };
 
 const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: () => void) => React.ReactNode> = {
 	utm_campaign: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
 		</>
 	),
 	utm_content: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
 		</>
 	),
 	utm_medium: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
 		</>
 	),
 	utm_source: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
 		</>
 	),
 	utm_term: (value, onSelect) => (
 		<>
 			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown / none"}</DimensionValueButton>
 		</>
 	),
 	platform: (value, onSelect) => (

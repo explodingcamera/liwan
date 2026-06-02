@@ -95,7 +95,7 @@ export const DeleteDialog = ({
 					invalidateUsers();
 					break;
 			}
-			createToast(`${toTitleCase(type)} deleted successfully`, "success");
+			createToast(`${toTitleCase(type)} deleted`, "success");
 			onDeleted?.();
 		},
 		onError: console.error,
@@ -212,7 +212,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 
 			closeRef.current?.click();
 			queryClient.invalidateQueries({ queryKey: ["projects"] });
-			createToast("Project updated successfully", "success");
+			createToast("Project updated", "success");
 		} catch (err) {
 			setError(err instanceof Error ? err : new Error("Failed to update project"));
 		}
@@ -232,7 +232,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 				}
 			}}
 			title={project.displayName}
-			description="Edit the project's name or change its visibility."
+			description="Edit the project name, visibility, and display settings."
 			hideDescription
 			trigger={role === "admin" && trigger}
 			autoOverflow
@@ -257,11 +257,11 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 				</div>
 				<section className={styles.tabPanel} hidden={tab !== "general"}>
 					<label>
-						Project Name <small>(Used in the dashboard)</small>
+						Project name <small>(used in the dashboard)</small>
 						<input required name="displayName" type="text" defaultValue={project.displayName} autoComplete="off" />
 					</label>
 					<Tags
-						labelText="Associated Entities"
+						labelText="Associated entities"
 						selected={selectedEntities}
 						suggestions={entityTags}
 						onAdd={(tag) => setSelectedEntities((rest) => [...rest, tag])}
@@ -271,15 +271,15 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 					<label>
 						{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
 						<input type="checkbox" role="switch" name="isPublic" defaultChecked={project.public} />
-						Make Public <br />
+						Make public <br />
 						<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
 					</label>
 				</section>
 				{projectSettings && (
 					<section className={styles.tabPanel} hidden={tab !== "display"}>
 						<p>
-							Auto hides metrics or dimensions when project data is incomplete. Use Show anyway only when partial
-							results are acceptable.
+							Auto hides metrics or dimensions when project data is incomplete. Use Show anyway only if partial results
+							are acceptable.
 						</p>
 						<h3>Metrics</h3>
 						{metrics.map((metric) => (
@@ -318,7 +318,7 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Save Changes</button>
+					<button type="submit">Save changes</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>
@@ -340,7 +340,7 @@ export const CreateProject = () => {
 		mutationFn: api["/api/dashboard/project/{project_id}"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
-			createToast("Project created successfully", "success");
+			createToast("Project created", "success");
 			invalidateProjects();
 		},
 		onError: console.error,
@@ -366,8 +366,7 @@ export const CreateProject = () => {
 		<Dialog
 			onOpenChange={() => reset()}
 			title="Create a new project"
-			description="Project's are a collection of entities that you want to track and are used to group data from different
-					sources together."
+			description="Projects group one or more entities for reporting and access control."
 			trigger={
 				role === "admin" && (
 					<button type="button" className={cls("contrast", styles.new)}>
@@ -378,7 +377,7 @@ export const CreateProject = () => {
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
-					Project ID <small>(This cannot be changed later)</small>
+					Project ID <small>(cannot be changed later)</small>
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -389,13 +388,13 @@ export const CreateProject = () => {
 					/>
 				</label>
 				<label>
-					Project Name <small>(Used in the dashboard)</small>
+					Project name <small>(used in the dashboard)</small>
 					<input required name="displayName" type="text" placeholder="My Project" autoComplete="off" />
 				</label>
 				<label>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
 					<input type="checkbox" role="switch" name="isPublic" />
-					Make Public
+					Make public
 					<br />
 					<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
 				</label>
@@ -405,7 +404,7 @@ export const CreateProject = () => {
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Create Project</button>
+					<button type="submit">Create project</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>
@@ -479,7 +478,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 			}
 
 			closeRef.current?.click();
-			createToast("Entity updated successfully", "success");
+			createToast("Entity updated", "success");
 			invalidateEntities();
 		} catch (err) {
 			setError(err instanceof Error ? err : new Error("Failed to update entity"));
@@ -540,11 +539,11 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 
 				<section className={styles.tabPanel} hidden={tab !== "general"}>
 					<label>
-						Entity Name <small>(Used in the dashboard)</small>
+						Entity name <small>(used in the dashboard)</small>
 						<input required name="displayName" type="text" defaultValue={entity.displayName} autoComplete="off" />
 					</label>
 					<Tags
-						labelText="Associated Projects"
+						labelText="Associated projects"
 						selected={selectedProjects}
 						suggestions={projectTags}
 						onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
@@ -581,7 +580,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 									<option value="true">Track</option>
 									<option value="false">Do not track</option>
 								</select>
-								<small>Required for bounce rate, time on site, entry URL, and exit URL.</small>
+								<small>Required for bounce rate, time on site, entry page, and exit page.</small>
 							</label>
 							<label>
 								UTM parameters
@@ -603,7 +602,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 							<label htmlFor="entityTrackGeo">
 								Geolocation detail
 								<GeoSelect id="entityTrackGeo" value={trackGeo} onChange={setTrackGeo} allowInherit />
-								<small>Choose how much location data is stored for this entity.</small>
+								<small>Choose how much location data to store for this entity.</small>
 							</label>
 							<fieldset>
 								<div className="grid">
@@ -632,7 +631,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 										</select>
 									</label>
 								</div>
-								<small>Automatically prune older event data after the selected period.</small>
+								<small>Automatically delete event data older than the selected period.</small>
 							</fieldset>
 						</section>
 
@@ -650,7 +649,7 @@ export const EditEntity = ({ entity, trigger }: { entity: EntityResponse; trigge
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Save Changes</button>
+					<button type="submit">Save changes</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>
@@ -671,7 +670,7 @@ export const CreateEntity = () => {
 		mutationFn: api["/api/dashboard/entity"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
-			createToast("Entity created successfully", "success");
+			createToast("Entity created", "success");
 			invalidateEntities();
 		},
 		onError: console.error,
@@ -693,7 +692,7 @@ export const CreateEntity = () => {
 		<Dialog
 			onOpenChange={() => reset()}
 			title="Create a new entity"
-			description="Entities are individual clients or services that you want to track, like distinct websites or mobile apps. The entity id is used in the tracking snippet to identify the source of the data."
+			description="Entities are individual websites, apps, or services that send events. The entity ID is used in the tracking snippet."
 			trigger={
 				role === "admin" && (
 					<button type="button" className={cls("contrast", styles.new)}>
@@ -704,7 +703,7 @@ export const CreateEntity = () => {
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
-					Entity ID <small>(This cannot be changed later)</small>
+					Entity ID <small>(cannot be changed later)</small>
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -715,11 +714,11 @@ export const CreateEntity = () => {
 					/>
 				</label>
 				<label>
-					Entity Name <small>(Used in the dashboard)</small>
+					Entity name <small>(used in the dashboard)</small>
 					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
 				</label>
 				<Tags
-					labelText="Add to Projects"
+					labelText="Add to projects"
 					selected={selectedProjects}
 					suggestions={projectTags}
 					onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
@@ -730,7 +729,7 @@ export const CreateEntity = () => {
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Create Entity</button>
+					<button type="submit">Create entity</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>
@@ -752,7 +751,7 @@ export const EditPassword = ({ user, trigger }: { user: UserResponse; trigger: R
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/user/{username}/password"].put,
 		onSuccess: () => {
-			createToast("Password updated successfully", "success");
+			createToast("Password updated", "success");
 			closeRef?.current?.click();
 		},
 		onError: console.error,
@@ -777,25 +776,25 @@ export const EditPassword = ({ user, trigger }: { user: UserResponse; trigger: R
 	return (
 		<Dialog
 			onOpenChange={() => reset()}
-			title={`Change Password: ${user.username}`}
+			title={`Change password: ${user.username}`}
 			description="Enter a new password for the user."
 			hideDescription
 			trigger={role === "admin" && trigger}
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
-					New Password
+					New password
 					<input minLength={8} required name="password" type="password" autoComplete="new-password" />
 				</label>
 				<label>
-					Confirm New Password
+					Confirm new password
 					<input required name="confirm" type="password" autoComplete="new-password" ref={confirmPasswordRef} />
 				</label>
 				<div className="grid">
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Change Password</button>
+					<button type="submit">Change password</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>
@@ -820,7 +819,7 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 		mutationFn: api["/api/dashboard/user/{username}"].put,
 		onSuccess: () => {
 			closeRef?.current?.click();
-			createToast("User updated successfully", "success");
+			createToast("User updated", "success");
 			invalidateUsers();
 		},
 		onError: console.error,
@@ -856,7 +855,7 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 	return (
 		<Dialog
 			onOpenChange={() => reset()}
-			title={`Edit User: ${user.username}`}
+			title={`Edit user: ${user.username}`}
 			description="Edit the user's role."
 			hideDescription
 			trigger={trigger}
@@ -873,7 +872,7 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 				<label>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
 					<input name="admin" type="checkbox" role="switch" defaultChecked={user.role === "admin"} />
-					Enable Administrator Access
+					Enable administrator access
 					<br />
 					<small>Administrators can edit and create projects, entities, and users.</small>
 				</label>
@@ -883,7 +882,7 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Save Changes</button>
+					<button type="submit">Save changes</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>
@@ -905,7 +904,7 @@ export const CreateUser = () => {
 		mutationFn: api["/api/dashboard/user"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
-			createToast("User created successfully", "success");
+			createToast("User created", "success");
 			invalidateUsers();
 		},
 		onError: console.error,
@@ -927,7 +926,7 @@ export const CreateUser = () => {
 	return (
 		<Dialog
 			title="Create a new user"
-			description="Non-admin users can only view data of projects they are members of, and cannot create or edit projects, entities, or users."
+			description="Non-admin users can only view projects they belong to. They cannot create or edit projects, entities, or users."
 			trigger={
 				role === "admin" && (
 					<button type="button" className={cls("contrast", styles.new)}>
@@ -938,7 +937,7 @@ export const CreateUser = () => {
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
-					Username <small>(This cannot be changed later)</small>
+					Username <small>(cannot be changed later)</small>
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-]{1,20}$"
@@ -954,8 +953,8 @@ export const CreateUser = () => {
 				</label>
 				<label>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
-					<input name="publish" type="checkbox" role="switch" />
-					Enable Administrator Access
+					<input name="admin" type="checkbox" role="switch" />
+					Enable administrator access
 					<br />
 					<small>Administrators can edit and create projects, entities, and users.</small>
 				</label>
@@ -964,7 +963,7 @@ export const CreateUser = () => {
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Create User</button>
+					<button type="submit">Create user</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>

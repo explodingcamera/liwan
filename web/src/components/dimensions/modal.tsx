@@ -22,8 +22,8 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 
 	return (
 		<Dialog
-			title={`${dimensionNames[dimension]} - ${metricNames[query.metric]}`}
-			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${metricNames[query.metric]}`}
+			title={`${dimensionNames[dimension]} by ${metricNames[query.metric]}`}
+			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${metricNames[query.metric]}.`}
 			hideTitle
 			hideDescription
 			showClose
@@ -43,7 +43,7 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 				</div>
 				<input
 					type="search"
-					placeholder="Search..."
+					placeholder="Search"
 					value={filter}
 					onChange={(e) => setFilter(e.target.value)}
 					className={styles.search}
