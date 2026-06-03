@@ -131,7 +131,8 @@ impl LiwanSettings {
         Ok(())
     }
 
-    fn reload(&self) -> Result<()> {
+    /// Reload collection settings from SQLite into the in-memory cache
+    pub fn reload(&self) -> Result<()> {
         let cache = SettingsCache::load(&self.pool)?;
         *self.cache.write().expect("collection settings cache poisoned") = cache;
         Ok(())

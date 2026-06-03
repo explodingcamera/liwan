@@ -71,6 +71,7 @@ impl LiwanEntities {
     pub fn delete(&self, id: &str) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
+        tx.execute("delete from entity_settings where entity_id = ?", rusqlite::params![id])?;
         tx.execute("delete from entities where id = ?", rusqlite::params![id])?;
         tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![id])?;
         tx.commit()?;

@@ -13,6 +13,7 @@ use tokio::task::spawn_blocking;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 use crate::{
+    PASSWORD_MIN_LENGTH,
     app::models::UserRole,
     utils::hash::session_token,
     web::{
@@ -70,6 +71,10 @@ async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> Api
 
     if token != Some(params.token) {
         http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
+    }
+
+    if params.password.len() < PASSWORD_MIN_LENGTH {
+        http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
     }
 
     app.users
