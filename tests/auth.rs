@@ -10,10 +10,10 @@ async fn test_login() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "test", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
 
     // login
-    let login = json!({ "username": "test", "password": "test" });
+    let login = json!({ "username": "test", "password": "testtesttesttest" });
     let res = client.post("/api/dashboard/auth/login", login).await;
 
     res.assert_status_success();
@@ -55,27 +55,27 @@ async fn test_setup() -> Result<()> {
     let token = app.onboarding.token().unwrap().expect("onboarding should exist");
 
     // Invalid token should return 401
-    let setup = json!({ "token": "invalid_token", "username": "admin2", "password": "admin2" });
+    let setup = json!({ "token": "invalid_token", "username": "admin2", "password": "adminadminadmin" });
     let res = client.post("/api/dashboard/auth/setup", setup).await;
     res.assert_status_unauthorized();
 
     // Valid token should return 200
-    let setup = json!({ "token": token, "username": "admin", "password": "admin" });
+    let setup = json!({ "token": token, "username": "admin", "password": "adminadminadmin" });
     let res = client.post("/api/dashboard/auth/setup", setup).await;
     res.assert_status_success();
 
     // Check that the user is created
-    let login = json!({ "username": "admin", "password": "admin" });
+    let login = json!({ "username": "admin", "password": "adminadminadmin" });
     let res = client.post("/api/dashboard/auth/login", login).await;
     res.assert_status_success();
 
     // Check that the onboarding is cleared
     assert_eq!(app.onboarding.token().unwrap(), None, "onboarding should be cleared");
-    let setup = json!({ "token": token, "username": "admin", "password": "admin" });
+    let setup = json!({ "token": token, "username": "admin", "password": "adminadminadmin" });
     let res = client.post("/api/dashboard/auth/setup", setup).await;
     res.assert_status_unauthorized();
 
-    let setup = json!({ "token": token, "username": "admin2", "password": "admin2" });
+    let setup = json!({ "token": token, "username": "admin2", "password": "adminadminadmin2" });
     let res = client.post("/api/dashboard/auth/setup", setup).await;
     res.assert_status_unauthorized();
 
@@ -88,10 +88,10 @@ async fn expired_session() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "test", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
 
     // login
-    let login = json!({ "username": "test", "password": "test" });
+    let login = json!({ "username": "test", "password": "testtesttesttest" });
     let res = client.post("/api/dashboard/auth/login", login).await;
     res.assert_status_success();
     let cookies = common::cookies(&res);
@@ -137,7 +137,7 @@ async fn private_projects() -> Result<()> {
     let res = client.get("/api/dashboard/projects").await;
     res.assert_json(&json!({"projects": []}));
 
-    app.users.create("test", "test", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
     app.users.create("test2", "test", UserRole::User, &["private-project"])?;
 
     let login1 = common::login(&client, "test", "test").await;

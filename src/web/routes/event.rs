@@ -67,15 +67,15 @@ impl EventRequest {
             anyhow::bail!("name cannot be longer than 255 characters");
         }
 
-        if self.screen_width.as_deref().map_or(false, |w| w.len() > 20) {
+        if self.screen_width.as_deref().is_some_and(|w| w.len() > 20) {
             anyhow::bail!("screen_width cannot be longer than 20 characters");
         }
 
-        if self.orientation.as_deref().map_or(false, |o| o.len() > 20) {
+        if self.orientation.as_deref().is_some_and(|o| o.len() > 20) {
             anyhow::bail!("orientation cannot be longer than 20 characters");
         }
 
-        if self.referrer.as_deref().map_or(false, |r| r.len() > 256) {
+        if self.referrer.as_deref().is_some_and(|r| r.len() > 256) {
             anyhow::bail!("referrer cannot be longer than 256 characters");
         }
 
