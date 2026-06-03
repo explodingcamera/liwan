@@ -50,6 +50,43 @@ struct EventRequest {
     orientation: Option<String>,
 }
 
+impl EventRequest {
+    fn validate(&self) -> Result<()> {
+        if self.entity_id.trim().is_empty() {
+            anyhow::bail!("entity_id cannot be empty");
+        }
+        if self.name.trim().is_empty() {
+            anyhow::bail!("name cannot be empty");
+        }
+
+        if self.entity_id.len() > 255 {
+            anyhow::bail!("entity_id cannot be longer than 255 characters");
+        }
+
+        if self.name.len() > 255 {
+            anyhow::bail!("name cannot be longer than 255 characters");
+        }
+
+        if self.screen_width.as_deref().map_or(false, |w| w.len() > 20) {
+            anyhow::bail!("screen_width cannot be longer than 20 characters");
+        }
+
+        if self.orientation.as_deref().map_or(false, |o| o.len() > 20) {
+            anyhow::bail!("orientation cannot be longer than 20 characters");
+        }
+
+        if self.referrer.as_deref().map_or(false, |r| r.len() > 256) {
+            anyhow::bail!("referrer cannot be longer than 256 characters");
+        }
+
+        if self.url.len() > 2048 {
+            anyhow::bail!("url cannot be longer than 2048 characters");
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Utm {
     source: Option<String>,
@@ -64,7 +101,7 @@ fn extract_query(url: &mut Url, keys: &[&str]) -> Option<String> {
         .iter()
         .find_map(|key| url.query_pairs().find(|(name, _)| name == *key).map(|(_, value)| value.into_owned()));
 
-    if value.is_some() {
+    if let Some(value) = &value {
         let filtered = url
             .query_pairs()
             .filter(|(name, _)| !keys.contains(&name.as_ref()))
@@ -78,6 +115,14 @@ fn extract_query(url: &mut Url, keys: &[&str]) -> Option<String> {
         if !filtered.is_empty() {
             let mut pairs = url.query_pairs_mut();
             pairs.extend_pairs(filtered.iter().map(|(name, value)| (name.as_str(), value.as_str())));
+        }
+
+        if value.trim().is_empty() {
+            return None;
+        }
+
+        if value.len() > 255 {
+            return None;
         }
     }
 
@@ -106,6 +151,7 @@ async fn event_handler(
     let url = Url::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
     let app = state.app.clone();
     let events = state.events.clone();
+    event.validate().context("invalid event").http_err("invalid event", StatusCode::BAD_REQUEST)?;
 
     // run the event processing in the background
     let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, user_agent))

@@ -11,11 +11,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::models::{
-        CollectionSettings, Entity, EntityCollectionSettings, Project, ProjectDisplaySettings,
-        ResolvedCollectionSettings, UserRole,
+    PASSWORD_MIN_LENGTH,
+    app::{
+        models::{
+            CollectionSettings, Entity, EntityCollectionSettings, Project, ProjectDisplaySettings,
+            ResolvedCollectionSettings, UserRole,
+        },
+        reports::{Dimension, Metric},
     },
-    app::reports::{Dimension, Metric},
     utils::validate::can_access_project,
     web::{
         RouterState,
@@ -267,14 +270,18 @@ async fn update_user_password(
     app: State<RouterState>,
     Path(username): Path<String>,
     Auth(session_user): Auth,
-    password: Json<UpdatePasswordRequest>,
+    params: Json<UpdatePasswordRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if session_user.role != UserRole::Admin || username != session_user.username {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
+    if params.password.len() < PASSWORD_MIN_LENGTH {
+        http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
+    }
+
     app.users
-        .update_password(&username, &password.password)
+        .update_password(&username, &params.password)
         .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
@@ -301,14 +308,18 @@ async fn remove_user(
 async fn create_user(
     app: State<RouterState>,
     Auth(session_user): Auth,
-    user: Json<CreateUserRequest>,
+    params: Json<CreateUserRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
     if session_user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
+    if params.password.len() < PASSWORD_MIN_LENGTH {
+        http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
+    }
+
     let app = app.app.clone();
-    tokio::task::spawn_blocking(move || app.users.create(&user.username, &user.password, user.role, &[]))
+    tokio::task::spawn_blocking(move || app.users.create(&params.username, &params.password, params.role, &[]))
         .await
         .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -646,6 +657,7 @@ async fn entity_delete_handler(
     }
 
     app.entities.delete(&entity_id).http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+    app.settings.reload().http_err("Failed to reload collection settings", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
 }

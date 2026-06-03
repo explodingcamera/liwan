@@ -27,12 +27,12 @@ create table entity_settings (
     history_mode text not null default 'inherit',
     history_days integer,
     ingest_drop_rules_json text not null default '[]',
-    foreign key (entity_id) references entities(id) on delete cascade
+    foreign key (entity_id) references entities(id)
 );
 
 create table project_settings (
     project_id text primary key not null,
     metric_display_overrides_json text not null default '{}',
     dimension_display_overrides_json text not null default '{}',
-    foreign key (project_id) references projects(id) on delete cascade
+    foreign key (project_id) references projects(id)
 );
