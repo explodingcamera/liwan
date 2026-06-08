@@ -31,8 +31,8 @@
 		"fuzzysort": "^3.1.0",
 		"little-date": "^1.2.1",
 		"lucide-react": "1.17.0",
-		"react": "19.2.6",
-		"react-dom": "19.2.6",
+		"react": "19.2.7",
+		"react-dom": "19.2.7",
 		"topojson-client": "^3.1.0"
 	},
 	"devDependencies": {
@@ -47,11 +47,11 @@
 		"@types/d3-shape": "^3.1.8",
 		"@types/d3-transition": "^3.0.9",
 		"@types/d3-zoom": "^3.0.8",
-		"@types/react": "^19.2.16",
+		"@types/react": "^19.2.17",
 		"@types/react-dom": "^19.2.3",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"astro": "6.4.2",
+		"astro": "6.4.4",
 		"babel-plugin-react-compiler": "^1.0.0",
 		"rollup-plugin-license": "^3.7.1",
 		"typescript": "^6.0.3"
