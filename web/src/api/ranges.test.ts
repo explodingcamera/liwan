@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { differenceInCalendarDays, endOfDay, startOfDay, subDays } from "date-fns";
+import { differenceInCalendarDays, endOfDay, startOfDay, startOfMonth, subDays, subMonths } from "date-fns";
 
 import { DateRange, ranges } from "./ranges";
 
@@ -25,6 +25,13 @@ describe("DateRange", () => {
 		const serialized = range.serialize();
 		const deserialized = DateRange.deserialize(serialized);
 		expect(deserialized.value).toEqual({ start, end });
+	});
+
+	it("should persist named ranges dynamically but cache by resolved dates", () => {
+		const range = new DateRange("last30Days");
+
+		expect(range.serialize()).toBe("last30Days");
+		expect(range.cacheKey()).toContain("last30Days:");
 	});
 
 	it("should format well-known ranges", () => {
@@ -81,6 +88,21 @@ describe("DateRange", () => {
 
 		expect(differenceInCalendarDays(end, start) + 1).toBe(7);
 		expect(new DateRange("last7DaysHourly").getGraphInterval()).toBe("hour");
+	});
+
+	it("should keep last12Months to the current month and never future months", () => {
+		const now = new Date();
+		const { start, end } = ranges.last12Months().range;
+
+		expect(start).toEqual(startOfMonth(subMonths(now, 11)));
+		expect(end).toEqual(endOfDay(now));
+	});
+
+	it("should include years on axis and tooltip labels for ranges spanning calendar years", () => {
+		const range = new DateRange({ start: new Date(2024, 11, 30), end: new Date(2025, 0, 2) });
+
+		expect(range.getAxisRange()).toBe("day+year");
+		expect(range.getTooltipRange()).toBe("day+hour");
 	});
 
 	it("should start weekToDate on monday and end today", () => {

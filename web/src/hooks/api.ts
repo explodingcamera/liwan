@@ -123,9 +123,11 @@ export const useDimension = ({
 
 	return useMemo(() => {
 		const biggest = data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0;
-		const order = data?.data?.sort((a, b) => b.value - a.value).map((d) => d.dimensionValue);
+		const order = data?.data
+			?.toSorted((a, b) => (metric === "bounce_rate" ? a.value - b.value : b.value - a.value))
+			.map((d) => d.dimensionValue);
 		return { data: data?.data, biggest, order, isLoading, error };
-	}, [data, isLoading, error]);
+	}, [data, isLoading, error, metric]);
 };
 export const useProjectGraph = ({
 	projectId,

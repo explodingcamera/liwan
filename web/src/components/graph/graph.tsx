@@ -8,7 +8,7 @@ import { select } from "d3-selection";
 import { area, line } from "d3-shape";
 import "d3-transition";
 
-import { addMonths } from "date-fns";
+import { addMonths, differenceInHours, isSameYear } from "date-fns";
 
 import type { DateRange } from "../../api/ranges";
 import { debounce, formatMetricVal, formatMetricValEvenly } from "../../utils";
@@ -16,13 +16,16 @@ import type { DataPoint, GraphState } from ".";
 import { axisBottom, axisLeft } from "./axis";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
+type DateDisplayRange = GraphRange | "day+hour" | "day+hour+year" | "day+year";
 
 const keepMeridiemTogether = (value: string) => value.replace(/(\d)\s([AP]M)\b/g, "$1\u00A0$2");
 
-const formatDate = (date: Date, range: GraphRange | "day+hour" | "day+year" = "day") => {
+const formatShortYear = (date: Date) => `'${String(date.getFullYear()).slice(-2)}`;
+
+const formatDate = (date: Date, range: DateDisplayRange = "day") => {
 	switch (range) {
 		case "day+year":
-			return Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric" }).format(date);
+			return `${Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date)} ${formatShortYear(date)}`;
 		case "year":
 			return Intl.DateTimeFormat("en-US", { year: "numeric" }).format(date);
 		case "month":
@@ -33,9 +36,31 @@ const formatDate = (date: Date, range: GraphRange | "day+hour" | "day+year" = "d
 			return keepMeridiemTogether(
 				Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric" }).format(date),
 			);
+		case "day+hour+year":
+			return keepMeridiemTogether(
+				`${Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric" }).format(
+					date,
+				)} ${formatShortYear(date)}`,
+			);
 		case "hour":
 			return keepMeridiemTogether(Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "numeric" }).format(date));
 	}
+};
+
+const getAxisDateRange = (start: Date, end: Date): "hour" | "day" | "day+year" => {
+	if (differenceInHours(end, start) <= 24) return "hour";
+	if (!isSameYear(start, end)) return "day+year";
+	return "day";
+};
+
+const getTooltipDateRange = (
+	start: Date,
+	end: Date,
+	range: DateRange,
+): "hour" | "day+hour" | "day+hour+year" | "day" | "day+year" => {
+	if (range.getGraphInterval() === "day") return getAxisDateRange(start, end) === "day+year" ? "day+year" : "day";
+	if (range.value.start.toDateString() === range.value.end.toDateString()) return "hour";
+	return isSameYear(start, end) ? "day+hour" : "day+hour+year";
 };
 
 const getIncompleteBucketEnd = (data: DataPoint[], range: DateRange) => {
@@ -95,8 +120,6 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 		}
 	}, []);
 
-	const axisRange = range.getAxisRange();
-
 	const firstRender = useRef(true);
 
 	const updateGraph = useCallback(() => {
@@ -106,6 +129,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 
 		const [minX] = extent(state.data, (d) => d.x).map((d) => d || new Date());
 		const maxX = domainMaxX;
+		const axisRange = getAxisDateRange(minX, maxX);
 		const [_minY, maxY] = extent(state.data, (d) => d.y).map((d) => d || 0);
 
 		let xCount = Math.min(state.data.length, 8);
@@ -238,7 +262,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 
 			firstRender.current = false;
 		});
-	}, [dimensions, state, axisRange, range]);
+	}, [dimensions, state, range]);
 
 	useEffect(() => {
 		if (!svgRef.current || !dimensions) return;
@@ -294,7 +318,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 			const value = point.y;
 
 			const date = new Date(point.x);
-			const dateRange = range.getTooltipRange();
+			const dateRange = getTooltipDateRange(minX, maxX, range);
 
 			const tooltipDate = formatDate(date, dateRange);
 			const tooltipValue = formatMetricVal(value, state.metric);

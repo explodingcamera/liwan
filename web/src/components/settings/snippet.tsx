@@ -19,7 +19,7 @@ export const Snippet = ({ entityId }: { entityId: string }) => {
 			</code>
 			<button
 				type="button"
-				className="secondary outline"
+				className={`secondary outline ${styles.copyButton}`}
 				aria-label="Copy snippet"
 				onClick={() =>
 					navigator.clipboard

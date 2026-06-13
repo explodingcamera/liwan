@@ -8,7 +8,6 @@ import {
 	differenceInCalendarDays,
 	differenceInHours,
 	differenceInMonths,
-	differenceInYears,
 	endOfDay,
 	endOfMonth,
 	endOfWeek,
@@ -63,7 +62,8 @@ export class DateRange {
 	}
 
 	cacheKey(): string {
-		return this.serialize();
+		const { start, end } = this.value;
+		return `${this.serialize()}:${Number(start)}:${Number(end)}`;
 	}
 
 	serialize(): string {
@@ -101,6 +101,14 @@ export class DateRange {
 
 	#isCalendarDayRange(): boolean {
 		return isEqual(startOfDay(this.value.start), this.value.start) && isEqual(endOfDay(this.value.end), this.value.end);
+	}
+
+	#isRollingYearRange(): boolean {
+		return (
+			[11, 12].includes(differenceInMonths(this.value.end, this.value.start)) &&
+			isEqual(startOfMonth(this.value.start), this.value.start) &&
+			isEqual(endOfDay(this.value.end), this.value.end)
+		);
 	}
 
 	#shiftByCalendarDays(direction: -1 | 1): DateRange {
@@ -156,12 +164,12 @@ export class DateRange {
 	getAxisRange(): "hour" | "day" | "day+year" {
 		const { end } = this.getBucketBounds();
 		if (differenceInHours(end, this.value.start) <= 24) return "hour";
-		if (differenceInYears(this.value.end, addHours(this.value.start, 1)) > 1) return "day+year";
+		if (!isSameYear(this.value.start, this.value.end)) return "day+year";
 		return "day";
 	}
 
-	getTooltipRange(): "hour" | "day+hour" | "day" {
-		if (this.getGraphInterval() === "day") return "day";
+	getTooltipRange(): "hour" | "day+hour" | "day" | "day+year" {
+		if (this.getGraphInterval() === "day") return this.getAxisRange() === "day+year" ? "day+year" : "day";
 		const dayCount = this.#getDayCount();
 		if (dayCount === 1) return "hour";
 		return "day+hour";
@@ -205,7 +213,7 @@ export class DateRange {
 			return new DateRange({ start, end });
 		}
 
-		if (differenceInMonths(this.value.end, this.value.start) === 12) {
+		if (this.#isRollingYearRange()) {
 			const start = subYears(this.value.start, 1);
 			const end = subYears(this.value.end, 1);
 			return new DateRange({ start, end });
@@ -249,7 +257,7 @@ export class DateRange {
 			return new DateRange({ start, end });
 		}
 
-		if (differenceInMonths(this.value.end, this.value.start) === 12) {
+		if (this.#isRollingYearRange()) {
 			const start = addYears(this.value.start, 1);
 			const end = addYears(this.value.end, 1);
 			return new DateRange({ start, end });
@@ -296,8 +304,9 @@ export const ranges: Record<RangeName, () => { range: { start: Date; end: Date }
 	last7Days: () => ({ range: lastXDays(7) }),
 	last30Days: () => ({ range: lastXDays(30) }),
 	last12Months: () => {
-		const start = startOfMonth(subYears(new Date(), 1));
-		const end = endOfMonth(new Date());
+		const now = new Date();
+		const start = startOfMonth(subMonths(now, 11));
+		const end = endOfDay(now);
 		return { range: { start, end } };
 	},
 	weekToDate: () => {

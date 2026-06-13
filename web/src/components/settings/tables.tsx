@@ -9,6 +9,7 @@ import { useEntities, useMe, useProjects, useUsers } from "../../hooks/api";
 import { cls, getUsername } from "../../utils";
 import type { Column } from "../table";
 import { Table } from "../table";
+import { createToast } from "../toast";
 import { DeleteDialog, EditPassword, EditUser } from "./dialogs";
 
 type DropdownOptions = Record<string, ((close: () => void) => ReactElement) | null>;
@@ -43,6 +44,21 @@ const SettingsLink = ({ href, label }: { href: string; label: string }) => {
 		</a>
 	);
 };
+
+const EntityId = ({ id }: { id: string }) => (
+	<button
+		type="button"
+		className={styles.entityId}
+		onClick={() =>
+			navigator.clipboard
+				.writeText(id)
+				.then(() => createToast("Entity ID copied to clipboard", "info"))
+				.catch(() => {})
+		}
+	>
+		{id}
+	</button>
+);
 
 export const ProjectsTable = () => {
 	const { projects, isLoading } = useProjects();
@@ -104,7 +120,7 @@ export const EntitiesTable = () => {
 			id: "id",
 			// icon: <WholeWordIcon size={18} />,
 			header: "ID",
-			render: (row) => <i>{row.id}</i>,
+			render: (row) => <EntityId id={row.id} />,
 			nowrap: true,
 		},
 		{

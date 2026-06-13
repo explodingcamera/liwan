@@ -58,3 +58,26 @@ details.edit summary + ul {
   color: var(--pico-color);
   text-decoration: none;
 }
+
+.entityId {
+  display: inline;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-style: normal;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.16em;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.entityId:hover {
+  background: transparent;
+  color: var(--pico-primary-hover);
+  box-shadow: none;
+}

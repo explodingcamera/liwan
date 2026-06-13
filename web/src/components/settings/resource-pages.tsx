@@ -1,6 +1,7 @@
 import styles from "./resource-pages.module.css";
 
 import { useEffect, useMemo, useState } from "react";
+import { navigate } from "astro:transitions/client";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 
@@ -15,7 +16,7 @@ import type {
 	ProjectDisplaySettings,
 	VisitorGroupMode,
 } from "../../constants";
-import { dimensionNames, dimensions, displayOverrides, metricNames, metrics } from "../../constants";
+import { dimensionNames, displayOverrides, metricNames, metrics } from "../../constants";
 import { invalidateEntities, invalidateProjects, useEntities, useProjects } from "../../hooks/api";
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
@@ -55,6 +56,16 @@ const displayLabels: Record<DisplayOverride, string> = {
 	show: "Always",
 	hide: "Hidden",
 };
+const displayDimensionGroups = [
+	{ label: "Pages", dimensions: ["url", "url_entry", "url_exit", "fqdn"] },
+	{
+		label: "Campaigns",
+		dimensions: ["referrer", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"],
+	},
+	{ label: "Geography", dimensions: ["country", "city"] },
+	{ label: "Technology", dimensions: ["platform", "browser"] },
+	{ label: "Device", dimensions: ["mobile", "screen_width", "orientation"] },
+] as const satisfies readonly { label: string; dimensions: readonly Dimension[] }[];
 const projectTabs = [
 	{ value: "general", label: "General" },
 	{ value: "display", label: "Display" },
@@ -254,9 +265,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 							id={project.id}
 							displayName={project.displayName}
 							type="project"
-							onDeleted={() => {
-								window.location.href = "/settings/projects";
-							}}
+							onDeleted={() => navigate("/settings/projects")}
 							trigger={
 								<button type="button" className={styles.deleteButton}>
 									Delete project
@@ -285,14 +294,21 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 								</div>
 							</SettingsFieldset>
 							<SettingsFieldset legend="Dimensions">
-								<div className={styles.displayGrid}>
-									{dimensions.map((dimension) => (
-										<DisplayOverrideSwitch
-											key={dimension}
-											label={dimensionNames[dimension]}
-											value={settings.dimensionDisplayOverrides[dimension] ?? "auto"}
-											onChange={(value) => updateDimensionDisplay(dimension, value)}
-										/>
+								<div className={styles.dimensionGroups}>
+									{displayDimensionGroups.map((group) => (
+										<section key={group.label} className={styles.dimensionGroup}>
+											<h3>{group.label}</h3>
+											<div>
+												{group.dimensions.map((dimension) => (
+													<DisplayOverrideSwitch
+														key={dimension}
+														label={dimensionNames[dimension]}
+														value={settings.dimensionDisplayOverrides[dimension] ?? "auto"}
+														onChange={(value) => updateDimensionDisplay(dimension, value)}
+													/>
+												))}
+											</div>
+										</section>
 									))}
 								</div>
 							</SettingsFieldset>

@@ -5,7 +5,7 @@ import { Accordion } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
 
 import { api, useQuery } from "../api";
-import type { DateRange } from "../api/ranges";
+import { DateRange } from "../api/ranges";
 import type { Metric, ProjectResponse } from "../constants";
 import { metricNames, metrics } from "../constants";
 import { useMe, useProjectGraph, useProjectStats } from "../hooks/api";
@@ -59,6 +59,10 @@ export const Projects = () => {
 	useEffect(() => {
 		if (activeMetric && activeMetric !== metric) setMetric(activeMetric);
 	}, [activeMetric, metric, setMetric]);
+
+	useEffect(() => {
+		if (range.variant === "allTime") setRange(new DateRange(range.value));
+	}, [range, setRange]);
 
 	if (isLoading) return null;
 	if (isError)

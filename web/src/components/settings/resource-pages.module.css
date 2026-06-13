@@ -117,19 +117,27 @@
   gap: 0;
 }
 
+.dimensionGroups {
+  display: grid;
+  gap: 0.75rem 1.25rem;
+}
+
+.dimensionGroup h3 {
+  margin: 0 0 0.2rem;
+  color: var(--pico-muted-color);
+  font-size: 0.88rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .displayRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.45rem 0;
-  border-top: 1px solid color-mix(in srgb, var(--pico-muted-border-color) 64%, transparent);
+  padding: 0.2rem 0;
   color: color-mix(in srgb, var(--pico-color) 84%, var(--pico-muted-color));
-}
-
-.displayRow:nth-child(1),
-.displayRow:nth-child(2) {
-  border-top: 0;
 }
 
 .displayRow > span {
@@ -140,18 +148,44 @@
 }
 
 .segmented {
-  display: inline-flex;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 0.02rem;
   margin-bottom: 0;
   padding: 0.12rem;
   border: 1px solid var(--pico-muted-border-color);
   border-radius: 999px;
   background: var(--pico-card-background-color);
+  overflow: hidden;
+}
+
+.segmented::before {
+  position: absolute;
+  top: 0.12rem;
+  bottom: 0.12rem;
+  left: 0.12rem;
+  width: calc((100% - 0.28rem) / 3);
+  border-radius: 999px;
+  background: var(--pico-primary-background);
+  content: "";
+  transition: transform 160ms ease;
+}
+
+.segmented:has(button:nth-child(2)[data-pressed])::before {
+  transform: translateX(100%);
+}
+
+.segmented:has(button:nth-child(3)[data-pressed])::before {
+  transform: translateX(200%);
 }
 
 .segmented button {
+  position: relative;
+  z-index: 1;
   width: auto;
   margin: 0;
-  padding: 0.25rem 0.52rem;
+  padding: 0.25rem 0.42rem;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -159,17 +193,27 @@
   font-size: 0.82rem;
   line-height: 1.2;
   box-shadow: none;
+  transition: color 160ms ease;
 }
 
 .segmented button:hover {
-  background: var(--pico-secondary-background);
+  background: transparent;
   color: var(--pico-color);
   box-shadow: none;
 }
 
-.segmented button[data-pressed] {
-  background: var(--pico-primary-background);
+.segmented button[data-pressed]:hover {
   color: var(--pico-primary-inverse);
+}
+
+.segmented button[data-pressed] {
+  color: var(--pico-primary-inverse);
+}
+
+@media (min-width: 1050px) {
+  .dimensionGroups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {

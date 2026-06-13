@@ -2,6 +2,7 @@ import styles from "./dialogs.module.css";
 
 import type { ReactElement } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { navigate } from "astro:transitions/client";
 
 import { api, queryClient, useMutation } from "../../api";
 import type {
@@ -334,10 +335,10 @@ export const CreateProject = () => {
 
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/project/{project_id}"].post,
-		onSuccess: () => {
-			closeRef?.current?.click();
+		onSuccess: (_res, variables) => {
 			createToast("Project created", "success");
 			invalidateProjects();
+			navigate(`/settings/projects/${variables.params.project_id}`);
 		},
 		onError: console.error,
 	});
@@ -663,24 +664,20 @@ export const CreateEntity = () => {
 	const { role } = useMe();
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/entity"].post,
-		onSuccess: () => {
-			closeRef?.current?.click();
+		onSuccess: (_res, variables) => {
 			createToast("Entity created", "success");
 			invalidateEntities();
+			navigate(`/settings/entities/${variables.json.id}`);
 		},
 		onError: console.error,
 	});
-
-	const { projects } = useProjects();
-	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
-	const [selectedProjects, setSelectedProjects] = useState<Tag[]>([]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
 		const { id, displayName } = Object.fromEntries(new FormData(form)) as { id: string; displayName: string };
-		mutate({ json: { id, displayName, projects: selectedProjects.map((tag) => tag.value as string) } });
+		mutate({ json: { id, displayName, projects: [] } });
 	};
 
 	return (
@@ -712,14 +709,6 @@ export const CreateEntity = () => {
 					Entity name <small>(used in the dashboard)</small>
 					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
 				</label>
-				<Tags
-					labelText="Add to projects"
-					selected={selectedProjects}
-					suggestions={projectTags}
-					onAdd={(tag) => setSelectedProjects((rest) => [...rest, tag])}
-					onDelete={(i) => setSelectedProjects(selectedProjects.filter((_, index) => index !== i))}
-					noOptionsText="No matching projects"
-				/>
 				<div className="grid">
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel

@@ -25,10 +25,23 @@
 }
 
 .entity {
+  display: inline;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-style: normal;
   font-weight: 900;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.16em;
+  box-shadow: none;
 }
 
-.snippet button {
+.copyButton {
   position: absolute;
   top: 0.45rem;
   right: 0.45rem;
