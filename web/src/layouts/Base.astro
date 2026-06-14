@@ -1,7 +1,7 @@
 ---
-import "@fontsource-variable/stack-sans-headline";
 import "../global.css";
 
+import { Font } from "astro:assets";
 import { ClientRouter } from "astro:transitions";
 
 import ThemeSwitcher from "../components/ThemeSwitcher.astro";
@@ -17,6 +17,7 @@ type Props = { title: string; hideFooter?: boolean; noSwitcher?: boolean };
     <meta name="robots" content="noindex" />
     <meta name="description" content="Liwan Web Analytics Dashboard" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <Font cssVariable="--font-stack-sans-headline" />
     <ClientRouter />
     <title>{Astro.props.title} | Liwan</title>
   </head>

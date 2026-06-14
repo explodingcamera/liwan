@@ -1,7 +1,7 @@
 import path from "node:path";
 import react from "@astrojs/react";
 import type { AstroIntegration } from "astro";
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 import license from "rollup-plugin-license";
 
 const dirname = path.dirname(new URL(import.meta.url).pathname);
@@ -38,6 +38,16 @@ function setPrerender(): AstroIntegration {
 
 // https://astro.build/config
 export default defineConfig({
+	fonts: [
+		{
+			provider: fontProviders.fontsource(),
+			name: "Stack Sans Headline",
+			cssVariable: "--font-stack-sans-headline",
+			weights: ["200 700"],
+			styles: ["normal"],
+			subsets: ["latin", "latin-ext"],
+		},
+	],
 	vite: {
 		server: { proxy },
 		preview: { proxy },

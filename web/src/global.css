@@ -18,7 +18,7 @@
   --pico-form-element-spacing-horizontal: 0.6rem;
 
   --pico-font-family:
-    "Stack Sans Headline Variable", system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial,
+    var(--font-stack-sans-headline), system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial,
     "Helvetica Neue", sans-serif, var(--pico-font-family-emoji);
   --pico-font-family-sans-serif: var(--pico-font-family);
   font-variant-numeric: tabular-nums;
