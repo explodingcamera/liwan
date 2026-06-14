@@ -73,7 +73,7 @@ export const ProjectsTable = () => {
 		{
 			id: "public",
 			header: "Visibility",
-			render: (row) => <>{row.public ? "Public" : "Private"}</>,
+			render: (row) => <>{row.public ? (row.unlisted ? "Unlisted" : "Public") : "Private"}</>,
 		},
 		{
 			id: "entities",

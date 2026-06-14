@@ -82,13 +82,14 @@ impl LiwanEntities {
     pub fn projects(&self, entity_id: &str) -> Result<Vec<models::Project>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
-            "select p.id, p.display_name, p.public, p.secret from projects p join project_entities pe on p.id = pe.project_id where pe.entity_id = ?",
+            "select p.id, p.display_name, p.public, p.unlisted, p.secret from projects p join project_entities pe on p.id = pe.project_id where pe.entity_id = ?",
         )?;
         let projects = stmt.query_map(rusqlite::params![entity_id], |row| {
             Ok(models::Project {
                 id: row.get("id")?,
                 display_name: row.get("display_name")?,
                 public: row.get("public")?,
+                unlisted: row.get("unlisted")?,
                 secret: row.get("secret")?,
             })
         })?;

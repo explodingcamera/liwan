@@ -23,6 +23,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Added global and per-entity collection settings for visitor grouping, geolocation detail, session metrics, UTM parameters, and data retention
 - Added ingest drop rules to discard matching events before they are stored
 - Added project display settings to show or hide metrics and dimensions per project
+- Added unlisted project visibility
 - Added a pruning tool to apply retention and collection settings to historical data
 
 ### Bug Fixes

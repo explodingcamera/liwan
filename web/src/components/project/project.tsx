@@ -1,6 +1,6 @@
 import styles from "./project.module.css";
 
-import { CircleIcon, LockIcon } from "lucide-react";
+import { CircleIcon, LockIcon, LockOpenIcon } from "lucide-react";
 
 import type { ProjectResponse, StatsResponse } from "../../constants";
 import { formatMetricVal } from "../../utils";
@@ -11,7 +11,7 @@ export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; proje
 		<h1 className={styles.statsHeader}>
 			<span>
 				<CardLink href={`/p/${project.id}`}>
-					{project.public ? null : <LockIcon size={16} />}
+					{project.public ? project.unlisted && <LockOpenIcon size={16} /> : <LockIcon size={16} />}
 					{project.displayName}
 				</CardLink>
 			</span>

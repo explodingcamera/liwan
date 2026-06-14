@@ -53,6 +53,12 @@ const entityRetentionValue = (retention: DataRetention) => {
 	return (entityRetentionValues as readonly string[]).includes(value) ? value : "365";
 };
 const title = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+type ProjectVisibility = "private" | "unlisted" | "public";
+const projectVisibility = (project: ProjectResponse): ProjectVisibility => {
+	if (!project.public) return "private";
+	return project.unlisted ? "unlisted" : "public";
+};
+const visibilityPublic = (visibility: ProjectVisibility) => visibility === "public" || visibility === "unlisted";
 
 export const DeleteDialog = ({
 	id,
@@ -183,16 +189,16 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
-		const { displayName, isPublic } = Object.fromEntries(new FormData(form)) as {
+		const { displayName, visibility } = Object.fromEntries(new FormData(form)) as {
 			displayName: string;
-			isPublic: string;
+			visibility: ProjectVisibility;
 		};
 
 		api["/api/dashboard/project/{project_id}"]
 			.put({
 				params: { project_id: project.id },
 				json: {
-					project: { displayName, public: isPublic === "on" },
+					project: { displayName, public: visibilityPublic(visibility), unlisted: visibility === "unlisted" },
 					entities: selectedEntities.map((tag) => tag.value as string),
 				},
 			})
@@ -266,10 +272,13 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 						noOptionsText="No matching entities"
 					/>
 					<label>
-						{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
-						<input type="checkbox" role="switch" name="isPublic" defaultChecked={project.public} />
-						Make public <br />
-						<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
+						Visibility
+						<select name="visibility" defaultValue={projectVisibility(project)}>
+							<option value="private">Private</option>
+							<option value="unlisted">Unlisted</option>
+							<option value="public">Public</option>
+						</select>
+						<small>Unlisted projects are public by direct link, but hidden from public project lists.</small>
 					</label>
 				</section>
 				{projectSettings && (
@@ -347,15 +356,15 @@ export const CreateProject = () => {
 		e.preventDefault();
 		e.stopPropagation();
 		const form = e.target as HTMLFormElement;
-		const { id, displayName, isPublic } = Object.fromEntries(new FormData(form)) as {
+		const { id, displayName, visibility } = Object.fromEntries(new FormData(form)) as {
 			id: string;
 			displayName: string;
-			isPublic: string;
+			visibility: ProjectVisibility;
 		};
 
 		mutate({
 			params: { project_id: id },
-			json: { displayName, public: isPublic === "on", entities: [] },
+			json: { displayName, public: visibilityPublic(visibility), unlisted: visibility === "unlisted", entities: [] },
 		});
 	};
 
@@ -389,11 +398,13 @@ export const CreateProject = () => {
 					<input required name="displayName" type="text" placeholder="My Project" autoComplete="off" />
 				</label>
 				<label>
-					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
-					<input type="checkbox" role="switch" name="isPublic" />
-					Make public
-					<br />
-					<small>Public projects can be viewed by anyone, even if they are not logged in.</small>
+					Visibility
+					<select name="visibility" defaultValue="private">
+						<option value="private">Private</option>
+						<option value="unlisted">Unlisted</option>
+						<option value="public">Public</option>
+					</select>
+					<small>Unlisted projects are public by direct link, but hidden from public project lists.</small>
 				</label>
 				<br />
 

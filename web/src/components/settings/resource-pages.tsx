@@ -14,6 +14,7 @@ import type {
 	GeoDetail,
 	Metric,
 	ProjectDisplaySettings,
+	ProjectResponse,
 	VisitorGroupMode,
 } from "../../constants";
 import { dimensionNames, displayOverrides, metricNames, metrics } from "../../constants";
@@ -28,6 +29,7 @@ import { Snippet } from "./snippet";
 
 type ProjectTab = "general" | "display";
 type EntityTab = "general" | "collection" | "filters";
+type ProjectVisibility = "private" | "unlisted" | "public";
 
 const retentionOptions = [
 	{ value: "inherit", label: "Inherit global" },
@@ -50,6 +52,11 @@ const getSettingsPathId = (prefix: string) => {
 	const path = window.location.pathname.replace(/\/$/, "");
 	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
 };
+const projectVisibility = (project: ProjectResponse): ProjectVisibility => {
+	if (!project.public) return "private";
+	return project.unlisted ? "unlisted" : "public";
+};
+const visibilityPublic = (visibility: ProjectVisibility) => visibility === "public" || visibility === "unlisted";
 
 const displayLabels: Record<DisplayOverride, string> = {
 	auto: "Auto",
@@ -122,7 +129,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 	const project = projects.find((project) => project.id === projectId);
 	const [tab, setTab] = useState<ProjectTab>("general");
 	const [displayName, setDisplayName] = useState("");
-	const [visibility, setVisibility] = useState<"private" | "public">("private");
+	const [visibility, setVisibility] = useState<ProjectVisibility>("private");
 	const [selectedEntities, setSelectedEntities] = useState<Tag[]>([]);
 	const [settings, setSettings] = useState<ProjectDisplaySettings>();
 	const [error, setError] = useState<string>();
@@ -136,7 +143,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 		if (!project) return;
 		const entities = project.entities.map((entity) => ({ value: entity.id, label: entity.displayName }));
 		setDisplayName(project.displayName);
-		setVisibility(project.public ? "public" : "private");
+		setVisibility(projectVisibility(project));
 		setSelectedEntities(entities);
 		api["/api/dashboard/project/{project_id}/settings"]
 			.get({ params: { project_id: project.id } })
@@ -145,13 +152,17 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 			.catch((err) => setError(err instanceof Error ? err.message : "Failed to load project settings"));
 	}, [project]);
 
-	const saveProject = (nextDisplayName: string, nextVisibility: "private" | "public", nextEntities: Tag[]) => {
+	const saveProject = (nextDisplayName: string, nextVisibility: ProjectVisibility, nextEntities: Tag[]) => {
 		if (!project) return;
 		api["/api/dashboard/project/{project_id}"]
 			.put({
 				params: { project_id: project.id },
 				json: {
-					project: { displayName: nextDisplayName, public: nextVisibility === "public" },
+					project: {
+						displayName: nextDisplayName,
+						public: visibilityPublic(nextVisibility),
+						unlisted: nextVisibility === "unlisted",
+					},
 					entities: nextEntities.map((tag) => String(tag.value)),
 				},
 			})
@@ -228,19 +239,20 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 					</SettingsField>
 					<SettingsField
 						label="Visibility"
-						description="Public projects can be viewed by anyone, even if they are not logged in."
+						description="Unlisted projects can be viewed by direct link, but are hidden from public project lists."
 						name="visibility"
 					>
 						<select
 							name="visibility"
 							value={visibility}
 							onChange={(event) => {
-								const next = event.currentTarget.value === "public" ? "public" : "private";
+								const next = event.currentTarget.value as ProjectVisibility;
 								setVisibility(next);
 								saveProject(displayName, next, selectedEntities);
 							}}
 						>
 							<option value="private">Private</option>
+							<option value="unlisted">Unlisted</option>
 							<option value="public">Public</option>
 						</select>
 					</SettingsField>

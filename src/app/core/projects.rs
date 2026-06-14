@@ -51,29 +51,30 @@ impl LiwanProjects {
     /// Get a project by ID
     pub fn get(&self, id: &str) -> Result<models::Project> {
         let conn = self.pool.get()?;
-        let project = conn.prepare("select id, display_name, public, secret from projects where id = ?")?.query_row(
-            rusqlite::params![id],
-            |row| {
+        let project = conn
+            .prepare("select id, display_name, public, unlisted, secret from projects where id = ?")?
+            .query_row(rusqlite::params![id], |row| {
                 Ok(models::Project {
                     id: row.get("id")?,
                     display_name: row.get("display_name")?,
                     public: row.get("public")?,
+                    unlisted: row.get("unlisted")?,
                     secret: row.get("secret")?,
                 })
-            },
-        )?;
+            })?;
         Ok(project)
     }
 
     /// Get all projects
     pub fn all(&self) -> Result<Vec<models::Project>> {
         let conn = self.pool.get()?;
-        let mut stmt = conn.prepare("select id, display_name, public, secret from projects")?;
+        let mut stmt = conn.prepare("select id, display_name, public, unlisted, secret from projects")?;
         let projects = stmt.query_map([], |row| {
             Ok(models::Project {
                 id: row.get("id")?,
                 display_name: row.get("display_name")?,
                 public: row.get("public")?,
+                unlisted: row.get("unlisted")?,
                 secret: row.get("secret")?,
             })
         })?;
@@ -89,11 +90,12 @@ impl LiwanProjects {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute(
-            "insert into projects (id, display_name, public, secret) values (:id, :display_name, :public, :secret)",
+            "insert into projects (id, display_name, public, unlisted, secret) values (:id, :display_name, :public, :unlisted, :secret)",
             rusqlite::named_params! {
                 ":id": project.id,
                 ":display_name": project.display_name,
                 ":public": project.public,
+                ":unlisted": project.unlisted,
                 ":secret": project.secret,
             },
         )?;
@@ -111,11 +113,12 @@ impl LiwanProjects {
     pub fn update(&self, project: &models::Project) -> Result<models::Project> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
-            "update projects set display_name = :display_name, public = :public, secret = :secret where id = :id",
+            "update projects set display_name = :display_name, public = :public, unlisted = :unlisted, secret = :secret where id = :id",
         )?;
         stmt.execute(rusqlite::named_params! {
             ":display_name": project.display_name,
             ":public": project.public,
+            ":unlisted": project.unlisted,
             ":secret": project.secret,
             ":id": project.id,
         })?;

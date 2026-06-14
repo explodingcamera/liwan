@@ -34,6 +34,7 @@ pub struct Project {
     pub id: String,
     pub display_name: String,
     pub public: bool,
+    pub unlisted: bool,
     pub secret: Option<String>, // currently unused
 }
 
