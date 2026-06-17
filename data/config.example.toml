@@ -1,6 +1,9 @@
 base_url="http://localhost:9042" # The base URL of the Liwan instance
 listen=9042 # The port to listen on (http)
 
+# Disable favicon fetching from the DuckDuckGo API.
+# disable_favicons=false
+
 # # Folder to store the database in (Will be created if it doesn't exist)
 # # defaults to $HOME/.local/share/liwan/data on linux/macos
 # # defaults to ./liwan-data on other platforms

@@ -820,7 +820,6 @@ export const EditUser = ({ user, trigger }: { user: UserResponse; trigger: React
 		onError: console.error,
 	});
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: don't want to re-run this effect when projects change
 	useEffect(() => {
 		setSelectedProjects(
 			user.projects.map((projectId) => {

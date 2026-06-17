@@ -53,3 +53,31 @@ async fn test_event() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn event_allows_cross_origin_requests() -> Result<()> {
+    let app = common::app();
+    let (tx, _rx) = common::events();
+    let client = common::TestClient::new(app.clone(), tx);
+    app.seed_database(0)?;
+
+    let event = json!({
+        "entity_id": "entity-1",
+        "name": "pageview",
+        "url": "https://example.com/"
+    });
+
+    let res = client
+        .post_with_headers(
+            "/api/event",
+            event,
+            vec![
+                ("origin".to_string(), "https://site.example".to_string()),
+                ("user-agent".to_string(), "test".to_string()),
+            ],
+        )
+        .await;
+    res.assert_status_success();
+
+    Ok(())
+}

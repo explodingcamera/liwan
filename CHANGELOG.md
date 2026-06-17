@@ -30,6 +30,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 - Fixed bounce rate deltas so lower bounce rates are shown as an improvement
 - Fixed the account settings form to avoid React form action runtime errors
+- Tracking snippets now use the configured `base_url` instead of the current browser origin
 
 ### Documentation
 

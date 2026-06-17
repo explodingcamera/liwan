@@ -5,18 +5,20 @@ pub mod webext;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::ops::Deref;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use axum::handler::{Handler, HandlerWithoutStateExt};
 use rust_embed::RustEmbed;
 
 use aide::{axum::ApiRouter, openapi};
-use http::{HeaderValue, Method, header};
+use http::{HeaderName, HeaderValue, Method, header};
 use tokio::sync::mpsc::Sender;
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
     set_header::SetResponseHeaderLayer,
+    timeout::RequestBodyDeadlineLayer,
 };
 
 use crate::app::{Liwan, models::Event};
@@ -80,6 +82,12 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()
             HeaderValue::from_static("default-src 'self' data: 'unsafe-inline'; img-src 'self' data: https://*"),
         ))
         .layer(SetResponseHeaderLayer::if_not_present(
+            HeaderName::from_static("permissions-policy"),
+            HeaderValue::from_static(
+                "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+            ),
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
             header::REFERRER_POLICY,
             HeaderValue::from_static("same-origin"),
         ));
@@ -94,6 +102,7 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()
         .nest("/api/dashboard", dashboard)
         .route_service("/script.js", StaticFile::<Script>::new("script.min.js").layer(script_cors).into_service())
         .fallback(axum::routing::get(serve))
+        .layer(RequestBodyDeadlineLayer::new(Duration::from_secs(30)))
         .layer(CompressionLayer::new())
         .layer(set_headers)
         .with_state(RouterState { app: app.clone(), events })

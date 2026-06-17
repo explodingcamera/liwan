@@ -78,11 +78,12 @@ struct DimensionTableRow {
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 struct ConfigResponse {
+    base_url: String,
     disable_favicons: bool,
 }
 
 async fn config_handler(State(app): State<RouterState>) -> ApiResult<Json<ConfigResponse>> {
-    Ok(Json(ConfigResponse { disable_favicons: app.config.disable_favicons }))
+    Ok(Json(ConfigResponse { base_url: app.config.base_url.clone(), disable_favicons: app.config.disable_favicons }))
 }
 
 #[derive(Serialize, JsonSchema)]

@@ -69,6 +69,7 @@ const ingestFilterValueLabel = (filter: IngestFilter) =>
 	filter.value;
 
 export const DocsLink = ({ hash }: { hash: string }) => (
+	// biome-ignore lint/a11y/noAmbiguousAnchorText: short inline link text is intentional in these setting descriptions
 	<a href={docsUrl(hash)} target="_blank" rel="noopener noreferrer">
 		Learn more.
 	</a>

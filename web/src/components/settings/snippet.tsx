@@ -2,10 +2,14 @@ import styles from "./snippet.module.css";
 
 import { CopyIcon } from "lucide-react";
 
+import { useConfig } from "../../hooks/api";
 import { createToast } from "../toast";
 
 export const Snippet = ({ entityId }: { entityId: string }) => {
-	const code = `<script type="module" data-entity="${entityId}" src="${window.location.origin}/script.js"></script>`;
+	const { config } = useConfig();
+	const baseUrl = config?.baseUrl ?? window.location.origin;
+	const scriptUrl = `${baseUrl.replace(/\/$/, "")}/script.js`;
+	const code = `<script type="module" data-entity="${entityId}" src="${scriptUrl}"></script>`;
 
 	return (
 		<div className={styles.snippet}>
@@ -14,7 +18,8 @@ export const Snippet = ({ entityId }: { entityId: string }) => {
 				{' type="module" data-entity="'}
 				<span className={styles.entity}>{entityId}</span>
 				{'" src="'}
-				{window.location.origin}/script.js{`"`}
+				{scriptUrl}
+				{`"`}
 				<span className={styles.tag}>{"></script>"}</span>
 			</code>
 			<button

@@ -24,7 +24,6 @@ export const LineGraph = ({
 }) => {
 	const [lineGraphState, setLineGraphState] = useState<GraphState | undefined>(undefined);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: we only want to update the graph when the graph data changes
 	useEffect(() => {
 		if (data) {
 			setLineGraphState({
