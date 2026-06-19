@@ -2,40 +2,59 @@
 @import "@picocss/pico/css/pico.slate.min.css" layer(pico);
 
 :root {
-  --pico-background-color: #f7f8ff;
+  --pico-background-color: #eef0f9;
   --card-background-base: 0deg 0% 100%;
   --pico-card-background-color: hsl(var(--card-background-base));
   --pico-block-spacing-vertical: 0.8rem;
   --pico-block-spacing-horizontal: 0.8rem;
-  --pico-card-box-shadow: 0px 0px 24px #15233610;
-  --pico-dropdown-background-color: #ffffff81;
-
+  --pico-card-box-shadow: 0px 0px 13px #15233609;
+  --pico-dropdown-background-color: #ffffff;
+  --pico-dropdown-hover-background-color: #dfe7f3;
+  --graph-line-color: #2563eb;
+  --graph-fill-color: 37 99 235;
+  --close-icon-color: #ffffff;
+  --switch-inactive-bg: #e2e8f0;
+  --pico-line-height: 1.2;
   --pico-form-element-active-border-color: var(--pico-secondary-hover);
-  --pico-form-element-focus-color: var(--pico-secondary-hover);
-  --pico-border-radius: 0.7rem;
+  --pico-form-element-focus-color: transparent;
+  --pico-border-radius: 0.6rem;
   --pico-spacing: 0.75rem;
   --pico-form-element-spacing-vertical: 0.5rem;
   --pico-form-element-spacing-horizontal: 0.6rem;
+  --pico-table-border-color: var(--pico-card-background-color);
 
   --pico-font-family:
     var(--font-stack-sans-headline), system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial,
     "Helvetica Neue", sans-serif, var(--pico-font-family-emoji);
   --pico-font-family-sans-serif: var(--pico-font-family);
   font-variant-numeric: tabular-nums;
+
+  --metric-button-active-background: #ebeef3;
 }
 
 :root[data-theme="dark"] {
   --pico-background-color: #0a0c10;
   --card-background-base: 218.8 23.9% 13.9%;
-  --pico-dropdown-background-color: #181c25d4;
-  /* --pico-card-box-shadow: 0 0 0.5rem 0.1rem hsla(0, 0%, 0%, 0.1); */
+  --pico-dropdown-background-color: #181c25;
+  --pico-dropdown-hover-background-color: #2d3442;
+  --graph-line-color: #a6cee3;
+  --graph-fill-color: 166 206 227;
+  --close-icon-color: #0a0c10;
+  --switch-inactive-bg: var(--pico-secondary-background);
+  --metric-button-active-background: #303743;
 }
 
 @media only screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --pico-background-color: #0a0c10;
     --card-background-base: 218.8 23.9% 13.9%;
-    --pico-dropdown-background-color: #181c25d4;
+    --pico-dropdown-background-color: #181c25;
+    --pico-dropdown-hover-background-color: #2d3442;
+    --graph-line-color: #a6cee3;
+    --graph-fill-color: 166 206 227;
+    --close-icon-color: #0a0c10;
+    --switch-inactive-bg: var(--pico-secondary-background);
+    --metric-button-active-background: #303743;
   }
 }
 
@@ -49,7 +68,7 @@ h6 {
 }
 
 html body[data-scroll-locked] {
-  margin-right: 0 !important;
+  margin-right: 0;
 }
 
 .full {
@@ -57,7 +76,7 @@ html body[data-scroll-locked] {
 }
 
 [type="search"] {
-  --pico-border-radius: 0.7rem;
+  --pico-border-radius: 0.6rem;
 }
 
 [type="button"],
@@ -81,7 +100,19 @@ details.dropdown.right summary + ul {
 }
 
 details.dropdown summary + ul {
-  backdrop-filter: blur(3px);
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-dropdown-background-color);
+  box-shadow: var(--pico-card-box-shadow);
+}
+
+details.dropdown summary + ul li a,
+details.dropdown summary + ul li button {
+  cursor: pointer;
+}
+
+details.dropdown summary + ul li a:hover,
+details.dropdown summary + ul li button:hover {
+  background: var(--pico-dropdown-hover-background-color);
 }
 
 details.dropdown summary + ul li:has(hr) {

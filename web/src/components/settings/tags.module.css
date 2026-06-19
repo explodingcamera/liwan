@@ -1,0 +1,164 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.label {
+  font-weight: 500;
+  margin-bottom: 0;
+}
+
+.labelDescription {
+  margin: 0 0 0.25rem;
+  color: var(--pico-muted-color);
+  font-size: 0.875em;
+}
+
+.inputGroup {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 2.35rem;
+  width: 100%;
+  padding: 0.15rem 0.25rem 0.15rem 0.4rem;
+  cursor: text;
+  border: var(--pico-border-width) solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background-color: var(--pico-form-element-background-color);
+  color: var(--pico-form-element-color);
+  outline: none;
+}
+
+.inputGroup:focus-within {
+  border-color: var(--pico-secondary-hover);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  outline: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 0.25rem;
+  padding: 0.18rem 0.28rem 0.18rem 0.55rem;
+  cursor: default;
+  border-radius: 0.4rem;
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.chipRemove {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
+  border-radius: 0.4rem;
+  color: inherit;
+}
+
+.chipRemove:hover {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.chipRemove:focus-visible {
+  outline: none;
+}
+
+.input {
+  flex: 1;
+  min-width: 6rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  outline: none;
+  appearance: none;
+}
+
+.input:focus,
+.input:focus-visible {
+  box-shadow: none;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--pico-muted-color);
+  opacity: 1;
+}
+
+.positioner {
+  z-index: 200;
+  outline: 0;
+}
+
+.popup {
+  width: var(--anchor-width);
+  max-width: var(--available-width);
+  max-height: min(var(--available-height), 18rem);
+  overflow-y: auto;
+  padding: 0.25rem 0;
+  border: var(--pico-border-width) solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background-color: var(--pico-dropdown-background-color);
+  color: var(--pico-color);
+  box-shadow: var(--pico-card-box-shadow);
+}
+
+.list {
+  display: block;
+  outline: none;
+}
+
+.item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+  box-sizing: border-box;
+  outline: none;
+  user-select: none;
+}
+
+.item[data-highlighted] {
+  background-color: var(--pico-dropdown-hover-background-color);
+}
+
+.itemIndicator {
+  flex: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pico-primary);
+}
+
+.itemText {
+  min-width: 0;
+  flex: 1 1 auto;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.empty {
+  padding: 0.65rem;
+  color: var(--pico-muted-color);
+}

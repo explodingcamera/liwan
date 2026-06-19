@@ -1,0 +1,47 @@
+.full {
+  width: 100%;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.container {
+  margin-top: 0.5rem;
+  animation: tableLoad 0.3s ease;
+  overflow-x: auto;
+  height: 100%;
+  border-radius: var(--pico-border-radius);
+}
+
+@keyframes tableLoad {
+  from {
+    opacity: 0;
+    transform: translateY(0.2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.table {
+  background: var(--pico-background-color);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--pico-border-radius);
+  overflow: hidden;
+  margin-bottom: 0;
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  th {
+    div.icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+  }
+}

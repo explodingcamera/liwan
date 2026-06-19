@@ -1,0 +1,244 @@
+.section {
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.section p {
+  margin-bottom: 0.6rem;
+}
+
+.description {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--pico-muted-color);
+  font-size: 0.875em;
+}
+
+.empty {
+  margin: 0;
+  color: var(--pico-muted-color);
+}
+
+.filterAction {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.filterAction button {
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
+  white-space: nowrap;
+}
+
+.hostnameEditor {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.hostnameBox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0.25rem;
+  border: var(--pico-border-width) solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background-color: var(--pico-form-element-background-color);
+  color: var(--pico-form-element-color);
+}
+
+.hostnameBox:focus-within {
+  border-color: var(--pico-secondary-hover);
+}
+
+.hostnameBox input {
+  flex: 1;
+  min-width: 6rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  outline: none;
+  appearance: none;
+}
+
+.hostnameBox input:focus,
+.hostnameBox input:focus-visible {
+  box-shadow: none;
+  outline: none;
+}
+
+.hostnameBox input::placeholder {
+  color: var(--pico-muted-color);
+  opacity: 1;
+}
+
+.hostnameChip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 0.25rem;
+  padding: 0.18rem 0.28rem 0.18rem 0.55rem;
+  border-radius: 0.4rem;
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.hostnameChipRemove {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
+  border-radius: 0.4rem;
+  color: inherit;
+}
+
+.hostnameChipRemove:hover {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.hostnameChipRemove:focus-visible {
+  outline: none;
+}
+
+.hostnameHelp {
+  color: var(--pico-muted-color);
+}
+
+.hostnameHelp code {
+  padding: 0;
+  background: transparent;
+}
+
+.filterList {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ruleList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ruleCard {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+  box-shadow: none;
+}
+
+.ruleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.ruleTitle {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.ruleTitle small {
+  color: var(--pico-muted-color);
+}
+
+.ruleActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.ruleActions button {
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
+}
+
+.filterRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+}
+
+.filterText {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pico-muted-color);
+}
+
+.filterText strong {
+  color: var(--pico-color);
+  font-weight: 600;
+}
+
+.filterText code {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filterRow button {
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
+}
+
+@media (max-width: 700px) {
+  .ruleHeader,
+  .ruleActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ruleActions button {
+    width: 100%;
+  }
+
+  .filterRow {
+    grid-template-columns: 1fr;
+  }
+
+  .filterRow button {
+    width: 100%;
+  }
+}

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 
-import { DateRange } from "../api/ranges";
-import type { Metric } from "../constants";
+import { DateRange } from "@/api/ranges";
+import type { Metric } from "@/constants";
 
 export const useMetric = () => {
 	const [metric, _setMetric] = useState<Metric>(

@@ -1,0 +1,67 @@
+@keyframes overlayShow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes contentShow {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  inset: 0;
+  animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+}
+
+.title {
+  white-space: preserve-breaks;
+  font-size: 1.6rem;
+}
+
+.content {
+  position: fixed;
+  z-index: 100;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: 25rem;
+  max-height: 85vh;
+  padding: 1rem;
+  animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.autoOverflow {
+  overflow-y: auto;
+}
+
+.close {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--pico-dropdown-color);
+  color: var(--close-icon-color);
+  border: none;
+  right: 0;
+  top: 0;
+  margin: 0.5rem;
+  pointer-events: auto;
+  border-radius: 3rem;
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  justify-content: center;
+  align-items: center;
+}

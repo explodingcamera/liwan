@@ -11,7 +11,7 @@
 	"dependencies": {
 		"@astrojs/compiler-rs": "^0.2.2",
 		"@astrojs/react": "^5.0.7",
-		"@base-ui/react": "^1.5.0",
+		"@base-ui/react": "^1.6.0",
 		"@explodingcamera/css": "^0.0.4",
 		"@floating-ui/react": "^0.27.19",
 		"@icons-pack/react-simple-icons": "^13.13.0",
@@ -29,7 +29,7 @@
 		"fets": "^0.8.7",
 		"fuzzysort": "^3.1.0",
 		"little-date": "^1.2.1",
-		"lucide-react": "1.18.0",
+		"lucide-react": "1.21.0",
 		"react": "19.2.7",
 		"react-dom": "19.2.7",
 		"topojson-client": "^3.1.0"
@@ -50,7 +50,7 @@
 		"@types/react-dom": "^19.2.3",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"astro": "6.4.6",
+		"astro": "6.4.8",
 		"babel-plugin-react-compiler": "^1.0.0",
 		"rollup-plugin-license": "^3.7.1",
 		"typescript": "^6.0.3"

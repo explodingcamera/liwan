@@ -1,6 +1,6 @@
 import { createClient } from "fets";
 
-import type { DashboardSpec } from "../constants";
+import type { DashboardSpec } from "@/constants";
 
 export const api = createClient<DashboardSpec>({
 	globalParams: { credentials: "same-origin" },
@@ -10,7 +10,12 @@ export const api = createClient<DashboardSpec>({
 				return res
 					.json()
 					.catch((_) => Promise.reject({ status: res.status, message: res.statusText }))
-					.then((body) => Promise.reject({ status: res.status, message: body?.message ?? res.statusText }));
+					.then((body) =>
+						Promise.reject({
+							status: res.status,
+							message: body?.message ?? res.statusText,
+						}),
+					);
 			}
 			return res;
 		});

@@ -1,0 +1,242 @@
+---
+import { CodeIcon, DatabaseIcon, TablePropertiesIcon, UserIcon, UsersIcon } from "lucide-react";
+
+import Layout from "./layout.astro";
+
+type Props = {
+	title: string;
+	noContainer?: boolean;
+};
+
+const path = Astro.url.pathname;
+const { title, noContainer } = Astro.props;
+---
+
+<Layout {title}>
+  <div class="settings">
+    <aside class="mobile">
+      <select
+        name="select"
+        aria-label="Select a page"
+        id="select-settings-page"
+      >
+        <optgroup label="General">
+          <option
+            selected={path.startsWith("/settings/me") ? true : undefined}
+            value="/settings/me">My Account</option
+          >
+        </optgroup>
+        <optgroup label="Admin">
+          <option
+            selected={path.startsWith("/settings/projects") ? true : undefined}
+            value="/settings/projects">Projects</option
+          >
+          <option
+            selected={path.startsWith("/settings/entities") ? true : undefined}
+            value="/settings/entities">Entities</option
+          >
+          <option
+            selected={path.startsWith("/settings/collection")
+              ? true
+              : undefined}
+            value="/settings/collection">Collection</option
+          >
+          <option
+            selected={path.startsWith("/settings/users") ? true : undefined}
+            value="/settings/users">Users</option
+          >
+        </optgroup>
+      </select>
+    </aside>
+    <aside class="desktop">
+      <h3>General</h3>
+      <ul class="sidebar">
+        <li>
+          <a
+            data-active={path.startsWith("/settings/me") ? "true" : "false"}
+            class="secondary"
+            href="/settings/me"
+          >
+            <UserIcon size="20" />
+            My Account</a
+          >
+        </li>
+      </ul>
+      <h3>Admin</h3>
+      <ul class="sidebar">
+        <li>
+          <a
+            data-active={path.startsWith("/settings/projects")
+              ? "true"
+              : "false"}
+            class="secondary"
+            href="/settings/projects"
+          >
+            <TablePropertiesIcon size="20" />
+            Projects</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/entities")
+              ? "true"
+              : "false"}
+            class="secondary"
+            href="/settings/entities"
+          >
+            <CodeIcon size="20" />
+            Entities</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/collection")
+              ? "true"
+              : "false"}
+            class="secondary"
+            href="/settings/collection"
+          >
+            <DatabaseIcon size="20" />
+            Collection</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/users") ? "true" : "false"}
+            class="secondary"
+            href="/settings/users"
+          >
+            <UsersIcon size="20" />
+            Users</a
+          >
+        </li>
+      </ul>
+    </aside>
+    {
+      noContainer ? (
+        <slot />
+      ) : (
+        <article class="content">
+          <slot />
+        </article>
+      )
+    }
+  </div>
+</Layout>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+
+  function handleSelectChange(event: Event) {
+    navigate((event.currentTarget as HTMLSelectElement).value);
+  }
+
+  document.addEventListener("astro:page-load", () => {
+    document
+      .getElementById("select-settings-page")
+      ?.addEventListener("change", handleSelectChange);
+  });
+</script>
+
+<style>
+  .settings :global(nav) {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.5rem;
+    min-height: 2rem;
+  }
+
+  .settings :global(h1) {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  .settings {
+    display: flex;
+    height: 100%;
+    margin-top: 1rem;
+  }
+
+  .settings :global(.content),
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  aside {
+    display: flex;
+    flex-direction: column;
+    width: 12rem;
+    gap: 0.4rem;
+    margin-right: 2rem;
+
+    h3 {
+      margin: 0;
+      margin-left: 0.3rem;
+      margin-top: 0.2rem;
+      font-size: 1.1rem;
+    }
+  }
+
+  .sidebar {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+
+    li {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    a {
+        line-height: 1.6;
+      text-decoration: none;
+      transition: all 0.2s;
+      border-radius: var(--pico-border-radius);
+      padding: 0.2rem 0.4rem;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    a[data-active="true"] {
+      color: var(--pico-h1-color);
+      background: var(--pico-card-background-color);
+      box-shadow: var(--pico-card-box-shadow);
+    }
+
+    a:hover {
+      color: var(--pico-h1-color);
+      background: var(--pico-card-background-color);
+      box-shadow: var(--pico-card-box-shadow);
+    }
+  }
+
+  main {
+    padding: 20px;
+  }
+
+  .mobile {
+    display: none;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 768px) {
+    .mobile {
+      display: block;
+    }
+    .desktop {
+      display: none;
+    }
+    .settings {
+      flex-direction: column;
+    }
+  }
+</style>

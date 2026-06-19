@@ -1,6 +1,6 @@
 import styles from "./form.module.css";
 
-import type { FormEvent, ReactNode } from "react";
+import type { ReactNode, SubmitEvent } from "react";
 import { Field } from "@base-ui/react/field";
 import { Fieldset } from "@base-ui/react/fieldset";
 import { Form as BaseForm } from "@base-ui/react/form";
@@ -16,7 +16,7 @@ export const SettingsForm = ({
 	children,
 }: {
 	id?: string;
-	onSubmit?: (event: FormEvent<HTMLFormElement>) => void;
+	onSubmit?: (event: SubmitEvent<HTMLFormElement>) => void;
 	children: ReactNode;
 }) => (
 	<BaseForm id={id} className={styles.form} onSubmit={onSubmit ?? ((event) => event.preventDefault())}>
@@ -99,8 +99,8 @@ export const SettingsField = ({
 }) => (
 	<Field.Root name={name} className={styles.field}>
 		<Field.Label className={styles.label}>{label}</Field.Label>
-		{children}
 		{description && <Field.Description className={styles.fieldDescription}>{description}</Field.Description>}
+		{children}
 	</Field.Root>
 );
 
@@ -125,12 +125,14 @@ export const SettingsSwitch = ({
 	description,
 	name,
 	checked,
+	disabled,
 	onCheckedChange,
 }: {
 	label: ReactNode;
 	description?: ReactNode;
 	name?: string;
 	checked: boolean;
+	disabled?: boolean;
 	onCheckedChange: (checked: boolean) => void;
 }) => (
 	<Field.Root name={name} className={styles.switchField}>
@@ -138,7 +140,13 @@ export const SettingsSwitch = ({
 			<Field.Label className={styles.label}>{label}</Field.Label>
 			{description && <Field.Description className={styles.fieldDescription}>{description}</Field.Description>}
 		</div>
-		<Switch.Root name={name} checked={checked} onCheckedChange={onCheckedChange} className={styles.switchRoot}>
+		<Switch.Root
+			name={name}
+			checked={checked}
+			disabled={disabled}
+			onCheckedChange={onCheckedChange}
+			className={styles.switchRoot}
+		>
 			<Switch.Thumb className={styles.switchThumb} />
 		</Switch.Root>
 	</Field.Root>

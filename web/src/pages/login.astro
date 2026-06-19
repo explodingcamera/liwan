@@ -1,6 +1,6 @@
 ---
-import ThemeSwitcher from "../components/ThemeSwitcher.astro";
-import Layout from "../layouts/Base.astro";
+import ThemeSwitcher from "@/components/ui/theme-switcher.astro";
+import Layout from "@/layouts/base.astro";
 ---
 
 <Layout title="Login" noSwitcher>
@@ -38,8 +38,8 @@ import Layout from "../layouts/Base.astro";
 </Layout>
 
 <script>
-  import { api } from "../api/client";
-  import { queryClient } from "../api/query";
+  import { api } from "@/api/client";
+  import { queryClient } from "@/api/query";
 
   document.addEventListener("astro:page-load", () => {
     const form = document.getElementById("login-form") as HTMLFormElement;

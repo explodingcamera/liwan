@@ -175,7 +175,7 @@ impl Liwan {
     }
 }
 
-#[cfg(any(debug_assertions, test, feature = "__dev"))]
+#[cfg(any(debug_assertions, test))]
 impl Liwan {
     pub fn seed_database(&self, count_per_entity: usize) -> Result<()> {
         use chrono::{Days, Utc};

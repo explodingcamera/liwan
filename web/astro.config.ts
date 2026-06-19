@@ -27,7 +27,8 @@ function setPrerender(): AstroIntegration {
 					isDev &&
 					(route.component.endsWith("/pages/p/[...project].astro") ||
 						route.component.endsWith("/pages/settings/projects/[projectId].astro") ||
-						route.component.endsWith("/pages/settings/entities/[entityId].astro"))
+						route.component.endsWith("/pages/settings/entities/[entityId].astro") ||
+						route.component.endsWith("/pages/settings/users/[username].astro"))
 				) {
 					route.prerender = false;
 				}
@@ -60,8 +61,7 @@ export default defineConfig({
 						template: (dependencies) => JSON.stringify(dependencies),
 					},
 				},
-				// biome-ignore lint/suspicious/noExplicitAny: wrong type
-			}) as any,
+			}),
 		],
 	},
 	integrations: [

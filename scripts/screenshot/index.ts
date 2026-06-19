@@ -1,12 +1,14 @@
-import captureWebsite from "capture-website";
-import { $ } from "bun";
 import { join } from "node:path";
+import { $ } from "bun";
+import captureWebsite from "capture-website";
 
 const geoCardMargin = ".geocard { margin-bottom: 2rem !important; }";
 const cornerRadius = 28;
 
 async function addRoundedCorners(imagePath: string, radius: number) {
-	const dimensions = (await $`magick identify -format %w,%h ${imagePath}`.text()).trim();
+	const dimensions = (
+		await $`magick identify -format %w,%h ${imagePath}`.text()
+	).trim();
 	const [widthText, heightText] = dimensions.split(",");
 	const width = Number(widthText);
 	const height = Number(heightText);
@@ -25,7 +27,10 @@ async function addRoundedCorners(imagePath: string, radius: number) {
 	await $`rm ${maskPath}`;
 }
 
-const screenshots: Array<{ imagePath: string; options: Parameters<typeof captureWebsite.file>[2] }> = [
+const screenshots: Array<{
+	imagePath: string;
+	options: Parameters<typeof captureWebsite.file>[2];
+}> = [
 	{
 		imagePath: join(__dirname, "../../data/images/liwan-desktop.png"),
 		options: {
@@ -69,6 +74,10 @@ const screenshots: Array<{ imagePath: string; options: Parameters<typeof capture
 ];
 
 for (const { imagePath, options } of screenshots) {
-	await captureWebsite.file("http://localhost:9042/p/public-project", imagePath, options);
+	await captureWebsite.file(
+		"http://localhost:9042/p/public-project",
+		imagePath,
+		options,
+	);
 	await addRoundedCorners(imagePath, cornerRadius);
 }

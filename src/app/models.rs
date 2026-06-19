@@ -209,6 +209,8 @@ pub struct EntityCollectionSettings {
     pub track_utm_params: Option<bool>,
     pub track_geo: Option<GeoDetail>,
     pub data_retention: DataRetention,
+    #[serde(default)]
+    pub allowed_hostnames: Vec<String>,
     pub ingest_drop_rules: Vec<IngestDropRule>,
 }
 
@@ -220,6 +222,7 @@ pub struct ResolvedCollectionSettings {
     pub track_utm_params: bool,
     pub track_geo: GeoDetail,
     pub data_retention: DataRetention,
+    pub allowed_hostnames: Vec<String>,
     pub ingest_drop_rules: Vec<IngestDropRule>,
 }
 
@@ -231,6 +234,7 @@ impl From<CollectionSettings> for ResolvedCollectionSettings {
             track_utm_params: settings.track_utm_params,
             track_geo: settings.track_geo,
             data_retention: settings.data_retention,
+            allowed_hostnames: Vec::new(),
             ingest_drop_rules: settings.ingest_drop_rules,
         }
     }
@@ -254,9 +258,58 @@ impl ResolvedCollectionSettings {
                 DataRetention::Inherit => global.data_retention,
                 retention => retention,
             },
+            allowed_hostnames: entity.allowed_hostnames,
             ingest_drop_rules,
         }
     }
+}
+
+pub fn normalize_allowed_hostname_pattern(pattern: &str) -> Result<Option<String>, String> {
+    let pattern = pattern.trim().trim_end_matches('.').to_ascii_lowercase();
+    if pattern.is_empty() {
+        return Ok(None);
+    }
+
+    if pattern.contains('*') {
+        let Some(suffix) = pattern.strip_prefix("*.") else {
+            return Err(format!("invalid hostname pattern: {pattern}"));
+        };
+        if suffix.contains('*') || !is_valid_hostname(suffix) {
+            return Err(format!("invalid hostname pattern: {pattern}"));
+        }
+        return Ok(Some(format!("*.{suffix}")));
+    }
+
+    if !is_valid_hostname(&pattern) {
+        return Err(format!("invalid hostname pattern: {pattern}"));
+    }
+
+    Ok(Some(pattern))
+}
+
+pub fn hostname_allowed(hostname: &str, allowed_hostnames: &[String]) -> bool {
+    let hostname = hostname.trim_end_matches('.').to_ascii_lowercase();
+    allowed_hostnames.is_empty()
+        || allowed_hostnames.iter().any(|pattern| {
+            if let Some(suffix) = pattern.strip_prefix("*.") {
+                return hostname.len() > suffix.len()
+                    && hostname.ends_with(suffix)
+                    && hostname.as_bytes().get(hostname.len() - suffix.len() - 1) == Some(&b'.');
+            }
+            hostname == *pattern
+        })
+}
+
+fn is_valid_hostname(hostname: &str) -> bool {
+    !hostname.is_empty()
+        && hostname.len() <= 253
+        && hostname.split('.').all(|label| {
+            !label.is_empty()
+                && label.len() <= 63
+                && !label.starts_with('-')
+                && !label.ends_with('-')
+                && label.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -312,11 +365,39 @@ mod tests {
                 track_utm_params: None,
                 track_geo: None,
                 data_retention: DataRetention::Days(NonZeroU32::new(30).unwrap()),
+                allowed_hostnames: Vec::new(),
                 ingest_drop_rules: Vec::new(),
             }),
         );
 
         assert_eq!(resolved.data_retention, DataRetention::Days(NonZeroU32::new(30).unwrap()));
+    }
+
+    #[test]
+    fn allowed_hostname_patterns_match_exact_and_wildcard_hosts() {
+        let allowed_hostnames = vec!["example.com".to_string(), "*.example.org".to_string()];
+
+        assert!(hostname_allowed("example.com", &allowed_hostnames));
+        assert!(hostname_allowed("www.example.org", &allowed_hostnames));
+        assert!(hostname_allowed("a.b.example.org", &allowed_hostnames));
+        assert!(!hostname_allowed("www.example.com", &allowed_hostnames));
+        assert!(!hostname_allowed("example.org", &allowed_hostnames));
+    }
+
+    #[test]
+    fn empty_allowed_hostname_patterns_allow_all_hosts() {
+        assert!(hostname_allowed("example.com", &[]));
+    }
+
+    #[test]
+    fn invalid_allowed_hostname_patterns_are_rejected() {
+        assert_eq!(normalize_allowed_hostname_pattern(" Example.COM. ").unwrap(), Some("example.com".to_string()));
+        assert_eq!(normalize_allowed_hostname_pattern("*.Example.COM").unwrap(), Some("*.example.com".to_string()));
+        assert_eq!(normalize_allowed_hostname_pattern("  ").unwrap(), None);
+        assert!(normalize_allowed_hostname_pattern("example.*").is_err());
+        assert!(normalize_allowed_hostname_pattern("*example.com").is_err());
+        assert!(normalize_allowed_hostname_pattern("foo.*.example.com").is_err());
+        assert!(normalize_allowed_hostname_pattern("-example.com").is_err());
     }
 }
 

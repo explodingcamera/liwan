@@ -1,0 +1,192 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.tabs {
+  .tabsList {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+
+    .dimensionSelect {
+      all: unset;
+      user-select: none;
+      appearance: menulist;
+      cursor: pointer;
+      margin-right: auto;
+      outline: none;
+      box-shadow: none;
+      font-weight: 600;
+    }
+  }
+
+  .tabsList button {
+    all: unset;
+    cursor: pointer;
+    user-select: none;
+    opacity: 0.9;
+    font-weight: 500;
+  }
+
+  .tabsList button[aria-selected="true"] {
+    opacity: 1;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-thickness: 0.15rem;
+  }
+
+  .tabsList > button:last-of-type {
+    margin-right: auto;
+  }
+
+  .tabsContent {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.percentage {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  padding-left: 0.5rem;
+  padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 0;
+
+  &:hover {
+    &::after {
+      opacity: 0.3;
+    }
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: var(--percentage);
+    height: 100%;
+    background: var(--pico-h5-color);
+    opacity: 0.09;
+    z-index: -1;
+    transition:
+      width 0.3s ease-in-out,
+      opacity 0.1s ease-in-out;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+  }
+}
+
+.dimensionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--pico-h5-color);
+  margin-bottom: 1rem;
+
+  > div:first-of-type {
+    font-weight: 600;
+    color: var(--pico-color);
+  }
+}
+
+.dimensionTable {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(var(--count) * (2.1rem + 0.2rem));
+  position: relative;
+
+  .spinner {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+  }
+
+  &.loading {
+    .dimensionRow {
+      opacity: 0.2;
+    }
+  }
+}
+
+.showMore {
+  all: unset;
+  cursor: pointer;
+  color: var(--pico-contrast);
+  margin-top: 0.2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3rem;
+  transition: opacity 0.15s ease-in-out;
+  opacity: 0.6;
+  user-select: none;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.showMoreHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dimensionRow {
+  height: 2.1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+.external {
+  display: flex;
+  align-items: center;
+}
+
+.hostname {
+  opacity: 0.7;
+  font-size: 0.6rem;
+}
+
+.dimensionItemSelect {
+  all: unset;
+  position: relative;
+  color: var(--pico-h2-color);
+  padding: 0.5rem 0;
+  max-width: calc(100% - 3rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  span {
+    white-space: nowrap;
+  }
+
+  &:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--pico-h4-color);
+    text-decoration-style: dotted;
+    text-decoration-thickness: 0.1rem;
+  }
+
+  cursor: pointer;
+}
+
+.dimensionEmpty {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+.detailsModal.detailsModal {
+  max-width: 35em;
+}
