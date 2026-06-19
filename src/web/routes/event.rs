@@ -1,5 +1,5 @@
 use crate::app::models::{
-    FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings, VisitorGroupMode,
+    FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings, VisitorGroupMode, hostname_allowed,
 };
 use crate::app::{Liwan, models::Event};
 use crate::utils::hash::{visitor_group_id, visitor_group_id_cidr, visitor_group_id_fallback};
@@ -196,6 +196,10 @@ fn process_event(
     }
 
     let settings = app.settings.resolved_for_entity(&event.entity_id);
+    let fqdn = url.host_str().unwrap_or_default().to_string();
+    if !hostname_allowed(&fqdn, &settings.allowed_hostnames) {
+        return Ok(None);
+    }
 
     // we delay the user agent parsing as much as possible since it's by far the most expensive operation
     let client = useragent::parse(user_agent.as_str());
@@ -226,7 +230,6 @@ fn process_event(
     url.set_query(None);
     let path = url.path().to_string();
     let path = if path.len() > 1 && path.ends_with('/') { path.trim_end_matches('/').to_string() } else { path };
-    let fqdn = url.host_str().unwrap_or_default().to_string();
 
     let event = Event {
         visitor_group_id,

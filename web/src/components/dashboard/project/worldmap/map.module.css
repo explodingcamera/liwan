@@ -1,0 +1,91 @@
+.tooltipContainer {
+  z-index: 10;
+  pointer-events: none;
+}
+
+button.reset {
+  all: unset;
+  cursor: pointer;
+  transition: opacity 0.3s;
+  display: flex;
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  pointer-events: none;
+  opacity: 0;
+
+  &.moved {
+    pointer-events: auto;
+    opacity: 0.4;
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.worldmap {
+  display: flex;
+  flex: 1;
+
+  > svg {
+    flex: 1;
+  }
+}
+
+.geo {
+  stroke: var(--pico-card-background-color);
+  stroke-width: 1;
+  transition:
+    fill 0.3s,
+    opacity 0.3s;
+  outline: none;
+
+  fill: hsl(200, calc(0% + 85% * var(--percent) * var(--percent)), calc(45% + 15% * var(--percent)));
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &[data-inverted="true"] {
+    /* same fill, but closer to 100 means worse instead of better */
+    fill: hsl(
+      200,
+      calc(0% + 85% * (1 - var(--percent)) * (1 - var(--percent))),
+      calc(45% + 15% * (1 - var(--percent)))
+    );
+  }
+
+  &[data-ignored="true"] {
+    fill: hsl(200, 0%, 35%);
+  }
+}
+
+div.tooltip {
+  background-color: var(--pico-secondary-background);
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+  min-width: 7rem;
+
+  h2 {
+    margin-bottom: 0.3rem;
+    font-size: 1rem;
+    color: var(--pico-contrast);
+  }
+
+  h3 {
+    font-size: 1rem;
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    color: var(--pico-contrast);
+    font-weight: 800;
+    align-items: center;
+
+    span {
+      color: var(--pico-h3-color);
+      padding: 0.1rem 0.2rem;
+      font-weight: 500;
+      border-radius: 0.2rem;
+    }
+  }
+}

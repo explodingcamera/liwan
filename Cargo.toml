@@ -1,6 +1,6 @@
 [package]
 name="liwan"
-version="1.5.0"
+version="1.6.0"
 edition="2024"
 rust-version="1.95"
 repository="https://github.com/explodingcamera/liwan"
@@ -106,7 +106,6 @@ criterion={version="0.8", default-features=false}
 [features]
 default=["geoip"]
 geoip=["dep:maxminddb"]
-__dev=[]
 
 [profile.dev]
 opt-level=1

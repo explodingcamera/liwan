@@ -1,35 +1,35 @@
 declare global {
-    interface Window {
-        __liwan_loaded?: boolean;
-    }
+	interface Window {
+		__liwan_loaded?: boolean;
+	}
 }
 export type EventOptions = {
-    /**
-     * The URL of the page where the event occurred.
-     *
-     * If not provided, the current page URL with only attribution query parameters preserved will be used.
-     */
-    url?: string;
-    /**
-     * The referrer of the page where the event occurred.
-     *
-     * If not provided, `document.referrer` will be used if available.
-     */
-    referrer?: string;
-    /**
-     * The API endpoint to send the event to.
-     *
-     * If not provided, either the `data-api` attribute or the url where the script is loaded from will be used.
-     * Required in server-side environments.
-     */
-    endpoint?: string;
-    /**
-     * The entity that the event is associated with.
-     *
-     * If not provided, the `data-entity` attribute will be used.
-     * Required for custom events.
-     */
-    entity?: string;
+	/**
+	 * The URL of the page where the event occurred.
+	 *
+	 * If not provided, the current page URL with only attribution query parameters preserved will be used.
+	 */
+	url?: string;
+	/**
+	 * The referrer of the page where the event occurred.
+	 *
+	 * If not provided, `document.referrer` will be used if available.
+	 */
+	referrer?: string;
+	/**
+	 * The API endpoint to send the event to.
+	 *
+	 * If not provided, either the `data-api` attribute or the url where the script is loaded from will be used.
+	 * Required in server-side environments.
+	 */
+	endpoint?: string;
+	/**
+	 * The entity that the event is associated with.
+	 *
+	 * If not provided, the `data-entity` attribute will be used.
+	 * Required for custom events.
+	 */
+	entity?: string;
 };
 /**
  * Sends an event to the Liwan API.
@@ -51,4 +51,7 @@ export type EventOptions = {
  * });
  * ```
  */
-export declare function event(name?: string, options?: EventOptions): Promise<void>;
+export declare function event(
+	name?: string,
+	options?: EventOptions,
+): Promise<void>;

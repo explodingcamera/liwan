@@ -1,0 +1,305 @@
+.page {
+  --pico-block-spacing-vertical: 0.75rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.description {
+  max-width: 46rem;
+  margin-bottom: 1rem;
+  color: var(--pico-muted-color);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.retention {
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border: 0;
+}
+
+.retentionControls {
+  display: block;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.retentionControls label,
+.retentionControls select,
+.retentionControls input {
+  margin-bottom: 0;
+}
+
+.saveButton {
+  width: fit-content;
+  padding: 0.45rem 0.75rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+.tab {
+  width: auto;
+  margin: 0;
+  padding: 0.35rem 0.65rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pico-muted-color);
+  box-shadow: none;
+}
+
+.tab:hover {
+  background: transparent;
+  color: var(--pico-color);
+  box-shadow: none;
+}
+
+.activeTab,
+.activeTab:hover {
+  border-bottom-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.panel {
+  margin-top: 0.5rem;
+}
+
+.section {
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.section p {
+  margin-bottom: 0.6rem;
+}
+
+.filterAction {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.filterAction button {
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
+  white-space: nowrap;
+}
+
+.hostnameInput {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.hostnameInput input,
+.hostnameInput button {
+  margin-bottom: 0;
+}
+
+.hostnameInput button,
+.hostnameRow button {
+  width: fit-content;
+  padding: 0.32rem 0.55rem;
+}
+
+.hostnameList {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+
+.hostnameRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+}
+
+.hostnameRow code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filterList {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ruleList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ruleCard {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+  box-shadow: none;
+}
+
+.ruleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.ruleTitle {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.ruleTitle small {
+  color: var(--pico-muted-color);
+}
+
+.ruleActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.ruleActions button {
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
+}
+
+.filterRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+}
+
+.filterText {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pico-muted-color);
+}
+
+.filterText strong {
+  color: var(--pico-color);
+  font-weight: 600;
+}
+
+.filterText code {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filterRow button {
+  width: fit-content;
+  margin: 0;
+  padding: 0.32rem 0.55rem;
+}
+
+.prune {
+  margin-top: 1.2rem;
+  margin-bottom: 0;
+}
+
+.prune p {
+  margin-bottom: 0.5rem;
+}
+
+.pruneActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.pruneActions button {
+  width: fit-content;
+  padding: 0.45rem 0.75rem;
+}
+
+@media (max-width: 700px) {
+  .ruleHeader,
+  .ruleActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ruleActions button {
+    width: 100%;
+  }
+
+  .filterRow {
+    grid-template-columns: 1fr;
+  }
+
+  .hostnameInput,
+  .hostnameRow {
+    grid-template-columns: 1fr;
+  }
+
+  .filterRow button {
+    width: 100%;
+  }
+
+  .hostnameInput button,
+  .hostnameRow button {
+    width: 100%;
+  }
+
+  .pruneActions button {
+    width: 100%;
+  }
+}

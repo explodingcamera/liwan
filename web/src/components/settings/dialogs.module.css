@@ -34,6 +34,9 @@
 }
 
 .tab {
+  --pico-background-color: transparent;
+  --pico-border-color: transparent;
+  --pico-color: var(--pico-muted-color);
   width: auto;
   margin: 0;
   padding: 0.35rem 0.65rem;
@@ -47,14 +50,15 @@
 
 .tab:hover {
   background: transparent;
-  color: var(--pico-color);
+  color: var(--pico-h1-color);
   box-shadow: none;
 }
 
 .activeTab,
-.activeTab:hover {
-  border-bottom-color: var(--pico-primary);
-  color: var(--pico-primary);
+.activeTab:hover,
+.tab[data-selected] {
+  border-bottom-color: var(--pico-primary-hover);
+  color: var(--pico-primary-hover);
 }
 
 .tabPanel {

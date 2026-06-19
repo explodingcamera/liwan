@@ -1,0 +1,65 @@
+.container {
+  display: flex;
+  gap: 0.2rem;
+
+  button {
+    display: flex;
+    background: transparent;
+    opacity: 0.6;
+    border: none;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: var(--pico-contrast);
+    transition:
+      background-color 0.1s,
+      opacity 0.1s;
+
+    &:hover {
+      background-color: var(--pico-dropdown-hover-background-color);
+      opacity: 1;
+    }
+  }
+
+  ul {
+    li {
+      padding: 0;
+
+      button {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 0.4rem var(--pico-form-element-spacing-horizontal);
+        border-radius: calc(var(--pico-border-radius) - 0.35rem);
+      }
+    }
+  }
+}
+
+details.selectRange {
+  min-width: 11rem;
+  max-width: 16rem;
+  line-height: 1;
+
+  button {
+    all: unset;
+    cursor: pointer;
+  }
+
+  .selected {
+    font-weight: 700;
+    color: var(--pico-primary-hover);
+    text-decoration: underline;
+  }
+
+  summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    --pico-form-element-spacing-vertical: 0.5rem;
+    --pico-form-element-spacing-horizontal: 0.6rem;
+  }
+}
+
+article.rangeDialog {
+  width: unset;
+}

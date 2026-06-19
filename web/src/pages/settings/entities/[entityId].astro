@@ -1,8 +1,7 @@
 ---
 import type { GetStaticPaths } from "astro";
-
-import { EntitySettingsPage } from "../../../components/settings/resource-pages";
-import Settings from "../../../layouts/Settings.astro";
+import { EntitySettingsPage } from "@/components/settings/entities";
+import Settings from "@/layouts/settings.astro";
 
 export const getStaticPaths = (() => {
 	return [{ params: { entityId: "entity" } }];

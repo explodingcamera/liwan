@@ -35,7 +35,7 @@
 }
 
 .backButton:hover {
-  background: var(--pico-secondary-background);
+  background: var(--pico-dropdown-hover-background-color);
   color: var(--pico-color);
   text-decoration: none;
 }
@@ -64,6 +64,9 @@
 }
 
 .tab {
+  --pico-background-color: transparent;
+  --pico-border-color: transparent;
+  --pico-color: var(--pico-muted-color);
   width: auto;
   margin: 0;
   padding: 0.35rem 0.65rem;
@@ -77,13 +80,14 @@
 
 .tab:hover {
   background: transparent;
-  color: var(--pico-color);
+  color: var(--pico-h1-color);
   box-shadow: none;
 }
 
-.tab[data-active] {
-  border-bottom-color: var(--pico-primary);
-  color: var(--pico-primary);
+.tab[data-active],
+.tab[data-selected] {
+  border-bottom-color: var(--pico-primary-hover);
+  color: var(--pico-primary-hover);
 }
 
 .panel {
@@ -100,10 +104,12 @@
 .label,
 .legend {
   font-weight: 500;
+  margin-bottom: 0;
 }
 
 .fieldDescription {
   display: block;
+  margin: 0;
   font-size: 0.875em;
 }
 
@@ -146,7 +152,7 @@
   padding: 0.13rem;
   border: 1px solid var(--pico-form-element-border-color);
   border-radius: 999px;
-  background: var(--pico-secondary-background);
+  background: var(--switch-inactive-bg);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -156,6 +162,11 @@
 .switchRoot[data-checked] {
   border-color: var(--pico-primary);
   background: var(--pico-primary);
+}
+
+.switchRoot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .switchRoot:focus-visible {

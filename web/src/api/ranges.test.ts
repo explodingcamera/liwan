@@ -99,7 +99,10 @@ describe("DateRange", () => {
 	});
 
 	it("should include years on axis and tooltip labels for ranges spanning calendar years", () => {
-		const range = new DateRange({ start: new Date(2024, 11, 30), end: new Date(2025, 0, 2) });
+		const range = new DateRange({
+			start: new Date(2024, 11, 30),
+			end: new Date(2025, 0, 2),
+		});
 
 		expect(range.getAxisRange()).toBe("day+year");
 		expect(range.getTooltipRange()).toBe("day+hour");
@@ -123,11 +126,17 @@ describe("DateRange", () => {
 	});
 
 	it("should use variant-specific hourly cutovers for week and month to date", () => {
-		const weekShort = new DateRange({ start: startOfDay(new Date(2024, 10, 1)), end: endOfDay(new Date(2024, 10, 3)) });
+		const weekShort = new DateRange({
+			start: startOfDay(new Date(2024, 10, 1)),
+			end: endOfDay(new Date(2024, 10, 3)),
+		});
 		weekShort.variant = "weekToDate";
 		expect(weekShort.getGraphInterval()).toBe("hour");
 
-		const weekLong = new DateRange({ start: startOfDay(new Date(2024, 10, 1)), end: endOfDay(new Date(2024, 10, 4)) });
+		const weekLong = new DateRange({
+			start: startOfDay(new Date(2024, 10, 1)),
+			end: endOfDay(new Date(2024, 10, 4)),
+		});
 		weekLong.variant = "weekToDate";
 		expect(weekLong.getGraphInterval()).toBe("day");
 
@@ -138,7 +147,10 @@ describe("DateRange", () => {
 		monthShort.variant = "monthToDate";
 		expect(monthShort.getGraphInterval()).toBe("hour");
 
-		const monthLong = new DateRange({ start: startOfDay(new Date(2024, 10, 1)), end: endOfDay(new Date(2024, 10, 7)) });
+		const monthLong = new DateRange({
+			start: startOfDay(new Date(2024, 10, 1)),
+			end: endOfDay(new Date(2024, 10, 7)),
+		});
 		monthLong.variant = "monthToDate";
 		expect(monthLong.getGraphInterval()).toBe("day");
 	});

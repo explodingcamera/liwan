@@ -3,9 +3,9 @@
 	"assist": {
 		"enabled": true,
 		"actions": {
-			"recommended": true,
+			"preset": "recommended",
 			"source": {
-				"recommended": true,
+				"preset": "recommended",
 				"organizeImports": {
 					"level": "on",
 					"options": {
@@ -37,11 +37,13 @@
 	"css": {
 		"parser": { "cssModules": true },
 		"formatter": {
-			"indentStyle": "space"
+			"indentStyle": "space",
+			"indentWidth": 2
 		}
 	},
 	"linter": {
 		"rules": {
+			"preset": "recommended",
 			"suspicious": {
 				"noArrayIndexKey": "off"
 			},
@@ -54,7 +56,7 @@
 				"useImportType": {
 					"level": "on",
 					"options": {
-						"style": "separatedType"
+						"style": "auto"
 					}
 				}
 			},
@@ -68,13 +70,12 @@
 	},
 	"files": {
 		"includes": [
-			"**",
-			"!**/dist/*",
-			"!**/target/*",
-			"!**/.astro/*",
-			"!**/api/dashboard.ts",
-			"!tracker/script.min.js",
-			"!tracker/script.d.ts"
+			"web/**/*.{ts,tsx,astro,css}",
+			"!web/dist",
+			"!web/node_modules",
+			"!web/.astro",
+			"!web/api/dashboard.ts",
+			"tracker/script.ts"
 		]
 	},
 	"overrides": [

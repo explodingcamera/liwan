@@ -1,0 +1,68 @@
+---
+import { LoginButton } from "@/components/ui/user-info";
+import Base from "./base.astro";
+
+type Props = {
+	title: string;
+};
+
+const { title } = Astro.props;
+---
+
+<Base {title}>
+  <header class="container-fluid">
+    <nav>
+      <ul>
+        <li>
+          <a href="/" class="contrast logo">
+            <img src="/favicon.svg" alt="liwan logo" width="24" height="24" />
+            <strong>Liwan</strong>
+          </a>
+        </li>
+      </ul>
+      <ul>
+        <li class="login"><LoginButton client:only="react" /></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="container-fluid">
+    <slot />
+  </main>
+</Base>
+
+<style>
+  main {
+    flex: 1;
+  }
+
+  .login {
+    position: relative;
+  }
+
+  nav {
+    height: 3rem;
+  }
+
+  .theme {
+    padding: 0.9rem;
+    display: flex;
+    justify-content: ce;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  main,
+  header {
+    max-width: 60rem;
+    padding: 1rem 1rem;
+  }
+
+  header {
+    padding-top: 1rem;
+    padding-bottom: 0;
+  }
+</style>

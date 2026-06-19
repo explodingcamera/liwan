@@ -1,0 +1,143 @@
+.project {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.projectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+  gap: 1rem;
+
+  details {
+    margin: 0;
+  }
+
+  > h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    align-items: first baseline;
+  }
+
+  @media (max-width: 700px) {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    padding-bottom: 0.5rem;
+    gap: 0.5rem;
+
+    > div {
+      width: 100%;
+      justify-content: end;
+    }
+  }
+}
+
+.tables {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+
+  @media (max-width: 40rem) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.graphCard {
+  height: 20rem;
+  margin-top: -0.2rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.graphCard2 {
+  height: 20rem;
+  padding: 0;
+}
+
+.geoCard.geoCard {
+  padding: 0;
+  grid-column: span 2;
+  display: flex;
+  flex-direction: row;
+
+  > div {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .geoMap {
+    display: flex;
+    position: relative;
+    width: calc(50% + 1rem);
+
+    &::after {
+      content: "";
+      position: absolute;
+      --direction: right;
+      background: linear-gradient(
+        to var(--direction),
+        hsla(var(--card-background-base) / 0) 0%,
+        hsla(var(--card-background-base) / 0.018) 9.5%,
+        hsla(var(--card-background-base) / 0.058) 17.9%,
+        hsla(var(--card-background-base) / 0.116) 25.6%,
+        hsla(var(--card-background-base) / 0.188) 32.5%,
+        hsla(var(--card-background-base) / 0.273) 38.8%,
+        hsla(var(--card-background-base) / 0.365) 44.7%,
+        hsla(var(--card-background-base) / 0.462) 50.3%,
+        hsla(var(--card-background-base) / 0.56) 55.7%,
+        hsla(var(--card-background-base) / 0.657) 61.1%,
+        hsla(var(--card-background-base) / 0.747) 66.5%,
+        hsla(var(--card-background-base) / 0.829) 72.2%,
+        hsla(var(--card-background-base) / 0.899) 78.3%,
+        hsla(var(--card-background-base) / 0.953) 84.8%,
+        hsla(var(--card-background-base) / 0.988) 92%,
+        hsl(var(--card-background-base)) 100%
+      );
+
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 3rem;
+    }
+  }
+
+  .geoTable {
+    width: calc(50% - 1rem);
+
+    > div {
+      padding: 1rem;
+      padding-left: 0;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    grid-column: span 1;
+    flex-direction: column;
+
+    .geoTable,
+    .geoMap {
+      width: 100%;
+    }
+
+    .geoMap {
+      &::after {
+        top: unset;
+        width: 100%;
+        left: 0;
+        height: 3rem;
+        --direction: bottom;
+      }
+    }
+
+    .geoTable {
+      padding: 1rem;
+      padding-top: 0;
+
+      > div {
+        padding: 0;
+      }
+    }
+  }
+}

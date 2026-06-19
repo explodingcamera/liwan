@@ -29,8 +29,8 @@ import {
 } from "date-fns";
 import { formatDateRange } from "little-date";
 
-import type { GraphRange } from "../components/graph/graph";
-import type { GraphInterval } from "../constants";
+import type { GraphRange } from "@/components/dashboard/project/graph";
+import type { GraphInterval } from "@/constants";
 
 type DateRangeValue = { start: Date; end: Date };
 const WEEK_STARTS_ON = { weekStartsOn: 1 as const };
@@ -76,7 +76,10 @@ export class DateRange {
 			return new DateRange(range as RangeName);
 		}
 		const [start, end, variant] = range.split(":");
-		const dr = new DateRange({ start: new Date(Number(start)), end: new Date(Number(end)) });
+		const dr = new DateRange({
+			start: new Date(Number(start)),
+			end: new Date(Number(end)),
+		});
 		if (variant) {
 			dr.variant = variant;
 		}

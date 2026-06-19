@@ -1,8 +1,7 @@
 ---
+import { Project } from "@/components/dashboard/project";
+import Layout from "@/layouts/layout.astro";
 import type { GetStaticPaths } from "astro";
-
-import { Project } from "../../components/project";
-import Layout from "../../layouts/Layout.astro";
 
 export const getStaticPaths = (() => {
 	return [{ params: { project: "project" } }];

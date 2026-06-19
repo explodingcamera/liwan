@@ -45,6 +45,7 @@ impl LiwanSettings {
                 track_utm_params: None,
                 track_geo: None,
                 data_retention: models::DataRetention::Inherit,
+                allowed_hostnames: Vec::new(),
                 ingest_drop_rules: Vec::new(),
             },
         )
@@ -94,6 +95,15 @@ impl LiwanSettings {
 
     /// Update per-entity collection settings and refresh the cache
     pub fn update_entity(&self, settings: &models::EntityCollectionSettings) -> Result<()> {
+        let mut allowed_hostnames = Vec::new();
+        for pattern in &settings.allowed_hostnames {
+            if let Some(pattern) = models::normalize_allowed_hostname_pattern(pattern).map_err(anyhow::Error::msg)? {
+                if !allowed_hostnames.contains(&pattern) {
+                    allowed_hostnames.push(pattern);
+                }
+            }
+        }
+        let allowed_hostnames = allowed_hostnames.join(",");
         let ingest_drop_rules_json = serde_json::to_string(&settings.ingest_drop_rules)?;
         let history_mode = match settings.data_retention {
             models::DataRetention::Inherit => "inherit",
@@ -106,8 +116,8 @@ impl LiwanSettings {
         };
         let conn = self.pool.get()?;
         conn.execute(
-            "insert into entity_settings (entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_drop_rules_json)
-             values (:entity_id, :visitor_group_mode, :track_sessions, :track_utm_params, :track_geo, :history_mode, :history_days, :ingest_drop_rules_json)
+            "insert into entity_settings (entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, allowed_hostnames, ingest_drop_rules_json)
+             values (:entity_id, :visitor_group_mode, :track_sessions, :track_utm_params, :track_geo, :history_mode, :history_days, :allowed_hostnames, :ingest_drop_rules_json)
              on conflict(entity_id) do update set
                 visitor_group_mode = excluded.visitor_group_mode,
                 track_sessions = excluded.track_sessions,
@@ -115,6 +125,7 @@ impl LiwanSettings {
                 track_geo = excluded.track_geo,
                 history_mode = excluded.history_mode,
                 history_days = excluded.history_days,
+                allowed_hostnames = excluded.allowed_hostnames,
                 ingest_drop_rules_json = excluded.ingest_drop_rules_json",
             rusqlite::named_params! {
                 ":entity_id": settings.entity_id,
@@ -124,6 +135,7 @@ impl LiwanSettings {
                 ":track_geo": settings.track_geo.map(|detail| detail.to_string()),
                 ":history_mode": history_mode,
                 ":history_days": data_retention_days,
+                ":allowed_hostnames": allowed_hostnames,
                 ":ingest_drop_rules_json": ingest_drop_rules_json,
             },
         )?;
@@ -230,7 +242,7 @@ impl SettingsCache {
         )?;
 
         let mut stmt = conn.prepare(
-            "select entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, ingest_drop_rules_json from entity_settings",
+            "select entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, allowed_hostnames, ingest_drop_rules_json from entity_settings",
         )?;
         let entities = stmt
             .query_map([], |row| {
@@ -238,7 +250,8 @@ impl SettingsCache {
                 let track_geo: Option<String> = row.get(4)?;
                 let history_mode: String = row.get(5)?;
                 let history_days: Option<u32> = row.get(6)?;
-                let ingest_drop_rules_json: String = row.get(7)?;
+                let allowed_hostnames: String = row.get(7)?;
+                let ingest_drop_rules_json: String = row.get(8)?;
                 let data_retention = match history_mode.as_str() {
                     "inherit" => models::DataRetention::Inherit,
                     "keep_all" => models::DataRetention::All,
@@ -265,8 +278,12 @@ impl SettingsCache {
                         .map(|value| value.parse().map_err(|err: String| sql_err(4, rusqlite::types::Type::Text, err)))
                         .transpose()?,
                     data_retention,
+                    allowed_hostnames: allowed_hostnames
+                        .split(',')
+                        .filter_map(|pattern| models::normalize_allowed_hostname_pattern(pattern).ok().flatten())
+                        .collect(),
                     ingest_drop_rules: serde_json::from_str(&ingest_drop_rules_json)
-                        .map_err(|err| sql_err(7, rusqlite::types::Type::Text, err))?,
+                        .map_err(|err| sql_err(8, rusqlite::types::Type::Text, err))?,
                 })
             })?
             .collect::<Result<Vec<_>, rusqlite::Error>>()?

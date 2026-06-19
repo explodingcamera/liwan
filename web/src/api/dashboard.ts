@@ -1,1 +1,1224 @@
-export default {"openapi":"3.1.0","info":{"title":"Liwan API","version":""},"paths":{"/api/dashboard/users":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UsersResponse"}}}}}}},"/api/dashboard/user/{username}":{"put":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateUserRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}},"delete":{}},"/api/dashboard/user/{username}/password":{"put":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdatePasswordRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/user":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateUserRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/project/{project_id}":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProjectResponse"}}}}}},"put":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateProjectRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}},"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateProjectRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}},"delete":{}},"/api/dashboard/project/{project_id}/settings":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProjectDisplaySettings"}}}}}},"put":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProjectDisplaySettings"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/projects":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProjectsResponse"}}}}}}},"/api/dashboard/entities":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntitiesResponse"}}}}}}},"/api/dashboard/entity":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateEntityRequest"}}},"required":true},"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityResponse"}}}},"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/entity/{entity_id}":{"put":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateEntityRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}},"delete":{}},"/api/dashboard/entity/{entity_id}/settings":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityCollectionSettingsResponse"}}}}}},"put":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityCollectionSettings"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/settings":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CollectionSettings"}}}}}},"put":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CollectionSettings"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/settings/prune":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PruneRequest"}}},"required":true},"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PruneResponse"}}}},"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/auth/me":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/MeResponse"}}}}}}},"/api/dashboard/auth/setup":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SetupRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/auth/login":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/LoginRequest"}}},"required":true},"responses":{"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/auth/logout":{"post":{}},"/api/dashboard/config":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ConfigResponse"}}}}}}},"/api/dashboard/project/{project_id}/earliest":{"get":{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EarliestResponse"}}}}}}},"/api/dashboard/project/{project_id}/graph":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/GraphRequest"}}},"required":true},"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/GraphResponse"}}}},"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/project/{project_id}/stats":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/StatsRequest"}}},"required":true},"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/StatsResponse"}}}},"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}},"/api/dashboard/project/{project_id}/dimension":{"post":{"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DimensionRequest"}}},"required":true},"responses":{"200":{"description":"","content":{"application/json":{"schema":{"$ref":"#/components/schemas/DimensionResponse"}}}},"400":{"description":"Failed to parse the request body as JSON","content":{"text/plain":{"schema":{"type":"string"}}}},"415":{"description":"Expected request with `Content-Type: application/json`","content":{"text/plain":{"schema":{"type":"string"}}}},"422":{"description":"Failed to deserialize the JSON body into the target type","content":{"text/plain":{"schema":{"type":"string"}}}}}}}},"components":{"schemas":{"CollectionSettings":{"type":"object","properties":{"dataRetention":{"$ref":"#/components/schemas/DataRetention"},"ingestDropRules":{"type":"array","items":{"$ref":"#/components/schemas/IngestDropRule"}},"trackGeo":{"$ref":"#/components/schemas/GeoDetail"},"trackSessions":{"type":"boolean"},"trackUtmParams":{"type":"boolean"},"visitorGroupMode":{"$ref":"#/components/schemas/VisitorGroupMode"}},"required":["visitorGroupMode","trackSessions","trackUtmParams","trackGeo","dataRetention","ingestDropRules"]},"ConfigResponse":{"type":"object","properties":{"baseUrl":{"type":"string"},"disableFavicons":{"type":"boolean"}},"required":["baseUrl","disableFavicons"]},"CreateEntityRequest":{"type":"object","properties":{"displayName":{"type":"string"},"id":{"type":"string"},"projects":{"type":"array","items":{"type":"string"}}},"required":["id","displayName","projects"]},"CreateProjectRequest":{"type":"object","properties":{"displayName":{"type":"string"},"entities":{"type":"array","items":{"type":"string"}},"public":{"type":"boolean"},"secret":{"type":["string","null"]},"unlisted":{"type":"boolean","default":false}},"required":["displayName","public","entities"]},"CreateUserRequest":{"type":"object","properties":{"password":{"type":"string"},"role":{"$ref":"#/components/schemas/UserRole"},"username":{"type":"string"}},"required":["username","password","role"]},"DataRetention":{"oneOf":[{"type":"object","properties":{"mode":{"type":"string","const":"inherit"}},"required":["mode"]},{"type":"object","properties":{"mode":{"type":"string","const":"all"}},"required":["mode"]},{"type":"object","properties":{"days":{"type":"integer","format":"uint32","minimum":1},"mode":{"type":"string","const":"days"}},"required":["mode","days"]}]},"DateRange":{"type":"object","properties":{"end":{"description":"End of the report range","type":"string","format":"date-time"},"start":{"description":"Start of the report range","type":"string","format":"date-time"}},"required":["start","end"]},"Dimension":{"description":"Dimension selected for table reports and filters","oneOf":[{"description":"Full tracked URL","type":"string","const":"url"},{"description":"First URL in a session","type":"string","const":"url_entry"},{"description":"Last URL in a session","type":"string","const":"url_exit"},{"description":"Tracked hostname","type":"string","const":"fqdn"},{"description":"Tracked path","type":"string","const":"path"},{"description":"Referrer domain","type":"string","const":"referrer"},{"description":"Operating system family","type":"string","const":"platform"},{"description":"Browser family","type":"string","const":"browser"},{"description":"Device type","type":"string","const":"mobile"},{"description":"GeoIP country","type":"string","const":"country"},{"description":"GeoIP city","type":"string","const":"city"},{"description":"UTM source","type":"string","const":"utm_source"},{"description":"UTM medium","type":"string","const":"utm_medium"},{"description":"UTM campaign","type":"string","const":"utm_campaign"},{"description":"UTM content","type":"string","const":"utm_content"},{"description":"UTM term","type":"string","const":"utm_term"},{"description":"Screen width bucket","type":"string","const":"screen_width"},{"description":"Screen orientation","type":"string","const":"orientation"}]},"DimensionFilter":{"description":"Filter applied to a dashboard report query","type":"object","properties":{"dimension":{"$ref":"#/components/schemas/Dimension"},"filterType":{"$ref":"#/components/schemas/FilterType"},"inversed":{"type":["boolean","null"]},"strict":{"type":["boolean","null"]},"value":{"type":["string","null"]}},"required":["dimension","filterType"]},"DimensionRequest":{"type":"object","properties":{"dimension":{"$ref":"#/components/schemas/Dimension"},"filters":{"type":"array","items":{"$ref":"#/components/schemas/DimensionFilter"}},"metric":{"$ref":"#/components/schemas/Metric"},"range":{"$ref":"#/components/schemas/DateRange"}},"required":["range","filters","metric","dimension"]},"DimensionResponse":{"type":"object","properties":{"data":{"type":"array","items":{"$ref":"#/components/schemas/DimensionTableRow"}}},"required":["data"]},"DimensionTableRow":{"type":"object","properties":{"dimensionValue":{"type":"string"},"displayName":{"type":["string","null"]},"icon":{"type":["string","null"]},"value":{"type":"number","format":"double"}},"required":["dimensionValue","value"]},"DisplayOverride":{"type":"string","enum":["auto","show","hide"]},"EarliestResponse":{"type":"object","properties":{"earliest":{"type":["string","null"],"format":"date-time"}}},"EntitiesResponse":{"type":"object","properties":{"entities":{"type":"array","items":{"$ref":"#/components/schemas/EntityResponse"}}},"required":["entities"]},"EntityCollectionSettings":{"type":"object","properties":{"dataRetention":{"$ref":"#/components/schemas/DataRetention"},"entityId":{"type":"string"},"ingestDropRules":{"type":"array","items":{"$ref":"#/components/schemas/IngestDropRule"}},"trackGeo":{"anyOf":[{"$ref":"#/components/schemas/GeoDetail"},{"type":"null"}]},"trackSessions":{"type":["boolean","null"]},"trackUtmParams":{"type":["boolean","null"]},"visitorGroupMode":{"anyOf":[{"$ref":"#/components/schemas/VisitorGroupMode"},{"type":"null"}]}},"required":["entityId","dataRetention","ingestDropRules"]},"EntityCollectionSettingsResponse":{"type":"object","properties":{"resolved":{"$ref":"#/components/schemas/ResolvedCollectionSettings"},"settings":{"$ref":"#/components/schemas/EntityCollectionSettings"}},"required":["settings","resolved"]},"EntityProject":{"type":"object","properties":{"displayName":{"type":"string"},"id":{"type":"string"},"public":{"type":"boolean"},"unlisted":{"type":"boolean"}},"required":["id","displayName","public","unlisted"]},"EntityResponse":{"type":"object","properties":{"displayName":{"type":"string"},"id":{"type":"string"},"projects":{"type":"array","items":{"$ref":"#/components/schemas/EntityProject"}}},"required":["id","displayName","projects"]},"EventRequest":{"type":"object","properties":{"entity_id":{"type":"string"},"name":{"type":"string"},"orientation":{"type":["string","null"]},"referrer":{"type":["string","null"]},"screen_width":{"type":["string","null"]},"url":{"type":"string"}},"required":["entity_id","name","url"]},"FilterType":{"type":"string","enum":["is_null","equal","contains","starts_with","ends_with","is_true","is_false"]},"GeoDetail":{"type":"string","enum":["none","country","city"]},"GraphInterval":{"description":"Time bucket size for graph reports","oneOf":[{"description":"Hourly buckets","type":"string","const":"hour"},{"description":"Daily buckets","type":"string","const":"day"}]},"GraphRequest":{"type":"object","properties":{"filters":{"type":"array","items":{"$ref":"#/components/schemas/DimensionFilter"}},"interval":{"$ref":"#/components/schemas/GraphInterval"},"metric":{"$ref":"#/components/schemas/Metric"},"range":{"$ref":"#/components/schemas/DateRange"},"timezone":{"type":["string","null"]}},"required":["range","filters","interval","metric"]},"GraphResponse":{"type":"object","properties":{"data":{"type":"array","items":{"$ref":"#/components/schemas/ReportGraphPoint"}}},"required":["data"]},"IngestDropRule":{"type":"object","properties":{"filters":{"type":"array","items":{"$ref":"#/components/schemas/IngestFilter"}}},"required":["filters"]},"IngestFilter":{"type":"object","properties":{"dimension":{"type":"string"},"filterType":{"$ref":"#/components/schemas/FilterType"},"value":{"type":["string","null"]}},"required":["dimension","filterType"]},"LoginRequest":{"type":"object","properties":{"password":{"type":"string"},"username":{"type":"string"}},"required":["username","password"]},"MeResponse":{"type":"object","properties":{"role":{"$ref":"#/components/schemas/UserRole"},"username":{"type":"string"}},"required":["username","role"]},"Metric":{"oneOf":[{"description":"Total pageviews","type":"string","const":"views"},{"description":"Distinct visitor groups","type":"string","const":"unique_visitors"},{"description":"Percentage of sessions with one pageview","type":"string","const":"bounce_rate"},{"description":"Average time between pageviews in a session","type":"string","const":"avg_time_on_site"}]},"ProjectDisplaySettings":{"type":"object","properties":{"dimensionDisplayOverrides":{"type":"object","additionalProperties":{"$ref":"#/components/schemas/DisplayOverride"}},"metricDisplayOverrides":{"type":"object","additionalProperties":{"$ref":"#/components/schemas/DisplayOverride"}},"projectId":{"type":"string"}},"required":["projectId","metricDisplayOverrides","dimensionDisplayOverrides"]},"ProjectEntity":{"type":"object","properties":{"displayName":{"type":"string"},"id":{"type":"string"}},"required":["id","displayName"]},"ProjectResponse":{"type":"object","properties":{"displayName":{"type":"string"},"entities":{"type":"array","items":{"$ref":"#/components/schemas/ProjectEntity"}},"hiddenDimensions":{"type":"array","items":{"$ref":"#/components/schemas/Dimension"}},"hiddenMetrics":{"type":"array","items":{"$ref":"#/components/schemas/Metric"}},"id":{"type":"string"},"public":{"type":"boolean"},"unlisted":{"type":"boolean"}},"required":["id","displayName","entities","public","unlisted","hiddenMetrics","hiddenDimensions"]},"ProjectsResponse":{"type":"object","properties":{"projects":{"type":"array","items":{"$ref":"#/components/schemas/ProjectResponse"}}},"required":["projects"]},"PruneEntityStats":{"type":"object","properties":{"clearedGeoEvents":{"type":"integer","format":"uint64","minimum":0},"clearedSessionEvents":{"type":"integer","format":"uint64","minimum":0},"clearedUtmEvents":{"type":"integer","format":"uint64","minimum":0},"deletedEvents":{"type":"integer","format":"uint64","minimum":0},"entityId":{"type":"string"},"totalEvents":{"type":"integer","format":"uint64","minimum":0}},"required":["entityId","totalEvents","deletedEvents","clearedUtmEvents","clearedGeoEvents","clearedSessionEvents"]},"PruneRequest":{"type":"object","properties":{"dryRun":{"type":"boolean"}},"required":["dryRun"]},"PruneResponse":{"type":"object","properties":{"dryRun":{"type":"boolean"},"entities":{"type":"array","items":{"$ref":"#/components/schemas/PruneEntityStats"}},"total":{"$ref":"#/components/schemas/PruneEntityStats"}},"required":["dryRun","entities","total"]},"ReportGraphPoint":{"description":"One point in a graph report","type":"object","properties":{"binStart":{"description":"Start timestamp of the graph bucket","type":"string","format":"date-time"},"value":{"description":"Metric value for the graph bucket","type":"number","format":"double"}},"required":["binStart","value"]},"ReportStats":{"description":"Overall metric summary for a report range","type":"object","properties":{"avgTimeOnSite":{"description":"Average time on site, when session metrics are available","type":["number","null"],"format":"double"},"bounceRate":{"description":"Bounce rate, when session metrics are available","type":["number","null"],"format":"double"},"totalViews":{"description":"Total pageviews","type":"integer","format":"uint64","minimum":0},"uniqueVisitors":{"description":"Distinct visitor groups","type":"integer","format":"uint64","minimum":0}},"required":["totalViews","uniqueVisitors"]},"ResolvedCollectionSettings":{"type":"object","properties":{"dataRetention":{"$ref":"#/components/schemas/DataRetention"},"ingestDropRules":{"type":"array","items":{"$ref":"#/components/schemas/IngestDropRule"}},"trackGeo":{"$ref":"#/components/schemas/GeoDetail"},"trackSessions":{"type":"boolean"},"trackUtmParams":{"type":"boolean"},"visitorGroupMode":{"$ref":"#/components/schemas/VisitorGroupMode"}},"required":["visitorGroupMode","trackSessions","trackUtmParams","trackGeo","dataRetention","ingestDropRules"]},"SetupRequest":{"type":"object","properties":{"password":{"type":"string"},"token":{"type":"string"},"username":{"type":"string"}},"required":["token","username","password"]},"StatsRequest":{"type":"object","properties":{"filters":{"type":"array","items":{"$ref":"#/components/schemas/DimensionFilter"}},"range":{"$ref":"#/components/schemas/DateRange"}},"required":["range","filters"]},"StatsResponse":{"type":"object","properties":{"currentVisitors":{"type":"integer","format":"uint64","minimum":0},"stats":{"$ref":"#/components/schemas/ReportStats"},"statsPrev":{"$ref":"#/components/schemas/ReportStats"}},"required":["currentVisitors","stats","statsPrev"]},"UpdateEntityRequest":{"type":"object","properties":{"displayName":{"type":["string","null"]},"projects":{"type":["array","null"],"items":{"type":"string"}}}},"UpdatePasswordRequest":{"type":"object","properties":{"password":{"type":"string"}},"required":["password"]},"UpdateProjectInfo":{"type":"object","properties":{"displayName":{"type":"string"},"public":{"type":"boolean"},"secret":{"type":["string","null"]},"unlisted":{"type":"boolean","default":false}},"required":["displayName","public"]},"UpdateProjectRequest":{"type":"object","properties":{"entities":{"type":["array","null"],"items":{"type":"string"}},"project":{"anyOf":[{"$ref":"#/components/schemas/UpdateProjectInfo"},{"type":"null"}]}}},"UpdateUserRequest":{"type":"object","properties":{"projects":{"type":"array","items":{"type":"string"}},"role":{"$ref":"#/components/schemas/UserRole"}},"required":["role","projects"]},"UserResponse":{"type":"object","properties":{"projects":{"type":"array","items":{"type":"string"}},"role":{"$ref":"#/components/schemas/UserRole"},"username":{"type":"string"}},"required":["username","role","projects"]},"UserRole":{"type":"string","enum":["admin","user"]},"UsersResponse":{"type":"object","properties":{"users":{"type":"array","items":{"$ref":"#/components/schemas/UserResponse"}}},"required":["users"]},"VisitorGroupMode":{"type":"string","enum":["accurate","random_per_request","network_standard","network_balanced","network_accurate"]}}}} as const;
+export default {
+	openapi: "3.1.0",
+	info: { title: "Liwan API", version: "" },
+	paths: {
+		"/api/dashboard/users": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/UsersResponse" },
+							},
+						},
+					},
+				},
+			},
+		},
+		"/api/dashboard/user/{username}": {
+			put: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/UpdateUserRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+			delete: {},
+		},
+		"/api/dashboard/user/{username}/password": {
+			put: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/UpdatePasswordRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/user": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/CreateUserRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/project/{project_id}": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/ProjectResponse" },
+							},
+						},
+					},
+				},
+			},
+			put: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/UpdateProjectRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/CreateProjectRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+			delete: {},
+		},
+		"/api/dashboard/project/{project_id}/settings": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/ProjectDisplaySettings" },
+							},
+						},
+					},
+				},
+			},
+			put: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/ProjectDisplaySettings" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/projects": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/ProjectsResponse" },
+							},
+						},
+					},
+				},
+			},
+		},
+		"/api/dashboard/entities": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/EntitiesResponse" },
+							},
+						},
+					},
+				},
+			},
+		},
+		"/api/dashboard/entity": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/CreateEntityRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/EntityResponse" },
+							},
+						},
+					},
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/entity/{entity_id}": {
+			put: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/UpdateEntityRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+			delete: {},
+		},
+		"/api/dashboard/entity/{entity_id}/settings": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: {
+									$ref: "#/components/schemas/EntityCollectionSettingsResponse",
+								},
+							},
+						},
+					},
+				},
+			},
+			put: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/EntityCollectionSettings" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/settings": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/CollectionSettings" },
+							},
+						},
+					},
+				},
+			},
+			put: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/CollectionSettings" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/settings/prune": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/PruneRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/PruneResponse" },
+							},
+						},
+					},
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/auth/me": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/MeResponse" },
+							},
+						},
+					},
+				},
+			},
+		},
+		"/api/dashboard/auth/setup": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/SetupRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/auth/login": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/LoginRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/auth/logout": { post: {} },
+		"/api/dashboard/config": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/ConfigResponse" },
+							},
+						},
+					},
+				},
+			},
+		},
+		"/api/dashboard/project/{project_id}/earliest": {
+			get: {
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/EarliestResponse" },
+							},
+						},
+					},
+				},
+			},
+		},
+		"/api/dashboard/project/{project_id}/graph": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/GraphRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/GraphResponse" },
+							},
+						},
+					},
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/project/{project_id}/stats": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/StatsRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/StatsResponse" },
+							},
+						},
+					},
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+		"/api/dashboard/project/{project_id}/dimension": {
+			post: {
+				requestBody: {
+					content: {
+						"application/json": {
+							schema: { $ref: "#/components/schemas/DimensionRequest" },
+						},
+					},
+					required: true,
+				},
+				responses: {
+					"200": {
+						description: "",
+						content: {
+							"application/json": {
+								schema: { $ref: "#/components/schemas/DimensionResponse" },
+							},
+						},
+					},
+					"400": {
+						description: "Failed to parse the request body as JSON",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"415": {
+						description: "Expected request with `Content-Type: application/json`",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+					"422": {
+						description: "Failed to deserialize the JSON body into the target type",
+						content: { "text/plain": { schema: { type: "string" } } },
+					},
+				},
+			},
+		},
+	},
+	components: {
+		schemas: {
+			CollectionSettings: {
+				type: "object",
+				properties: {
+					dataRetention: { $ref: "#/components/schemas/DataRetention" },
+					ingestDropRules: {
+						type: "array",
+						items: { $ref: "#/components/schemas/IngestDropRule" },
+					},
+					trackGeo: { $ref: "#/components/schemas/GeoDetail" },
+					trackSessions: { type: "boolean" },
+					trackUtmParams: { type: "boolean" },
+					visitorGroupMode: { $ref: "#/components/schemas/VisitorGroupMode" },
+				},
+				required: [
+					"visitorGroupMode",
+					"trackSessions",
+					"trackUtmParams",
+					"trackGeo",
+					"dataRetention",
+					"ingestDropRules",
+				],
+			},
+			ConfigResponse: {
+				type: "object",
+				properties: {
+					baseUrl: { type: "string" },
+					disableFavicons: { type: "boolean" },
+				},
+				required: ["baseUrl", "disableFavicons"],
+			},
+			CreateEntityRequest: {
+				type: "object",
+				properties: {
+					displayName: { type: "string" },
+					id: { type: "string" },
+					projects: { type: "array", items: { type: "string" } },
+				},
+				required: ["id", "displayName", "projects"],
+			},
+			CreateProjectRequest: {
+				type: "object",
+				properties: {
+					displayName: { type: "string" },
+					entities: { type: "array", items: { type: "string" } },
+					public: { type: "boolean" },
+					secret: { type: ["string", "null"] },
+					unlisted: { type: "boolean", default: false },
+				},
+				required: ["displayName", "public", "entities"],
+			},
+			CreateUserRequest: {
+				type: "object",
+				properties: {
+					password: { type: "string" },
+					role: { $ref: "#/components/schemas/UserRole" },
+					username: { type: "string" },
+				},
+				required: ["username", "password", "role"],
+			},
+			DataRetention: {
+				oneOf: [
+					{
+						type: "object",
+						properties: { mode: { type: "string", const: "inherit" } },
+						required: ["mode"],
+					},
+					{
+						type: "object",
+						properties: { mode: { type: "string", const: "all" } },
+						required: ["mode"],
+					},
+					{
+						type: "object",
+						properties: {
+							days: { type: "integer", format: "uint32", minimum: 1 },
+							mode: { type: "string", const: "days" },
+						},
+						required: ["mode", "days"],
+					},
+				],
+			},
+			DateRange: {
+				type: "object",
+				properties: {
+					end: {
+						description: "End of the report range",
+						type: "string",
+						format: "date-time",
+					},
+					start: {
+						description: "Start of the report range",
+						type: "string",
+						format: "date-time",
+					},
+				},
+				required: ["start", "end"],
+			},
+			Dimension: {
+				description: "Dimension selected for table reports and filters",
+				oneOf: [
+					{ description: "Full tracked URL", type: "string", const: "url" },
+					{
+						description: "First URL in a session",
+						type: "string",
+						const: "url_entry",
+					},
+					{
+						description: "Last URL in a session",
+						type: "string",
+						const: "url_exit",
+					},
+					{ description: "Tracked hostname", type: "string", const: "fqdn" },
+					{ description: "Tracked path", type: "string", const: "path" },
+					{ description: "Referrer domain", type: "string", const: "referrer" },
+					{
+						description: "Operating system family",
+						type: "string",
+						const: "platform",
+					},
+					{ description: "Browser family", type: "string", const: "browser" },
+					{ description: "Device type", type: "string", const: "mobile" },
+					{ description: "GeoIP country", type: "string", const: "country" },
+					{ description: "GeoIP city", type: "string", const: "city" },
+					{ description: "UTM source", type: "string", const: "utm_source" },
+					{ description: "UTM medium", type: "string", const: "utm_medium" },
+					{
+						description: "UTM campaign",
+						type: "string",
+						const: "utm_campaign",
+					},
+					{ description: "UTM content", type: "string", const: "utm_content" },
+					{ description: "UTM term", type: "string", const: "utm_term" },
+					{
+						description: "Screen width bucket",
+						type: "string",
+						const: "screen_width",
+					},
+					{
+						description: "Screen orientation",
+						type: "string",
+						const: "orientation",
+					},
+				],
+			},
+			DimensionFilter: {
+				description: "Filter applied to a dashboard report query",
+				type: "object",
+				properties: {
+					dimension: { $ref: "#/components/schemas/Dimension" },
+					filterType: { $ref: "#/components/schemas/FilterType" },
+					inversed: { type: ["boolean", "null"] },
+					strict: { type: ["boolean", "null"] },
+					value: { type: ["string", "null"] },
+				},
+				required: ["dimension", "filterType"],
+			},
+			DimensionRequest: {
+				type: "object",
+				properties: {
+					dimension: { $ref: "#/components/schemas/Dimension" },
+					filters: {
+						type: "array",
+						items: { $ref: "#/components/schemas/DimensionFilter" },
+					},
+					metric: { $ref: "#/components/schemas/Metric" },
+					range: { $ref: "#/components/schemas/DateRange" },
+				},
+				required: ["range", "filters", "metric", "dimension"],
+			},
+			DimensionResponse: {
+				type: "object",
+				properties: {
+					data: {
+						type: "array",
+						items: { $ref: "#/components/schemas/DimensionTableRow" },
+					},
+				},
+				required: ["data"],
+			},
+			DimensionTableRow: {
+				type: "object",
+				properties: {
+					dimensionValue: { type: "string" },
+					displayName: { type: ["string", "null"] },
+					icon: { type: ["string", "null"] },
+					value: { type: "number", format: "double" },
+				},
+				required: ["dimensionValue", "value"],
+			},
+			DisplayOverride: { type: "string", enum: ["auto", "show", "hide"] },
+			EarliestResponse: {
+				type: "object",
+				properties: {
+					earliest: { type: ["string", "null"], format: "date-time" },
+				},
+			},
+			EntitiesResponse: {
+				type: "object",
+				properties: {
+					entities: {
+						type: "array",
+						items: { $ref: "#/components/schemas/EntityResponse" },
+					},
+				},
+				required: ["entities"],
+			},
+			EntityCollectionSettings: {
+				type: "object",
+				properties: {
+					allowedHostnames: {
+						type: "array",
+						default: [],
+						items: { type: "string" },
+					},
+					dataRetention: { $ref: "#/components/schemas/DataRetention" },
+					entityId: { type: "string" },
+					ingestDropRules: {
+						type: "array",
+						items: { $ref: "#/components/schemas/IngestDropRule" },
+					},
+					trackGeo: {
+						anyOf: [{ $ref: "#/components/schemas/GeoDetail" }, { type: "null" }],
+					},
+					trackSessions: { type: ["boolean", "null"] },
+					trackUtmParams: { type: ["boolean", "null"] },
+					visitorGroupMode: {
+						anyOf: [{ $ref: "#/components/schemas/VisitorGroupMode" }, { type: "null" }],
+					},
+				},
+				required: ["entityId", "dataRetention", "ingestDropRules"],
+			},
+			EntityCollectionSettingsResponse: {
+				type: "object",
+				properties: {
+					resolved: { $ref: "#/components/schemas/ResolvedCollectionSettings" },
+					settings: { $ref: "#/components/schemas/EntityCollectionSettings" },
+				},
+				required: ["settings", "resolved"],
+			},
+			EntityProject: {
+				type: "object",
+				properties: {
+					displayName: { type: "string" },
+					id: { type: "string" },
+					public: { type: "boolean" },
+					unlisted: { type: "boolean" },
+				},
+				required: ["id", "displayName", "public", "unlisted"],
+			},
+			EntityResponse: {
+				type: "object",
+				properties: {
+					displayName: { type: "string" },
+					id: { type: "string" },
+					projects: {
+						type: "array",
+						items: { $ref: "#/components/schemas/EntityProject" },
+					},
+				},
+				required: ["id", "displayName", "projects"],
+			},
+			EventRequest: {
+				type: "object",
+				properties: {
+					entity_id: { type: "string" },
+					name: { type: "string" },
+					orientation: { type: ["string", "null"] },
+					referrer: { type: ["string", "null"] },
+					screen_width: { type: ["string", "null"] },
+					url: { type: "string" },
+				},
+				required: ["entity_id", "name", "url"],
+			},
+			FilterType: {
+				type: "string",
+				enum: ["is_null", "equal", "contains", "starts_with", "ends_with", "is_true", "is_false"],
+			},
+			GeoDetail: { type: "string", enum: ["none", "country", "city"] },
+			GraphInterval: {
+				description: "Time bucket size for graph reports",
+				oneOf: [
+					{ description: "Hourly buckets", type: "string", const: "hour" },
+					{ description: "Daily buckets", type: "string", const: "day" },
+				],
+			},
+			GraphRequest: {
+				type: "object",
+				properties: {
+					filters: {
+						type: "array",
+						items: { $ref: "#/components/schemas/DimensionFilter" },
+					},
+					interval: { $ref: "#/components/schemas/GraphInterval" },
+					metric: { $ref: "#/components/schemas/Metric" },
+					range: { $ref: "#/components/schemas/DateRange" },
+					timezone: { type: ["string", "null"] },
+				},
+				required: ["range", "filters", "interval", "metric"],
+			},
+			GraphResponse: {
+				type: "object",
+				properties: {
+					data: {
+						type: "array",
+						items: { $ref: "#/components/schemas/ReportGraphPoint" },
+					},
+				},
+				required: ["data"],
+			},
+			IngestDropRule: {
+				type: "object",
+				properties: {
+					filters: {
+						type: "array",
+						items: { $ref: "#/components/schemas/IngestFilter" },
+					},
+				},
+				required: ["filters"],
+			},
+			IngestFilter: {
+				type: "object",
+				properties: {
+					dimension: { type: "string" },
+					filterType: { $ref: "#/components/schemas/FilterType" },
+					value: { type: ["string", "null"] },
+				},
+				required: ["dimension", "filterType"],
+			},
+			LoginRequest: {
+				type: "object",
+				properties: {
+					password: { type: "string" },
+					username: { type: "string" },
+				},
+				required: ["username", "password"],
+			},
+			MeResponse: {
+				type: "object",
+				properties: {
+					role: { $ref: "#/components/schemas/UserRole" },
+					username: { type: "string" },
+				},
+				required: ["username", "role"],
+			},
+			Metric: {
+				oneOf: [
+					{ description: "Total pageviews", type: "string", const: "views" },
+					{
+						description: "Distinct visitor groups",
+						type: "string",
+						const: "unique_visitors",
+					},
+					{
+						description: "Percentage of sessions with one pageview",
+						type: "string",
+						const: "bounce_rate",
+					},
+					{
+						description: "Average time between pageviews in a session",
+						type: "string",
+						const: "avg_time_on_site",
+					},
+				],
+			},
+			ProjectDisplaySettings: {
+				type: "object",
+				properties: {
+					dimensionDisplayOverrides: {
+						type: "object",
+						additionalProperties: {
+							$ref: "#/components/schemas/DisplayOverride",
+						},
+					},
+					metricDisplayOverrides: {
+						type: "object",
+						additionalProperties: {
+							$ref: "#/components/schemas/DisplayOverride",
+						},
+					},
+					projectId: { type: "string" },
+				},
+				required: ["projectId", "metricDisplayOverrides", "dimensionDisplayOverrides"],
+			},
+			ProjectEntity: {
+				type: "object",
+				properties: { displayName: { type: "string" }, id: { type: "string" } },
+				required: ["id", "displayName"],
+			},
+			ProjectResponse: {
+				type: "object",
+				properties: {
+					displayName: { type: "string" },
+					entities: {
+						type: "array",
+						items: { $ref: "#/components/schemas/ProjectEntity" },
+					},
+					hiddenDimensions: {
+						type: "array",
+						items: { $ref: "#/components/schemas/Dimension" },
+					},
+					hiddenMetrics: {
+						type: "array",
+						items: { $ref: "#/components/schemas/Metric" },
+					},
+					id: { type: "string" },
+					public: { type: "boolean" },
+					unlisted: { type: "boolean" },
+				},
+				required: ["id", "displayName", "entities", "public", "unlisted", "hiddenMetrics", "hiddenDimensions"],
+			},
+			ProjectsResponse: {
+				type: "object",
+				properties: {
+					projects: {
+						type: "array",
+						items: { $ref: "#/components/schemas/ProjectResponse" },
+					},
+				},
+				required: ["projects"],
+			},
+			PruneEntityStats: {
+				type: "object",
+				properties: {
+					clearedGeoEvents: { type: "integer", format: "uint64", minimum: 0 },
+					clearedSessionEvents: {
+						type: "integer",
+						format: "uint64",
+						minimum: 0,
+					},
+					clearedUtmEvents: { type: "integer", format: "uint64", minimum: 0 },
+					deletedEvents: { type: "integer", format: "uint64", minimum: 0 },
+					entityId: { type: "string" },
+					totalEvents: { type: "integer", format: "uint64", minimum: 0 },
+				},
+				required: [
+					"entityId",
+					"totalEvents",
+					"deletedEvents",
+					"clearedUtmEvents",
+					"clearedGeoEvents",
+					"clearedSessionEvents",
+				],
+			},
+			PruneRequest: {
+				type: "object",
+				properties: { dryRun: { type: "boolean" } },
+				required: ["dryRun"],
+			},
+			PruneResponse: {
+				type: "object",
+				properties: {
+					dryRun: { type: "boolean" },
+					entities: {
+						type: "array",
+						items: { $ref: "#/components/schemas/PruneEntityStats" },
+					},
+					total: { $ref: "#/components/schemas/PruneEntityStats" },
+				},
+				required: ["dryRun", "entities", "total"],
+			},
+			ReportGraphPoint: {
+				description: "One point in a graph report",
+				type: "object",
+				properties: {
+					binStart: {
+						description: "Start timestamp of the graph bucket",
+						type: "string",
+						format: "date-time",
+					},
+					value: {
+						description: "Metric value for the graph bucket",
+						type: "number",
+						format: "double",
+					},
+				},
+				required: ["binStart", "value"],
+			},
+			ReportStats: {
+				description: "Overall metric summary for a report range",
+				type: "object",
+				properties: {
+					avgTimeOnSite: {
+						description: "Average time on site, when session metrics are available",
+						type: ["number", "null"],
+						format: "double",
+					},
+					bounceRate: {
+						description: "Bounce rate, when session metrics are available",
+						type: ["number", "null"],
+						format: "double",
+					},
+					totalViews: {
+						description: "Total pageviews",
+						type: "integer",
+						format: "uint64",
+						minimum: 0,
+					},
+					uniqueVisitors: {
+						description: "Distinct visitor groups",
+						type: "integer",
+						format: "uint64",
+						minimum: 0,
+					},
+				},
+				required: ["totalViews", "uniqueVisitors"],
+			},
+			ResolvedCollectionSettings: {
+				type: "object",
+				properties: {
+					allowedHostnames: { type: "array", items: { type: "string" } },
+					dataRetention: { $ref: "#/components/schemas/DataRetention" },
+					ingestDropRules: {
+						type: "array",
+						items: { $ref: "#/components/schemas/IngestDropRule" },
+					},
+					trackGeo: { $ref: "#/components/schemas/GeoDetail" },
+					trackSessions: { type: "boolean" },
+					trackUtmParams: { type: "boolean" },
+					visitorGroupMode: { $ref: "#/components/schemas/VisitorGroupMode" },
+				},
+				required: [
+					"visitorGroupMode",
+					"trackSessions",
+					"trackUtmParams",
+					"trackGeo",
+					"dataRetention",
+					"allowedHostnames",
+					"ingestDropRules",
+				],
+			},
+			SetupRequest: {
+				type: "object",
+				properties: {
+					password: { type: "string" },
+					token: { type: "string" },
+					username: { type: "string" },
+				},
+				required: ["token", "username", "password"],
+			},
+			StatsRequest: {
+				type: "object",
+				properties: {
+					filters: {
+						type: "array",
+						items: { $ref: "#/components/schemas/DimensionFilter" },
+					},
+					range: { $ref: "#/components/schemas/DateRange" },
+				},
+				required: ["range", "filters"],
+			},
+			StatsResponse: {
+				type: "object",
+				properties: {
+					currentVisitors: { type: "integer", format: "uint64", minimum: 0 },
+					stats: { $ref: "#/components/schemas/ReportStats" },
+					statsPrev: { $ref: "#/components/schemas/ReportStats" },
+				},
+				required: ["currentVisitors", "stats", "statsPrev"],
+			},
+			UpdateEntityRequest: {
+				type: "object",
+				properties: {
+					displayName: { type: ["string", "null"] },
+					projects: { type: ["array", "null"], items: { type: "string" } },
+				},
+			},
+			UpdatePasswordRequest: {
+				type: "object",
+				properties: { password: { type: "string" } },
+				required: ["password"],
+			},
+			UpdateProjectInfo: {
+				type: "object",
+				properties: {
+					displayName: { type: "string" },
+					public: { type: "boolean" },
+					secret: { type: ["string", "null"] },
+					unlisted: { type: "boolean", default: false },
+				},
+				required: ["displayName", "public"],
+			},
+			UpdateProjectRequest: {
+				type: "object",
+				properties: {
+					entities: { type: ["array", "null"], items: { type: "string" } },
+					project: {
+						anyOf: [{ $ref: "#/components/schemas/UpdateProjectInfo" }, { type: "null" }],
+					},
+				},
+			},
+			UpdateUserRequest: {
+				type: "object",
+				properties: {
+					projects: { type: "array", items: { type: "string" } },
+					role: { $ref: "#/components/schemas/UserRole" },
+				},
+				required: ["role", "projects"],
+			},
+			UserResponse: {
+				type: "object",
+				properties: {
+					projects: { type: "array", items: { type: "string" } },
+					role: { $ref: "#/components/schemas/UserRole" },
+					username: { type: "string" },
+				},
+				required: ["username", "role", "projects"],
+			},
+			UserRole: { type: "string", enum: ["admin", "user"] },
+			UsersResponse: {
+				type: "object",
+				properties: {
+					users: {
+						type: "array",
+						items: { $ref: "#/components/schemas/UserResponse" },
+					},
+				},
+				required: ["users"],
+			},
+			VisitorGroupMode: {
+				type: "string",
+				enum: ["accurate", "random_per_request", "network_standard", "network_balanced", "network_accurate"],
+			},
+		},
+	},
+} as const;

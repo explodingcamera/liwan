@@ -121,6 +121,12 @@ pub(super) async fn serve(orig_uri: extract::OriginalUri, req: Request) -> Resul
         path = parts.join("/");
     }
 
+    if path.starts_with("settings/users/") {
+        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
+        parts[2] = "user";
+        path = parts.join("/");
+    }
+
     let file = if let Some(content) = Files::get(&path) {
         Some(content)
     } else {
