@@ -15,7 +15,6 @@ use tokio::task::spawn_blocking;
 
 pub fn router() -> ApiRouter<RouterState> {
     ApiRouter::new()
-        .api_route("/config", get(config_handler))
         .api_route("/project/{project_id}/earliest", get(project_earliest_handler))
         .api_route("/project/{project_id}/graph", post(project_graph_handler))
         .api_route("/project/{project_id}/stats", post(project_stats_handler))
@@ -73,17 +72,6 @@ struct DimensionTableRow {
     value: f64,
     display_name: Option<String>,
     icon: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "camelCase")]
-struct ConfigResponse {
-    base_url: String,
-    disable_favicons: bool,
-}
-
-async fn config_handler(State(app): State<RouterState>) -> ApiResult<Json<ConfigResponse>> {
-    Ok(Json(ConfigResponse { base_url: app.config.base_url.clone(), disable_favicons: app.config.disable_favicons }))
 }
 
 #[derive(Serialize, JsonSchema)]

@@ -8,7 +8,7 @@ const brandIcons = { foursquare: SiFoursquare, vk: SiVk, sinaweibo: SiSinaweibo,
 
 import styles from "./icons.module.css";
 
-import { useConfig } from "@/hooks/api";
+import { runtimeConfig } from "@/config";
 
 const genericIcons = {
 	search: SearchIcon,
@@ -118,9 +118,7 @@ export const Favicon = ({
 }: IconProps & {
 	fqdn: string;
 }) => {
-	const config = useConfig();
-	if (config.isLoading || config.config?.disableFavicons) return <SearchIcon size={size} />;
-
+	if (runtimeConfig?.disableFavicons) return <SearchIcon size={size} />;
 	fqdn = fqdn.replace(/[^a-zA-Z0-9.-]/g, "");
 	return <img src={`https://icons.duckduckgo.com/ip3/${fqdn}.ico`} alt="" height={size} width={size} />;
 };

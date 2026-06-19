@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "@/api/client";
 import { queryClient, useQuery } from "@/api/query";
@@ -7,6 +7,7 @@ import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResp
 import { toDataPoints } from "../components/dashboard/project/graph";
 
 const getStatusCode = (error: unknown) => (error as { status?: number } | undefined)?.status;
+
 export const useMe = () => {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["me"],
@@ -28,15 +29,6 @@ export const useMe = () => {
 		isLoading: isLoading || !mounted,
 		authError,
 	};
-};
-
-export const useConfig = () => {
-	const { data, isLoading } = useQuery({
-		queryKey: ["config"],
-		refetchOnMount: false,
-		queryFn: () => api["/api/dashboard/config"].get().json(),
-	});
-	return { config: data, isLoading };
 };
 
 export const useProjects = () => {

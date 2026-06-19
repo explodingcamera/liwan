@@ -93,7 +93,20 @@ impl IntoResponse for ApiError {
     }
 }
 
-pub(super) async fn serve(orig_uri: extract::OriginalUri, req: Request) -> Result<impl IntoResponse, StatusCode> {
+const CONFIG_PLACEHOLDER: &str = "__LIWAN_CONFIG__";
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HtmlConfig {
+    base_url: String,
+    disable_favicons: bool,
+}
+
+pub(super) async fn serve(
+    extract::State(state): extract::State<RouterState>,
+    orig_uri: extract::OriginalUri,
+    req: Request,
+) -> Result<impl IntoResponse, StatusCode> {
     let mut path = req.uri().path().trim_start_matches('/').trim_end_matches('/').to_string();
     if path.is_empty() {
         path = "index.html".to_string();
@@ -146,15 +159,33 @@ pub(super) async fn serve(orig_uri: extract::OriginalUri, req: Request) -> Resul
 
     let Some(content) = file else { return Err(StatusCode::NOT_FOUND) };
 
-    let hash = hex::encode(content.metadata.sha256_hash());
+    let mime = content.metadata.mimetype();
+    let is_html = mime == "text/html";
+
+    let (body, hash) = if is_html {
+        let html = std::str::from_utf8(&content.data).map_err(|err| {
+            tracing::error!("failed to read embedded HTML as UTF-8: {err}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        let config =
+            HtmlConfig { base_url: state.config.base_url.clone(), disable_favicons: state.config.disable_favicons };
+        let config_json = serde_json::to_string(&config).map_err(|err| {
+            tracing::error!("failed to serialize HTML config: {err}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        let body = html.replace(CONFIG_PLACEHOLDER, &config_json.replace('<', "\\u003c"));
+        let hash = blake3::hash(body.as_bytes()).to_hex().to_string();
+        (Body::from(body), hash)
+    } else {
+        let hash = hex::encode(content.metadata.sha256_hash());
+        (Body::from(content.data), hash)
+    };
+
     if let Some(etag) = req.headers().get(header::IF_NONE_MATCH)
         && etag.to_str().unwrap_or("000000") == hash
     {
         return Err(StatusCode::NOT_MODIFIED);
     }
-
-    let body = Body::from(content.data);
-    let mime = content.metadata.mimetype();
 
     let mut builder = Response::builder().header(header::CONTENT_TYPE, mime).header(header::ETAG, hash);
 
