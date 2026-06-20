@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { api } from "@/api/client";
 import { queryClient, useQuery } from "@/api/query";
@@ -125,10 +125,11 @@ export const useDimension = ({
 
 	return useMemo(() => {
 		const biggest = data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0;
-		const order = data?.data
-			?.toSorted((a, b) => (metric === "bounce_rate" ? a.value - b.value : b.value - a.value))
-			.map((d) => d.dimensionValue);
-		return { data: data?.data, biggest, order, isLoading, error };
+		const sortedData = data?.data?.toSorted((a, b) =>
+			metric === "bounce_rate" ? a.value - b.value : b.value - a.value,
+		);
+		const order = sortedData?.map((d) => d.dimensionValue);
+		return { data: sortedData, biggest, order, isLoading, error };
 	}, [data, isLoading, error, metric]);
 };
 export const useProjectGraph = ({

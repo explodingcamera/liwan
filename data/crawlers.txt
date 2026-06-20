@@ -1,0 +1,11 @@
+# Some crawlers use long browser-like user agents where ua_regexes may miss the
+# crawler token. Tokens in this file are matched case-insensitively anywhere in
+# the full User-Agent header before falling back to the parser.
+applebot
+bytespider
+google-cloudvertexbot
+google-inspectiontool
+googlebot
+googleother
+storebot-google
+yisouspider

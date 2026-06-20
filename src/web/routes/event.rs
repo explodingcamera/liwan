@@ -201,6 +201,10 @@ fn process_event(
         return Ok(None);
     }
 
+    if useragent::is_crawler_header(user_agent.as_str()) {
+        return Ok(None);
+    }
+
     // we delay the user agent parsing as much as possible since it's by far the most expensive operation
     let client = useragent::parse(user_agent.as_str());
     if client.is_bot() {
