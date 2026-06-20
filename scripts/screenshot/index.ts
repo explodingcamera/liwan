@@ -36,7 +36,7 @@ const screenshots: Array<{
 		options: {
 			overwrite: true,
 			width: 1100,
-			height: 1465,
+			height: 1445,
 			quality: 0.8,
 			styles: [geoCardMargin],
 		},
@@ -47,7 +47,7 @@ const screenshots: Array<{
 			darkMode: true,
 			overwrite: true,
 			width: 1100,
-			height: 1465,
+			height: 1445,
 			quality: 0.8,
 			styles: [geoCardMargin],
 		},
@@ -75,7 +75,7 @@ const screenshots: Array<{
 
 for (const { imagePath, options } of screenshots) {
 	await captureWebsite.file(
-		"http://localhost:9042/p/public-project",
+		"https://demo.liwan.dev/p/liwan.dev",
 		imagePath,
 		options,
 	);

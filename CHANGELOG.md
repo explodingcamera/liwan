@@ -16,7 +16,7 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
-## [Unreleased]
+## [v1.6.0] - 2026-06-20
 
 ### Features
 
@@ -30,17 +30,14 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 - Fixed bounce rate deltas so lower bounce rates are shown as an improvement
 - Fixed the account settings form to avoid React form action runtime errors
+- Fixed some crawler user-agents that were not being filtered out correctly
 - Tracking snippets now use the configured `base_url` instead of the current browser origin
-
-### Documentation
-
-- Added documentation for collected data, privacy-focused collection settings, cookie banner considerations, and projects/entities
-- Updated the docs site for clearer setup, configuration, metrics, GeoIP, reverse proxy, DuckDB, and ad blocker guidance
 
 ### Other
 
 - Renamed the internal `visitor_id` event column to `visitor_group_id` to better describe how repeat visits are grouped
 - Existing installs are migrated automatically with collection settings that preserve the previous default behavior
+- Updated to the latest version of DuckDB (1.5.4)
 
 ## [v1.5.0] - 2026-06-15
 
