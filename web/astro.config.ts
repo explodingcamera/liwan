@@ -75,7 +75,4 @@ export default defineConfig({
 	redirects: {
 		"/settings": "/settings/projects",
 	},
-	experimental: {
-		rustCompiler: true,
-	},
 });

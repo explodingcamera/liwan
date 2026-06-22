@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"@astrojs/compiler-rs": "^0.2.2",
-		"@astrojs/react": "^5.0.7",
+		"@astrojs/react": "6.0.0",
 		"@base-ui/react": "^1.6.0",
 		"@explodingcamera/css": "^0.0.4",
 		"@floating-ui/react": "^0.27.19",
@@ -50,7 +50,7 @@
 		"@types/react-dom": "^19.2.3",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"astro": "6.4.8",
+		"astro": "7.0.0",
 		"babel-plugin-react-compiler": "^1.0.0",
 		"rollup-plugin-license": "^3.7.1",
 		"typescript": "^6.0.3"
