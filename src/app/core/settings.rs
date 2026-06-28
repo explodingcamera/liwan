@@ -97,10 +97,10 @@ impl LiwanSettings {
     pub fn update_entity(&self, settings: &models::EntityCollectionSettings) -> Result<()> {
         let mut allowed_hostnames = Vec::new();
         for pattern in &settings.allowed_hostnames {
-            if let Some(pattern) = models::normalize_allowed_hostname_pattern(pattern).map_err(anyhow::Error::msg)? {
-                if !allowed_hostnames.contains(&pattern) {
-                    allowed_hostnames.push(pattern);
-                }
+            if let Some(pattern) = models::normalize_allowed_hostname_pattern(pattern).map_err(anyhow::Error::msg)?
+                && !allowed_hostnames.contains(&pattern)
+            {
+                allowed_hostnames.push(pattern);
             }
         }
         let allowed_hostnames = allowed_hostnames.join(",");

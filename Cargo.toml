@@ -2,7 +2,7 @@
 name="liwan"
 version="1.6.0"
 edition="2024"
-rust-version="1.95"
+rust-version="1.96"
 repository="https://github.com/explodingcamera/liwan"
 license="Apache-2.0"
 publish=false
@@ -24,7 +24,7 @@ arc-swap="1.9"
 tokio={version="1.52", default-features=false, features=["macros", "rt-multi-thread", "signal"]}
 tokio-util={version="0.7", features=["io"]}
 futures-lite={version="2.6", default-features=false, features=["alloc"]}
-quick_cache={version="0.6", features=["ahash"]}
+quick_cache={version="0.7"}
 
 # encoding
 hex={version="0.4"}
@@ -100,7 +100,7 @@ mimalloc={version="0.1"}
 tempfile={version="3"}
 cookie={version="*", default-features=false}
 tower={version="*", features=["util"]}
-axum-test={version="20"}
+axum-test={version="21"}
 criterion={version="0.8", default-features=false}
 
 [features]
