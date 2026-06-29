@@ -29,7 +29,7 @@
 		"fets": "^0.8.7",
 		"fuzzysort": "^3.1.0",
 		"little-date": "^1.2.1",
-		"lucide-react": "1.21.0",
+		"lucide-react": "1.22.0",
 		"react": "19.2.7",
 		"react-dom": "19.2.7",
 		"topojson-client": "^3.1.0"
