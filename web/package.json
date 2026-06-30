@@ -9,7 +9,7 @@
 		"typecheck": "bun run --bun tsc --noEmit"
 	},
 	"dependencies": {
-		"@astrojs/compiler-rs": "^0.2.3",
+		"@astrojs/compiler-rs": "^0.3.0",
 		"@astrojs/react": "6.0.0",
 		"@base-ui/react": "^1.6.0",
 		"@explodingcamera/css": "^0.0.4",
@@ -50,7 +50,7 @@
 		"@types/react-dom": "^19.2.3",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"astro": "7.0.3",
+		"astro": "7.0.4",
 		"babel-plugin-react-compiler": "^1.0.0",
 		"rollup-plugin-license": "^3.7.1",
 		"typescript": "^6.0.3"
