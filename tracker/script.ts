@@ -52,8 +52,13 @@ let referrer: string | null = null;
 const noWindow = typeof window === "undefined";
 
 if (typeof document !== "undefined") {
-	scriptEl = document.querySelector(`script[src^="${import.meta.url}"]`);
-	endpoint = scriptEl?.getAttribute("data-api") || (scriptEl && `${new URL(scriptEl.src).origin}/api/event`);
+	scriptEl =
+		document.querySelector<HTMLScriptElement>(`script[src^="${import.meta.url}"]`) ??
+		document.querySelector<HTMLScriptElement>("script:not([src])[data-api][data-entity]");
+
+	endpoint =
+		scriptEl?.getAttribute("data-api") || (scriptEl?.src && `${new URL(scriptEl.src).origin}/api/event`) || null;
+
 	entity = scriptEl?.getAttribute("data-entity") || null;
 	referrer = document.referrer;
 }
