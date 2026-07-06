@@ -11,7 +11,6 @@ use crate::web::webext::{ApiResult, AxumErrExt, ClientIp, empty_response};
 use aide::axum::routing::post;
 use aide::axum::{ApiRouter, IntoApiResponse};
 use anyhow::{Context, Result};
-use axum::Json;
 use axum::extract::State;
 use axum_extra::TypedHeader;
 use chrono::Utc;
@@ -337,6 +336,40 @@ fn resolve_visitor_group_id(
             };
             visitor_group_id_cidr(&ip, ipv4_prefix, ipv6_prefix, daily_salt, entity_id)
         }
+    }
+}
+
+/// Based on [`axum::Json`], but does not check `Content-Type` so it can be used
+/// with no-cors requests.
+pub struct Json<T>(pub T);
+
+impl<T, S> axum::extract::FromRequest<S> for Json<T>
+where
+    T: serde::de::DeserializeOwned,
+    S: Send + Sync,
+{
+    type Rejection = axum::extract::rejection::JsonRejection;
+
+    async fn from_request(req: axum::extract::Request, state: &S) -> Result<Self, Self::Rejection> {
+        let bytes = axum::body::Bytes::from_request(req, state).await?;
+        let axum::Json(value) = axum::Json::<T>::from_bytes(&bytes)?;
+        Ok(Self(value))
+    }
+}
+
+impl<T> aide::OperationInput for Json<T>
+where
+    T: schemars::JsonSchema,
+{
+    fn operation_input(ctx: &mut aide::generate::GenContext, operation: &mut aide::openapi::Operation) {
+        axum::Json::<T>::operation_input(ctx, operation);
+    }
+
+    fn inferred_early_responses(
+        ctx: &mut aide::generate::GenContext,
+        operation: &mut aide::openapi::Operation,
+    ) -> Vec<(Option<aide::openapi::StatusCode>, aide::openapi::Response)> {
+        axum::Json::<T>::inferred_early_responses(ctx, operation)
     }
 }
 
