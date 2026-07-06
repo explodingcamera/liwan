@@ -6,7 +6,7 @@ pub fn is_valid_id(id: &str) -> bool {
 }
 
 pub fn is_valid_username(name: &str) -> bool {
-    name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') && name.len() <= 64 && name.len() >= 3
+    name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') && name.len() <= 64 && name.len() >= 2
 }
 
 pub fn can_view_project(project: &Project, user: Option<&User>) -> bool {

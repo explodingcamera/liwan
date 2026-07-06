@@ -52,7 +52,7 @@ export const CreateUser = () => {
 					Username <small>(cannot be changed later)</small>
 					<input
 						required
-						pattern="^[A-Za-z0-9_\-]{1,20}$"
+						pattern="^[A-Za-z0-9_\-]{2,20}$"
 						name="username"
 						type="text"
 						placeholder="MyUsername"
