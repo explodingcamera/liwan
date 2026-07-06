@@ -53,6 +53,7 @@ const noWindow = typeof window === "undefined";
 
 if (typeof document !== "undefined") {
 	scriptEl =
+		document.currentScript as HTMLScriptElement ??
 		document.querySelector<HTMLScriptElement>(`script[src^="${import.meta.url}"]`) ??
 		document.querySelector<HTMLScriptElement>("script:not([src])[data-api][data-entity]");
 
