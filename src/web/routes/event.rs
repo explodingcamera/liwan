@@ -3,6 +3,7 @@ use crate::app::models::{
 };
 use crate::app::{Liwan, models::Event};
 use crate::utils::hash::{visitor_group_id, visitor_group_id_cidr, visitor_group_id_fallback};
+use crate::utils::ip_headers::CloudflareGeo;
 use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::RouterState;
@@ -145,6 +146,7 @@ static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
 async fn event_handler(
     state: State<RouterState>,
     ClientIp(ip): ClientIp,
+    cf_geo: CloudflareGeo,
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
     Json(event): Json<EventRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
@@ -154,7 +156,7 @@ async fn event_handler(
     event.validate().context("invalid event").http_err("invalid event", StatusCode::BAD_REQUEST)?;
 
     // run the event processing in the background
-    let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, user_agent))
+    let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, cf_geo, user_agent))
         .await
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -177,6 +179,7 @@ fn process_event(
     event: EventRequest,
     mut url: Url,
     ip: Option<IpAddr>,
+    cf_geo: CloudflareGeo,
     user_agent: headers::UserAgent,
 ) -> Result<Option<Event>> {
     let referrer = match process_referer(event.referrer.as_deref()) {
@@ -215,20 +218,13 @@ fn process_event(
         resolve_visitor_group_id(&settings, ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id);
 
     #[cfg(feature = "geoip")]
-    let (country, city) = match settings.track_geo {
-        GeoDetail::None => (None, None),
-        GeoDetail::Country => ip
-            .and_then(|ip| app.geoip.lookup(&ip).ok())
-            .map(|lookup| (lookup.country_code, None))
-            .unwrap_or((None, None)),
-        GeoDetail::City => ip
-            .and_then(|ip| app.geoip.lookup(&ip).ok())
-            .map(|lookup| (lookup.country_code, lookup.city))
-            .unwrap_or((None, None)),
-    };
+    let (country, city) = resolve_geo(&app, settings.track_geo, ip, cf_geo);
 
     #[cfg(not(feature = "geoip"))]
-    let (country, city) = (None, None);
+    let (country, city) = {
+        let _ = cf_geo;
+        (None, None)
+    };
 
     let utm = if settings.track_utm_params { extract_utm(&mut url) } else { Utm::default() };
     url.set_query(None);
@@ -263,6 +259,35 @@ fn process_event(
     }
 
     Ok(Some(event))
+}
+
+/// Resolve the country/city for an event, preferring Cloudflare-provided geolocation
+/// and falling back to the MaxMind database lookup for any missing field.
+#[cfg(feature = "geoip")]
+fn resolve_geo(
+    app: &Liwan,
+    track_geo: GeoDetail,
+    ip: Option<IpAddr>,
+    cf_geo: CloudflareGeo,
+) -> (Option<String>, Option<String>) {
+    match (track_geo, cf_geo.is_present()) {
+        (GeoDetail::None, _) => (None, None),
+
+        // If Cloudflare provided geolocation, never fall back to MaxMind even
+        // if part of it is missing.
+        (GeoDetail::Country, true) => (cf_geo.country_code, None),
+        (GeoDetail::City, true) => (cf_geo.country_code, cf_geo.city),
+
+        // Otherwise, look the IP up in the MaxMind database.
+        (GeoDetail::Country, false) => {
+            let country = ip.and_then(|ip| app.geoip.lookup(&ip).ok()).and_then(|lookup| lookup.country_code);
+            (country, None)
+        }
+        (GeoDetail::City, false) => ip
+            .and_then(|ip| app.geoip.lookup(&ip).ok())
+            .map(|lookup| (lookup.country_code, lookup.city))
+            .unwrap_or((None, None)),
+    }
 }
 
 fn ingest_drop_rule_matches(event: &Event, rule: &IngestDropRule) -> bool {

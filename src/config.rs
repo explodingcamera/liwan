@@ -72,6 +72,8 @@ pub struct GeoIpConfig {
     pub maxmind_license_key: Option<String>,
     #[serde(default = "default_maxmind_edition")]
     pub maxmind_edition: String,
+    #[serde(default)]
+    pub cloudflare: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

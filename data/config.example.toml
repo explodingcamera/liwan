@@ -39,6 +39,13 @@ listen=9042 # The port to listen on (http)
 # # Otherwise, the database will be downloaded automatically and stored in the data_dir
 # maxmind_db_path="./GeoLite2-City.mmdb"
 
+# # Trust and use the geolocation headers set by Cloudflare (cf-ipcountry, cf-ipcity), taking
+# # precedence over the MaxMind database if set. Will not be used if the request is not from a
+# # trusted proxy.
+# # Note: Currently, cf-ipcountry is always sent, but the city header (cf-ipcity) requires
+# # enabling the "Add visitor location headers" managed transform in the Cloudflare dashboard.
+# cloudflare=false
+
 [duckdb]
 # See https://liwan.dev/guides/duckdb
 # threads=2

@@ -195,6 +195,41 @@ pub fn parse_header_ip(parts: &http::request::Parts, header: &TrustedHeader) -> 
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CloudflareGeo {
+    present: bool,
+    pub country_code: Option<String>,
+    pub city: Option<String>,
+}
+
+impl CloudflareGeo {
+    /// Parse Cloudflare's geolocation headers (`cf-ipcountry`, `cf-ipcity`).
+    ///
+    /// A missing or invalid `cf-ipcountry` header means Cloudflare geolocation is not active,
+    /// in which case [`CloudflareGeo::is_present`] returns false.
+    pub fn from_headers(parts: &http::request::Parts) -> Self {
+        let header = |name: &str| {
+            parts.headers.get(name).and_then(|value| value.to_str().ok()).map(str::trim).filter(|value| !value.is_empty())
+        };
+
+        let Some(country) = header("cf-ipcountry") else {
+            return Self::default();
+        };
+
+        // Cloudflare uses "XX" for unknown locations and "T1" for Tor exit nodes.
+        let country_code = (!country.eq_ignore_ascii_case("XX") && !country.eq_ignore_ascii_case("T1"))
+            .then(|| country.to_uppercase());
+        let city = header("cf-ipcity").map(str::to_owned);
+
+        Self { present: true, country_code, city }
+    }
+
+    /// Whether Cloudflare provided authoritative geolocation for this request.
+    pub fn is_present(&self) -> bool {
+        self.present
+    }
+}
+
 pub fn should_trust_forwarded_headers(
     use_forward_headers: bool,
     peer_ip: Option<IpAddr>,
@@ -266,5 +301,47 @@ mod tests {
         assert_eq!(public_ip(Some("10.0.0.1".parse().unwrap())), None);
         assert_eq!(public_ip(Some("127.0.0.1".parse().unwrap())), None);
         assert_eq!(public_ip(Some("::1".parse().unwrap())), None);
+    }
+
+    fn cloudflare_geo(headers: &[(&str, &str)]) -> CloudflareGeo {
+        let mut builder = http::Request::builder();
+        for (name, value) in headers {
+            builder = builder.header(*name, *value);
+        }
+        let (parts, _) = builder.body(()).unwrap().into_parts();
+        CloudflareGeo::from_headers(&parts)
+    }
+
+    #[test]
+    fn cloudflare_geo_parses_country_and_city() {
+        let geo = cloudflare_geo(&[("cf-ipcountry", "ca"), ("cf-ipcity", "Ottawa")]);
+        assert!(geo.is_present());
+        assert_eq!(geo.country_code.as_deref(), Some("CA"));
+        assert_eq!(geo.city.as_deref(), Some("Ottawa"));
+    }
+
+    #[test]
+    fn cloudflare_geo_country_only() {
+        let geo = cloudflare_geo(&[("cf-ipcountry", "US")]);
+        assert!(geo.is_present());
+        assert_eq!(geo.country_code.as_deref(), Some("US"));
+        assert_eq!(geo.city, None);
+    }
+
+    #[test]
+    fn cloudflare_geo_unknown_country_is_present_without_fallback() {
+        for code in ["XX", "xx", "T1", "t1"] {
+            let geo = cloudflare_geo(&[("cf-ipcountry", code)]);
+            assert!(geo.is_present(), "expected present for {code}");
+            assert_eq!(geo.country_code, None, "expected no country for {code}");
+            assert_eq!(geo.city, None);
+        }
+    }
+
+    #[test]
+    fn cloudflare_geo_absent_when_header_missing_or_empty() {
+        assert_eq!(cloudflare_geo(&[]), CloudflareGeo::default());
+        assert!(!cloudflare_geo(&[]).is_present());
+        assert!(!cloudflare_geo(&[("cf-ipcountry", "  ")]).is_present());
     }
 }

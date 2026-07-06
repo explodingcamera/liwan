@@ -32,10 +32,16 @@ pub struct LiwanGeoIP {
 impl LiwanGeoIP {
     pub fn try_new(config: crate::config::Config) -> Result<Self> {
         let geoip = config.geoip;
+        if geoip.cloudflare {
+            tracing::info!("Cloudflare geolocation support enabled")
+        }
         if geoip.maxmind_account_id.is_none() && geoip.maxmind_license_key.is_none() && geoip.maxmind_db_path.is_none()
         {
-            tracing::trace!("GeoIP support disabled, skipping...");
+            tracing::trace!("MaxMind GeoIP support disabled, skipping...");
             return Ok(Self::noop());
+        }
+        if geoip.cloudflare {
+            tracing::info!("MaxMind GeoIP also enabled, will fall back to it if Cloudflare geolocation is not available")
         }
 
         let edition = &geoip.maxmind_edition;

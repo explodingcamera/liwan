@@ -5,7 +5,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::utils::ip_headers::{parse_header_ip, public_ip, should_trust_forwarded_headers};
+use crate::utils::ip_headers::{CloudflareGeo, parse_header_ip, public_ip, should_trust_forwarded_headers};
 use crate::web::Files;
 use crate::web::RouterState;
 use aide::axum::IntoApiResponse;
@@ -281,5 +281,30 @@ impl FromRequestParts<RouterState> for ClientIp {
         }
 
         Ok(ClientIp(public_ip(peer_ip)))
+    }
+}
+
+impl OperationInput for CloudflareGeo {}
+
+impl FromRequestParts<RouterState> for CloudflareGeo {
+    type Rejection = Infallible;
+
+    async fn from_request_parts(
+        parts: &mut http::request::Parts,
+        state: &RouterState,
+    ) -> Result<Self, Self::Rejection> {
+        if !state.config.geoip.cloudflare {
+            return Ok(CloudflareGeo::default());
+        }
+
+        // Only trust the geolocation headers if the request comes from a trusted proxy,
+        // like the forwarded IP headers.
+        let peer_ip =
+            ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await.ok().map(|ConnectInfo(addr)| addr.ip());
+        if should_trust_forwarded_headers(state.config.use_forward_headers, peer_ip, &state.config.trusted_proxies) {
+            return Ok(CloudflareGeo::from_headers(parts));
+        }
+
+        Ok(CloudflareGeo::default())
     }
 }
