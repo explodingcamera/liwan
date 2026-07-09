@@ -15,4 +15,3 @@ accepted=[
 targets=["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "aarch64-apple-darwin"]
 ignore-build-dependencies=true
 ignore-dev-dependencies=true
-filter-noassertion=true

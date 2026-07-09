@@ -83,7 +83,7 @@ aide={version="0.16.0-alpha.4", default-features=false, features=[
 schemars={version="1.2", features=["derive", "chrono04"]}
 url="2.5"
 ua-parser="0.2"
-rust-embed={version="8.11", features=["mime-guess"]}
+rust-embed={version="8.12", features=["mime-guess"]}
 reqwest={version="0.13", default-features=false, features=["json", "stream", "charset", "rustls"]}
 ipnet="2.12"
 
