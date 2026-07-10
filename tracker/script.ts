@@ -6,11 +6,12 @@ declare global {
 
 type Payload = {
 	name: string;
+	entity_id?: string;
 	url: string;
 	referrer?: string;
 	screen_width?: string;
 	orientation?: string;
-	// biome-ignore lint/suspicious/noExplicitAny: no
+	// biome-ignore lint/suspicious/noExplicitAny: we want to allow any additional properties to be sent in the payload
 } & Record<string, any>;
 
 export type EventOptions = {
@@ -105,7 +106,7 @@ const sanitizeUrl = (value: string) => {
  *
  * @param name The name of the event. Defaults to "pageview". Currencly, custom event names are not supported and will be treated as "pageview".
  * @param options Additional options for the event. See {@link EventOptions}.
- * @returns A promise that resolves with the status code of the response or void if the event was ignored.
+ * @returns A promise that resolves when the event has been sent
  * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
  *
  * @example
@@ -115,21 +116,22 @@ const sanitizeUrl = (value: string) => {
  *   url: "https://example.com",
  *   referrer: "https://google.com",
  *   endpoint: "https://liwan.example.com/api/event"
- * }).then(({ status }) => {
- *   console.log(`Event response: ${status}`);
  * });
  * ```
  */
 export async function event(name: string = "pageview", options?: EventOptions): Promise<void> {
 	const endpoint_url = options?.endpoint || endpoint;
 	if (!endpoint_url) return reject("endpoint is required");
-	if (localStorage?.getItem("disable-liwan")) return ignore("localStorage flag");
-	if (/^localhost$|^127(?:\.\d+){0,2}\.\d+$|^\[::1?\]$/.test(location.hostname) || location.protocol === "file:")
+	if (!noWindow && localStorage?.getItem("disable-liwan")) return ignore("localStorage flag");
+	if (
+		!noWindow &&
+		(/^localhost$|^127(?:\.\d+){0,2}\.\d+$|^(?:\[::1\]|::1)$/.test(location.hostname) || location.protocol === "file:")
+	)
 		return ignore("localhost");
 
 	const w = !noWindow ? window.screen?.width : undefined;
 
-	// biome-ignore format: no
+	// biome-ignore format: more readable this way
 	const screen_width =
         w == null ? undefined :
         w < 480 ? "xs" :
@@ -139,36 +141,69 @@ export async function event(name: string = "pageview", options?: EventOptions): 
         w < 1536 ? "xl" :
         "2xl";
 
+	const url = options?.url || (!noWindow ? location.href : null);
+	if (!url) return reject("url is required");
+
 	const response = await fetch(endpoint_url, {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: { "Content-Type": "text/plain;charset=UTF-8" }, // we use text/plain to avoid preflight requests
+		keepalive: true, // allow the request to be sent even if the page is being unloaded
 		body: JSON.stringify(<Payload>{
 			name,
 			entity_id: options?.entity || entity,
 			referrer: options?.referrer || referrer,
-			url: sanitizeUrl(options?.url || location.href),
+			url: sanitizeUrl(url),
 			screen_width,
-			orientation: !noWindow && window.screen.orientation.type.startsWith("portrait") ? "portrait" : "landscape",
+			orientation: noWindow
+				? undefined
+				: window.screen.orientation?.type.startsWith("portrait")
+					? "portrait"
+					: "landscape",
 		}),
 	});
 
 	if (!response.ok) {
-		log(`Failed to send event: ${response.statusText}`);
-		reject(response.statusText);
+		reject(`${response.status} ${response.statusText}`.trim());
 	}
 }
 
-const trackPageviews = () => {
+/**
+ * Starts automatically tracking pageviews.
+ *
+ * Sends an initial pageview immediately and tracks subsequent client-side
+ * navigations using the Navigation API when available, with `popstate` as a fallback.
+ *
+ * Calling this function marks Liwan as loaded through `window.__liwan_loaded`.
+ *
+ * @param options Options passed to each pageview event.
+ *
+ * @example
+ * ```ts
+ * import { trackPageviews } from "@liwan/tracker";
+ *
+ * trackPageviews({
+ *   endpoint: "https://analytics.example.com/api/event",
+ *   entity: "example",
+ * });
+ * ```
+ */
+export const trackPageviews = (options?: EventOptions) => {
 	window.__liwan_loaded = true;
 	let lastPage: string | undefined;
+
 	const page = () => {
 		if (lastPage === location.pathname) return;
 		lastPage = location.pathname;
-		event("pageview");
+
+		void event("pageview", options).catch((error) => log(error instanceof Error ? error.message : String(error)));
 	};
 
 	if (window.navigation) {
-		window.navigation.addEventListener("navigate", () => page());
+		// baseline since Jan 2026
+		window.navigation.addEventListener("currententrychange", () => page());
+	} else {
+		// not the best fallback but most browsers support the new Navigation API
+		window.addEventListener("popstate", () => page());
 	}
 
 	// initial pageview

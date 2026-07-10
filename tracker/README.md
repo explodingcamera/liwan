@@ -2,6 +2,8 @@
 
 Tracking script for [Liwan](https://liwan.dev), an open-source analytics platform.
 
+The `liwan-tracker` npm package is intended for current Liwan server releases. Its network protocol may change between Liwan versions. When it does, update the npm tracker alongside Liwan. If you use the tracker script served by Liwan itself, it already uses the matching internal tracker version.
+
 ## Usage
 
 ### Pageviews
@@ -15,6 +17,17 @@ When the script is loaded directly in the browser, it will automatically send pa
   data-entity="example"
   data-api="https://liwan.example.com/api/event"
 ></script>
+```
+
+When using the npm package, call `trackPageviews()` to start automatic pageview tracking:
+
+```ts
+import { trackPageviews } from "liwan-tracker";
+
+trackPageviews({
+  endpoint: "https://liwan.example.com/api/event",
+  entity: "example",
+});
 ```
 
 ### Custom events
@@ -70,15 +83,23 @@ export type EventOptions = {
  *
  * @param name The name of the event. Defaults to "pageview".
  * @param options Additional options for the event. See {@link EventOptions}.
- * @returns A promise that resolves with the status code of the response or void if the event was ignored.
+ * @returns A promise that resolves when the event has been sent.
  * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
  */
 export function event(
   name: string = "pageview",
   options?: EventOptions
-): Promise<void | {
-  status: number;
-}>;
+): Promise<void>;
+
+/**
+ * Starts automatically tracking pageviews.
+ *
+ * Sends an initial pageview immediately and tracks subsequent client-side
+ * navigations using the Navigation API when available, with `popstate` as a fallback.
+ *
+ * @param options Options passed to each pageview event.
+ */
+export const trackPageviews: (options?: EventOptions) => void;
 ```
 
 ## License

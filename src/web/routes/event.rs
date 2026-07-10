@@ -11,7 +11,7 @@ use crate::web::webext::{ApiResult, AxumErrExt, ClientIp, empty_response};
 use aide::axum::routing::post;
 use aide::axum::{ApiRouter, IntoApiResponse};
 use anyhow::{Context, Result};
-use axum::Json;
+use axum::body::Bytes;
 use axum::extract::State;
 use axum_extra::TypedHeader;
 use chrono::Utc;
@@ -146,14 +146,17 @@ async fn event_handler(
     state: State<RouterState>,
     ClientIp(ip): ClientIp,
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
-    Json(event): Json<EventRequest>,
+    event: Bytes,
 ) -> ApiResult<impl IntoApiResponse> {
+    // we accept any content type, so we need to manually parse the body as JSON
+    let event: EventRequest =
+        serde_json::from_slice(&event).context("invalid json").http_err("invalid json", StatusCode::BAD_REQUEST)?;
     let url = Url::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
     let app = state.app.clone();
     let events = state.events.clone();
     event.validate().context("invalid event").http_err("invalid event", StatusCode::BAD_REQUEST)?;
 
-    // run the event processing in the background
+    // blocking a bit to give some slight backpressure to the caller
     let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, user_agent))
         .await
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;

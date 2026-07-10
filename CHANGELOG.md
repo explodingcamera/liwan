@@ -16,6 +16,14 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
+> The `liwan-tracker` npm package is intended for current Liwan server releases. Its network protocol may change between Liwan versions. When it does, update the npm tracker alongside Liwan. If you use the tracker script served by Liwan itself, it already uses the matching internal tracker version.
+
+## [Unreleased]
+
+### Bug Fixes
+
+- Tracker requests now avoid CORS preflight requests by sending JSON as `text/plain` and the event API accepts tracker JSON regardless of content type
+
 ## [v1.6.0] - 2026-06-20
 
 ### Features

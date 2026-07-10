@@ -36,7 +36,7 @@ export type EventOptions = {
  *
  * @param name The name of the event. Defaults to "pageview". Currencly, custom event names are not supported and will be treated as "pageview".
  * @param options Additional options for the event. See {@link EventOptions}.
- * @returns A promise that resolves with the status code of the response or void if the event was ignored.
+ * @returns A promise that resolves when the event has been sent
  * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
  *
  * @example
@@ -46,9 +46,28 @@ export type EventOptions = {
  *   url: "https://example.com",
  *   referrer: "https://google.com",
  *   endpoint: "https://liwan.example.com/api/event"
- * }).then(({ status }) => {
- *   console.log(`Event response: ${status}`);
  * });
  * ```
  */
 export declare function event(name?: string, options?: EventOptions): Promise<void>;
+/**
+ * Starts automatically tracking pageviews.
+ *
+ * Sends an initial pageview immediately and tracks subsequent client-side
+ * navigations using the Navigation API when available, with `popstate` as a fallback.
+ *
+ * Calling this function marks Liwan as loaded through `window.__liwan_loaded`.
+ *
+ * @param options Options passed to each pageview event.
+ *
+ * @example
+ * ```ts
+ * import { trackPageviews } from "@liwan/tracker";
+ *
+ * trackPageviews({
+ *   endpoint: "https://analytics.example.com/api/event",
+ *   entity: "example",
+ * });
+ * ```
+ */
+export declare const trackPageviews: (options?: EventOptions) => void;
