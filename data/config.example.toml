@@ -1,7 +1,7 @@
 base_url = "http://localhost:9042"  # The base URL of the Liwan instance
 listen = 9042  # The port to listen on (http)
 
-# Disable favicon fetching from the DuckDuckGo API.
+# # Disable favicon fetching from the DuckDuckGo API.
 # disable_favicons=false
 
 # # Folder to store the database in (Will be created if it doesn't exist)
@@ -9,31 +9,27 @@ listen = 9042  # The port to listen on (http)
 # # defaults to ./liwan-data on other platforms
 # data_dir="./liwan-data"
 
-# Trusted client IP headers (used in order).
-# Defaults to all supported headers.
-# Presets: cloudflare, fastly, fly, cloudfront, akamai.
+# # Trusted client IP headers (used in order).
+# # Empty by default, meaning only the direct peer IP is used.
+# # Presets: cloudflare, fastly, fly, cloudfront, akamai.
 # client_ip_headers="cloudflare"
-# Provider presets can be combined with standard or custom headers.
+# # Provider presets can be combined with standard or custom headers.
 # client_ip_headers=["cloudflare", "fly", "X-Forwarded-For", "X-Client-IP"]
 
-# Trusted reverse proxies (IP or CIDR).
-# Empty by default, meaning all proxies are trusted.
+# # Trusted reverse proxies (IP or CIDR).
+# # Empty by default, meaning all proxies are trusted.
 # trusted_proxies=["127.0.0.1", "10.0.0.0/8"]
 
-# Whether to use forwarded IP headers at all.
-# If false, only the direct peer IP is used.
-# use_forward_headers=true
-
-# Hour of day, in the server's local timezone, when visitor grouping salts rotate.
-# Defaults to 4, meaning 4am local time.
+# # Hour of day, in the server's local timezone, when visitor grouping salts rotate.
+# # Defaults to 4, meaning 4am local time.
 # visitor_group_rotation_hour=4
 
 # GeoIp settings (Optional)
 [geoip]
-# Read location data supplied by a trusted proxy.
-# Presets: cloudflare, cloudfront, vercel.
+# # Read location data supplied by a trusted proxy.
+# # Presets: akamai, cloudflare, cloudfront, netlify, vercel.
 # headers="cloudflare"
-# Multiple presets and custom mappings are also supported, in priority order.
+# # Multiple presets and custom mappings are also supported, in priority order.
 # headers=["cloudflare", { country="X-Country", city="X-City" }]
 
 # # MaxMind account ID and license key
@@ -47,6 +43,6 @@ listen = 9042  # The port to listen on (http)
 # maxmind_db_path="./GeoLite2-City.mmdb"
 
 [duckdb]
-# See https://liwan.dev/guides/duckdb
+# # See https://liwan.dev/guides/duckdb for guidance
 # threads=2
 # memory_limit=2G

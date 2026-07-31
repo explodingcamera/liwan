@@ -20,17 +20,20 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ## [Unreleased]
 
+### ⚠️ Breaking Changes
+
+- Proxy-provided client IP headers are no longer trusted by default. Configure `client_ip_headers` to opt in
+
 ### Features
 
-- Added provider presets for client IP headers and support for reading GeoIP data from provider or custom headers
-
-### Bug Fixes
-
+- Added client IP header presets for Akamai, Cloudflare, CloudFront, Fastly, and Fly
+- Added GeoIP header mappings and presets for Akamai, Cloudflare, CloudFront, Netlify, and Vercel, with MaxMind results taking precedence when available
 - Tracker requests now avoid CORS preflight requests by sending JSON as `text/plain` and the event API accepts tracker JSON regardless of content type
 
 ### Other
 
 - Renamed `trusted_headers` to `client_ip_headers` (the old name remains supported)
+- Removed the redundant `use_forward_headers` option
 
 ## [v1.6.0] - 2026-06-20
 

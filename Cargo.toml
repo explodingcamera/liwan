@@ -30,12 +30,6 @@ tokio = { version = "1.53", default-features = false, features = [
 ] }
 tokio-util = { version = "0.7", features = ["io"] }
 
-argon2 = { version = "0.6.0-rc.8", features = [] }
-async-compression = { version = "0.4", default-features = false, features = [
-  "gzip",
-  "tokio"
-] }
-blake3 = { version = "1.8" }
 # encoding
 hex = { version = "0.4" }
 md-5 = { version = "0.11.0" }
@@ -48,10 +42,23 @@ serde_json = { version = "1.0" }
 tokio-tar = { package = "astral-tokio-tar", version = "0.6" }
 zstd = { version = "0.13", default-features = false }
 
-ahash = "0.8"
-anyhow = { version = "1.0" }
 # general
+ahash = "0.8"
+aide = { version = "0.16.0-alpha.4", default-features = false, features = [
+  "axum",
+  "axum-extra-cookie",
+  "axum-extra-headers",
+  "axum-json",
+  "axum-matched-path",
+] }
+anyhow = { version = "1.0" }
 argh = { version = "0.1", default-features = false, features = ["help"] }
+argon2 = { version = "0.6.0-rc.8", features = [] }
+async-compression = { version = "0.4", default-features = false, features = [
+  "gzip",
+  "tokio"
+] }
+blake3 = { version = "1.8" }
 chrono = { version = "0.4", default-features = false, features = [
   "now",
   "serde",
@@ -67,13 +74,6 @@ rand = { version = "0.10", default-features = false, features = [
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-aide = { version = "0.16.0-alpha.4", default-features = false, features = [
-  "axum",
-  "axum-extra-cookie",
-  "axum-extra-headers",
-  "axum-json",
-  "axum-matched-path",
-] }
 # web
 axum = { version = "0.8", default-features = false, features = [
   "http1",
@@ -89,7 +89,7 @@ axum-extra = { version = "0.12", default-features = false, features = [
 ] }
 headers = "0.4"
 http = "1.5"
-ipnet = "2.12"
+ipnet = { version = "2.12", features = ["serde"] }
 reqwest = { version = "0.13", default-features = false, features = [
   "charset",
   "json",

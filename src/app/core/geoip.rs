@@ -88,7 +88,7 @@ impl LiwanGeoIP {
 
         let maxmind_edition = &self.geoip.maxmind_edition;
         let maxmind_account_id =
-            self.geoip.maxmind_account_id.as_deref().ok_or_else(|| anyhow!("MaxMind account ID not found"))?;
+            self.geoip.maxmind_account_id.as_ref().ok_or_else(|| anyhow!("MaxMind account ID not found"))?.to_string();
         let maxmind_license_key =
             self.geoip.maxmind_license_key.as_deref().ok_or_else(|| anyhow!("MaxMind license key not found"))?;
 
@@ -97,7 +97,7 @@ impl LiwanGeoIP {
 
         let mut update = !db_exists;
         if db_exists {
-            match get_latest_md5(maxmind_edition, maxmind_account_id, maxmind_license_key).await {
+            match get_latest_md5(maxmind_edition, &maxmind_account_id, maxmind_license_key).await {
                 Ok(latest_md5) => {
                     if latest_md5 != db_md5 {
                         tracing::info!("GeoIP database outdated, downloading...");
@@ -113,7 +113,7 @@ impl LiwanGeoIP {
         }
 
         if update {
-            let file = match download_maxmind_db(maxmind_edition, maxmind_account_id, maxmind_license_key).await {
+            let file = match download_maxmind_db(maxmind_edition, &maxmind_account_id, maxmind_license_key).await {
                 Ok(file) => file,
                 Err(e) => {
                     tracing::warn!(error = ?e, "Failed to download GeoIP database, skipping update");

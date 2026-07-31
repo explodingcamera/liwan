@@ -1,7 +1,5 @@
-use crate::utils::ip_headers::{
-    GeoIpHeaders, TrustedHeader, TrustedProxy, deserialize_client_ip_headers, deserialize_geoip_headers,
-    deserialize_trusted_proxies,
-};
+use crate::utils::ip_headers::{ClientIpHeaderSource, GeoIpHeaderSource, TrustedProxy};
+use crate::utils::serde::OneOrMany;
 use anyhow::{Context, Result, bail};
 use config::{File, FileFormat, Value};
 use serde::{Deserialize, Serialize};
@@ -36,18 +34,11 @@ pub struct Config {
 
     /// Client IP header names or provider presets.
     /// Presets: `cloudflare`, `fastly`, `fly`, `cloudfront`, and `akamai`.
-    #[serde(
-        default = "default_client_ip_headers",
-        alias = "trusted_headers",
-        deserialize_with = "deserialize_client_ip_headers"
-    )]
-    pub client_ip_headers: Vec<TrustedHeader>,
+    #[serde(default, alias = "trusted_headers")]
+    pub client_ip_headers: OneOrMany<ClientIpHeaderSource>,
 
-    #[serde(default, deserialize_with = "deserialize_trusted_proxies")]
-    pub trusted_proxies: Vec<TrustedProxy>,
-
-    #[serde(default = "default_use_forward_headers")]
-    pub use_forward_headers: bool,
+    #[serde(default)]
+    pub trusted_proxies: OneOrMany<TrustedProxy>,
 
     #[serde(default = "default_visitor_group_rotation_hour")]
     pub visitor_group_rotation_hour: u8,
@@ -63,9 +54,8 @@ impl Default for Config {
             disable_favicons: false,
             listen: None,
             port: None,
-            client_ip_headers: default_client_ip_headers(),
-            trusted_proxies: Vec::new(),
-            use_forward_headers: default_use_forward_headers(),
+            client_ip_headers: OneOrMany::default(),
+            trusted_proxies: OneOrMany::default(),
             visitor_group_rotation_hour: default_visitor_group_rotation_hour(),
         }
     }
@@ -73,13 +63,14 @@ impl Default for Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GeoIpConfig {
-    /// GeoIP header mappings or provider presets. Presets: `cloudflare`, `cloudfront`, and `vercel`.
-    #[serde(default, deserialize_with = "deserialize_geoip_headers")]
-    pub headers: Vec<GeoIpHeaders>,
+    /// GeoIP header mappings or provider presets.
+    /// Presets: `akamai`, `cloudflare`, `cloudfront`, `netlify`, and `vercel`.
+    #[serde(default)]
+    pub headers: OneOrMany<GeoIpHeaderSource>,
     #[serde(default)]
     pub maxmind_db_path: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_string_from_number")]
-    pub maxmind_account_id: Option<String>,
+    #[serde(default)]
+    pub maxmind_account_id: Option<MaxMindAccountId>,
     #[serde(default)]
     pub maxmind_license_key: Option<String>,
     #[serde(default = "default_maxmind_edition")]
@@ -92,6 +83,22 @@ pub struct DuckdbConfig {
     pub memory_limit: Option<String>,
     #[serde(default)]
     pub threads: Option<NonZeroU16>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum MaxMindAccountId {
+    String(String),
+    Number(u64),
+}
+
+impl std::fmt::Display for MaxMindAccountId {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::String(value) => formatter.write_str(value),
+            Self::Number(value) => value.fmt(formatter),
+        }
+    }
 }
 
 fn default_base() -> String {
@@ -120,14 +127,6 @@ fn default_data_dir() -> String {
     }
 }
 
-fn default_client_ip_headers() -> Vec<TrustedHeader> {
-    TrustedHeader::all().to_vec()
-}
-
-fn default_use_forward_headers() -> bool {
-    true
-}
-
 fn default_visitor_group_rotation_hour() -> u8 {
     4
 }
@@ -145,25 +144,6 @@ impl ListenAddr {
             ListenAddr::Port(port) => SocketAddr::from(([0, 0, 0, 0], *port)).to_string(),
             ListenAddr::Addr(addr) => addr.clone(),
         }
-    }
-}
-
-pub fn deserialize_string_from_number<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrNumber {
-        String(String),
-        Number(i64),
-        Float(f64),
-    }
-
-    match StringOrNumber::deserialize(deserializer)? {
-        StringOrNumber::String(s) => Ok(Some(s)),
-        StringOrNumber::Number(i) => Ok(Some(i.to_string())),
-        StringOrNumber::Float(f) => Ok(Some(f.to_string())),
     }
 }
 
@@ -197,7 +177,7 @@ impl Config {
 
         for (key, value) in env_vars {
             if let Some(mapped_key) = map_env_key(key.as_ref()) {
-                builder = builder.set_override(&mapped_key, parse_env_value(value.as_ref()))?;
+                builder = builder.set_override(&mapped_key, parse_env_value(&mapped_key, value.as_ref()))?;
             };
         }
 
@@ -247,22 +227,26 @@ fn map_env_key(key: &str) -> Option<String> {
     Some(key)
 }
 
-fn parse_env_value(value: &str) -> Value {
-    if let Ok(parsed) = value.parse::<bool>() {
-        Value::from(parsed)
-    } else if let Ok(parsed) = value.parse::<i64>() {
-        Value::from(parsed)
-    } else if let Ok(parsed) = value.parse::<f64>() {
-        Value::from(parsed)
-    } else {
-        Value::from(value.to_string())
+fn parse_env_value(key: &str, value: &str) -> Value {
+    if ["client_ip_headers", "trusted_headers", "trusted_proxies", "geoip.headers"].contains(&key)
+        && value.contains(',')
+    {
+        return Value::from(value.split(',').map(str::trim).collect::<Vec<_>>());
     }
+
+    value
+        .parse::<bool>()
+        .ok()
+        .map(Value::from)
+        .or_else(|| value.parse::<i64>().ok().map(Value::from))
+        .or_else(|| value.parse::<f64>().ok().map(Value::from))
+        .unwrap_or_else(|| Value::from(value.to_string()))
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::utils::ip_headers::{TrustedHeader, TrustedProxy};
+    use crate::utils::ip_headers::{ClientIpHeaderSource, ClientIpProvider, TrustedProxy};
     use tempfile::TempDir;
 
     fn temp_config(name: &str, content: &str) -> (TempDir, String) {
@@ -299,7 +283,7 @@ mod test {
 
         assert_eq!(config.geoip.maxmind_edition, "test".to_string());
         assert_eq!(config.geoip.maxmind_license_key, Some("test".to_string()));
-        assert_eq!(config.geoip.maxmind_account_id, Some("test".to_string()));
+        assert_eq!(config.geoip.maxmind_account_id, Some(MaxMindAccountId::String("test".to_string())));
         assert_eq!(config.geoip.maxmind_db_path, Some("test".to_string()));
         assert_eq!(config.base_url, "http://localhost:8081");
         assert_eq!(config.data_dir, "./liwan-test-data");
@@ -360,19 +344,24 @@ mod test {
         let config = Config::load(None, env).expect("failed to load config");
         assert_eq!(config.data_dir, "/data");
         assert_eq!(config.base_url, "https://example.com");
-        assert_eq!(config.geoip.maxmind_account_id, Some("123".to_string()));
-        assert_eq!(config.client_ip_headers, vec![TrustedHeader::XForwardedFor, TrustedHeader::Forwarded]);
+        assert_eq!(config.geoip.maxmind_account_id, Some(MaxMindAccountId::Number(123)));
         assert_eq!(
-            config.trusted_proxies,
-            vec![TrustedProxy::Ip("127.0.0.1".parse().unwrap()), TrustedProxy::Cidr("10.0.0.0/8".parse().unwrap())]
+            config.client_ip_headers.as_ref(),
+            &[
+                ClientIpHeaderSource::Header("x-forwarded-for".to_string()),
+                ClientIpHeaderSource::Header("forwarded".to_string())
+            ]
         );
-        assert!(config.use_forward_headers);
+        assert_eq!(
+            config.trusted_proxies.as_ref(),
+            &[TrustedProxy::Ip("127.0.0.1".parse().unwrap()), TrustedProxy::Cidr("10.0.0.0/8".parse().unwrap())]
+        );
     }
 
     #[test]
     fn test_env_custom_trusted_header() {
         let config = Config::load(None, vec![("LIWAN_TRUSTED_HEADERS", "X_CLIENT_IP")]).expect("failed to load config");
-        assert_eq!(config.client_ip_headers, vec![TrustedHeader::Other("x-client-ip".to_string())]);
+        assert_eq!(config.client_ip_headers.as_ref(), &[ClientIpHeaderSource::Header("x-client-ip".to_string())]);
     }
 
     #[test]
@@ -389,20 +378,27 @@ mod test {
 
         let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
         assert_eq!(
-            config.client_ip_headers,
-            vec![
-                TrustedHeader::CfConnectingIp,
-                TrustedHeader::FastlyClientIp,
-                TrustedHeader::FlyClientIp,
-                TrustedHeader::TrueClientIp,
-                TrustedHeader::Other("x-client-ip".to_string())
+            config.client_ip_headers.as_ref(),
+            &[
+                ClientIpHeaderSource::Provider(ClientIpProvider::Cloudflare),
+                ClientIpHeaderSource::Provider(ClientIpProvider::Fastly),
+                ClientIpHeaderSource::Provider(ClientIpProvider::Fly),
+                ClientIpHeaderSource::Provider(ClientIpProvider::Akamai),
+                ClientIpHeaderSource::Header("x-client-ip".to_string())
             ]
         );
         assert_eq!(config.geoip.headers.len(), 2);
-        assert_eq!(config.geoip.headers[0].country(), Some("cf-ipcountry"));
-        assert_eq!(config.geoip.headers[0].city(), Some("cf-ipcity"));
-        assert_eq!(config.geoip.headers[1].country(), Some("X-Country"));
-        assert_eq!(config.geoip.headers[1].city(), Some("X-City"));
+        assert_eq!(
+            config.geoip.headers[0],
+            GeoIpHeaderSource::Provider(crate::utils::ip_headers::GeoIpProvider::Cloudflare)
+        );
+        assert_eq!(
+            config.geoip.headers[1],
+            GeoIpHeaderSource::Mapping(crate::utils::ip_headers::GeoIpHeaderMapping {
+                country: "X-Country".to_string(),
+                city: "X-City".to_string(),
+            })
+        );
     }
 
     #[test]
@@ -410,7 +406,7 @@ mod test {
         let (_temp_dir, config_path) = temp_config("legacy.config.toml", "trusted_headers = \"fly\"");
         let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
 
-        assert_eq!(config.client_ip_headers, vec![TrustedHeader::FlyClientIp]);
+        assert_eq!(config.client_ip_headers.as_ref(), &[ClientIpHeaderSource::Provider(ClientIpProvider::Fly)]);
         let serialized = serde_json::to_value(config).expect("failed to serialize config");
         assert!(serialized.get("client_ip_headers").is_some());
         assert!(serialized.get("trusted_headers").is_none());
@@ -424,5 +420,6 @@ mod test {
         assert!(config.geoip.maxmind_license_key.is_none());
         assert_eq!(config.base_url, "http://localhost:9042");
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
+        assert!(config.client_ip_headers.is_empty());
     }
 }

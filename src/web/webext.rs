@@ -5,7 +5,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::utils::ip_headers::{parse_header_ip, public_ip, should_trust_forwarded_headers};
+use crate::utils::ip_headers::{parse_geoip_headers, parse_header_ip, should_trust_proxy_headers};
 use crate::web::Files;
 use crate::web::RouterState;
 use aide::axum::IntoApiResponse;
@@ -271,16 +271,25 @@ impl FromRequestParts<RouterState> for ClientIp {
     ) -> Result<Self, Self::Rejection> {
         let peer_ip =
             ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await.ok().map(|ConnectInfo(addr)| addr.ip());
+        let is_public = |ip: &IpAddr| {
+            !ip.is_loopback()
+                && !ip.is_unspecified()
+                && !ip.is_multicast()
+                && match ip {
+                    IpAddr::V4(ip) => !ip.is_private() && !ip.is_link_local() && !ip.is_broadcast(),
+                    IpAddr::V6(ip) => !ip.is_unique_local() && !ip.is_unicast_link_local(),
+                }
+        };
 
-        if should_trust_forwarded_headers(state.config.use_forward_headers, peer_ip, &state.config.trusted_proxies) {
-            for header in &state.config.client_ip_headers {
-                if let Some(ip) = public_ip(parse_header_ip(parts, header)) {
+        if should_trust_proxy_headers(peer_ip, &state.config.trusted_proxies) {
+            for header in state.config.client_ip_headers.iter() {
+                if let Some(ip) = parse_header_ip(parts, header).filter(is_public) {
                     return Ok(ClientIp(Some(ip)));
                 }
             }
         }
 
-        Ok(ClientIp(public_ip(peer_ip)))
+        Ok(ClientIp(peer_ip.filter(is_public)))
     }
 }
 
@@ -300,23 +309,11 @@ impl FromRequestParts<RouterState> for GeoLocationHeaders {
     ) -> Result<Self, Self::Rejection> {
         let peer_ip =
             ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await.ok().map(|ConnectInfo(addr)| addr.ip());
-        if !should_trust_forwarded_headers(state.config.use_forward_headers, peer_ip, &state.config.trusted_proxies) {
+        if !should_trust_proxy_headers(peer_ip, &state.config.trusted_proxies) {
             return Ok(Self::default());
         }
 
-        let read_header = |name: &str| {
-            parts
-                .headers
-                .get(name)
-                .and_then(|value| value.to_str().ok())
-                .map(str::trim)
-                .filter(|value| !value.is_empty() && value.len() <= 255)
-                .map(str::to_owned)
-        };
-
-        Ok(Self {
-            country: state.config.geoip.headers.iter().filter_map(|headers| headers.country()).find_map(read_header),
-            city: state.config.geoip.headers.iter().filter_map(|headers| headers.city()).find_map(read_header),
-        })
+        let values = parse_geoip_headers(&parts.headers, &state.config.geoip.headers);
+        Ok(Self { country: values.country, city: values.city })
     }
 }

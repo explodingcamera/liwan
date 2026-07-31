@@ -1,165 +1,141 @@
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::convert::Infallible;
 use std::net::IpAddr;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum TrustedHeader {
-    CfConnectingIp,
-    FastlyClientIp,
-    FlyClientIp,
-    TrueClientIp,
-    XRealIp,
-    CloudfrontViewerAddress,
-    XForwardedFor,
-    Forwarded,
-    Other(String),
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
+#[serde(untagged)]
+pub enum ClientIpHeaderSource {
+    Provider(ClientIpProvider),
+    Header(String),
 }
 
-impl TrustedHeader {
-    pub const fn all() -> &'static [Self] {
-        &[
-            Self::CfConnectingIp,
-            Self::FastlyClientIp,
-            Self::FlyClientIp,
-            Self::TrueClientIp,
-            Self::XRealIp,
-            Self::CloudfrontViewerAddress,
-            Self::XForwardedFor,
-            Self::Forwarded,
-        ]
-    }
-
+impl ClientIpHeaderSource {
     pub fn as_header_name(&self) -> &str {
         match self {
-            Self::CfConnectingIp => "cf-connecting-ip",
-            Self::FastlyClientIp => "fastly-client-ip",
-            Self::FlyClientIp => "fly-client-ip",
-            Self::TrueClientIp => "true-client-ip",
-            Self::XRealIp => "x-real-ip",
-            Self::CloudfrontViewerAddress => "cloudfront-viewer-address",
-            Self::XForwardedFor => "x-forwarded-for",
-            Self::Forwarded => "forwarded",
-            Self::Other(value) => value.as_str(),
+            Self::Provider(ClientIpProvider::Cloudflare) => "cf-connecting-ip",
+            Self::Provider(ClientIpProvider::Fastly) => "fastly-client-ip",
+            Self::Provider(ClientIpProvider::Fly) => "fly-client-ip",
+            Self::Provider(ClientIpProvider::Cloudfront) => "cloudfront-viewer-address",
+            Self::Provider(ClientIpProvider::Akamai) => "true-client-ip",
+            Self::Header(value) => value,
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum GeoIpHeaders {
-    Preset(GeoIpHeaderPreset),
-    Custom(GeoIpHeaderMapping),
-}
+impl FromStr for ClientIpHeaderSource {
+    type Err = Infallible;
 
-impl GeoIpHeaders {
-    pub fn country(&self) -> Option<&str> {
-        match self {
-            Self::Preset(preset) => Some(preset.country()),
-            Self::Custom(mapping) => mapping.country.as_deref(),
-        }
-    }
-
-    pub fn city(&self) -> Option<&str> {
-        match self {
-            Self::Preset(preset) => Some(preset.city()),
-            Self::Custom(mapping) => mapping.city.as_deref(),
-        }
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let value = value.trim().to_ascii_lowercase().replace('_', "-");
+        let provider = match value.as_str() {
+            "akamai" => ClientIpProvider::Akamai,
+            "cloudflare" => ClientIpProvider::Cloudflare,
+            "cloudfront" => ClientIpProvider::Cloudfront,
+            "fastly" => ClientIpProvider::Fastly,
+            "fly" => ClientIpProvider::Fly,
+            _ => return Ok(Self::Header(value)),
+        };
+        Ok(Self::Provider(provider))
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+impl<'de> Deserialize<'de> for ClientIpHeaderSource {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = String::deserialize(deserializer)?;
+        Ok(value.parse().expect("ClientIpHeaderSource parsing is infallible"))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
-pub enum GeoIpHeaderPreset {
+pub enum ClientIpProvider {
+    Akamai,
     Cloudflare,
     Cloudfront,
-    Vercel,
+    Fastly,
+    Fly,
 }
 
-impl GeoIpHeaderPreset {
-    fn country(self) -> &'static str {
-        match self {
-            Self::Cloudflare => "cf-ipcountry",
-            Self::Cloudfront => "cloudfront-viewer-country",
-            Self::Vercel => "x-vercel-ip-country",
-        }
-    }
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum GeoIpHeaderSource {
+    Provider(GeoIpProvider),
+    Mapping(GeoIpHeaderMapping),
+}
 
-    fn city(self) -> &'static str {
-        match self {
-            Self::Cloudflare => "cf-ipcity",
-            Self::Cloudfront => "cloudfront-viewer-city",
-            Self::Vercel => "x-vercel-ip-city",
-        }
-    }
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum GeoIpProvider {
+    Akamai,
+    Cloudflare,
+    Cloudfront,
+    Netlify,
+    Vercel,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GeoIpHeaderMapping {
-    #[serde(default)]
+    pub country: String,
+    pub city: String,
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct GeoIpHeaderValues {
     pub country: Option<String>,
-    #[serde(default)]
     pub city: Option<String>,
 }
 
-impl<'de> Deserialize<'de> for GeoIpHeaders {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Input {
-            Preset(String),
-            Custom(GeoIpHeaderMapping),
+pub fn parse_geoip_headers(headers: &http::HeaderMap, sources: &[GeoIpHeaderSource]) -> GeoIpHeaderValues {
+    let value = |value: &str| {
+        let value = value.trim();
+        (!value.is_empty() && value.len() <= 255).then(|| value.to_owned())
+    };
+    let header = |name: &str| headers.get(name)?.to_str().ok().and_then(&value);
+
+    let mut values = GeoIpHeaderValues::default();
+    for source in sources {
+        let (country, city) = match source {
+            GeoIpHeaderSource::Provider(GeoIpProvider::Cloudflare) => (header("cf-ipcountry"), header("cf-ipcity")),
+            GeoIpHeaderSource::Provider(GeoIpProvider::Cloudfront) => {
+                (header("cloudfront-viewer-country"), header("cloudfront-viewer-city"))
+            }
+            GeoIpHeaderSource::Provider(GeoIpProvider::Vercel) => {
+                (header("x-vercel-ip-country"), header("x-vercel-ip-city"))
+            }
+            GeoIpHeaderSource::Mapping(mapping) => (header(&mapping.country), header(&mapping.city)),
+            GeoIpHeaderSource::Provider(GeoIpProvider::Akamai) => {
+                let edgescape = headers.get("x-akamai-edgescape").and_then(|value| value.to_str().ok());
+                let get = |key: &str| {
+                    edgescape?
+                        .split(',')
+                        .filter_map(|part| part.trim().split_once('='))
+                        .find_map(|(name, value)| name.eq_ignore_ascii_case(key).then_some(value))
+                        .and_then(&value)
+                };
+                (get("country_code"), get("city"))
+            }
+            GeoIpHeaderSource::Provider(GeoIpProvider::Netlify) => {
+                let geo = headers
+                    .get("x-nf-geo")
+                    .and_then(|value| value.to_str().ok())
+                    .and_then(|value| serde_json::from_str::<serde_json::Value>(value).ok());
+                let get = |pointer: &str| geo.as_ref()?.pointer(pointer)?.as_str().and_then(&value);
+                (get("/country/code"), get("/city"))
+            }
+        };
+        values.country = values.country.or(country);
+        values.city = values.city.or(city);
+        if values.country.is_some() && values.city.is_some() {
+            break;
         }
-
-        match Input::deserialize(deserializer)? {
-            Input::Preset(value) => match value.trim().to_ascii_lowercase().as_str() {
-                "cloudflare" => Ok(Self::Preset(GeoIpHeaderPreset::Cloudflare)),
-                "cloudfront" => Ok(Self::Preset(GeoIpHeaderPreset::Cloudfront)),
-                "vercel" => Ok(Self::Preset(GeoIpHeaderPreset::Vercel)),
-                _ => Err(serde::de::Error::custom(format!("unknown GeoIP header preset: {value}"))),
-            },
-            Input::Custom(mapping) if mapping.country.is_some() || mapping.city.is_some() => Ok(Self::Custom(mapping)),
-            Input::Custom(_) => Err(serde::de::Error::custom("GeoIP header mapping must define country or city")),
-        }
     }
+    values
 }
 
-impl FromStr for TrustedHeader {
-    type Err = Infallible;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let normalized = value.trim().to_lowercase().replace('_', "-");
-
-        Ok(match normalized.as_str() {
-            "cf-connecting-ip" => Self::CfConnectingIp,
-            "fastly-client-ip" => Self::FastlyClientIp,
-            "fly-client-ip" => Self::FlyClientIp,
-            "true-client-ip" => Self::TrueClientIp,
-            "x-real-ip" => Self::XRealIp,
-            "cloudfront-viewer-address" => Self::CloudfrontViewerAddress,
-            "x-forwarded-for" => Self::XForwardedFor,
-            "forwarded" => Self::Forwarded,
-            _ => Self::Other(normalized),
-        })
-    }
-}
-
-impl Serialize for TrustedHeader {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        serializer.serialize_str(self.as_header_name())
-    }
-}
-
-impl<'de> Deserialize<'de> for TrustedHeader {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
-        let value = String::deserialize(deserializer)?;
-        Ok(value.parse().expect("TrustedHeader parsing is infallible"))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
 pub enum TrustedProxy {
     Ip(IpAddr),
     Cidr(IpNet),
@@ -174,152 +150,25 @@ impl TrustedProxy {
     }
 }
 
-impl FromStr for TrustedProxy {
-    type Err = anyhow::Error;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let value = value.trim();
-        if value.is_empty() {
-            return Err(anyhow::anyhow!("trusted proxy cannot be empty"));
-        }
-
-        if let Ok(ip) = value.parse::<IpAddr>() {
-            return Ok(TrustedProxy::Ip(ip));
-        }
-
-        if let Ok(net) = value.parse::<IpNet>() {
-            return Ok(TrustedProxy::Cidr(net));
-        }
-
-        Err(anyhow::anyhow!("invalid trusted proxy: {value}"))
-    }
-}
-
-impl Serialize for TrustedProxy {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        match self {
-            TrustedProxy::Ip(ip) => serializer.serialize_str(&ip.to_string()),
-            TrustedProxy::Cidr(net) => serializer.serialize_str(&net.to_string()),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for TrustedProxy {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
-        let value = String::deserialize(deserializer)?;
-        value.parse::<TrustedProxy>().map_err(serde::de::Error::custom)
-    }
-}
-
-fn deserialize_single_or_list<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-    T: Deserialize<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum SingleOrList<T> {
-        Single(T),
-        List(Vec<T>),
-    }
-
-    Ok(match SingleOrList::deserialize(deserializer)? {
-        SingleOrList::Single(value) => vec![value],
-        SingleOrList::List(values) => values,
-    })
-}
-
-pub fn deserialize_client_ip_headers<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<TrustedHeader>, D::Error> {
-    let values = deserialize_single_or_list::<_, String>(deserializer)?;
-
-    let mut seen = HashSet::new();
-    let headers = values
-        .into_iter()
-        .flat_map(|value| value.split(',').map(str::to_owned).collect::<Vec<_>>())
-        .flat_map(|value| match value.trim().to_ascii_lowercase().as_str() {
-            "cloudflare" => vec![TrustedHeader::CfConnectingIp],
-            "fastly" => vec![TrustedHeader::FastlyClientIp],
-            "fly" => vec![TrustedHeader::FlyClientIp],
-            "cloudfront" => vec![TrustedHeader::CloudfrontViewerAddress],
-            "akamai" => vec![TrustedHeader::TrueClientIp],
-            _ => vec![value.parse::<TrustedHeader>().expect("TrustedHeader parsing is infallible")],
-        })
-        .filter(|header| seen.insert(header.clone()))
-        .collect();
-
-    Ok(headers)
-}
-
-pub fn deserialize_geoip_headers<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<GeoIpHeaders>, D::Error> {
-    deserialize_single_or_list(deserializer)
-}
-
-pub fn deserialize_trusted_proxies<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<TrustedProxy>, D::Error> {
-    let values = deserialize_single_or_list::<_, String>(deserializer)?
-        .into_iter()
-        .flat_map(|value| value.split(',').map(str::to_owned).collect::<Vec<_>>());
-
-    let proxies = values
-        .map(|value| value.parse::<TrustedProxy>().map_err(serde::de::Error::custom))
-        .collect::<Result<Vec<_>, D::Error>>()?;
-
-    Ok(proxies)
-}
-
-pub fn parse_header_ip(parts: &http::request::Parts, header: &TrustedHeader) -> Option<IpAddr> {
-    let value = parts.headers.get(header.as_header_name())?.to_str().ok()?.trim();
+pub fn parse_header_ip(parts: &http::request::Parts, source: &ClientIpHeaderSource) -> Option<IpAddr> {
+    let header = source.as_header_name();
+    let value = parts.headers.get(header)?.to_str().ok()?.trim();
     match header {
-        TrustedHeader::CloudfrontViewerAddress => value.rsplit_once(':')?.0.parse().ok(),
-        TrustedHeader::XForwardedFor => value.split(',').next_back()?.trim().parse().ok(),
-        TrustedHeader::Forwarded => value
+        "cloudfront-viewer-address" => value.rsplit_once(':')?.0.parse().ok(),
+        "x-forwarded-for" => value.split(',').next_back()?.trim().parse().ok(),
+        "forwarded" => value
             .split(',')
             .next_back()?
             .split(';')
             .find_map(|p| p.trim().strip_prefix("for="))
             .map(|p| p.trim_matches('"'))
             .and_then(|p| p.parse().ok()),
-        TrustedHeader::Other(_) => value.parse().ok(),
         _ => value.parse().ok(),
     }
 }
 
-pub fn should_trust_forwarded_headers(
-    use_forward_headers: bool,
-    peer_ip: Option<IpAddr>,
-    proxies: &[TrustedProxy],
-) -> bool {
-    use_forward_headers
-        && (proxies.is_empty() || peer_ip.is_some_and(|ip| proxies.iter().any(|proxy| proxy.contains(ip))))
-}
-
-pub fn public_ip(ip: Option<IpAddr>) -> Option<IpAddr> {
-    ip.filter(is_public_ip)
-}
-
-fn is_public_ip(ip: &IpAddr) -> bool {
-    match ip {
-        IpAddr::V4(ipv4) => {
-            !(ipv4.is_private()
-                || ipv4.is_loopback()
-                || ipv4.is_link_local()
-                || ipv4.is_broadcast()
-                || ipv4.is_unspecified()
-                || ipv4.is_multicast())
-        }
-        IpAddr::V6(ipv6) => {
-            !(ipv6.is_loopback()
-                || ipv6.is_unspecified()
-                || ipv6.is_multicast()
-                || ipv6.is_unique_local()
-                || ipv6.is_unicast_link_local())
-        }
-    }
+pub fn should_trust_proxy_headers(peer_ip: Option<IpAddr>, proxies: &[TrustedProxy]) -> bool {
+    proxies.is_empty() || peer_ip.is_some_and(|ip| proxies.iter().any(|proxy| proxy.contains(ip)))
 }
 
 #[cfg(test)]
@@ -336,11 +185,33 @@ mod tests {
             .unwrap();
         let (parts, _) = req.into_parts();
 
-        assert_eq!(parse_header_ip(&parts, &TrustedHeader::XForwardedFor), Some("8.8.8.8".parse().unwrap()));
-        assert_eq!(parse_header_ip(&parts, &TrustedHeader::Forwarded), Some("1.1.1.1".parse().unwrap()));
         assert_eq!(
-            parse_header_ip(&parts, &TrustedHeader::Other("x-client-ip".to_string())),
+            parse_header_ip(&parts, &ClientIpHeaderSource::Header("x-forwarded-for".to_string())),
+            Some("8.8.8.8".parse().unwrap())
+        );
+        assert_eq!(
+            parse_header_ip(&parts, &ClientIpHeaderSource::Header("forwarded".to_string())),
+            Some("1.1.1.1".parse().unwrap())
+        );
+        assert_eq!(
+            parse_header_ip(&parts, &ClientIpHeaderSource::Header("x-client-ip".to_string())),
             Some("8.8.4.4".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_compound_geoip_headers() {
+        let mut headers = http::HeaderMap::new();
+        headers.insert("x-akamai-edgescape", "georegion=246,country_code=US,city=SAN FRANCISCO".parse().unwrap());
+        assert_eq!(
+            parse_geoip_headers(&headers, &[GeoIpHeaderSource::Provider(GeoIpProvider::Akamai)]),
+            GeoIpHeaderValues { country: Some("US".to_string()), city: Some("SAN FRANCISCO".to_string()) }
+        );
+
+        headers.insert("x-nf-geo", r#"{"city":"Berlin","country":{"code":"DE","name":"Germany"}}"#.parse().unwrap());
+        assert_eq!(
+            parse_geoip_headers(&headers, &[GeoIpHeaderSource::Provider(GeoIpProvider::Netlify)]),
+            GeoIpHeaderValues { country: Some("DE".to_string()), city: Some("Berlin".to_string()) }
         );
     }
 
@@ -348,17 +219,8 @@ mod tests {
     fn trust_decision_respects_flag_and_proxy_list() {
         let trusted = vec![TrustedProxy::Ip("10.0.0.1".parse().unwrap())];
 
-        assert!(should_trust_forwarded_headers(true, Some("10.0.0.1".parse().unwrap()), &trusted));
-        assert!(!should_trust_forwarded_headers(true, Some("10.0.0.2".parse().unwrap()), &trusted));
-        assert!(should_trust_forwarded_headers(true, Some("10.0.0.2".parse().unwrap()), &[]));
-        assert!(!should_trust_forwarded_headers(false, Some("10.0.0.1".parse().unwrap()), &trusted));
-    }
-
-    #[test]
-    fn public_ip_filters_reserved_ranges() {
-        assert_eq!(public_ip(Some("8.8.8.8".parse().unwrap())), Some("8.8.8.8".parse().unwrap()));
-        assert_eq!(public_ip(Some("10.0.0.1".parse().unwrap())), None);
-        assert_eq!(public_ip(Some("127.0.0.1".parse().unwrap())), None);
-        assert_eq!(public_ip(Some("::1".parse().unwrap())), None);
+        assert!(should_trust_proxy_headers(Some("10.0.0.1".parse().unwrap()), &trusted));
+        assert!(!should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &trusted));
+        assert!(should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &[]));
     }
 }
