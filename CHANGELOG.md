@@ -20,9 +20,17 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ## [Unreleased]
 
+### Features
+
+- Added provider presets for client IP headers and support for reading GeoIP data from provider or custom headers
+
 ### Bug Fixes
 
 - Tracker requests now avoid CORS preflight requests by sending JSON as `text/plain` and the event API accepts tracker JSON regardless of content type
+
+### Other
+
+- Renamed `trusted_headers` to `client_ip_headers` (the old name remains supported)
 
 ## [v1.6.0] - 2026-06-20
 

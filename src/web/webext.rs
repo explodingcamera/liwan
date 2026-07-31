@@ -273,7 +273,7 @@ impl FromRequestParts<RouterState> for ClientIp {
             ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await.ok().map(|ConnectInfo(addr)| addr.ip());
 
         if should_trust_forwarded_headers(state.config.use_forward_headers, peer_ip, &state.config.trusted_proxies) {
-            for header in &state.config.trusted_headers {
+            for header in &state.config.client_ip_headers {
                 if let Some(ip) = public_ip(parse_header_ip(parts, header)) {
                     return Ok(ClientIp(Some(ip)));
                 }
@@ -281,5 +281,42 @@ impl FromRequestParts<RouterState> for ClientIp {
         }
 
         Ok(ClientIp(public_ip(peer_ip)))
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct GeoLocationHeaders {
+    pub country: Option<String>,
+    pub city: Option<String>,
+}
+impl OperationInput for GeoLocationHeaders {}
+
+impl FromRequestParts<RouterState> for GeoLocationHeaders {
+    type Rejection = Infallible;
+
+    async fn from_request_parts(
+        parts: &mut http::request::Parts,
+        state: &RouterState,
+    ) -> Result<Self, Self::Rejection> {
+        let peer_ip =
+            ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await.ok().map(|ConnectInfo(addr)| addr.ip());
+        if !should_trust_forwarded_headers(state.config.use_forward_headers, peer_ip, &state.config.trusted_proxies) {
+            return Ok(Self::default());
+        }
+
+        let read_header = |name: &str| {
+            parts
+                .headers
+                .get(name)
+                .and_then(|value| value.to_str().ok())
+                .map(str::trim)
+                .filter(|value| !value.is_empty() && value.len() <= 255)
+                .map(str::to_owned)
+        };
+
+        Ok(Self {
+            country: state.config.geoip.headers.iter().filter_map(|headers| headers.country()).find_map(read_header),
+            city: state.config.geoip.headers.iter().filter_map(|headers| headers.city()).find_map(read_header),
+        })
     }
 }

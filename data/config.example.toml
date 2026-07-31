@@ -1,5 +1,5 @@
-base_url="http://localhost:9042" # The base URL of the Liwan instance
-listen=9042 # The port to listen on (http)
+base_url = "http://localhost:9042"  # The base URL of the Liwan instance
+listen = 9042  # The port to listen on (http)
 
 # Disable favicon fetching from the DuckDuckGo API.
 # disable_favicons=false
@@ -11,9 +11,10 @@ listen=9042 # The port to listen on (http)
 
 # Trusted client IP headers (used in order).
 # Defaults to all supported headers.
-# trusted_headers=["cf-connecting-ip", "fly-client-ip", "true-client-ip", "x-real-ip", "cloudfront-viewer-address", "x-forwarded-for", "forwarded"]
-# You can also include custom headers. Names are case-insensitive.
-# trusted_headers=["X-Forwarded-For", "X-Client-IP"]
+# Presets: cloudflare, fastly, fly, cloudfront, akamai.
+# client_ip_headers="cloudflare"
+# Provider presets can be combined with standard or custom headers.
+# client_ip_headers=["cloudflare", "fly", "X-Forwarded-For", "X-Client-IP"]
 
 # Trusted reverse proxies (IP or CIDR).
 # Empty by default, meaning all proxies are trusted.
@@ -29,6 +30,12 @@ listen=9042 # The port to listen on (http)
 
 # GeoIp settings (Optional)
 [geoip]
+# Read location data supplied by a trusted proxy.
+# Presets: cloudflare, cloudfront, vercel.
+# headers="cloudflare"
+# Multiple presets and custom mappings are also supported, in priority order.
+# headers=["cloudflare", { country="X-Country", city="X-City" }]
+
 # # MaxMind account ID and license key
 # # Required to automatically download the database and keep it up to date
 # maxmind_account_id="MY_ACCOUNT_ID"

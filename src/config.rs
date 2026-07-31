@@ -1,4 +1,7 @@
-use crate::utils::ip_headers::{TrustedHeader, TrustedProxy, deserialize_trusted_headers, deserialize_trusted_proxies};
+use crate::utils::ip_headers::{
+    GeoIpHeaders, TrustedHeader, TrustedProxy, deserialize_client_ip_headers, deserialize_geoip_headers,
+    deserialize_trusted_proxies,
+};
 use anyhow::{Context, Result, bail};
 use config::{File, FileFormat, Value};
 use serde::{Deserialize, Serialize};
@@ -31,8 +34,14 @@ pub struct Config {
     #[serde(default)]
     pub duckdb: DuckdbConfig,
 
-    #[serde(default = "default_trusted_headers", deserialize_with = "deserialize_trusted_headers")]
-    pub trusted_headers: Vec<TrustedHeader>,
+    /// Client IP header names or provider presets.
+    /// Presets: `cloudflare`, `fastly`, `fly`, `cloudfront`, and `akamai`.
+    #[serde(
+        default = "default_client_ip_headers",
+        alias = "trusted_headers",
+        deserialize_with = "deserialize_client_ip_headers"
+    )]
+    pub client_ip_headers: Vec<TrustedHeader>,
 
     #[serde(default, deserialize_with = "deserialize_trusted_proxies")]
     pub trusted_proxies: Vec<TrustedProxy>,
@@ -54,7 +63,7 @@ impl Default for Config {
             disable_favicons: false,
             listen: None,
             port: None,
-            trusted_headers: default_trusted_headers(),
+            client_ip_headers: default_client_ip_headers(),
             trusted_proxies: Vec::new(),
             use_forward_headers: default_use_forward_headers(),
             visitor_group_rotation_hour: default_visitor_group_rotation_hour(),
@@ -64,6 +73,9 @@ impl Default for Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GeoIpConfig {
+    /// GeoIP header mappings or provider presets. Presets: `cloudflare`, `cloudfront`, and `vercel`.
+    #[serde(default, deserialize_with = "deserialize_geoip_headers")]
+    pub headers: Vec<GeoIpHeaders>,
     #[serde(default)]
     pub maxmind_db_path: Option<String>,
     #[serde(default, deserialize_with = "deserialize_string_from_number")]
@@ -108,7 +120,7 @@ fn default_data_dir() -> String {
     }
 }
 
-fn default_trusted_headers() -> Vec<TrustedHeader> {
+fn default_client_ip_headers() -> Vec<TrustedHeader> {
     TrustedHeader::all().to_vec()
 }
 
@@ -221,6 +233,9 @@ impl Config {
 
 fn map_env_key(key: &str) -> Option<String> {
     let key = key.strip_prefix("LIWAN_")?.to_ascii_lowercase();
+    if key == "geoip_headers" {
+        return Some("geoip.headers".to_string());
+    }
     const NESTED_PREFIXES: &[(&str, &str)] = &[("maxmind_", "geoip.maxmind_"), ("duckdb_", "duckdb.")];
 
     for (prefix, mapped_prefix) in NESTED_PREFIXES {
@@ -346,7 +361,7 @@ mod test {
         assert_eq!(config.data_dir, "/data");
         assert_eq!(config.base_url, "https://example.com");
         assert_eq!(config.geoip.maxmind_account_id, Some("123".to_string()));
-        assert_eq!(config.trusted_headers, vec![TrustedHeader::XForwardedFor, TrustedHeader::Forwarded]);
+        assert_eq!(config.client_ip_headers, vec![TrustedHeader::XForwardedFor, TrustedHeader::Forwarded]);
         assert_eq!(
             config.trusted_proxies,
             vec![TrustedProxy::Ip("127.0.0.1".parse().unwrap()), TrustedProxy::Cidr("10.0.0.0/8".parse().unwrap())]
@@ -357,7 +372,48 @@ mod test {
     #[test]
     fn test_env_custom_trusted_header() {
         let config = Config::load(None, vec![("LIWAN_TRUSTED_HEADERS", "X_CLIENT_IP")]).expect("failed to load config");
-        assert_eq!(config.trusted_headers, vec![TrustedHeader::Other("x-client-ip".to_string())]);
+        assert_eq!(config.client_ip_headers, vec![TrustedHeader::Other("x-client-ip".to_string())]);
+    }
+
+    #[test]
+    fn test_header_presets_and_geoip_mappings() {
+        let (_temp_dir, config_path) = temp_config(
+            "headers.config.toml",
+            r#"
+                client_ip_headers = ["cloudflare", "fastly", "fly", "akamai", "X-Client-IP"]
+
+                [geoip]
+                headers = ["cloudflare", { country = "X-Country", city = "X-City" }]
+            "#,
+        );
+
+        let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
+        assert_eq!(
+            config.client_ip_headers,
+            vec![
+                TrustedHeader::CfConnectingIp,
+                TrustedHeader::FastlyClientIp,
+                TrustedHeader::FlyClientIp,
+                TrustedHeader::TrueClientIp,
+                TrustedHeader::Other("x-client-ip".to_string())
+            ]
+        );
+        assert_eq!(config.geoip.headers.len(), 2);
+        assert_eq!(config.geoip.headers[0].country(), Some("cf-ipcountry"));
+        assert_eq!(config.geoip.headers[0].city(), Some("cf-ipcity"));
+        assert_eq!(config.geoip.headers[1].country(), Some("X-Country"));
+        assert_eq!(config.geoip.headers[1].city(), Some("X-City"));
+    }
+
+    #[test]
+    fn test_legacy_trusted_headers_alias() {
+        let (_temp_dir, config_path) = temp_config("legacy.config.toml", "trusted_headers = \"fly\"");
+        let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
+
+        assert_eq!(config.client_ip_headers, vec![TrustedHeader::FlyClientIp]);
+        let serialized = serde_json::to_value(config).expect("failed to serialize config");
+        assert!(serialized.get("client_ip_headers").is_some());
+        assert!(serialized.get("trusted_headers").is_none());
     }
 
     #[test]

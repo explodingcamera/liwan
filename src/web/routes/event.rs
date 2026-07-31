@@ -6,7 +6,7 @@ use crate::utils::hash::{visitor_group_id, visitor_group_id_cidr, visitor_group_
 use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::RouterState;
-use crate::web::webext::{ApiResult, AxumErrExt, ClientIp, empty_response};
+use crate::web::webext::{ApiResult, AxumErrExt, ClientIp, GeoLocationHeaders, empty_response};
 
 use aide::axum::routing::post;
 use aide::axum::{ApiRouter, IntoApiResponse};
@@ -145,6 +145,7 @@ static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
 async fn event_handler(
     state: State<RouterState>,
     ClientIp(ip): ClientIp,
+    geo_headers: GeoLocationHeaders,
     TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
     event: Bytes,
 ) -> ApiResult<impl IntoApiResponse> {
@@ -157,7 +158,7 @@ async fn event_handler(
     event.validate().context("invalid event").http_err("invalid event", StatusCode::BAD_REQUEST)?;
 
     // blocking a bit to give some slight backpressure to the caller
-    let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, user_agent))
+    let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, geo_headers, user_agent))
         .await
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -180,6 +181,7 @@ fn process_event(
     event: EventRequest,
     mut url: Url,
     ip: Option<IpAddr>,
+    geo_headers: GeoLocationHeaders,
     user_agent: headers::UserAgent,
 ) -> Result<Option<Event>> {
     let referrer = match process_referer(event.referrer.as_deref()) {
@@ -217,21 +219,27 @@ fn process_event(
     let visitor_group_id =
         resolve_visitor_group_id(&settings, ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id);
 
+    let (country, city) = match settings.track_geo {
+        GeoDetail::None => (None, None),
+        GeoDetail::Country => (geo_headers.country, None),
+        GeoDetail::City => (geo_headers.country, geo_headers.city),
+    };
+
     #[cfg(feature = "geoip")]
     let (country, city) = match settings.track_geo {
         GeoDetail::None => (None, None),
-        GeoDetail::Country => ip
-            .and_then(|ip| app.geoip.lookup(&ip).ok())
-            .map(|lookup| (lookup.country_code, None))
-            .unwrap_or((None, None)),
-        GeoDetail::City => ip
-            .and_then(|ip| app.geoip.lookup(&ip).ok())
-            .map(|lookup| (lookup.country_code, lookup.city))
-            .unwrap_or((None, None)),
+        GeoDetail::Country => {
+            let maxmind_country = ip.and_then(|ip| app.geoip.lookup(&ip).ok()).and_then(|lookup| lookup.country_code);
+            (maxmind_country.or(country), None)
+        }
+        GeoDetail::City => {
+            let lookup = ip.and_then(|ip| app.geoip.lookup(&ip).ok());
+            (
+                lookup.as_ref().and_then(|value| value.country_code.clone()).or(country),
+                lookup.and_then(|value| value.city).or(city),
+            )
+        }
     };
-
-    #[cfg(not(feature = "geoip"))]
-    let (country, city) = (None, None);
 
     let utm = if settings.track_utm_params { extract_utm(&mut url) } else { Utm::default() };
     url.set_query(None);

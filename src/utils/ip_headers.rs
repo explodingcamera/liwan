@@ -8,6 +8,7 @@ use std::str::FromStr;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TrustedHeader {
     CfConnectingIp,
+    FastlyClientIp,
     FlyClientIp,
     TrueClientIp,
     XRealIp,
@@ -21,6 +22,7 @@ impl TrustedHeader {
     pub const fn all() -> &'static [Self] {
         &[
             Self::CfConnectingIp,
+            Self::FastlyClientIp,
             Self::FlyClientIp,
             Self::TrueClientIp,
             Self::XRealIp,
@@ -33,6 +35,7 @@ impl TrustedHeader {
     pub fn as_header_name(&self) -> &str {
         match self {
             Self::CfConnectingIp => "cf-connecting-ip",
+            Self::FastlyClientIp => "fastly-client-ip",
             Self::FlyClientIp => "fly-client-ip",
             Self::TrueClientIp => "true-client-ip",
             Self::XRealIp => "x-real-ip",
@@ -40,6 +43,85 @@ impl TrustedHeader {
             Self::XForwardedFor => "x-forwarded-for",
             Self::Forwarded => "forwarded",
             Self::Other(value) => value.as_str(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum GeoIpHeaders {
+    Preset(GeoIpHeaderPreset),
+    Custom(GeoIpHeaderMapping),
+}
+
+impl GeoIpHeaders {
+    pub fn country(&self) -> Option<&str> {
+        match self {
+            Self::Preset(preset) => Some(preset.country()),
+            Self::Custom(mapping) => mapping.country.as_deref(),
+        }
+    }
+
+    pub fn city(&self) -> Option<&str> {
+        match self {
+            Self::Preset(preset) => Some(preset.city()),
+            Self::Custom(mapping) => mapping.city.as_deref(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum GeoIpHeaderPreset {
+    Cloudflare,
+    Cloudfront,
+    Vercel,
+}
+
+impl GeoIpHeaderPreset {
+    fn country(self) -> &'static str {
+        match self {
+            Self::Cloudflare => "cf-ipcountry",
+            Self::Cloudfront => "cloudfront-viewer-country",
+            Self::Vercel => "x-vercel-ip-country",
+        }
+    }
+
+    fn city(self) -> &'static str {
+        match self {
+            Self::Cloudflare => "cf-ipcity",
+            Self::Cloudfront => "cloudfront-viewer-city",
+            Self::Vercel => "x-vercel-ip-city",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GeoIpHeaderMapping {
+    #[serde(default)]
+    pub country: Option<String>,
+    #[serde(default)]
+    pub city: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for GeoIpHeaders {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Input {
+            Preset(String),
+            Custom(GeoIpHeaderMapping),
+        }
+
+        match Input::deserialize(deserializer)? {
+            Input::Preset(value) => match value.trim().to_ascii_lowercase().as_str() {
+                "cloudflare" => Ok(Self::Preset(GeoIpHeaderPreset::Cloudflare)),
+                "cloudfront" => Ok(Self::Preset(GeoIpHeaderPreset::Cloudfront)),
+                "vercel" => Ok(Self::Preset(GeoIpHeaderPreset::Vercel)),
+                _ => Err(serde::de::Error::custom(format!("unknown GeoIP header preset: {value}"))),
+            },
+            Input::Custom(mapping) if mapping.country.is_some() || mapping.city.is_some() => Ok(Self::Custom(mapping)),
+            Input::Custom(_) => Err(serde::de::Error::custom("GeoIP header mapping must define country or city")),
         }
     }
 }
@@ -52,6 +134,7 @@ impl FromStr for TrustedHeader {
 
         Ok(match normalized.as_str() {
             "cf-connecting-ip" => Self::CfConnectingIp,
+            "fastly-client-ip" => Self::FastlyClientIp,
             "fly-client-ip" => Self::FlyClientIp,
             "true-client-ip" => Self::TrueClientIp,
             "x-real-ip" => Self::XRealIp,
@@ -128,50 +211,61 @@ impl<'de> Deserialize<'de> for TrustedProxy {
     }
 }
 
-pub fn deserialize_trusted_headers<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<TrustedHeader>, D::Error> {
+fn deserialize_single_or_list<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
     #[derive(Deserialize)]
     #[serde(untagged)]
-    enum HeadersInput {
-        Single(String),
-        Multiple(Vec<String>),
+    enum SingleOrList<T> {
+        Single(T),
+        List(Vec<T>),
     }
 
-    let input = HeadersInput::deserialize(deserializer)?;
-    let values = match input {
-        HeadersInput::Single(value) => value.split(',').map(str::to_owned).collect::<Vec<_>>(),
-        HeadersInput::Multiple(values) => values,
-    };
+    Ok(match SingleOrList::deserialize(deserializer)? {
+        SingleOrList::Single(value) => vec![value],
+        SingleOrList::List(values) => values,
+    })
+}
+
+pub fn deserialize_client_ip_headers<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Vec<TrustedHeader>, D::Error> {
+    let values = deserialize_single_or_list::<_, String>(deserializer)?;
 
     let mut seen = HashSet::new();
     let headers = values
         .into_iter()
-        .map(|value| value.parse::<TrustedHeader>().expect("TrustedHeader parsing is infallible"))
+        .flat_map(|value| value.split(',').map(str::to_owned).collect::<Vec<_>>())
+        .flat_map(|value| match value.trim().to_ascii_lowercase().as_str() {
+            "cloudflare" => vec![TrustedHeader::CfConnectingIp],
+            "fastly" => vec![TrustedHeader::FastlyClientIp],
+            "fly" => vec![TrustedHeader::FlyClientIp],
+            "cloudfront" => vec![TrustedHeader::CloudfrontViewerAddress],
+            "akamai" => vec![TrustedHeader::TrueClientIp],
+            _ => vec![value.parse::<TrustedHeader>().expect("TrustedHeader parsing is infallible")],
+        })
         .filter(|header| seen.insert(header.clone()))
         .collect();
 
     Ok(headers)
 }
 
+pub fn deserialize_geoip_headers<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Vec<GeoIpHeaders>, D::Error> {
+    deserialize_single_or_list(deserializer)
+}
+
 pub fn deserialize_trusted_proxies<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Vec<TrustedProxy>, D::Error> {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum ProxiesInput {
-        Single(String),
-        Multiple(Vec<String>),
-    }
-
-    let input = ProxiesInput::deserialize(deserializer)?;
-    let values = match input {
-        ProxiesInput::Single(value) => value.split(',').map(str::to_owned).collect::<Vec<_>>(),
-        ProxiesInput::Multiple(values) => values,
-    };
+    let values = deserialize_single_or_list::<_, String>(deserializer)?
+        .into_iter()
+        .flat_map(|value| value.split(',').map(str::to_owned).collect::<Vec<_>>());
 
     let proxies = values
-        .into_iter()
         .map(|value| value.parse::<TrustedProxy>().map_err(serde::de::Error::custom))
         .collect::<Result<Vec<_>, D::Error>>()?;
 
