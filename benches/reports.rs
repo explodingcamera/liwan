@@ -13,17 +13,20 @@ fn configure_group(group: &mut criterion::BenchmarkGroup<'_, criterion::measurem
 
 fn benchmark_reports(c: &mut Criterion) {
     let config = Config::load(None, std::env::vars()).expect("failed to load config");
-    let app = Liwan::try_new(config).expect("failed to initialize app");
+    // the app is async, but the benchmarks themselves only use the (blocking) duckdb connection
+    let runtime = tokio::runtime::Runtime::new().expect("failed to build tokio runtime");
+    let app = runtime.block_on(Liwan::try_new(config)).expect("failed to initialize app");
 
-    let project = app
-        .projects
-        .all()
+    let project = runtime
+        .block_on(app.projects.all())
         .expect("failed to load projects")
         .into_iter()
         .next()
         .expect("no projects found; seed the database first");
 
-    let entities = app.projects.entity_ids(&project.id).expect("failed to resolve entities for benchmark project");
+    let entities = runtime
+        .block_on(app.projects.entity_ids(&project.id))
+        .expect("failed to resolve entities for benchmark project");
     assert!(!entities.is_empty(), "project has no entities; seed the database first");
 
     let range = DateRange {

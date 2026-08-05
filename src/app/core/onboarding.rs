@@ -10,11 +10,10 @@ pub struct LiwanOnboarding {
 }
 
 impl LiwanOnboarding {
-    pub fn try_new(pool: &SqlitePool) -> Result<Self> {
+    pub async fn try_new(pool: &SqlitePool) -> Result<Self> {
         let onboarding = {
             tracing::debug!("Checking if an onboarding token needs to be generated");
-            let conn = pool.get()?;
-            let onboarded = conn.prepare("select 1 from users limit 1")?.exists([])?;
+            let onboarded = sqlx::query("select 1 from users limit 1").fetch_optional(pool).await?.is_some();
             ArcSwapOption::new((!onboarded).then(|| onboarding_token().into()))
         };
 

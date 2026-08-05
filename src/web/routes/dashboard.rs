@@ -84,14 +84,14 @@ async fn project_earliest_handler(
     MaybeAuth(user): MaybeAuth,
     Path(project_id): Path<String>,
 ) -> ApiResult<Json<EarliestResponse>> {
-    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    let project = app.projects.get(&project_id).await.http_status(StatusCode::NOT_FOUND)?;
 
     if !can_view_project(&project, user.as_ref()) {
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
     }
 
     let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let entities = app.projects.entity_ids(&project.id).await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
     let earliest = reports::earliest_timestamp(&conn, &entities).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(EarliestResponse { earliest }))
@@ -103,14 +103,14 @@ async fn project_graph_handler(
     MaybeAuth(user): MaybeAuth,
     Json(req): Json<GraphRequest>,
 ) -> ApiResult<Json<GraphResponse>> {
-    let project = app.projects.get(&project_id).http_status(StatusCode::IM_A_TEAPOT)?;
-    let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let project = app.projects.get(&project_id).await.http_status(StatusCode::IM_A_TEAPOT)?;
+    let entities = app.projects.entity_ids(&project.id).await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if !can_view_project(&project, user.as_ref()) {
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
     }
 
-    if app.is_metric_hidden(&project.id, &entities, req.metric) {
+    if app.is_metric_hidden(&project.id, &entities, req.metric).await {
         http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
     }
 
@@ -138,12 +138,12 @@ async fn project_stats_handler(
     MaybeAuth(user): MaybeAuth,
     Json(req): Json<StatsRequest>,
 ) -> ApiResult<Json<StatsResponse>> {
-    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    let project = app.projects.get(&project_id).await.http_status(StatusCode::NOT_FOUND)?;
     if !can_view_project(&project, user.as_ref()) {
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
     }
 
-    let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let entities = app.projects.entity_ids(&project.id).await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
     let (entities2, entities3) = (entities.clone(), entities.clone());
 
     let conn = app.events_conn().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -164,11 +164,11 @@ async fn project_stats_handler(
         stats_prev.http_status(StatusCode::INTERNAL_SERVER_ERROR)?,
     );
 
-    if app.is_metric_hidden(&project.id, &entities3, Metric::BounceRate) {
+    if app.is_metric_hidden(&project.id, &entities3, Metric::BounceRate).await {
         stats.bounce_rate = None;
         stats_prev.bounce_rate = None;
     }
-    if app.is_metric_hidden(&project.id, &entities3, Metric::AvgTimeOnSite) {
+    if app.is_metric_hidden(&project.id, &entities3, Metric::AvgTimeOnSite).await {
         stats.avg_time_on_site = None;
         stats_prev.avg_time_on_site = None;
     }
@@ -185,17 +185,17 @@ async fn project_detailed_handler(
     Path(project_id): Path<String>,
     Json(req): Json<DimensionRequest>,
 ) -> ApiResult<Json<DimensionResponse>> {
-    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
-    let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let project = app.projects.get(&project_id).await.http_status(StatusCode::NOT_FOUND)?;
+    let entities = app.projects.entity_ids(&project.id).await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if !can_view_project(&project, user.as_ref()) {
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
     }
 
-    if app.is_metric_hidden(&project.id, &entities, req.metric) {
+    if app.is_metric_hidden(&project.id, &entities, req.metric).await {
         http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
     }
-    if app.is_dimension_hidden(&project.id, &entities, req.dimension) {
+    if app.is_dimension_hidden(&project.id, &entities, req.dimension).await {
         http_bail!(StatusCode::BAD_REQUEST, "Dimension is hidden for this project")
     }
 

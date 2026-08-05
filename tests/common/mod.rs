@@ -9,8 +9,8 @@ use liwan::{
 use serde_json::json;
 use std::sync::Arc;
 
-pub fn app() -> std::sync::Arc<Liwan> {
-    Liwan::new_memory(Config::default()).unwrap()
+pub async fn app() -> std::sync::Arc<Liwan> {
+    Liwan::new_memory(Config::default()).await.unwrap()
 }
 
 pub fn events() -> (tokio::sync::mpsc::Sender<Event>, tokio::sync::mpsc::Receiver<Event>) {

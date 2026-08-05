@@ -4,10 +4,10 @@ use serde_json::json;
 
 #[tokio::test]
 async fn test_event() -> Result<()> {
-    let app = common::app();
+    let app = common::app().await;
     let (tx, mut rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
-    app.seed_database(0)?;
+    app.seed_database(0).await?;
 
     let event = json!({
         "entity_id": "entity-1",
@@ -56,10 +56,10 @@ async fn test_event() -> Result<()> {
 
 #[tokio::test]
 async fn event_allows_cross_origin_requests() -> Result<()> {
-    let app = common::app();
+    let app = common::app().await;
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
-    app.seed_database(0)?;
+    app.seed_database(0).await?;
 
     let event = json!({
         "entity_id": "entity-1",

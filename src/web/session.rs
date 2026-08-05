@@ -80,7 +80,7 @@ impl axum::extract::FromRequestParts<RouterState> for MaybeSessionId {
         {
             let session_id = session_cookie.value();
             tracing::info!(session_id, "user has session cookie but no username cookie, logging out");
-            let _ = state.app.sessions.delete(session_cookie.value());
+            let _ = state.app.sessions.delete(session_cookie.value()).await;
             return Err(logout_response());
         }
 
@@ -93,7 +93,8 @@ impl axum::extract::FromRequestParts<RouterState> for Auth {
 
     async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
         let session_id = MaybeSessionId::from_request_parts(parts, state).await?.0.ok_or_else(logout_response)?;
-        let user = state.app.sessions.get(&session_id).map_err(|_| logout_response())?.ok_or_else(logout_response)?;
+        let user =
+            state.app.sessions.get(&session_id).await.map_err(|_| logout_response())?.ok_or_else(logout_response)?;
         Ok(Auth(user))
     }
 }
@@ -105,7 +106,8 @@ impl axum::extract::FromRequestParts<RouterState> for MaybeAuth {
         let MaybeSessionId(Some(session_id)) = MaybeSessionId::from_request_parts(parts, state).await? else {
             return Ok(MaybeAuth(None));
         };
-        let user = state.app.sessions.get(&session_id).map_err(|_| logout_response())?.ok_or_else(logout_response)?;
+        let user =
+            state.app.sessions.get(&session_id).await.map_err(|_| logout_response())?.ok_or_else(logout_response)?;
         Ok(MaybeAuth(Some(user)))
     }
 }

@@ -26,6 +26,11 @@ pub struct Config {
     #[serde(default = "default_data_dir")]
     pub data_dir: String,
 
+    /// Connection url for the app database, e.g. `sqlite://liwan-app.sqlite?mode=rwc`.
+    /// Defaults to `liwan-app.sqlite` inside the data directory.
+    #[serde(default)]
+    pub database: Option<String>,
+
     #[serde(default)]
     pub geoip: GeoIpConfig,
 
@@ -49,6 +54,7 @@ impl Default for Config {
         Self {
             base_url: default_base(),
             data_dir: default_data_dir(),
+            database: None,
             geoip: Default::default(),
             duckdb: Default::default(),
             disable_favicons: false,
@@ -212,6 +218,12 @@ impl Config {
 }
 
 fn map_env_key(key: &str) -> Option<String> {
+    // the database connection url may also be provided without the `LIWAN_` prefix,
+    // since `DATABASE` is a conventional name
+    if key == "DATABASE" {
+        return Some("database".to_string());
+    }
+
     let key = key.strip_prefix("LIWAN_")?.to_ascii_lowercase();
     if key == "geoip_headers" {
         return Some("geoip.headers".to_string());

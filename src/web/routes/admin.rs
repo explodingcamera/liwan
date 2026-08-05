@@ -137,9 +137,23 @@ pub struct ProjectEntity {
 }
 
 impl ProjectResponse {
-    fn new(app: &crate::app::Liwan, project: Project) -> anyhow::Result<Self> {
-        let entities = app.projects.entities(&project.id)?;
+    async fn new(app: &crate::app::Liwan, project: Project) -> anyhow::Result<Self> {
+        let entities = app.projects.entities(&project.id).await?;
         let entity_ids: Vec<String> = entities.iter().map(|entity| entity.id.clone()).collect();
+
+        let mut hidden_metrics = Vec::new();
+        for metric in Metric::all().iter().copied() {
+            if app.is_metric_hidden(&project.id, &entity_ids, metric).await {
+                hidden_metrics.push(metric);
+            }
+        }
+
+        let mut hidden_dimensions = Vec::new();
+        for dimension in Dimension::all().iter().copied() {
+            if app.is_dimension_hidden(&project.id, &entity_ids, dimension).await {
+                hidden_dimensions.push(dimension);
+            }
+        }
 
         Ok(Self {
             id: project.id.clone(),
@@ -150,16 +164,8 @@ impl ProjectResponse {
                 .collect(),
             public: project.public,
             unlisted: project.unlisted,
-            hidden_metrics: Metric::all()
-                .iter()
-                .copied()
-                .filter(|metric| app.is_metric_hidden(&project.id, &entity_ids, *metric))
-                .collect(),
-            hidden_dimensions: Dimension::all()
-                .iter()
-                .copied()
-                .filter(|dimension| app.is_dimension_hidden(&project.id, &entity_ids, *dimension))
-                .collect(),
+            hidden_metrics,
+            hidden_dimensions,
         })
     }
 }
@@ -244,6 +250,7 @@ async fn get_users(
     let users = app
         .users
         .all()
+        .await
         .http_err("Failed to get users", StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
         .map(|u| UserResponse { username: u.username.clone(), role: u.role, projects: u.projects.clone() })
@@ -268,6 +275,7 @@ async fn update_user(
 
     app.users
         .update(&username, user.role, user.projects.as_slice())
+        .await
         .http_err("Failed to update user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
@@ -289,6 +297,7 @@ async fn update_user_password(
 
     app.users
         .update_password(&username, &params.password)
+        .await
         .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
@@ -307,7 +316,7 @@ async fn remove_user(
         http_bail!(StatusCode::FORBIDDEN, "Cannot delete own user")
     }
 
-    app.users.delete(&username).http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
+    app.users.delete(&username).await.http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
 }
@@ -325,10 +334,9 @@ async fn create_user(
         http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
     }
 
-    let app = app.app.clone();
-    tokio::task::spawn_blocking(move || app.users.create(&params.username, &params.password, params.role, &[]))
+    app.users
+        .create(&params.username, &params.password, params.role, &[])
         .await
-        .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
@@ -355,6 +363,7 @@ async fn project_create_handler(
             },
             project.entities.as_slice(),
         )
+        .await
         .http_err("Failed to create project", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
@@ -379,12 +388,14 @@ async fn project_update_handler(
                 unlisted: project.unlisted,
                 secret: project.secret,
             })
+            .await
             .http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
     if let Some(entities) = req.entities {
         app.projects
             .update_entities(&project_id, entities.as_slice())
+            .await
             .http_err("Failed to update project entities", StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
@@ -395,13 +406,15 @@ async fn projects_handler(
     app: State<RouterState>,
     MaybeAuth(user): MaybeAuth,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectsResponse>>> {
-    let projects = app.projects.all().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
+    let projects = app.projects.all().await.http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
     let projects: Vec<Project> = projects.into_iter().filter(|p| can_enumerate_project(p, user.as_ref())).collect();
 
     let mut resp = Vec::new();
     for project in projects {
         resp.push(
-            ProjectResponse::new(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?,
+            ProjectResponse::new(&app, project)
+                .await
+                .http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?,
         );
     }
 
@@ -413,13 +426,16 @@ async fn project_handler(
     MaybeAuth(user): MaybeAuth,
     Path(project_id): Path<String>,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectResponse>>> {
-    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    let project = app.projects.get(&project_id).await.http_status(StatusCode::NOT_FOUND)?;
     if !can_view_project(&project, user.as_ref()) {
         return Err(StatusCode::NOT_FOUND.into());
     }
 
-    let resp =
-        Json(ProjectResponse::new(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?);
+    let resp = Json(
+        ProjectResponse::new(&app, project)
+            .await
+            .http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?,
+    );
 
     Ok(([(http::header::CACHE_CONTROL, "private")], resp).into())
 }
@@ -444,7 +460,10 @@ async fn settings_update_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    app.settings.update_global(&settings).http_err("Failed to update collection settings", StatusCode::BAD_REQUEST)?;
+    app.settings
+        .update_global(&settings)
+        .await
+        .http_err("Failed to update collection settings", StatusCode::BAD_REQUEST)?;
 
     Ok(empty_response())
 }
@@ -458,10 +477,12 @@ async fn prune_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
+    let entities = app.entities.all().await.http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let app = app.app.clone();
     let response = tokio::task::spawn_blocking(move || {
         let mut response = PruneResponse { dry_run: req.dry_run, ..Default::default() };
-        for entity in app.entities.all()? {
+        for entity in entities {
             let settings = app.settings.resolved_for_entity(&entity.id);
             let stats = app.events.prune_entity(&entity.id, &settings, req.dry_run)?;
             let entity_stats = PruneEntityStats {
@@ -497,10 +518,11 @@ async fn project_settings_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    app.projects.get(&project_id).await.http_status(StatusCode::NOT_FOUND)?;
     let settings = app
         .project_settings
         .get(&project_id)
+        .await
         .http_err("Failed to get project display settings", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(([(http::header::CACHE_CONTROL, "private")], Json(settings)).into())
@@ -516,10 +538,11 @@ async fn project_settings_update_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    app.projects.get(&project_id).await.http_status(StatusCode::NOT_FOUND)?;
     settings.project_id = project_id;
     app.project_settings
         .update(&settings)
+        .await
         .http_err("Failed to update project display settings", StatusCode::BAD_REQUEST)?;
 
     Ok(empty_response())
@@ -534,7 +557,7 @@ async fn entity_settings_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    if !app.entities.exists(&entity_id).http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
+    if !app.entities.exists(&entity_id).await.http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
         http_bail!(StatusCode::NOT_FOUND, "Entity not found")
     }
 
@@ -554,13 +577,14 @@ async fn entity_settings_update_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    if !app.entities.exists(&entity_id).http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
+    if !app.entities.exists(&entity_id).await.http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
         http_bail!(StatusCode::NOT_FOUND, "Entity not found")
     }
 
     settings.entity_id = entity_id;
     app.settings
         .update_entity(&settings)
+        .await
         .http_err("Failed to update entity collection settings", StatusCode::BAD_REQUEST)?;
 
     Ok(empty_response())
@@ -571,12 +595,12 @@ async fn project_delete_handler(
     Path(project_id): Path<String>,
     Auth(user): Auth,
 ) -> ApiResult<impl IntoApiResponse> {
-    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    let project = app.projects.get(&project_id).await.http_status(StatusCode::NOT_FOUND)?;
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    app.projects.delete(&project.id).http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
+    app.projects.delete(&project.id).await.http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(empty_response())
 }
 
@@ -588,7 +612,7 @@ async fn entities_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    let entities = app.entities.all().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
+    let entities = app.entities.all().await.http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut resp = Vec::new();
     for entity in entities {
@@ -598,6 +622,7 @@ async fn entities_handler(
             projects: app
                 .entities
                 .projects(&entity.id)
+                .await
                 .http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?
                 .into_iter()
                 .map(|project| EntityProject {
@@ -627,6 +652,7 @@ async fn entity_create_handler(
             &Entity { id: entity.id.clone(), display_name: entity.display_name.clone() },
             entity.projects.as_slice(),
         )
+        .await
         .http_err("Failed to create entity", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(EntityResponse { id: entity.id, display_name: entity.display_name, projects: Vec::new() }))
@@ -645,12 +671,14 @@ async fn entity_update_handler(
     if let Some(display_name) = entity.display_name {
         app.entities
             .update(&Entity { id: entity_id.clone(), display_name })
+            .await
             .http_err("Failed to update entity", StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
     if let Some(projects) = entity.projects {
         app.entities
             .update_projects(&entity_id, projects.as_slice())
+            .await
             .http_err("Failed to update entity projects", StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
@@ -666,8 +694,8 @@ async fn entity_delete_handler(
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
 
-    app.entities.delete(&entity_id).http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
-    app.settings.reload().http_err("Failed to reload collection settings", StatusCode::INTERNAL_SERVER_ERROR)?;
+    app.entities.delete(&entity_id).await.http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
+    app.settings.reload().await.http_err("Failed to reload collection settings", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
 }

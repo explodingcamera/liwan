@@ -21,6 +21,7 @@ name = "reports"
 [dependencies]
 # async/concurrency
 arc-swap = "1.9"
+async-trait = "0.1"
 futures-lite = { version = "2.6", default-features = false, features = ["alloc"] }
 quick_cache = { version = "0.7" }
 tokio = { version = "1.53", default-features = false, features = [
@@ -118,7 +119,7 @@ mimalloc = { version = "0.1" }
 r2d2 = { version = "0.8", default-features = false }
 refinery = { version = "0.9", default-features = false }
 refinery-core = { version = "0.9", default-features = false }
-rusqlite = { version = "0.40", features = ["bundled", "chrono", "modern_sqlite"] }
+sqlx = { version = "0.9", features = ["chrono", "runtime-tokio", "sqlite"] }
 
 [dev-dependencies]
 axum-test = { version = "21" }

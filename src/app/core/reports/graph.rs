@@ -285,10 +285,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn overall_report_includes_start_and_excludes_end() {
-        let app = Liwan::new_memory(Config::default()).expect("failed to create app");
-        app.seed_database(0).expect("failed to seed app");
+    #[tokio::test]
+    async fn overall_report_includes_start_and_excludes_end() {
+        let app = Liwan::new_memory(Config::default()).await.expect("failed to create app");
+        app.seed_database(0).await.expect("failed to seed app");
 
         let start = local_datetime(Tz::UTC, 2024, 1, 1, 0, 0);
         let middle = local_datetime(Tz::UTC, 2024, 1, 2, 12, 0);

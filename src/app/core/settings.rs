@@ -3,9 +3,10 @@ use std::num::NonZeroU32;
 use std::sync::{Arc, RwLock};
 
 use anyhow::{Result, bail};
-use rusqlite::OptionalExtension;
+use sqlx::{Row, sqlite::SqliteRow};
 
 use crate::app::{SqlitePool, models};
+use crate::utils::sqlite::decode_err;
 
 #[derive(Clone)]
 pub struct LiwanSettings {
@@ -25,8 +26,8 @@ struct SettingsCache {
 }
 
 impl LiwanSettings {
-    pub fn try_new(pool: SqlitePool) -> Result<Self> {
-        let cache = SettingsCache::load(&pool)?;
+    pub async fn try_new(pool: SqlitePool) -> Result<Self> {
+        let cache = SettingsCache::load(&pool).await?;
         Ok(Self { pool, cache: Arc::new(RwLock::new(cache)) })
     }
 
@@ -58,7 +59,7 @@ impl LiwanSettings {
     }
 
     /// Update global collection settings and refresh the cache
-    pub fn update_global(&self, settings: &models::CollectionSettings) -> Result<()> {
+    pub async fn update_global(&self, settings: &models::CollectionSettings) -> Result<()> {
         if settings.data_retention == models::DataRetention::Inherit {
             bail!("global data_retention cannot inherit");
         }
@@ -69,32 +70,31 @@ impl LiwanSettings {
             models::DataRetention::Days(days) => Some(days.get()),
             models::DataRetention::Inherit => unreachable!(),
         };
-        let conn = self.pool.get()?;
-        conn.execute(
+        sqlx::query(
             "update settings
              set
-                visitor_group_mode = :visitor_group_mode,
-                track_sessions = :track_sessions,
-                track_utm_params = :track_utm_params,
-                track_geo = :track_geo,
-                history_days = :history_days,
-                ingest_drop_rules_json = :ingest_drop_rules_json
+                visitor_group_mode = ?,
+                track_sessions = ?,
+                track_utm_params = ?,
+                track_geo = ?,
+                history_days = ?,
+                ingest_drop_rules_json = ?
              where id = 1",
-            rusqlite::named_params! {
-                ":visitor_group_mode": settings.visitor_group_mode.to_string(),
-                ":track_sessions": settings.track_sessions,
-                ":track_utm_params": settings.track_utm_params,
-                ":track_geo": settings.track_geo.to_string(),
-                ":history_days": data_retention_days,
-                ":ingest_drop_rules_json": ingest_drop_rules_json,
-            },
-        )?;
-        self.reload()?;
+        )
+        .bind(settings.visitor_group_mode.to_string())
+        .bind(settings.track_sessions)
+        .bind(settings.track_utm_params)
+        .bind(settings.track_geo.to_string())
+        .bind(data_retention_days)
+        .bind(ingest_drop_rules_json)
+        .execute(&self.pool)
+        .await?;
+        self.reload().await?;
         Ok(())
     }
 
     /// Update per-entity collection settings and refresh the cache
-    pub fn update_entity(&self, settings: &models::EntityCollectionSettings) -> Result<()> {
+    pub async fn update_entity(&self, settings: &models::EntityCollectionSettings) -> Result<()> {
         let mut allowed_hostnames = Vec::new();
         for pattern in &settings.allowed_hostnames {
             if let Some(pattern) = models::normalize_allowed_hostname_pattern(pattern).map_err(anyhow::Error::msg)?
@@ -114,10 +114,9 @@ impl LiwanSettings {
             models::DataRetention::Days(days) => Some(days.get()),
             models::DataRetention::Inherit | models::DataRetention::All => None,
         };
-        let conn = self.pool.get()?;
-        conn.execute(
+        sqlx::query(
             "insert into entity_settings (entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, allowed_hostnames, ingest_drop_rules_json)
-             values (:entity_id, :visitor_group_mode, :track_sessions, :track_utm_params, :track_geo, :history_mode, :history_days, :allowed_hostnames, :ingest_drop_rules_json)
+             values (?, ?, ?, ?, ?, ?, ?, ?, ?)
              on conflict(entity_id) do update set
                 visitor_group_mode = excluded.visitor_group_mode,
                 track_sessions = excluded.track_sessions,
@@ -127,25 +126,25 @@ impl LiwanSettings {
                 history_days = excluded.history_days,
                 allowed_hostnames = excluded.allowed_hostnames,
                 ingest_drop_rules_json = excluded.ingest_drop_rules_json",
-            rusqlite::named_params! {
-                ":entity_id": settings.entity_id,
-                ":visitor_group_mode": settings.visitor_group_mode.map(|mode| mode.to_string()),
-                ":track_sessions": settings.track_sessions,
-                ":track_utm_params": settings.track_utm_params,
-                ":track_geo": settings.track_geo.map(|detail| detail.to_string()),
-                ":history_mode": history_mode,
-                ":history_days": data_retention_days,
-                ":allowed_hostnames": allowed_hostnames,
-                ":ingest_drop_rules_json": ingest_drop_rules_json,
-            },
-        )?;
-        self.reload()?;
+        )
+        .bind(&settings.entity_id)
+        .bind(settings.visitor_group_mode.map(|mode| mode.to_string()))
+        .bind(settings.track_sessions)
+        .bind(settings.track_utm_params)
+        .bind(settings.track_geo.map(|detail| detail.to_string()))
+        .bind(history_mode)
+        .bind(data_retention_days)
+        .bind(allowed_hostnames)
+        .bind(ingest_drop_rules_json)
+        .execute(&self.pool)
+        .await?;
+        self.reload().await?;
         Ok(())
     }
 
     /// Reload collection settings from SQLite into the in-memory cache
-    pub fn reload(&self) -> Result<()> {
-        let cache = SettingsCache::load(&self.pool)?;
+    pub async fn reload(&self) -> Result<()> {
+        let cache = SettingsCache::load(&self.pool).await?;
         *self.cache.write().expect("collection settings cache poisoned") = cache;
         Ok(())
     }
@@ -158,25 +157,27 @@ impl LiwanProjectSettings {
     }
 
     /// Get display settings for a project
-    pub fn get(&self, project_id: &str) -> Result<models::ProjectDisplaySettings> {
-        let conn = self.pool.get()?;
-        let settings = conn
-            .query_row(
-                "select metric_display_overrides_json, dimension_display_overrides_json from project_settings where project_id = ?",
-                [project_id],
-                |row| {
-                    let metric_json: String = row.get(0)?;
-                    let dimension_json: String = row.get(1)?;
-                    Ok(models::ProjectDisplaySettings {
-                        project_id: project_id.to_string(),
-                        metric_display_overrides: serde_json::from_str(&metric_json)
-                            .map_err(|err| sql_err(0, rusqlite::types::Type::Text, err))?,
-                        dimension_display_overrides: serde_json::from_str(&dimension_json)
-                            .map_err(|err| sql_err(1, rusqlite::types::Type::Text, err))?,
-                    })
-                },
-            )
-            .optional()?;
+    pub async fn get(&self, project_id: &str) -> Result<models::ProjectDisplaySettings> {
+        let row = sqlx::query(
+            "select metric_display_overrides_json, dimension_display_overrides_json from project_settings where project_id = ?",
+        )
+        .bind(project_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let settings = row
+            .map(|row| {
+                let metric_json: String = row.try_get(0)?;
+                let dimension_json: String = row.try_get(1)?;
+                Ok::<_, sqlx::Error>(models::ProjectDisplaySettings {
+                    project_id: project_id.to_string(),
+                    metric_display_overrides: serde_json::from_str(&metric_json)
+                        .map_err(|err| decode_err("metric_display_overrides_json", err))?,
+                    dimension_display_overrides: serde_json::from_str(&dimension_json)
+                        .map_err(|err| decode_err("dimension_display_overrides_json", err))?,
+                })
+            })
+            .transpose()?;
 
         Ok(settings.unwrap_or_else(|| models::ProjectDisplaySettings {
             project_id: project_id.to_string(),
@@ -185,108 +186,67 @@ impl LiwanProjectSettings {
     }
 
     /// Update display settings for a project
-    pub fn update(&self, settings: &models::ProjectDisplaySettings) -> Result<()> {
+    pub async fn update(&self, settings: &models::ProjectDisplaySettings) -> Result<()> {
         let metric_json = serde_json::to_string(&settings.metric_display_overrides)?;
         let dimension_json = serde_json::to_string(&settings.dimension_display_overrides)?;
-        let conn = self.pool.get()?;
-        conn.execute(
+        sqlx::query(
             "insert into project_settings (project_id, metric_display_overrides_json, dimension_display_overrides_json)
-             values (:project_id, :metric_display_overrides_json, :dimension_display_overrides_json)
+             values (?, ?, ?)
              on conflict(project_id) do update set
                 metric_display_overrides_json = excluded.metric_display_overrides_json,
                 dimension_display_overrides_json = excluded.dimension_display_overrides_json",
-            rusqlite::named_params! {
-                ":project_id": settings.project_id,
-                ":metric_display_overrides_json": metric_json,
-                ":dimension_display_overrides_json": dimension_json,
-            },
-        )?;
+        )
+        .bind(&settings.project_id)
+        .bind(metric_json)
+        .bind(dimension_json)
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }
 
 impl SettingsCache {
-    fn load(pool: &SqlitePool) -> Result<Self> {
-        let conn = pool.get()?;
-        let global = conn.query_row(
+    async fn load(pool: &SqlitePool) -> Result<Self> {
+        let global = sqlx::query(
             "select visitor_group_mode, track_sessions, track_utm_params, track_geo, history_days, ingest_drop_rules_json from settings where id = 1",
-            [],
-            |row| {
-                let visitor_group_mode: String = row.get(0)?;
-                let track_geo: String = row.get(3)?;
-                let history_days: Option<u32> = row.get(4)?;
-                let ingest_drop_rules_json: String = row.get(5)?;
-                let data_retention = match history_days {
-                    Some(days) => models::DataRetention::Days(
-                        NonZeroU32::new(days).ok_or_else(|| {
-                            sql_err(4, rusqlite::types::Type::Integer, "data retention days must be greater than zero")
-                        })?,
-                    ),
-                    None => models::DataRetention::All,
-                };
+        )
+        .fetch_one(pool)
+        .await
+        .and_then(|row| {
+            let visitor_group_mode: String = row.try_get(0)?;
+            let track_geo: String = row.try_get(3)?;
+            let history_days: Option<u32> = row.try_get(4)?;
+            let ingest_drop_rules_json: String = row.try_get(5)?;
+            let data_retention = match history_days {
+                Some(days) => models::DataRetention::Days(NonZeroU32::new(days).ok_or_else(|| {
+                    decode_err("history_days", "data retention days must be greater than zero")
+                })?),
+                None => models::DataRetention::All,
+            };
 
-                Ok(models::CollectionSettings {
-                    visitor_group_mode: visitor_group_mode
-                        .parse()
-                        .map_err(|err: String| sql_err(0, rusqlite::types::Type::Text, err))?,
-                    track_sessions: row.get(1)?,
-                    track_utm_params: row.get(2)?,
-                    track_geo: track_geo
-                        .parse()
-                        .map_err(|err: String| sql_err(3, rusqlite::types::Type::Text, err))?,
-                    data_retention,
-                    ingest_drop_rules: serde_json::from_str(&ingest_drop_rules_json)
-                        .map_err(|err| sql_err(5, rusqlite::types::Type::Text, err))?,
-                })
-            },
-        )?;
+            Ok(models::CollectionSettings {
+                visitor_group_mode: visitor_group_mode
+                    .parse()
+                    .map_err(|err: String| decode_err("visitor_group_mode", err))?,
+                track_sessions: row.try_get(1)?,
+                track_utm_params: row.try_get(2)?,
+                track_geo: track_geo.parse().map_err(|err: String| decode_err("track_geo", err))?,
+                data_retention,
+                ingest_drop_rules: serde_json::from_str(&ingest_drop_rules_json)
+                    .map_err(|err| decode_err("ingest_drop_rules_json", err))?,
+            })
+        })?;
 
-        let mut stmt = conn.prepare(
+        let rows = sqlx::query(
             "select entity_id, visitor_group_mode, track_sessions, track_utm_params, track_geo, history_mode, history_days, allowed_hostnames, ingest_drop_rules_json from entity_settings",
-        )?;
-        let entities = stmt
-            .query_map([], |row| {
-                let visitor_group_mode: Option<String> = row.get(1)?;
-                let track_geo: Option<String> = row.get(4)?;
-                let history_mode: String = row.get(5)?;
-                let history_days: Option<u32> = row.get(6)?;
-                let allowed_hostnames: String = row.get(7)?;
-                let ingest_drop_rules_json: String = row.get(8)?;
-                let data_retention = match history_mode.as_str() {
-                    "inherit" => models::DataRetention::Inherit,
-                    "keep_all" => models::DataRetention::All,
-                    "days" => models::DataRetention::Days(history_days.and_then(NonZeroU32::new).ok_or_else(|| {
-                        sql_err(6, rusqlite::types::Type::Integer, "data retention days must be greater than zero")
-                    })?),
-                    _ => {
-                        return Err(sql_err(
-                            5,
-                            rusqlite::types::Type::Text,
-                            format!("invalid history mode: {history_mode}"),
-                        ));
-                    }
-                };
+        )
+        .fetch_all(pool)
+        .await?;
 
-                Ok(models::EntityCollectionSettings {
-                    entity_id: row.get(0)?,
-                    visitor_group_mode: visitor_group_mode
-                        .map(|value| value.parse().map_err(|err: String| sql_err(1, rusqlite::types::Type::Text, err)))
-                        .transpose()?,
-                    track_sessions: row.get(2)?,
-                    track_utm_params: row.get(3)?,
-                    track_geo: track_geo
-                        .map(|value| value.parse().map_err(|err: String| sql_err(4, rusqlite::types::Type::Text, err)))
-                        .transpose()?,
-                    data_retention,
-                    allowed_hostnames: allowed_hostnames
-                        .split(',')
-                        .filter_map(|pattern| models::normalize_allowed_hostname_pattern(pattern).ok().flatten())
-                        .collect(),
-                    ingest_drop_rules: serde_json::from_str(&ingest_drop_rules_json)
-                        .map_err(|err| sql_err(8, rusqlite::types::Type::Text, err))?,
-                })
-            })?
-            .collect::<Result<Vec<_>, rusqlite::Error>>()?
+        let entities = rows
+            .iter()
+            .map(to_entity_settings)
+            .collect::<Result<Vec<_>, sqlx::Error>>()?
             .into_iter()
             .map(|settings| (settings.entity_id.clone(), settings))
             .collect();
@@ -295,10 +255,42 @@ impl SettingsCache {
     }
 }
 
-fn sql_err(column: usize, kind: rusqlite::types::Type, err: impl std::fmt::Display) -> rusqlite::Error {
-    rusqlite::Error::FromSqlConversionFailure(
-        column,
-        kind,
-        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string())),
-    )
+fn to_entity_settings(row: &SqliteRow) -> Result<models::EntityCollectionSettings, sqlx::Error> {
+    let visitor_group_mode: Option<String> = row.try_get(1)?;
+    let track_geo: Option<String> = row.try_get(4)?;
+    let history_mode: String = row.try_get(5)?;
+    let history_days: Option<u32> = row.try_get(6)?;
+    let allowed_hostnames: String = row.try_get(7)?;
+    let ingest_drop_rules_json: String = row.try_get(8)?;
+    let data_retention = match history_mode.as_str() {
+        "inherit" => models::DataRetention::Inherit,
+        "keep_all" => models::DataRetention::All,
+        "days" => models::DataRetention::Days(
+            history_days
+                .and_then(NonZeroU32::new)
+                .ok_or_else(|| decode_err("history_days", "data retention days must be greater than zero"))?,
+        ),
+        _ => {
+            return Err(decode_err("history_mode", format!("invalid history mode: {history_mode}")));
+        }
+    };
+
+    Ok(models::EntityCollectionSettings {
+        entity_id: row.try_get(0)?,
+        visitor_group_mode: visitor_group_mode
+            .map(|value| value.parse().map_err(|err: String| decode_err("visitor_group_mode", err)))
+            .transpose()?,
+        track_sessions: row.try_get(2)?,
+        track_utm_params: row.try_get(3)?,
+        track_geo: track_geo
+            .map(|value| value.parse().map_err(|err: String| decode_err("track_geo", err)))
+            .transpose()?,
+        data_retention,
+        allowed_hostnames: allowed_hostnames
+            .split(',')
+            .filter_map(|pattern| models::normalize_allowed_hostname_pattern(pattern).ok().flatten())
+            .collect(),
+        ingest_drop_rules: serde_json::from_str(&ingest_drop_rules_json)
+            .map_err(|err| decode_err("ingest_drop_rules_json", err))?,
+    })
 }

@@ -6,11 +6,11 @@ mod common;
 
 #[tokio::test]
 async fn test_login() -> Result<()> {
-    let app = common::app();
+    let app = common::app().await;
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User, &[]).await?;
 
     // login
     let login = json!({ "username": "test", "password": "testtesttesttest" });
@@ -48,7 +48,7 @@ async fn test_login() -> Result<()> {
 
 #[tokio::test]
 async fn test_setup() -> Result<()> {
-    let app = common::app();
+    let app = common::app().await;
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
@@ -84,11 +84,11 @@ async fn test_setup() -> Result<()> {
 
 #[tokio::test]
 async fn expired_session() -> Result<()> {
-    let app = common::app();
+    let app = common::app().await;
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User, &[]).await?;
 
     // login
     let login = json!({ "username": "test", "password": "testtesttesttest" });
@@ -107,7 +107,7 @@ async fn expired_session() -> Result<()> {
     assert_eq!(json, json!({ "username": "test", "role": "user" }));
 
     // expire the session
-    app.sessions.delete(&session_id)?;
+    app.sessions.delete(&session_id).await?;
 
     // test that the user is logged out
     let res = client
@@ -120,26 +120,28 @@ async fn expired_session() -> Result<()> {
 
 #[tokio::test]
 async fn private_projects() -> Result<()> {
-    let app = common::app();
+    let app = common::app().await;
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.projects.create(
-        &models::Project {
-            display_name: "Private Project".to_string(),
-            id: "private-project".to_string(),
-            public: false,
-            unlisted: false,
-            secret: None,
-        },
-        &[],
-    )?;
+    app.projects
+        .create(
+            &models::Project {
+                display_name: "Private Project".to_string(),
+                id: "private-project".to_string(),
+                public: false,
+                unlisted: false,
+                secret: None,
+            },
+            &[],
+        )
+        .await?;
 
     let res = client.get("/api/dashboard/projects").await;
     res.assert_json(&json!({"projects": []}));
 
-    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
-    app.users.create("test2", "test", UserRole::User, &["private-project"])?;
+    app.users.create("test", "testtesttesttest", UserRole::User, &[]).await?;
+    app.users.create("test2", "test", UserRole::User, &["private-project"]).await?;
 
     let login1 = common::login(&client, "test", "test").await;
     let login2 = common::login(&client, "test2", "test").await;

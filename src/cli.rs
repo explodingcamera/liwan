@@ -125,18 +125,18 @@ pub struct AddUser {
     admin: bool,
 }
 
-pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
+pub async fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
     config.geoip = GeoIpConfig::default(); // disable GeoIP in CLI commands
 
     match cmd {
         Command::UpdatePassword(update) => {
-            let app = Liwan::try_new(config)?;
-            app.users.update_password(&update.username, &update.password)?;
+            let app = Liwan::try_new(config).await?;
+            app.users.update_password(&update.username, &update.password).await?;
             println!("Password updated for user {}", update.username);
         }
         Command::Users(_) => {
-            let app = Liwan::try_new(config)?;
-            let users = app.users.all()?;
+            let app = Liwan::try_new(config).await?;
+            let users = app.users.all().await?;
             if users.is_empty() {
                 println!("No users found");
                 println!("Use `liwan add-user` to create a new user");
@@ -149,13 +149,10 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
             }
         }
         Command::AddUser(add) => {
-            let app = Liwan::try_new(config)?;
-            app.users.create(
-                &add.username,
-                &add.password,
-                if add.admin { UserRole::Admin } else { UserRole::User },
-                &[],
-            )?;
+            let app = Liwan::try_new(config).await?;
+            app.users
+                .create(&add.username, &add.password, if add.admin { UserRole::Admin } else { UserRole::User }, &[])
+                .await?;
 
             println!("User {} created", add.username);
         }
@@ -170,9 +167,9 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
             println!("Configuration file written to liwan.config.toml");
         }
         Command::Prune(prune) => {
-            let app = Liwan::try_new(config)?;
+            let app = Liwan::try_new(config).await?;
             let mut totals = crate::app::PruneStats::default();
-            for entity in app.entities.all()? {
+            for entity in app.entities.all().await? {
                 let settings = app.settings.resolved_for_entity(&entity.id);
                 let stats = app.events.prune_entity(&entity.id, &settings, prune.dry_run)?;
                 println!(
@@ -205,12 +202,12 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
         #[cfg(debug_assertions)]
         Command::Dev(dev) => match dev.cmd {
             DevCommand::Seed(_) => {
-                let app = Liwan::try_new(config)?;
-                app.seed_database(10_000_000)?;
+                let app = Liwan::try_new(config).await?;
+                app.seed_database(10_000_000).await?;
                 println!("Database seeded with test data");
             }
             DevCommand::GenerateOpenApi(_) => {
-                let app = Liwan::try_new(config)?;
+                let app = Liwan::try_new(config).await?;
                 let (events, _) = tokio::sync::mpsc::channel(1);
                 let (_, spec) = crate::web::router(app, events)?;
                 crate::web::save_spec(spec)?;

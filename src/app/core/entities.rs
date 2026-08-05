@@ -1,4 +1,5 @@
 use anyhow::{Result, bail};
+use sqlx::Row;
 
 use crate::app::{SqlitePool, models};
 use crate::utils::validate;
@@ -14,92 +15,101 @@ impl LiwanEntities {
     }
 
     /// Get all entities
-    pub fn all(&self) -> Result<Vec<models::Entity>> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare("select id, display_name from entities")?;
-        let entities = stmt
-            .query_map([], |row| Ok(models::Entity { id: row.get("id")?, display_name: row.get("display_name")? }))?;
-        Ok(entities.collect::<Result<Vec<models::Entity>, rusqlite::Error>>()?)
+    pub async fn all(&self) -> Result<Vec<models::Entity>> {
+        let rows = sqlx::query("select id, display_name from entities").fetch_all(&self.pool).await?;
+        Ok(rows
+            .iter()
+            .map(|row| Ok(models::Entity { id: row.try_get("id")?, display_name: row.try_get("display_name")? }))
+            .collect::<Result<Vec<models::Entity>, sqlx::Error>>()?)
     }
 
     /// Create a new entity
-    pub fn create(&self, entity: &models::Entity, initial_projects: &[String]) -> Result<()> {
+    pub async fn create(&self, entity: &models::Entity, initial_projects: &[String]) -> Result<()> {
         if !validate::is_valid_id(&entity.id) {
             bail!("invalid entity ID");
         }
 
-        let mut conn = self.pool.get()?;
-        let tx = conn.transaction()?;
-        tx.execute(
-            "insert into entities (id, display_name) values (:id, :display_name)",
-            rusqlite::named_params! { ":id": entity.id, ":display_name": entity.display_name },
-        )?;
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("insert into entities (id, display_name) values (?, ?)")
+            .bind(&entity.id)
+            .bind(&entity.display_name)
+            .execute(&mut *tx)
+            .await?;
         for project_id in initial_projects {
-            tx.execute(
-                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
-                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity.id },
-            )?;
+            sqlx::query("insert into project_entities (project_id, entity_id) values (?, ?)")
+                .bind(project_id)
+                .bind(&entity.id)
+                .execute(&mut *tx)
+                .await?;
         }
-        tx.commit()?;
+        tx.commit().await?;
         Ok(())
     }
 
     /// Update an entity
-    pub fn update(&self, entity: &models::Entity) -> Result<models::Entity> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("update entities set display_name = :display_name where id = :id")?;
-        stmt.execute(rusqlite::named_params! { ":display_name": entity.display_name, ":id": entity.id })?;
+    pub async fn update(&self, entity: &models::Entity) -> Result<models::Entity> {
+        sqlx::query("update entities set display_name = ? where id = ?")
+            .bind(&entity.display_name)
+            .bind(&entity.id)
+            .execute(&self.pool)
+            .await?;
         Ok(entity.clone())
     }
 
     /// Update an entity's project memberships
-    pub fn update_projects(&self, entity_id: &str, project_ids: &[String]) -> Result<()> {
-        let mut conn = self.pool.get()?;
-        let tx = conn.transaction()?;
-        tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![entity_id])?;
+    pub async fn update_projects(&self, entity_id: &str, project_ids: &[String]) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("delete from project_entities where entity_id = ?").bind(entity_id).execute(&mut *tx).await?;
         for project_id in project_ids {
-            tx.execute(
-                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
-                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity_id },
-            )?;
+            sqlx::query("insert into project_entities (project_id, entity_id) values (?, ?)")
+                .bind(project_id)
+                .bind(entity_id)
+                .execute(&mut *tx)
+                .await?;
         }
-        tx.commit()?;
+        tx.commit().await?;
         Ok(())
     }
 
     /// Delete an entity without removing associated events
-    pub fn delete(&self, id: &str) -> Result<()> {
-        let mut conn = self.pool.get()?;
-        let tx = conn.transaction()?;
-        tx.execute("delete from entity_settings where entity_id = ?", rusqlite::params![id])?;
-        tx.execute("delete from entities where id = ?", rusqlite::params![id])?;
-        tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![id])?;
-        tx.commit()?;
+    pub async fn delete(&self, id: &str) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("delete from entity_settings where entity_id = ?").bind(id).execute(&mut *tx).await?;
+        sqlx::query("delete from entities where id = ?").bind(id).execute(&mut *tx).await?;
+        sqlx::query("delete from project_entities where entity_id = ?").bind(id).execute(&mut *tx).await?;
+        tx.commit().await?;
         Ok(())
     }
 
     /// Get all projects associated with an entity
-    pub fn projects(&self, entity_id: &str) -> Result<Vec<models::Project>> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached(
+    pub async fn projects(&self, entity_id: &str) -> Result<Vec<models::Project>> {
+        let rows = sqlx::query(
             "select p.id, p.display_name, p.public, p.unlisted, p.secret from projects p join project_entities pe on p.id = pe.project_id where pe.entity_id = ?",
-        )?;
-        let projects = stmt.query_map(rusqlite::params![entity_id], |row| {
-            Ok(models::Project {
-                id: row.get("id")?,
-                display_name: row.get("display_name")?,
-                public: row.get("public")?,
-                unlisted: row.get("unlisted")?,
-                secret: row.get("secret")?,
+        )
+        .bind(entity_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .iter()
+            .map(|row| {
+                Ok(models::Project {
+                    id: row.try_get("id")?,
+                    display_name: row.try_get("display_name")?,
+                    public: row.try_get("public")?,
+                    unlisted: row.try_get("unlisted")?,
+                    secret: row.try_get("secret")?,
+                })
             })
-        })?;
-        Ok(projects.collect::<Result<Vec<models::Project>, rusqlite::Error>>()?)
+            .collect::<Result<Vec<models::Project>, sqlx::Error>>()?)
     }
 
     /// Check if an entity exists
-    pub fn exists(&self, id: &str) -> Result<bool> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("select 1 from entities where id = ? limit 1")?;
-        Ok(stmt.exists([id])?)
+    pub async fn exists(&self, id: &str) -> Result<bool> {
+        let exists = sqlx::query("select 1 from entities where id = ? limit 1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .is_some();
+        Ok(exists)
     }
 }

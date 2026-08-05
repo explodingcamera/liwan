@@ -1,6 +1,8 @@
 use crate::app::{SqlitePool, models};
+use crate::utils::sqlite::timestamp;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use sqlx::Row;
 
 #[derive(Clone)]
 pub struct LiwanSessions {
@@ -13,60 +15,58 @@ impl LiwanSessions {
     }
 
     /// Create a new session
-    pub fn create(&self, session_id: &str, username: &str, expires_at: DateTime<Utc>) -> Result<()> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn
-            .prepare_cached("insert into sessions (id, username, expires_at) values (:id, :username, :expires_at)")?;
-        stmt.execute(rusqlite::named_params! {
-            ":id": session_id,
-            ":username": username,
-            ":expires_at": expires_at,
-        })?;
+    pub async fn create(&self, session_id: &str, username: &str, expires_at: DateTime<Utc>) -> Result<()> {
+        sqlx::query("insert into sessions (id, username, expires_at) values (?, ?, ?)")
+            .bind(session_id)
+            .bind(username)
+            .bind(timestamp(expires_at))
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
     /// Get the user associated with a session ID, if the session is still valid
     /// Returns `None` if the session is expired
-    pub fn get(&self, session_id: &str) -> Result<Option<models::User>> {
-        let conn = self.pool.get()?;
-
-        let mut stmt = conn.prepare_cached(
+    pub async fn get(&self, session_id: &str) -> Result<Option<models::User>> {
+        let row = sqlx::query(
             r#"--sql
             select u.username, u.role, u.projects
             from sessions s
             join users u
             on lower(u.username) = lower(s.username)
             where
-                s.id = :session_id
-                and s.expires_at > :now
+                s.id = ?
+                and s.expires_at > ?
         "#,
-        )?;
-
-        let user = stmt.query_row(rusqlite::named_params! { ":session_id": session_id, ":now": Utc::now() }, |row| {
-            Ok(models::User {
-                username: row.get("username")?,
-                role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
-                projects: row
-                    .get::<_, String>("projects")?
-                    .split(',')
-                    .filter(|s| !s.is_empty())
-                    .map(str::to_string)
-                    .collect(),
-            })
-        });
-
-        user.map(Some).or_else(
-            |err| {
-                if err == rusqlite::Error::QueryReturnedNoRows { Ok(None) } else { Err(err.into()) }
-            },
         )
+        .bind(session_id)
+        .bind(timestamp(Utc::now()))
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let Some(row) = row else {
+            return Ok(None);
+        };
+
+        Ok(Some(models::User {
+            username: row.try_get("username")?,
+            role: row.try_get::<String, _>("role")?.try_into().unwrap_or_default(),
+            projects: row
+                .try_get::<String, _>("projects")?
+                .split(',')
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .collect(),
+        }))
     }
 
     /// Expire a session
-    pub fn delete(&self, session_id: &str) -> Result<()> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("update sessions set expires_at = :expires_at where id = :id")?;
-        stmt.execute(rusqlite::named_params! { ":expires_at": Utc::now(), ":id": session_id })?;
+    pub async fn delete(&self, session_id: &str) -> Result<()> {
+        sqlx::query("update sessions set expires_at = ? where id = ?")
+            .bind(timestamp(Utc::now()))
+            .bind(session_id)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }

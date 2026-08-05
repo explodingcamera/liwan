@@ -1,11 +1,13 @@
 use crate::config::DuckdbConfig;
+use crate::utils::hash::db_name;
 use crate::utils::refinery_duckdb::DuckDBConnection;
-use crate::utils::refinery_sqlite::RqlConnection;
+use crate::utils::refinery_sqlite::SqlxConnection;
 
-use crate::utils::r2d2_sqlite::SqliteConnectionManager;
 use anyhow::{Context, Result, bail};
 use duckdb::DuckdbConnectionManager;
 use refinery::Runner;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{SqlitePool, sqlite::SqliteJournalMode, sqlite::SqliteSynchronous};
 use std::path::PathBuf;
 
 pub(super) fn init_duckdb(
@@ -89,38 +91,43 @@ pub fn init_duckdb_mem(mut migrations_runner: Runner) -> Result<r2d2::Pool<Duckd
     Ok(pool)
 }
 
-pub(super) fn init_sqlite(
-    path: &PathBuf,
-    mut migrations_runner: Runner,
-) -> Result<r2d2::Pool<SqliteConnectionManager>> {
-    let conn = SqliteConnectionManager::file(path);
-    let pool = r2d2::Pool::new(conn)?;
+/// Connection options for the app database, either from a `DATABASE` url or from the data directory
+pub(super) fn database_options(database: Option<&str>, path: &PathBuf) -> Result<SqliteConnectOptions> {
+    let options = match database {
+        Some(database) => {
+            database.parse::<SqliteConnectOptions>().context("Failed to parse the database connection url")?
+        }
+        None => SqliteConnectOptions::new().filename(path).create_if_missing(true),
+    };
+
+    Ok(options
+        .foreign_keys(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal)
+        .pragma("mmap_size", "268435456")
+        .pragma("journal_size_limit", "268435456")
+        .pragma("cache_size", "2000"))
+}
+
+pub(super) async fn init_database(options: SqliteConnectOptions, mut migrations_runner: Runner) -> Result<SqlitePool> {
+    let pool = SqlitePoolOptions::new().connect_with(options).await?;
     migrations_runner.set_migration_table_name("migrations");
-    migrations_runner.run(&mut RqlConnection(pool.get()?))?;
-
-    {
-        let conn = pool.get()?;
-        conn.pragma_update(None, "foreign_keys", "ON")?;
-        conn.pragma_update(None, "journal_mode", "WAL")?;
-        conn.pragma_update(None, "synchronous", "NORMAL")?;
-        conn.pragma_update(None, "mmap_size", "268435456")?;
-        conn.pragma_update(None, "journal_size_limit", "268435456")?;
-        conn.pragma_update(None, "cache_size", "2000")?;
-    }
-
+    migrations_runner.run_async(&mut SqlxConnection(&pool)).await?;
     Ok(pool)
 }
 
-pub fn init_sqlite_mem(mut migrations_runner: Runner) -> Result<r2d2::Pool<SqliteConnectionManager>> {
-    let conn = SqliteConnectionManager::memory();
-    let pool = r2d2::Pool::new(conn)?;
+pub async fn init_database_mem(mut migrations_runner: Runner) -> Result<SqlitePool> {
+    let options = SqliteConnectOptions::new()
+        .filename(format!("file:{}", db_name()))
+        .in_memory(true)
+        .shared_cache(true)
+        .foreign_keys(true);
+
+    // in-memory databases are dropped as soon as the last connection to them is closed
+    let pool =
+        SqlitePoolOptions::new().min_connections(1).idle_timeout(None).max_lifetime(None).connect_with(options).await?;
+
     migrations_runner.set_migration_table_name("migrations");
-    migrations_runner.run(&mut RqlConnection(pool.get()?))?;
-
-    {
-        let conn = pool.get()?;
-        conn.pragma_update(None, "foreign_keys", "ON")?;
-    }
-
+    migrations_runner.run_async(&mut SqlxConnection(&pool)).await?;
     Ok(pool)
 }

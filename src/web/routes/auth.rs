@@ -9,7 +9,6 @@ use chrono::Utc;
 use http::{StatusCode, header};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tokio::task::spawn_blocking;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 use crate::{
@@ -79,6 +78,7 @@ async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> Api
 
     app.users
         .create(&params.username, &params.password, UserRole::Admin, &[])
+        .await
         .http_err("failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     app.onboarding.clear().context("onboarding lock poisoned").http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -92,11 +92,7 @@ async fn login(
 ) -> ApiResult<impl IntoApiResponse> {
     let username = params.username.clone();
 
-    let app2 = app.clone();
-    let authorized =
-        spawn_blocking(move || app2.users.check_login(&params.username, &params.password).unwrap_or(false))
-            .await
-            .unwrap_or(false);
+    let authorized = app.users.check_login(&params.username, &params.password).await.unwrap_or(false);
 
     if !(authorized) {
         http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
@@ -104,7 +100,7 @@ async fn login(
 
     let session_id = session_token();
     let expires = Utc::now() + MAX_SESSION_AGE;
-    app.sessions.create(&session_id, &username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    app.sessions.create(&session_id, &username, expires).await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut public_cookie = PUBLIC_COOKIE.clone();
     let mut session_cookie = SESSION_COOKIE.clone();
@@ -122,7 +118,7 @@ async fn logout(
     MaybeSessionId(session_id): MaybeSessionId,
 ) -> ApiResult<impl IntoApiResponse> {
     if let Some(session_id) = session_id {
-        let _ = app.sessions.delete(&session_id);
+        let _ = app.sessions.delete(&session_id).await;
     }
     Ok((LOGOUT_COOKIES.clone(), empty_response()))
 }

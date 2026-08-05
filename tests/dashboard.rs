@@ -5,11 +5,11 @@ use serde_json::json;
 
 #[tokio::test]
 async fn test_dashboard() -> Result<()> {
-    let app = common::app();
+    let app = common::app().await;
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.seed_database(100)?;
+    app.seed_database(100).await?;
 
     let project_id = "public-project";
     let api_prefix = format!("/api/dashboard/project/{project_id}");

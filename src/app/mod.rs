@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use crate::{config::Config, utils::writable::check_directory_writable};
 
-use crate::utils::r2d2_sqlite::SqliteConnectionManager;
 use anyhow::{Context, Result};
 use core::{
     LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjectSettings, LiwanProjects, LiwanSessions, LiwanSettings,
@@ -19,7 +18,7 @@ use reports::{Dimension, Metric};
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
-pub type SqlitePool = r2d2::Pool<SqliteConnectionManager>;
+pub type SqlitePool = sqlx::SqlitePool;
 pub use core::PruneStats;
 
 pub struct Liwan {
@@ -47,7 +46,7 @@ mod embedded {
 }
 
 impl Liwan {
-    pub fn try_new(config: Config) -> Result<Arc<Self>> {
+    pub async fn try_new(config: Config) -> Result<Arc<Self>> {
         tracing::debug!("Initializing app");
         let dir = std::path::Path::new(&config.data_dir);
 
@@ -58,7 +57,8 @@ impl Liwan {
         check_directory_writable(dir);
 
         tracing::debug!("Initializing databases");
-        let conn_app = db::init_sqlite(&dir.join("liwan-app.sqlite"), embedded::app::migrations::runner())?;
+        let database_options = db::database_options(config.database.as_deref(), &dir.join("liwan-app.sqlite"))?;
+        let conn_app = db::init_database(database_options, embedded::app::migrations::runner()).await?;
         let conn_events = db::init_duckdb(
             &dir.join("liwan-events.duckdb"),
             config.duckdb.clone(),
@@ -69,12 +69,13 @@ impl Liwan {
             #[cfg(feature = "geoip")]
             geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
 
-            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
-            onboarding: LiwanOnboarding::try_new(&conn_app)?,
+            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)
+                .await?,
+            onboarding: LiwanOnboarding::try_new(&conn_app).await?,
             sessions: LiwanSessions::new(conn_app.clone()),
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
-            settings: LiwanSettings::try_new(conn_app.clone())?,
+            settings: LiwanSettings::try_new(conn_app.clone()).await?,
             project_settings: LiwanProjectSettings::new(conn_app.clone()),
             users: LiwanUsers::new(conn_app),
 
@@ -84,21 +85,22 @@ impl Liwan {
         .into())
     }
 
-    pub fn new_memory(config: Config) -> Result<Arc<Self>> {
+    pub async fn new_memory(config: Config) -> Result<Arc<Self>> {
         tracing::debug!("Initializing app in memory");
-        let conn_app = db::init_sqlite_mem(embedded::app::migrations::runner())?;
+        let conn_app = db::init_database_mem(embedded::app::migrations::runner()).await?;
         let conn_events = db::init_duckdb_mem(embedded::events::migrations::runner())?;
 
         Ok(Self {
             #[cfg(feature = "geoip")]
             geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
 
-            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
-            onboarding: LiwanOnboarding::try_new(&conn_app)?,
+            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)
+                .await?,
+            onboarding: LiwanOnboarding::try_new(&conn_app).await?,
             sessions: LiwanSessions::new(conn_app.clone()),
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
-            settings: LiwanSettings::try_new(conn_app.clone())?,
+            settings: LiwanSettings::try_new(conn_app.clone()).await?,
             project_settings: LiwanProjectSettings::new(conn_app.clone()),
             users: LiwanUsers::new(conn_app),
 
@@ -123,10 +125,11 @@ impl Liwan {
         Ok(())
     }
 
-    pub fn is_metric_hidden(&self, project_id: &str, entities: &[String], metric: Metric) -> bool {
+    pub async fn is_metric_hidden(&self, project_id: &str, entities: &[String], metric: Metric) -> bool {
         match self
             .project_settings
             .get(project_id)
+            .await
             .ok()
             .and_then(|settings| settings.metric_display_overrides.get(&metric.to_string()).copied())
             .unwrap_or(DisplayOverride::Auto)
@@ -142,10 +145,11 @@ impl Liwan {
         }
     }
 
-    pub fn is_dimension_hidden(&self, project_id: &str, entities: &[String], dimension: Dimension) -> bool {
+    pub async fn is_dimension_hidden(&self, project_id: &str, entities: &[String], dimension: Dimension) -> bool {
         match self
             .project_settings
             .get(project_id)
+            .await
             .ok()
             .and_then(|settings| settings.dimension_display_overrides.get(&dimension.to_string()).copied())
             .unwrap_or(DisplayOverride::Auto)
@@ -177,7 +181,7 @@ impl Liwan {
 
 #[cfg(any(debug_assertions, test))]
 impl Liwan {
-    pub fn seed_database(&self, count_per_entity: usize) -> Result<()> {
+    pub async fn seed_database(&self, count_per_entity: usize) -> Result<()> {
         use chrono::{Days, Utc};
         use models::UserRole;
 
@@ -190,29 +194,33 @@ impl Liwan {
         let users = [("admin", "admin", UserRole::Admin), ("user", "user", UserRole::User)];
 
         for (username, password, role) in users {
-            self.users.create(username, password, role, &[])?;
+            self.users.create(username, password, role, &[]).await?;
         }
 
         for (project_id, display_name, public) in projects {
-            self.projects.create(
-                &models::Project {
-                    id: project_id.to_string(),
-                    display_name: display_name.to_string(),
-                    public,
-                    unlisted: false,
-                    secret: None,
-                },
-                &[],
-            )?;
+            self.projects
+                .create(
+                    &models::Project {
+                        id: project_id.to_string(),
+                        display_name: display_name.to_string(),
+                        public,
+                        unlisted: false,
+                        secret: None,
+                    },
+                    &[],
+                )
+                .await?;
         }
 
         let start = Utc::now().checked_sub_days(Days::new(365)).unwrap();
         let end = Utc::now();
         for (entity_id, display_name, fqdn, project_ids) in entities {
-            self.entities.create(
-                &models::Entity { id: entity_id.to_string(), display_name: display_name.to_string() },
-                &project_ids,
-            )?;
+            self.entities
+                .create(
+                    &models::Entity { id: entity_id.to_string(), display_name: display_name.to_string() },
+                    &project_ids,
+                )
+                .await?;
             let events = crate::utils::seed::random_events((start, end), entity_id, fqdn, count_per_entity);
             let now = std::time::Instant::now();
             self.events.append(events)?;

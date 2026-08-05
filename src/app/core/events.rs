@@ -10,6 +10,8 @@ use tokio::sync::mpsc::Receiver;
 use crate::app::models::{Event, GeoDetail, ResolvedCollectionSettings, event_params};
 use crate::app::{DuckDBPool, SqlitePool};
 use crate::utils::duckdb::{ParamVec, repeat_vars};
+use crate::utils::sqlite::timestamp;
+use sqlx::Row;
 
 #[derive(Clone)]
 pub struct LiwanEvents {
@@ -29,29 +31,28 @@ pub struct PruneStats {
 }
 
 impl LiwanEvents {
-    pub fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool, visitor_group_rotation_hour: u8) -> Result<Self> {
+    pub async fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool, visitor_group_rotation_hour: u8) -> Result<Self> {
         let daily_salt: (String, DateTime<Utc>) = {
             tracing::debug!("Loading visitor group salt");
-            sqlite.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
-                Ok((row.get(0)?, row.get(1)?))
-            })?
+            let row = sqlx::query("select salt, updated_at from salts where id = 1").fetch_one(&sqlite).await?;
+            (row.try_get(0)?, row.try_get(1)?)
         };
         Ok(Self { duckdb, sqlite, daily_salt: ArcSwap::new(daily_salt.into()).into(), visitor_group_rotation_hour })
     }
 
     /// Get the visitor group salt, generating a new one after the daily local rotation time
-    pub fn get_salt(&self) -> Result<String> {
+    pub async fn get_salt(&self) -> Result<String> {
         let (salt, updated_at) = &**self.daily_salt.load();
 
         if should_rotate_salt(*updated_at, self.visitor_group_rotation_hour) {
             tracing::debug!("Visitor group salt expired, generating a new one");
             let new_salt = StandardUniform.sample_string(&mut rand::rng(), 16);
             let now = Utc::now();
-            let conn = self.sqlite.get()?;
-            conn.execute(
-                "update salts set salt = :salt, updated_at = :updated_at where id = 1",
-                rusqlite::named_params! { ":salt": &new_salt, ":updated_at": now },
-            )?;
+            sqlx::query("update salts set salt = ?, updated_at = ? where id = 1")
+                .bind(&new_salt)
+                .bind(timestamp(now))
+                .execute(&self.sqlite)
+                .await?;
             self.daily_salt.store((new_salt.clone(), now).into());
             Ok(new_salt)
         } else {

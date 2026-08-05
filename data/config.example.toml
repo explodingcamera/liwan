@@ -9,6 +9,11 @@ listen = 9042  # The port to listen on (http)
 # # defaults to ./liwan-data on other platforms
 # data_dir="./liwan-data"
 
+# # Connection url for the app database (sqlite).
+# # Defaults to `liwan-app.sqlite` inside the data_dir.
+# # May also be set through the `DATABASE` or `LIWAN_DATABASE` environment variables.
+# database="sqlite://liwan-app.sqlite?mode=rwc"
+
 # # Trusted client IP headers (used in order).
 # # Empty by default, meaning only the direct peer IP is used.
 # # Presets: cloudflare, fastly, fly, cloudfront, akamai.

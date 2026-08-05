@@ -157,10 +157,7 @@ async fn event_handler(
     let events = state.events.clone();
     event.validate().context("invalid event").http_err("invalid event", StatusCode::BAD_REQUEST)?;
 
-    // blocking a bit to give some slight backpressure to the caller
-    let res = tokio::task::spawn_blocking(move || process_event(app, event, url, ip, geo_headers, user_agent))
-        .await
-        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let res = process_event(app, event, url, ip, geo_headers, user_agent).await;
 
     match res {
         Ok(Some(event)) => {
@@ -176,7 +173,7 @@ async fn event_handler(
     Ok(empty_response())
 }
 
-fn process_event(
+async fn process_event(
     app: Arc<Liwan>,
     event: EventRequest,
     mut url: Url,
@@ -194,7 +191,7 @@ fn process_event(
     let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
 
     if EXISTING_ENTITIES.get(&event.entity_id).is_none() {
-        if !app.entities.exists(&event.entity_id).unwrap_or(false) {
+        if !app.entities.exists(&event.entity_id).await.unwrap_or(false) {
             return Ok(None);
         }
         EXISTING_ENTITIES.insert(event.entity_id.clone(), ());
@@ -217,7 +214,7 @@ fn process_event(
     }
 
     let visitor_group_id =
-        resolve_visitor_group_id(&settings, ip, user_agent.as_str(), &app.events.get_salt()?, &event.entity_id);
+        resolve_visitor_group_id(&settings, ip, user_agent.as_str(), &app.events.get_salt().await?, &event.entity_id);
 
     let (country, city) = match settings.track_geo {
         GeoDetail::None => (None, None),
