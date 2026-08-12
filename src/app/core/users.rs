@@ -18,8 +18,8 @@ impl LiwanUsers {
         let username = username.to_lowercase();
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare("select password_hash from users where username = ?")?;
-        let hash: String = stmt.query_row([username], |row| row.get(0))?;
-        Ok(verify_password(password, &hash).is_ok())
+        let hash: Option<String> = stmt.query_row([username], |row| row.get(0))?;
+        Ok(hash.is_some_and(|hash| verify_password(password, &hash).is_ok()))
     }
 
     /// Get a user by username
@@ -106,9 +106,12 @@ impl LiwanUsers {
 
     /// Delete a user
     pub fn delete(&self, username: &str) -> Result<()> {
-        let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached("delete from users where username = ?")?;
-        stmt.execute([username])?;
+        let username = username.to_lowercase();
+        let mut conn = self.pool.get()?;
+        let transaction = conn.transaction()?;
+        transaction.execute("delete from sessions where username = ?", [&username])?;
+        transaction.execute("delete from users where username = ?", [&username])?;
+        transaction.commit()?;
         Ok(())
     }
 }

@@ -1,5 +1,6 @@
 mod entities;
 mod events;
+mod external_auth;
 mod onboarding;
 mod projects;
 pub mod reports;
@@ -9,6 +10,9 @@ mod users;
 
 pub use entities::LiwanEntities;
 pub use events::{LiwanEvents, PruneStats};
+pub use external_auth::{
+    ExternalAuthLogin, ExternalAuthProvider, ExternalAuthSettings, ExternalAuthStart, LiwanExternalAuth,
+};
 pub use onboarding::LiwanOnboarding;
 pub use projects::LiwanProjects;
 pub use sessions::LiwanSessions;

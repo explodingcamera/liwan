@@ -3,6 +3,7 @@ mod db;
 
 pub mod models;
 pub use core::reports;
+pub use core::{ExternalAuthLogin, ExternalAuthProvider, ExternalAuthSettings, ExternalAuthStart, LiwanExternalAuth};
 use std::sync::Arc;
 
 use crate::{config::Config, utils::writable::check_directory_writable};
@@ -28,6 +29,7 @@ pub struct Liwan {
     pub events: LiwanEvents,
     pub users: LiwanUsers,
     pub sessions: LiwanSessions,
+    pub external_auth: LiwanExternalAuth,
     pub onboarding: LiwanOnboarding,
     pub entities: LiwanEntities,
     pub projects: LiwanProjects,
@@ -72,6 +74,7 @@ impl Liwan {
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
+            external_auth: LiwanExternalAuth::try_new(conn_app.clone(), &config.base_url)?,
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
             settings: LiwanSettings::try_new(conn_app.clone())?,
@@ -96,6 +99,7 @@ impl Liwan {
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
+            external_auth: LiwanExternalAuth::try_new(conn_app.clone(), &config.base_url)?,
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
             settings: LiwanSettings::try_new(conn_app.clone())?,

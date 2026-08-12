@@ -26,7 +26,9 @@ impl r2d2::ManageConnection for SqliteConnectionManager {
     type Error = rusqlite::Error;
 
     fn connect(&self) -> Result<Connection> {
-        Connection::open_with_flags(&self.source, self.flags)
+        let connection = Connection::open_with_flags(&self.source, self.flags)?;
+        connection.pragma_update(None, "foreign_keys", "ON")?;
+        Ok(connection)
     }
 
     fn is_valid(&self, _conn: &mut Connection) -> Result<()> {

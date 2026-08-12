@@ -100,7 +100,6 @@ pub(super) fn init_sqlite(
 
     {
         let conn = pool.get()?;
-        conn.pragma_update(None, "foreign_keys", "ON")?;
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "NORMAL")?;
         conn.pragma_update(None, "mmap_size", "268435456")?;
@@ -116,11 +115,6 @@ pub fn init_sqlite_mem(mut migrations_runner: Runner) -> Result<r2d2::Pool<Sqlit
     let pool = r2d2::Pool::new(conn)?;
     migrations_runner.set_migration_table_name("migrations");
     migrations_runner.run(&mut RqlConnection(pool.get()?))?;
-
-    {
-        let conn = pool.get()?;
-        conn.pragma_update(None, "foreign_keys", "ON")?;
-    }
 
     Ok(pool)
 }
