@@ -41,6 +41,32 @@ pub struct RouterState {
     pub events: Sender<Event>,
 }
 
+// feTS treats directly resolved component references as circular and falls back to less precise types.
+#[derive(Clone)]
+struct WrapSchemaRefs;
+
+impl schemars::transform::Transform for WrapSchemaRefs {
+    fn transform(&mut self, schema: &mut schemars::Schema) {
+        let already_wrapped = schema.as_object().is_some_and(|object| {
+            object.len() == 1
+                && object.get("anyOf").and_then(serde_json::Value::as_array).is_some_and(|any_of| {
+                    any_of.len() == 1
+                        && any_of[0]
+                            .as_object()
+                            .is_some_and(|reference| reference.len() == 1 && reference.contains_key("$ref"))
+                })
+        });
+        if already_wrapped {
+            return;
+        }
+
+        schemars::transform::transform_subschemas(self, schema);
+        if let Some(reference) = schema.remove("$ref") {
+            schema.insert("anyOf".to_string(), serde_json::json!([{ "$ref": reference }]));
+        }
+    }
+}
+
 impl Deref for RouterState {
     type Target = Arc<Liwan>;
 
@@ -50,6 +76,10 @@ impl Deref for RouterState {
 }
 
 pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()>, openapi::OpenApi)> {
+    aide::generate::in_context(|ctx| {
+        ctx.schema = ctx.schema.settings().clone().with_transform(WrapSchemaRefs).into_generator();
+    });
+
     let mut api = openapi::OpenApi {
         info: openapi::Info { title: "Liwan API".to_string(), ..Default::default() },
         ..openapi::OpenApi::default()
