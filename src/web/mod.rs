@@ -95,6 +95,7 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()
     let dashboard = ApiRouter::new()
         .merge(routes::admin::router())
         .merge(routes::auth::router())
+        .merge(routes::external_auth::router())
         .merge(routes::dashboard::router());
 
     let router = ApiRouter::new()

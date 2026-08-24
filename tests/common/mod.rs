@@ -24,7 +24,7 @@ pub struct TestClient {
 impl TestClient {
     pub fn new(app: Arc<Liwan>, events: tokio::sync::mpsc::Sender<Event>) -> Self {
         let (router, _) = liwan::web::router(app, events).unwrap();
-        let server = TestServer::new(router);
+        let server = TestServer::new(router.into_make_service_with_connect_info::<std::net::SocketAddr>());
         Self { server }
     }
 
@@ -66,6 +66,30 @@ impl TestClient {
         for (key, value) in headers {
             if key.to_lowercase() == "cookie" {
                 // Parse and add individual cookies
+                for cookie_str in value.split(';').map(|s| s.trim()) {
+                    if let Some((name, val)) = cookie_str.split_once('=') {
+                        request = request.add_cookie(Cookie::new(name.trim(), val.trim()));
+                    }
+                }
+            } else {
+                request = request.add_header(
+                    key.parse::<axum::http::HeaderName>().unwrap(),
+                    value.parse::<axum::http::HeaderValue>().unwrap(),
+                );
+            }
+        }
+        request.await
+    }
+
+    pub async fn put_with_headers(
+        &self,
+        path: &str,
+        body: serde_json::Value,
+        headers: Vec<(String, String)>,
+    ) -> axum_test::TestResponse {
+        let mut request = self.server.put(path).json(&body);
+        for (key, value) in headers {
+            if key.to_lowercase() == "cookie" {
                 for cookie_str in value.split(';').map(|s| s.trim()) {
                     if let Some((name, val)) = cookie_str.split_once('=') {
                         request = request.add_cookie(Cookie::new(name.trim(), val.trim()));

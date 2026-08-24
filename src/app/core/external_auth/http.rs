@@ -3,7 +3,7 @@ use oauth2::{HttpRequest, HttpResponse};
 
 const MAX_RESPONSE_SIZE: usize = 1024 * 1024;
 
-pub(super) async fn execute(client: &reqwest::Client, request: HttpRequest) -> Result<HttpResponse, std::io::Error> {
+pub(super) async fn execute(client: reqwest::Client, request: HttpRequest) -> Result<HttpResponse, std::io::Error> {
     let request = reqwest::Request::try_from(request).map_err(std::io::Error::other)?;
     let response = client.execute(request).await.map_err(std::io::Error::other)?;
     if response.content_length().is_some_and(|length| length > MAX_RESPONSE_SIZE as u64) {

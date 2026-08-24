@@ -134,7 +134,7 @@ impl OidcProvider {
             .client
             .exchange_code(AuthorizationCode::new(code))?
             .set_pkce_verifier(verifier)
-            .request_async(&|request| http::execute(http_client, request))
+            .request_async(&|request| http::execute(http_client.clone(), request))
             .await?;
         let id_token = token.id_token().context("provider did not return an ID token")?;
         let claims = id_token.claims(&self.client.id_token_verifier(), &nonce)?;
@@ -176,7 +176,7 @@ async fn discover(issuer: IssuerUrl, client: &reqwest::Client) -> Result<CorePro
     discovery_url.set_path(&path);
 
     let response = http::execute(
-        client,
+        client.clone(),
         ::http::Request::builder()
             .uri(discovery_url.as_str())
             .header(::http::header::ACCEPT, "application/json")
@@ -193,7 +193,8 @@ async fn discover(issuer: IssuerUrl, client: &reqwest::Client) -> Result<CorePro
     validate_server_endpoint(metadata.authorization_endpoint().url(), &issuer)?;
     validate_server_endpoint(metadata.jwks_uri().url(), &issuer)?;
     validate_server_endpoint(metadata.token_endpoint().context("provider has no token endpoint")?.url(), &issuer)?;
-    let jwks = JsonWebKeySet::fetch_async(metadata.jwks_uri(), &|request| http::execute(client, request)).await?;
+    let jwks =
+        JsonWebKeySet::fetch_async(metadata.jwks_uri(), &|request| http::execute(client.clone(), request)).await?;
     Ok(metadata.set_jwks(jwks))
 }
 
@@ -247,6 +248,12 @@ fn microsoft_tenant_id(issuer: &url::Url) -> Result<String> {
 }
 
 fn microsoft_issuer(tenant: &str) -> Result<String> {
+    let tenant = tenant.trim();
+    if tenant.is_empty()
+        || ["common", "organizations", "consumers"].iter().any(|value| tenant.eq_ignore_ascii_case(value))
+    {
+        bail!("Microsoft organization must be a concrete tenant ID or domain");
+    }
     let mut issuer = url::Url::parse("https://login.microsoftonline.com")?;
     issuer.path_segments_mut().map_err(|_| anyhow::anyhow!("invalid Microsoft authority"))?.push(tenant).push("v2.0");
     Ok(issuer.to_string())
@@ -275,5 +282,16 @@ mod tests {
         assert!(matches!(token_auth_type(Some(&post)).unwrap(), AuthType::RequestBody));
         let private_key = vec![CoreClientAuthMethod::PrivateKeyJwt];
         assert!(token_auth_type(Some(&private_key)).is_err());
+    }
+
+    #[test]
+    fn microsoft_requires_a_concrete_tenant() {
+        for tenant in ["", "common", "organizations", "consumers"] {
+            assert!(microsoft_issuer(tenant).is_err());
+        }
+        assert_eq!(
+            microsoft_issuer("example.onmicrosoft.com").unwrap(),
+            "https://login.microsoftonline.com/example.onmicrosoft.com/v2.0"
+        );
     }
 }

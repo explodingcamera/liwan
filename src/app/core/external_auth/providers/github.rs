@@ -59,7 +59,7 @@ impl GithubProvider {
             .client
             .exchange_code(AuthorizationCode::new(code))
             .set_pkce_verifier(verifier)
-            .request_async(&|request| http::execute(http_client, request))
+            .request_async(&|request| http::execute(http_client.clone(), request))
             .await?;
         let access_token = token.access_token().secret();
         let user: GithubUser = github_request(http_client, "https://api.github.com/user", access_token).await?;
@@ -87,7 +87,7 @@ async fn github_request<T: serde::de::DeserializeOwned>(
     access_token: &str,
 ) -> Result<T> {
     let response = http::execute(
-        client,
+        client.clone(),
         ::http::Request::builder()
             .uri(url)
             .header(::http::header::AUTHORIZATION, format!("Bearer {access_token}"))

@@ -6,9 +6,13 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
+use chrono::Utc;
 
-use crate::app::models::User;
 use crate::web::RouterState;
+use crate::{
+    app::{Liwan, models::User},
+    utils::hash::session_token,
+};
 
 pub const MAX_SESSION_AGE: Duration = Duration::from_secs(24 * 60 * 60 * 14);
 
@@ -40,6 +44,21 @@ pub static LOGOUT_COOKIES: LazyLock<CookieJar> = LazyLock::new(|| {
     public_cookie.make_removal();
     CookieJar::new().add(session_cookie).add(public_cookie)
 });
+
+/// Creates a Liwan session and adds its browser cookies.
+pub(crate) fn issue_session(app: &Liwan, cookies: CookieJar, username: &str) -> anyhow::Result<CookieJar> {
+    let session_id = session_token();
+    app.sessions.create(&session_id, username, Utc::now() + MAX_SESSION_AGE)?;
+
+    let mut public_cookie = PUBLIC_COOKIE.clone();
+    let mut session_cookie = SESSION_COOKIE.clone();
+    public_cookie.set_secure(app.config.secure());
+    public_cookie.set_value(username.to_string());
+    session_cookie.set_secure(app.config.secure());
+    session_cookie.set_value(session_id);
+
+    Ok(cookies.add(public_cookie).add(session_cookie))
+}
 
 #[derive(Debug, Clone)]
 pub struct MaybeSessionId(pub Option<String>);

@@ -2,7 +2,7 @@
 name = "liwan"
 version = "1.6.0"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.98"
 repository = "https://github.com/explodingcamera/liwan"
 license = "Apache-2.0"
 publish = false
@@ -23,11 +23,7 @@ name = "reports"
 arc-swap = "1.9"
 futures-lite = { version = "2.6", default-features = false, features = ["alloc"] }
 quick_cache = { version = "0.7" }
-tokio = { version = "1.53", default-features = false, features = [
-  "macros",
-  "rt-multi-thread",
-  "signal"
-] }
+tokio = { version = "1.53", default-features = false, features = ["macros", "rt-multi-thread", "signal"] }
 tokio-util = { version = "0.7", features = ["io"] }
 
 # encoding
@@ -50,27 +46,18 @@ aide = { version = "0.16.0-alpha.4", default-features = false, features = [
   "axum-extra-headers",
   "axum-json",
   "axum-matched-path",
+  "axum-query",
 ] }
 anyhow = { version = "1.0" }
 argh = { version = "0.1", default-features = false, features = ["help"] }
 argon2 = { version = "0.6.0-rc.8", features = [] }
-async-compression = { version = "0.4", default-features = false, features = [
-  "gzip",
-  "tokio"
-] }
+async-compression = { version = "0.4", default-features = false, features = ["gzip", "tokio"] }
 blake3 = { version = "1.8" }
-chrono = { version = "0.4", default-features = false, features = [
-  "now",
-  "serde",
-  "std"
-] }
+chrono = { version = "0.4", default-features = false, features = ["now", "serde", "std"] }
 chrono-tz = "0.10"
 config = { version = "0.15", default-features = false, features = ["toml"] }
 nix = { version = "0.31", features = ["user"] }
-rand = { version = "0.10", default-features = false, features = [
-  "std",
-  "thread_rng"
-] }
+rand = { version = "0.10", default-features = false, features = ["std", "thread_rng"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
@@ -83,27 +70,17 @@ axum = { version = "0.8", default-features = false, features = [
   "query",
   "tokio",
 ] }
-axum-extra = { version = "0.12", default-features = false, features = [
-  "cookie",
-  "typed-header"
-] }
+axum-extra = { version = "0.12", default-features = false, features = ["cookie", "typed-header"] }
 headers = "0.4"
 http = "1.5"
 ipnet = { version = "2.12", features = ["serde"] }
 oauth2 = { git = "https://github.com/explodingcamera-contrib/oauth2-rs", default-features = false }
 openidconnect = { git = "https://github.com/explodingcamera-contrib/openidconnect-rs", default-features = false }
-reqwest = { version = "0.13", default-features = false, features = [
-  "charset",
-  "json",
-  "rustls",
-  "stream"
-] }
+reqwest = { version = "0.13", default-features = false, features = ["charset", "json", "rustls", "stream"] }
 rust-embed = { version = "8.12", features = ["mime-guess"] }
 schemars = { version = "1.2", features = ["chrono04", "derive"] }
 tower = { version = "0.5", default-features = false }
-tower_governor = { version = "0.8", default-features = false, features = [
-  "axum"
-] }
+tower_governor = { version = "0.8", default-features = false, features = ["axum"] }
 tower-http = { version = "0.7", default-features = false, features = [
   "compression-zstd",
   "cors",

@@ -5,7 +5,6 @@ use aide::{
 use anyhow::Context;
 use axum::{Json, extract::State};
 use axum_extra::extract::CookieJar;
-use chrono::Utc;
 use http::{StatusCode, header};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,10 +14,9 @@ use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use crate::{
     PASSWORD_MIN_LENGTH,
     app::models::UserRole,
-    utils::hash::session_token,
     web::{
         MaybeSessionId, RouterState,
-        session::{Auth, LOGOUT_COOKIES, MAX_SESSION_AGE, PUBLIC_COOKIE, SESSION_COOKIE},
+        session::{Auth, LOGOUT_COOKIES, issue_session},
         webext::{ApiResult, AxumErrExt, empty_response, http_bail},
     },
 };
@@ -36,11 +34,10 @@ pub fn router() -> ApiRouter<RouterState> {
     });
 
     ApiRouter::new()
-        .layer(GovernorLayer::new(limiter))
         .api_route("/auth/me", get(me))
         .api_route("/auth/setup", post(setup))
-        .api_route("/auth/login", post(login))
         .api_route("/auth/logout", post(logout))
+        .merge(ApiRouter::new().api_route("/auth/login", post(login)).layer(GovernorLayer::new(limiter)))
 }
 
 #[derive(Deserialize, Serialize, JsonSchema)]
@@ -102,18 +99,7 @@ async fn login(
         http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
     }
 
-    let session_id = session_token();
-    let expires = Utc::now() + MAX_SESSION_AGE;
-    app.sessions.create(&session_id, &username, expires).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let mut public_cookie = PUBLIC_COOKIE.clone();
-    let mut session_cookie = SESSION_COOKIE.clone();
-    public_cookie.set_secure(app.config.secure());
-    public_cookie.set_value(username.clone());
-    session_cookie.set_secure(app.config.secure());
-    session_cookie.set_value(session_id);
-
-    let cookies = cookies.add(public_cookie).add(session_cookie);
+    let cookies = issue_session(&app, cookies, &username).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((cookies, empty_response()))
 }
 

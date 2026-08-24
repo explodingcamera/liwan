@@ -313,6 +313,11 @@ impl LiwanExternalAuth {
         Ok(ExternalAuthLogin { username, return_to: flow.return_to })
     }
 
+    /// Cancels an in-progress login flow.
+    pub fn cancel(&self, state: &str) {
+        self.runtime.flows.lock().expect("external auth flow lock poisoned").remove(state);
+    }
+
     async fn provider(&self, settings: &ExternalAuthSettings, fingerprint: blake3::Hash) -> Result<Arc<Provider>> {
         if let Some(provider) = self
             .runtime
@@ -442,7 +447,7 @@ fn normalize_settings(settings: &ExternalAuthSettings) -> ExternalAuthSettings {
         provider: settings.provider,
         display_name: settings.display_name.trim().to_string(),
         client_id: settings.client_id.trim().to_string(),
-        client_secret: settings.client_secret.clone(),
+        client_secret: optional(&settings.client_secret),
         issuer_url: optional(&settings.issuer_url),
         allowed_domain: optional(&settings.allowed_domain).map(|value| value.to_lowercase()),
         allowed_organization: optional(&settings.allowed_organization).map(|value| value.to_lowercase()),
@@ -470,7 +475,13 @@ fn settings_fingerprint(settings: &ExternalAuthSettings) -> blake3::Hash {
 }
 
 fn is_local_return_path(path: &str) -> bool {
-    path.starts_with('/') && !path.starts_with("//") && !path.contains('\\')
+    path.parse::<::http::Uri>().is_ok_and(|uri| {
+        uri.scheme().is_none()
+            && uri.authority().is_none()
+            && uri.path().starts_with('/')
+            && !uri.path().starts_with("//")
+            && !path.contains('\\')
+    })
 }
 
 #[cfg(test)]
@@ -549,6 +560,7 @@ mod tests {
         assert!(app.external_auth.begin("https://example.com".to_string()).await.is_err());
         assert!(app.external_auth.begin("//example.com".to_string()).await.is_err());
         assert!(app.external_auth.begin("/\\example.com".to_string()).await.is_err());
+        assert!(app.external_auth.begin("/path\r\nlocation:https://example.com".to_string()).await.is_err());
     }
 
     #[test]
