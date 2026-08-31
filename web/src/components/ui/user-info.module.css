@@ -1,3 +1,18 @@
+.loginLink {
+  display: inline-flex;
+  margin: 0;
+  padding: 0.35rem 0;
+  color: var(--pico-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.loginLink:hover {
+  color: var(--pico-secondary-hover);
+  text-decoration: none;
+}
+
 details.user {
   margin: 0;
   position: initial;

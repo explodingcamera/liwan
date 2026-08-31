@@ -42,6 +42,14 @@ export default defineConfig({
 	fonts: [
 		{
 			provider: fontProviders.fontsource(),
+			name: "Stack Sans Text",
+			cssVariable: "--font-stack-sans-text",
+			weights: ["200 700"],
+			styles: ["normal"],
+			subsets: ["latin", "latin-ext"],
+		},
+		{
+			provider: fontProviders.fontsource(),
 			name: "Stack Sans Headline",
 			cssVariable: "--font-stack-sans-headline",
 			weights: ["200 700"],

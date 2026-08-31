@@ -18,8 +18,9 @@ fn settings(overrides: Value) -> Value {
         "clientId": "client-id",
         "issuerUrl": null,
         "allowedDomain": null,
-        "allowedOrganization": null,
-        "allowUserCreation": false
+        "tenantId": null,
+        "allowUserCreation": false,
+        "allowSessionReuse": true
     });
     settings.as_object_mut().unwrap().extend(overrides.as_object().unwrap().clone());
     settings
@@ -151,6 +152,7 @@ async fn oidc_start_uses_discovery_pkce_and_state_cookie() -> Result<()> {
             "/api/dashboard/admin/auth",
             settings(json!({
                 "enabled": true,
+                "allowSessionReuse": false,
                 "clientSecret": "secret",
                 "issuerUrl": issuer
             })),
@@ -178,6 +180,7 @@ async fn oidc_start_uses_discovery_pkce_and_state_cookie() -> Result<()> {
     assert_eq!(query.get("code_challenge_method").map(String::as_str), Some("S256"));
     assert!(query.contains_key("code_challenge"));
     assert!(query.contains_key("nonce"));
+    assert_eq!(query.get("prompt").map(String::as_str), Some("login"));
     let state = query.get("state").expect("state query parameter");
 
     let state_cookie = common::cookies(&response)
@@ -197,11 +200,7 @@ async fn oidc_start_uses_discovery_pkce_and_state_cookie() -> Result<()> {
         .await;
     callback.assert_status_see_other();
     callback.assert_header("location", "/login?externalAuthError=1");
-    let removal = common::cookies(&callback)
-        .into_iter()
-        .find(|cookie| cookie.name() == "liwan-external-auth-state")
-        .expect("state cookie removal");
-    assert_eq!(removal.max_age(), Some(cookie::time::Duration::ZERO));
+    assert!(common::cookies(&callback).into_iter().all(|cookie| cookie.name() != "liwan-external-auth-state"));
 
     let response = client.get("/api/dashboard/auth/external/start?returnTo=https%3A%2F%2Fevil.example").await;
     response.assert_status_bad_request();

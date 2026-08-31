@@ -5,7 +5,7 @@ import { ClientRouter } from "astro:transitions";
 import { ToastHost } from "@/components/ui/toast";
 import ThemeSwitcher from "@/components/ui/theme-switcher.astro";
 
-type Props = { title: string; hideFooter?: boolean; noSwitcher?: boolean };
+type Props = { title: string; hideFooter?: boolean };
 ---
 
 <html lang="en" transition:animate="none">
@@ -15,6 +15,7 @@ type Props = { title: string; hideFooter?: boolean; noSwitcher?: boolean };
     <meta name="robots" content="noindex" />
     <meta name="description" content="Liwan Web Analytics Dashboard" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <Font cssVariable="--font-stack-sans-text" />
     <Font cssVariable="--font-stack-sans-headline" />
     <ClientRouter />
     <script id="liwan-config" type="application/json" is:inline>__LIWAN_CONFIG__</script>
@@ -26,44 +27,57 @@ type Props = { title: string; hideFooter?: boolean; noSwitcher?: boolean };
     {
       !Astro.props.hideFooter && (
         <footer class="container-fluid footer">
-          {!Astro.props.noSwitcher && <ThemeSwitcher />}
-          <small>
-            Powered by&nbsp;
-            <a href="https://liwan.dev" target="_blank" class="secondary">
-              <span>Liwan.dev</span>
-            </a>
-            &nbsp;|&nbsp;
-            <a class="secondary" href="/attributions">
-              Open Source Licenses
-            </a>
+          <div class="footer-start">
+            <span class="footer-theme"><ThemeSwitcher /></span>
+            <small>
+              <span>
+                Powered by <a href="https://liwan.dev" target="_blank">Liwan.dev</a>
+              </span>
+            </small>
+          </div>
+          <small class="footer-links">
+            <a href="/attributions">Licenses</a>
           </small>
         </footer>
       )
     }
     <style>
       footer {
+        box-sizing: border-box;
+        width: 100%;
         max-width: 60rem;
-        padding: 1rem 2rem;
-        margin-bottom: 0.7rem;
+        padding: 1rem;
+        margin: 0 auto 0.7rem;
         display: flex;
+        align-items: center;
+        justify-content: space-between;
         gap: 0.5rem;
 
         small {
           display: inline-flex;
           flex-wrap: wrap;
           align-items: center;
-          font-size: 14px;
+          justify-content: flex-end;
+          gap: 0.35rem 0.8rem;
+          color: var(--pico-muted-color);
+          font-size: 0.75rem;
         }
 
-        a.icon-link {
-          text-decoration: none;
-          span {
-            text-decoration: underline;
-          }
-          display: inline-flex;
-          align-items: end;
-          justify-content: center;
-          gap: 0.2rem;
+        small a {
+          color: inherit;
+          text-underline-offset: 0.14em;
+        }
+
+        .footer-start {
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+        }
+
+        .footer-theme {
+          display: flex;
+          color: var(--pico-muted-color);
+          opacity: 0.8;
         }
       }
     </style>

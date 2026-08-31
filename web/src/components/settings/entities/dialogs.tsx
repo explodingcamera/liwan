@@ -1,17 +1,15 @@
 import styles from "../dialogs.module.css";
 
 import type { SubmitEvent } from "react";
-import { useRef } from "react";
 import { navigate } from "astro:transitions/client";
+import { PlusIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { invalidateEntities, useMe } from "@/hooks/api";
-import { cls } from "@/utils";
 
 export const CreateEntity = () => {
-	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
 	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/entity"].post,
@@ -37,18 +35,19 @@ export const CreateEntity = () => {
 		<Dialog
 			onOpenChange={() => reset()}
 			title="Create a new entity"
-			description="Entities are individual websites, apps, or services that send events. The entity ID is used in the tracking snippet."
+			description="Entities represent websites, apps, or services that send analytics events."
 			trigger={
 				role === "admin" && (
-					<button type="button" className={cls("contrast", styles.new)}>
-						Create
+					<button type="button" className={styles.new} aria-label="Create entity" title="Create entity">
+						<PlusIcon size={24} strokeWidth={2.25} />
 					</button>
 				)
 			}
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
-					Entity ID <small>(cannot be changed later)</small>
+					Entity ID
+					<small>Used in the tracking snippet and cannot be changed.</small>
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -59,14 +58,14 @@ export const CreateEntity = () => {
 					/>
 				</label>
 				<label>
-					Entity name <small>(used in the dashboard)</small>
+					Entity name
 					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
 				</label>
 				<div className="grid">
-					<Dialog.Close className="secondary outline" ref={closeRef}>
-						Cancel
-					</Dialog.Close>
-					<button type="submit">Create entity</button>
+					<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
+					<button type="submit" className="contrast">
+						Create entity
+					</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>

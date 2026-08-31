@@ -37,8 +37,8 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 			hideTitle
 			hideDescription
 			showClose
-			className={styles.detailsModal}
 			autoOverflow
+			className={styles.detailsModal}
 			trigger={
 				<button type="button" className={cls(styles.showMore, (data?.length ?? 0) === 0 && styles.showMoreHidden)}>
 					<ZoomInIcon size={16} />

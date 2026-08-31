@@ -3,9 +3,9 @@
   max-width: 100%;
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid var(--pico-form-element-border-color);
   border-radius: var(--pico-border-radius);
-  background: var(--pico-code-background-color, var(--pico-background-color));
+  background: var(--pico-form-element-background-color);
 }
 
 .snippet code {
@@ -13,6 +13,7 @@
   min-width: 0;
   padding: 0.9rem 3rem 0.9rem 0.9rem;
   background: transparent;
+  color: color-mix(in srgb, var(--pico-color) 82%, var(--pico-muted-color));
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -20,8 +21,8 @@
 }
 
 .tag {
-  color: var(--pico-primary-hover);
-  font-weight: 900;
+  color: var(--settings-icon-color);
+  font-weight: 650;
 }
 
 .entity {
@@ -31,10 +32,10 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: inherit;
   font: inherit;
   font-style: normal;
-  font-weight: 900;
+  color: var(--settings-icon-color);
+  font-weight: 650;
   text-decoration: underline;
   text-decoration-style: dotted;
   text-underline-offset: 0.16em;
@@ -51,4 +52,22 @@
   height: 2rem;
   margin: 0;
   padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pico-color);
+  opacity: 0.68;
+  box-shadow: none;
+}
+
+.copyButton:hover {
+  border: 0;
+  background: transparent;
+  color: var(--pico-color);
+  opacity: 1;
+  box-shadow: none;
+}
+
+.copyButton:focus-visible {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
 }

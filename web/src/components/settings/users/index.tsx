@@ -10,7 +10,7 @@ import { createToast } from "@/components/ui/toast";
 import { invalidateUsers, useMe, useProjects, useUsers } from "@/hooks/api";
 import { getUsername } from "@/utils";
 import { DeleteDialog } from "../dialogs";
-import { SettingsField, SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
+import { SettingsFieldset, SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
 
@@ -127,51 +127,54 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 	return (
 		<SettingsForm>
 			<SettingsHeader title={user.username} backHref="/settings/users" backLabel="Back to users" />
-			<SettingsField label="Projects" description="Projects this user can view.">
-				<Tags
-					selected={selectedProjects}
-					suggestions={projectTags}
-					onAdd={(tag) => saveUser([...selectedProjects, tag], isAdmin)}
-					onDelete={(i) =>
-						saveUser(
-							selectedProjects.filter((_, index) => i !== index),
-							isAdmin,
-						)
-					}
-					noOptionsText="No matching projects"
-				/>
-			</SettingsField>
-			{me.role === "admin" && (
-				<SettingsSwitch
-					label="Administrator access"
-					description={
-						<>
-							Administrators can edit and create projects, entities, and users.
-							{isSelf && " You cannot change your own role."}
-						</>
-					}
-					checked={isAdmin}
-					disabled={isSelf}
-					onCheckedChange={(checked) => saveUser(selectedProjects, checked)}
-				/>
-			)}
-			{me.role === "admin" && !isSelf && (
-				<div className={styles.dangerZone}>
-					<DeleteDialog
-						id={user.username}
-						displayName={user.username}
-						type="user"
-						onDeleted={() => {
-							window.location.href = "/settings/users";
-						}}
-						trigger={
-							<button type="button" className={styles.deleteButton}>
-								Delete user
-							</button>
+			<div className={styles.detailPanel}>
+				<SettingsFieldset legend="Project access" description="Choose which projects this user can view.">
+					<Tags
+						labelText="Projects"
+						selected={selectedProjects}
+						suggestions={projectTags}
+						onAdd={(tag) => saveUser([...selectedProjects, tag], isAdmin)}
+						onDelete={(i) =>
+							saveUser(
+								selectedProjects.filter((_, index) => i !== index),
+								isAdmin,
+							)
 						}
+						noOptionsText="No matching projects"
 					/>
-				</div>
-			)}
+				</SettingsFieldset>
+				{me.role === "admin" && (
+					<SettingsSwitch
+						label="Administrator access"
+						description={
+							<>
+								Allow this user to manage projects, entities, and users.
+								{isSelf && " You cannot change your own role."}
+							</>
+						}
+						checked={isAdmin}
+						disabled={isSelf}
+						onCheckedChange={(checked) => saveUser(selectedProjects, checked)}
+					/>
+				)}
+				{me.role === "admin" && !isSelf && (
+					<div className={styles.dangerZone}>
+						<DeleteDialog
+							id={user.username}
+							displayName={user.username}
+							type="user"
+							onDeleted={() => {
+								window.location.href = "/settings/users";
+							}}
+							trigger={
+								<button type="button" className={styles.deleteButton}>
+									Delete user
+								</button>
+							}
+						/>
+					</div>
+				)}
+			</div>
 			{error && (
 				<article role="alert" className={styles.error}>
 					{error}

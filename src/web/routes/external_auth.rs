@@ -39,6 +39,12 @@ static STATE_COOKIE: LazyLock<Cookie<'static>> = LazyLock::new(|| {
     cookie
 });
 
+static STATE_COOKIE_REMOVAL: LazyLock<Cookie<'static>> = LazyLock::new(|| {
+    let mut cookie = STATE_COOKIE.clone();
+    cookie.make_removal();
+    cookie
+});
+
 pub fn router() -> ApiRouter<RouterState> {
     let start_limiter =
         GovernorConfigBuilder::default().per_second(1).burst_size(5).finish().expect("valid governor config");
@@ -85,8 +91,9 @@ struct ExternalAuthSettingsResponse {
     client_secret_configured: bool,
     issuer_url: Option<String>,
     allowed_domain: Option<String>,
-    allowed_organization: Option<String>,
+    tenant_id: Option<String>,
     allow_user_creation: bool,
+    allow_session_reuse: bool,
     callback_url: String,
 }
 
@@ -103,8 +110,9 @@ struct UpdateExternalAuthSettings {
     clear_client_secret: bool,
     issuer_url: Option<String>,
     allowed_domain: Option<String>,
-    allowed_organization: Option<String>,
+    tenant_id: Option<String>,
     allow_user_creation: bool,
+    allow_session_reuse: bool,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -159,8 +167,26 @@ async fn update_settings(
     }
 
     let existing = app.external_auth.settings().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let client_secret =
-        if request.clear_client_secret { None } else { request.client_secret.or(existing.client_secret) };
+    let same_client_registration = request.provider == existing.provider
+        && request.client_id.trim() == existing.client_id
+        && match request.provider {
+            ExternalAuthProvider::Oidc => {
+                request.issuer_url.as_deref().map(str::trim) == existing.issuer_url.as_deref()
+            }
+            ExternalAuthProvider::Microsoft => {
+                request.tenant_id.as_deref().map(str::trim).map(str::to_lowercase) == existing.tenant_id
+            }
+            ExternalAuthProvider::Google => true,
+        };
+    let client_secret = if request.clear_client_secret {
+        None
+    } else if let Some(client_secret) = request.client_secret {
+        Some(client_secret)
+    } else if same_client_registration {
+        existing.client_secret
+    } else {
+        None
+    };
     let settings = ExternalAuthSettings {
         enabled: request.enabled,
         provider: request.provider,
@@ -169,8 +195,9 @@ async fn update_settings(
         client_secret,
         issuer_url: request.issuer_url,
         allowed_domain: request.allowed_domain,
-        allowed_organization: request.allowed_organization,
+        tenant_id: request.tenant_id,
         allow_user_creation: request.allow_user_creation,
+        allow_session_reuse: request.allow_session_reuse,
     };
     if let Err(error) = app.external_auth.update_settings(&settings).await {
         tracing::debug!(%error, "external authentication settings validation failed");
@@ -205,16 +232,19 @@ async fn callback(
     Query(query): Query<CallbackQuery>,
 ) -> UseApi<Response, ()> {
     let cookie_state = cookies.get(STATE_COOKIE_NAME).map(|cookie| cookie.value().to_string());
-    let mut removal = STATE_COOKIE.clone();
-    removal.set_secure(app.config.secure());
-    removal.make_removal();
-    let cookies = cookies.add(removal);
-
     let Some(cookie_state) = cookie_state else {
         tracing::debug!("external authentication callback has no state cookie");
         return (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response().into();
     };
-    if query.error.is_some() || query.state.as_deref() != Some(cookie_state.as_str()) {
+    if query.state.as_deref() != Some(cookie_state.as_str()) {
+        tracing::debug!("external authentication callback has an invalid state");
+        return (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response().into();
+    }
+
+    let mut removal = STATE_COOKIE_REMOVAL.clone();
+    removal.set_secure(app.config.secure());
+    let cookies = cookies.add(removal);
+    if query.error.is_some() {
         app.external_auth.cancel(&cookie_state);
         tracing::debug!(provider_error = ?query.error, "external authentication callback was rejected");
         return (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response().into();
@@ -257,8 +287,9 @@ fn settings_response(app: &RouterState, settings: ExternalAuthSettings) -> Exter
         client_secret_configured: settings.client_secret.is_some(),
         issuer_url: settings.issuer_url,
         allowed_domain: settings.allowed_domain,
-        allowed_organization: settings.allowed_organization,
+        tenant_id: settings.tenant_id,
         allow_user_creation: settings.allow_user_creation,
+        allow_session_reuse: settings.allow_session_reuse,
         callback_url: app.external_auth.callback_url().to_string(),
     }
 }

@@ -7,16 +7,12 @@ import { cls, getUsername } from "@/utils";
 
 export const LoginButton = () => {
 	const username = getUsername();
+	const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 	if (!username)
 		return (
-			<>
-				<a href="/login">
-					<button type="button" className="outline secondary">
-						Login
-					</button>
-				</a>
-				&nbsp;&nbsp;
-			</>
+			<a className={styles.loginLink} href={`/login?${new URLSearchParams({ returnTo })}`}>
+				Login
+			</a>
 		);
 
 	return (

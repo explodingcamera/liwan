@@ -9,9 +9,32 @@
 }
 
 .new {
-  padding: 0.4rem 0.5rem;
-  height: fit-content;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  margin-top: -0.45rem;
+  margin-right: -0.45rem;
+  padding: 0;
   animation: newLoad 0.4s ease;
+}
+
+.new,
+.new:hover {
+  border: 0;
+  background: transparent;
+  color: var(--settings-icon-color);
+  box-shadow: none;
+}
+
+.new:focus-visible {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
+}
+
+.new:hover {
+  color: var(--settings-icon-color);
+  opacity: 0.68;
 }
 
 .editDialog {

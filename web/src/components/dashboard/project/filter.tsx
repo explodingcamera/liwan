@@ -46,7 +46,12 @@ export const SelectFilters = ({
 							</span>
 						)}
 					</div>
-					<button type="button" onClick={() => onChange(value.filter((_, j) => i !== j))} className={styles.remove}>
+					<button
+						type="button"
+						aria-label={`Remove ${dimensionNames[filter.dimension]} filter`}
+						onClick={() => onChange(value.filter((_, j) => i !== j))}
+						className={styles.remove}
+					>
 						<XIcon size={20} />
 					</button>
 				</article>
@@ -197,9 +202,14 @@ export const FilterDialog = ({
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const selectableDimensions = dimensions.filter((dimension) => options[dimension]);
 	const [dimension, setDimension] = useState(selectableDimensions[0] ?? "url");
+	const [selectedFilterType, setSelectedFilterType] = useState<FilterType>();
 	const selectedDimension = options[dimension] ? dimension : (selectableDimensions[0] ?? "");
 	const filter = options[selectedDimension];
 	if (!filter) return null;
+	const filterType =
+		selectedFilterType && (filter.filterTypes as readonly FilterType[] | undefined)?.includes(selectedFilterType)
+			? selectedFilterType
+			: filter.filterTypes?.[0];
 
 	const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -222,12 +232,16 @@ export const FilterDialog = ({
 			filterType: filterType as FilterType,
 			value: typeof value === "string" ? value : null,
 		});
-		setDimension(selectableDimensions[0] ?? "url");
 		closeRef.current?.click();
 	};
 
 	return (
 		<Dialog
+			onOpenChange={(open) => {
+				if (open) return;
+				setDimension(selectableDimensions[0] ?? "url");
+				setSelectedFilterType(undefined);
+			}}
 			title="Add Filter"
 			description="Filter the report by a specific dimension."
 			hideDescription
@@ -256,7 +270,11 @@ export const FilterDialog = ({
 					<div className={styles.formInvertable}>
 						<label>
 							Filter type
-							<select name="filterType">
+							<select
+								name="filterType"
+								value={filterType}
+								onChange={(event) => setSelectedFilterType(event.currentTarget.value as FilterType)}
+							>
 								{filter.filterTypes?.map((filterType) => (
 									<option key={filterType} value={filterType}>
 										{capitalizeAll(filterNames[filterType])}
@@ -268,11 +286,11 @@ export const FilterDialog = ({
 							<div className={styles.inverted}>
 								<fieldset>
 									<label>
-										<input name="show-matches" defaultChecked value="default" type="radio" aria-invalid="false" />
+										<input name="show-matches" defaultChecked value="default" type="radio" />
 										Show matches
 									</label>
 									<label>
-										<input name="show-matches" type="radio" value="inverted" aria-invalid="true" />
+										<input name="show-matches" type="radio" value="inverted" />
 										Exclude matches
 									</label>
 								</fieldset>
@@ -281,10 +299,10 @@ export const FilterDialog = ({
 					</div>
 				)}
 
-				{!filter.custom && (
+				{!filter.custom && filterType !== "is_null" && (
 					<label>
 						Value
-						<input type="text" name="value" />
+						<input type="text" name="value" required />
 					</label>
 				)}
 

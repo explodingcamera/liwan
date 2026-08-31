@@ -1,5 +1,54 @@
 // biome-ignore format: no
-import { SiAndroid, SiBadoo, SiBluesky, SiDouban, SiDribbble, SiDuckduckgo, SiFacebook, SiFirefox, SiFlickr, SiFoursquare, SiGithub, SiGoogle, SiGooglechrome, SiInstagram, SiIos, SiLastdotfm, SiLinux, SiLivejournal, SiMacos, SiMaildotru, SiMastodon, SiOdnoklassniki, SiOpera, SiPinterest, SiPixelfed, SiReddit, SiRenren, SiSafari, SiSinaweibo, SiSnapchat, SiSourceforge, SiStackoverflow, SiTelegram, SiThreads, SiTiktok, SiTumblr, SiTwitch, SiV2ex, SiViadeo, SiVimeo, SiVk, SiWorkplace, SiX, SiXing, SiYcombinator, SiYoutube } from "@icons-pack/react-simple-icons";
+
+import { useState } from "react";
+import {
+	SiAndroid,
+	SiBadoo,
+	SiBluesky,
+	SiDouban,
+	SiDribbble,
+	SiDuckduckgo,
+	SiFacebook,
+	SiFirefox,
+	SiFlickr,
+	SiFoursquare,
+	SiGithub,
+	SiGoogle,
+	SiGooglechrome,
+	SiInstagram,
+	SiIos,
+	SiLastdotfm,
+	SiLinux,
+	SiLivejournal,
+	SiMacos,
+	SiMaildotru,
+	SiMastodon,
+	SiOdnoklassniki,
+	SiOpera,
+	SiPinterest,
+	SiPixelfed,
+	SiReddit,
+	SiRenren,
+	SiSafari,
+	SiSinaweibo,
+	SiSnapchat,
+	SiSourceforge,
+	SiStackoverflow,
+	SiTelegram,
+	SiThreads,
+	SiTiktok,
+	SiTumblr,
+	SiTwitch,
+	SiV2ex,
+	SiViadeo,
+	SiVimeo,
+	SiVk,
+	SiWorkplace,
+	SiX,
+	SiXing,
+	SiYcombinator,
+	SiYoutube,
+} from "@icons-pack/react-simple-icons";
 // biome-ignore format: no
 import { AppWindowIcon, EarthIcon, LayoutGridIcon, MonitorIcon, RectangleHorizontalIcon, RectangleVerticalIcon, SearchIcon, SmartphoneIcon, TabletIcon } from "lucide-react";
 
@@ -118,7 +167,22 @@ export const Favicon = ({
 }: IconProps & {
 	fqdn: string;
 }) => {
-	if (runtimeConfig?.disableFavicons) return <SearchIcon size={size} />;
-	fqdn = fqdn.replace(/[^a-zA-Z0-9.-]/g, "");
-	return <img src={`https://icons.duckduckgo.com/ip3/${fqdn}.ico`} alt="" height={size} width={size} />;
+	const [failedFqdn, setFailedFqdn] = useState<string>();
+	const sanitizedFqdn = fqdn.replace(/[^a-zA-Z0-9.-]/g, "");
+	if (runtimeConfig?.disableFavicons || !sanitizedFqdn || failedFqdn === sanitizedFqdn) {
+		return <EarthIcon size={size} />;
+	}
+
+	return (
+		<img
+			src={`https://icons.duckduckgo.com/ip3/${sanitizedFqdn}.ico`}
+			alt=""
+			height={size}
+			width={size}
+			onError={() => setFailedFqdn(sanitizedFqdn)}
+			onLoad={(event) => {
+				if (event.currentTarget.naturalWidth === 0) setFailedFqdn(sanitizedFqdn);
+			}}
+		/>
+	);
 };

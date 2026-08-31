@@ -229,8 +229,8 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 				backLabel="Back to projects"
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={projectTabs}>
-				<SettingsPanel value="general">
-					<SettingsField label="Project name" description="Used in the dashboard." name="displayName">
+				<SettingsPanel value="general" className={styles.detailPanel}>
+					<SettingsField label="Project name" name="displayName">
 						<input
 							required
 							name="displayName"
@@ -266,7 +266,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 					</SettingsField>
 					<Tags
 						labelText="Associated entities"
-						labelDescription="Controls which entities send data to this project."
+						labelDescription="Entities that send analytics data to this project."
 						selected={selectedEntities}
 						suggestions={entityTags}
 						onAdd={(tag) => {
@@ -299,10 +299,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 				</SettingsPanel>
 				{settings && (
 					<SettingsPanel value="display">
-						<p className={styles.displayHelp}>
-							Auto hides metrics or dimensions when project data is incomplete. Use Always only if partial results are
-							acceptable.
-						</p>
+						<p className={styles.displayHelp}>Auto follows data availability. Always may show partial results.</p>
 						<div className={styles.displaySections}>
 							<fieldset>
 								<legend>Metrics</legend>

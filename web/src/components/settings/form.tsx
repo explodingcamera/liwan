@@ -48,7 +48,7 @@ export const SettingsHeader = ({
 				<h1>{title}</h1>
 			</div>
 			{saveForm && (
-				<button type="submit" form={saveForm} className={styles.saveButton}>
+				<button type="submit" form={saveForm} className={`${styles.saveButton} contrast`}>
 					Save
 				</button>
 			)}
@@ -80,8 +80,16 @@ export const SettingsTabs = <T extends string>({
 	</Tabs.Root>
 );
 
-export const SettingsPanel = ({ value, children }: { value: string; children: ReactNode }) => (
-	<Tabs.Panel value={value} className={styles.panel}>
+export const SettingsPanel = ({
+	value,
+	className,
+	children,
+}: {
+	value: string;
+	className?: string;
+	children: ReactNode;
+}) => (
+	<Tabs.Panel value={value} className={[styles.panel, className].filter(Boolean).join(" ")}>
 		{children}
 	</Tabs.Panel>
 );

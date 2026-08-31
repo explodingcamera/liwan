@@ -54,6 +54,8 @@
 .description {
   max-width: 46rem;
   margin-bottom: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .tabs {
@@ -91,26 +93,35 @@
 }
 
 .panel {
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  margin-bottom: var(--pico-spacing);
+  margin-bottom: var(--settings-field-margin, 1rem);
 }
 
 .label,
 .legend {
+  font-size: 0.9rem;
   font-weight: 500;
+  line-height: 1.25;
   margin-bottom: 0;
 }
 
 .fieldDescription {
   display: block;
   margin: 0;
-  font-size: 0.875em;
+  font-size: 0.825rem;
+  line-height: 1.3;
+}
+
+.field > input,
+.field > select,
+.field > textarea {
+  margin-bottom: 0;
 }
 
 .fieldset {
@@ -126,6 +137,8 @@
 
 .fieldsetDescription {
   margin-bottom: 0.6rem;
+  font-size: 0.825rem;
+  line-height: 1.3;
 }
 
 .switchField {
@@ -133,7 +146,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.75rem;
   align-items: center;
-  margin-bottom: var(--pico-spacing);
+  margin-bottom: 1rem;
 }
 
 .switchText {
@@ -141,6 +154,20 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+}
+
+.form input,
+.form select,
+.form textarea {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .form input,
+  .form select,
+  .form textarea {
+    font-size: 1rem;
+  }
 }
 
 .switchRoot {

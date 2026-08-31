@@ -3,6 +3,7 @@ import styles from "../dialogs.module.css";
 import type { ReactElement, SubmitEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { navigate } from "astro:transitions/client";
+import { PlusIcon } from "lucide-react";
 
 import { api, queryClient, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
@@ -226,7 +227,6 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 };
 
 export const CreateProject = () => {
-	const closeRef = useRef<HTMLButtonElement>(null);
 	const { role } = useMe();
 
 	const { mutate, error, reset } = useMutation({
@@ -266,15 +266,16 @@ export const CreateProject = () => {
 			description="Projects group one or more entities for reporting and access control."
 			trigger={
 				role === "admin" && (
-					<button type="button" className={cls("contrast", styles.new)}>
-						Create
+					<button type="button" className={styles.new} aria-label="Create project" title="Create project">
+						<PlusIcon size={24} strokeWidth={2.25} />
 					</button>
 				)
 			}
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
-					Project ID <small>(cannot be changed later)</small>
+					Project ID
+					<small>Cannot be changed later.</small>
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -285,7 +286,7 @@ export const CreateProject = () => {
 					/>
 				</label>
 				<label>
-					Project name <small>(used in the dashboard)</small>
+					Project name
 					<input required name="displayName" type="text" placeholder="My Project" autoComplete="off" />
 				</label>
 				<label>
@@ -300,10 +301,10 @@ export const CreateProject = () => {
 				<br />
 
 				<div className="grid">
-					<Dialog.Close className="secondary outline" ref={closeRef}>
-						Cancel
-					</Dialog.Close>
-					<button type="submit">Create project</button>
+					<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
+					<button type="submit" className="contrast">
+						Create project
+					</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>

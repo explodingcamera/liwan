@@ -1,0 +1,176 @@
+.page {
+  --pico-block-spacing-vertical: 0.75rem;
+  --settings-field-gap: 1rem;
+  --settings-section-gap: 1.5rem;
+}
+
+.signInOptions,
+.providerFieldset {
+  margin-bottom: var(--settings-section-gap);
+}
+
+.signInOptions h2,
+.callbackSection h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.signInOptions > p,
+.providerFieldset > p,
+.callbackSection > p {
+  margin: 0 0 0.65rem;
+  color: var(--pico-muted-color);
+  font-size: 0.9rem;
+}
+
+.optionList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.optionList > * {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-form-element-background-color);
+}
+
+.providerFieldset {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+}
+
+.providerFieldset legend {
+  margin-bottom: 0.25rem;
+  padding: 0;
+  font-weight: 500;
+}
+
+.providerFieldset > .internalStatus {
+  margin: 0.65rem 0 0;
+  color: var(--pico-muted-color);
+  font-size: 0.85rem;
+}
+
+.providerGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.providerCard {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 4.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.75rem 2.5rem 0.75rem 0.75rem;
+  border: 1px solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-form-element-background-color);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.providerCard:hover {
+  border-color: var(--pico-secondary-hover);
+}
+
+.providerCard:has(input:checked) {
+  border-color: var(--pico-primary);
+  background: color-mix(in srgb, var(--pico-primary) 8%, var(--pico-form-element-background-color));
+  box-shadow: 0 0 0 1px var(--pico-primary);
+}
+
+.providerCard:has(input:focus-visible) {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
+}
+
+.providerCard input {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.providerLogo {
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 1.65rem;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+
+.providerLogo svg {
+  width: 100%;
+  height: 100%;
+}
+
+.providerText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.providerText strong {
+  color: var(--pico-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.providerText small {
+  overflow: hidden;
+  color: var(--pico-muted-color);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.callbackSection {
+  margin: 0;
+}
+
+.configuration {
+  --settings-field-margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--settings-field-gap);
+  margin-bottom: var(--settings-section-gap);
+}
+
+.configuration > * {
+  margin: 0;
+}
+
+.callback {
+  display: block;
+  padding: 0.15rem 0;
+  background: transparent;
+  color: var(--pico-muted-color);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+@media (max-width: 600px) {
+  .optionList,
+  .providerGrid {
+    grid-template-columns: 1fr;
+  }
+}

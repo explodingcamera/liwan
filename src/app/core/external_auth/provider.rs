@@ -14,7 +14,7 @@ use openidconnect::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::super::{ExternalAuthSettings, ExternalIdentity, http};
+use super::{ExternalAuthProvider, ExternalAuthSettings, ExternalIdentity, http};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 struct ProviderClaims {
@@ -54,48 +54,54 @@ type ProviderClient = Client<
     EndpointMaybeSet,
 >;
 
-pub(super) enum OidcKind {
-    Generic { issuer: String },
-    Google { allowed_domain: Option<String> },
-    Microsoft { tenant: String },
-}
-
-enum OidcPolicy {
+enum ProviderPolicy {
     Generic,
     Google { allowed_domain: Option<String> },
     Microsoft { tenant_id: String },
 }
 
-pub(crate) struct OidcProvider {
-    client: ProviderClient,
-    provider_key: String,
-    policy: OidcPolicy,
+pub(super) struct FlowSecret {
+    nonce: Nonce,
+    verifier: PkceCodeVerifier,
 }
 
-impl OidcProvider {
-    pub(super) async fn discover(
-        kind: OidcKind,
+pub(super) struct Authorization {
+    pub(super) url: url::Url,
+    pub(super) state: String,
+    pub(super) secret: FlowSecret,
+}
+
+pub(super) struct Provider {
+    client: ProviderClient,
+    provider_key: String,
+    policy: ProviderPolicy,
+    allow_session_reuse: bool,
+}
+
+impl Provider {
+    pub(super) async fn from_settings(
         settings: &ExternalAuthSettings,
         redirect_url: &str,
         client: &reqwest::Client,
     ) -> Result<Self> {
-        let issuer = match &kind {
-            OidcKind::Generic { issuer } => issuer.clone(),
-            OidcKind::Google { .. } => "https://accounts.google.com".to_string(),
-            OidcKind::Microsoft { tenant } => microsoft_issuer(tenant)?,
+        let (issuer, policy) = match settings.provider {
+            ExternalAuthProvider::Oidc => {
+                (settings.issuer_url.clone().context("issuer URL is required")?, ProviderPolicy::Generic)
+            }
+            ExternalAuthProvider::Google => (
+                "https://accounts.google.com".to_string(),
+                ProviderPolicy::Google { allowed_domain: settings.allowed_domain.clone() },
+            ),
+            ExternalAuthProvider::Microsoft => {
+                let tenant_id = settings.tenant_id.clone().context("Microsoft tenant ID is required")?;
+                (microsoft_issuer(&tenant_id)?, ProviderPolicy::Microsoft { tenant_id })
+            }
         };
         validate_issuer(&issuer)?;
         let issuer = IssuerUrl::new(issuer)?;
         let metadata = discover(issuer, client).await?;
         let provider_key = metadata.issuer().to_string();
         let auth_type = token_auth_type(metadata.token_endpoint_auth_methods_supported())?;
-        let policy = match kind {
-            OidcKind::Generic { .. } => OidcPolicy::Generic,
-            OidcKind::Google { allowed_domain } => OidcPolicy::Google { allowed_domain },
-            OidcKind::Microsoft { .. } => {
-                OidcPolicy::Microsoft { tenant_id: microsoft_tenant_id(metadata.issuer().url())? }
-            }
-        };
         let oidc_client = ProviderClient::from_provider_metadata(
             metadata,
             ClientId::new(settings.client_id.clone()),
@@ -104,12 +110,12 @@ impl OidcProvider {
         .set_auth_type(auth_type)
         .set_redirect_uri(RedirectUrl::new(redirect_url.to_string())?);
 
-        Ok(Self { client: oidc_client, provider_key, policy })
+        Ok(Self { client: oidc_client, provider_key, policy, allow_session_reuse: settings.allow_session_reuse })
     }
 
-    pub(super) fn authorize(&self) -> (url::Url, String, Nonce, PkceCodeVerifier) {
+    pub(super) fn authorize(&self) -> Authorization {
         let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
-        let (url, state, nonce) = self
+        let request = self
             .client
             .authorize_url(
                 AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
@@ -118,42 +124,42 @@ impl OidcProvider {
             )
             .add_scope(Scope::new("profile".to_string()))
             .add_scope(Scope::new("email".to_string()))
-            .set_pkce_challenge(challenge)
-            .url();
-        (url, state.secret().clone(), nonce, verifier)
+            .set_pkce_challenge(challenge);
+        let request = if self.allow_session_reuse { request } else { request.add_prompt(CoreAuthPrompt::Login) };
+        let (url, state, nonce) = request.url();
+        Authorization { url, state: state.secret().clone(), secret: FlowSecret { nonce, verifier } }
     }
 
     pub(super) async fn complete(
         &self,
         code: String,
-        nonce: Nonce,
-        verifier: PkceCodeVerifier,
+        secret: FlowSecret,
         http_client: &reqwest::Client,
     ) -> Result<ExternalIdentity> {
         let token = self
             .client
             .exchange_code(AuthorizationCode::new(code))?
-            .set_pkce_verifier(verifier)
+            .set_pkce_verifier(secret.verifier)
             .request_async(&|request| http::execute(http_client.clone(), request))
             .await?;
         let id_token = token.id_token().context("provider did not return an ID token")?;
-        let claims = id_token.claims(&self.client.id_token_verifier(), &nonce)?;
+        let claims = id_token.claims(&self.client.id_token_verifier(), &secret.nonce)?;
 
         match &self.policy {
-            OidcPolicy::Google { allowed_domain } => {
+            ProviderPolicy::Google { allowed_domain } => {
                 if let Some(domain) = allowed_domain
                     && !claims.additional_claims().hd.as_deref().is_some_and(|claim| claim.eq_ignore_ascii_case(domain))
                 {
                     bail!("Google account is outside the allowed Workspace domain");
                 }
             }
-            OidcPolicy::Microsoft { tenant_id } => {
+            ProviderPolicy::Microsoft { tenant_id } => {
                 if !claims.additional_claims().tid.as_deref().is_some_and(|claim| claim.eq_ignore_ascii_case(tenant_id))
                 {
                     bail!("Microsoft account is outside the configured tenant");
                 }
             }
-            OidcPolicy::Generic => {}
+            ProviderPolicy::Generic => {}
         }
 
         let username_hint = claims
@@ -190,9 +196,12 @@ async fn discover(issuer: IssuerUrl, client: &reqwest::Client) -> Result<CorePro
     if metadata.issuer() != &issuer {
         bail!("OIDC discovery issuer does not match the configured issuer");
     }
-    validate_server_endpoint(metadata.authorization_endpoint().url(), &issuer)?;
-    validate_server_endpoint(metadata.jwks_uri().url(), &issuer)?;
-    validate_server_endpoint(metadata.token_endpoint().context("provider has no token endpoint")?.url(), &issuer)?;
+    validate_server_endpoint(metadata.authorization_endpoint().url(), metadata.issuer())?;
+    validate_server_endpoint(metadata.jwks_uri().url(), metadata.issuer())?;
+    validate_server_endpoint(
+        metadata.token_endpoint().context("provider has no token endpoint")?.url(),
+        metadata.issuer(),
+    )?;
     let jwks =
         JsonWebKeySet::fetch_async(metadata.jwks_uri(), &|request| http::execute(client.clone(), request)).await?;
     Ok(metadata.set_jwks(jwks))
@@ -237,25 +246,20 @@ fn token_auth_type(methods: Option<&Vec<CoreClientAuthMethod>>) -> Result<AuthTy
     }
 }
 
-fn microsoft_tenant_id(issuer: &url::Url) -> Result<String> {
-    let tenant_id =
-        issuer.path_segments().and_then(|mut segments| segments.next()).context("invalid Microsoft issuer")?;
-    if !tenant_id.is_empty() {
-        Ok(tenant_id.to_lowercase())
-    } else {
-        bail!("Microsoft discovery returned an invalid tenant")
-    }
-}
-
-fn microsoft_issuer(tenant: &str) -> Result<String> {
-    let tenant = tenant.trim();
-    if tenant.is_empty()
-        || ["common", "organizations", "consumers"].iter().any(|value| tenant.eq_ignore_ascii_case(value))
-    {
-        bail!("Microsoft organization must be a concrete tenant ID or domain");
+fn microsoft_issuer(tenant_id: &str) -> Result<String> {
+    let valid_tenant_id = tenant_id.len() == 36
+        && tenant_id.char_indices().all(|(index, character)| {
+            if matches!(index, 8 | 13 | 18 | 23) { character == '-' } else { character.is_ascii_hexdigit() }
+        });
+    if !valid_tenant_id {
+        bail!("Microsoft tenant ID must be a UUID");
     }
     let mut issuer = url::Url::parse("https://login.microsoftonline.com")?;
-    issuer.path_segments_mut().map_err(|_| anyhow::anyhow!("invalid Microsoft authority"))?.push(tenant).push("v2.0");
+    issuer
+        .path_segments_mut()
+        .map_err(|_| anyhow::anyhow!("invalid Microsoft authority"))?
+        .push(&tenant_id.to_lowercase())
+        .push("v2.0");
     Ok(issuer.to_string())
 }
 
@@ -285,13 +289,13 @@ mod tests {
     }
 
     #[test]
-    fn microsoft_requires_a_concrete_tenant() {
-        for tenant in ["", "common", "organizations", "consumers"] {
-            assert!(microsoft_issuer(tenant).is_err());
+    fn microsoft_requires_a_tenant_id() {
+        for tenant_id in ["", "common", "example.onmicrosoft.com", "not-a-uuid"] {
+            assert!(microsoft_issuer(tenant_id).is_err());
         }
         assert_eq!(
-            microsoft_issuer("example.onmicrosoft.com").unwrap(),
-            "https://login.microsoftonline.com/example.onmicrosoft.com/v2.0"
+            microsoft_issuer("72F988BF-86F1-41AF-91AB-2D7CD011DB47").unwrap(),
+            "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0"
         );
     }
 }

@@ -224,7 +224,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 				backLabel="Back to entities"
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={entityTabs}>
-				<SettingsPanel value="general">
+				<SettingsPanel value="general" className={styles.detailPanel}>
 					<SettingsField label="Entity name" name="displayName">
 						<input
 							required
@@ -240,15 +240,12 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							autoComplete="off"
 						/>
 					</SettingsField>
-					<SettingsFieldset
-						legend="Tracking snippet"
-						description="Add this script to pages that should send events for this entity."
-					>
+					<SettingsFieldset legend="Tracking snippet" description="Add this script to pages tracked by this entity.">
 						<Snippet entityId={entity.id} />
 					</SettingsFieldset>
 					<Tags
 						labelText="Associated projects"
-						labelDescription="Controls which projects include data from this entity."
+						labelDescription="Projects that include analytics data from this entity."
 						selected={selectedProjects}
 						suggestions={projectTags}
 						onAdd={(tag) => {

@@ -19,16 +19,27 @@
 }
 
 .overlay {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgb(3 6 12 / 62%);
   position: fixed;
   inset: 0;
+  backdrop-filter: blur(3px);
   animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 100;
 }
 
 .title {
+  margin: 0 0 0.45rem;
   white-space: preserve-breaks;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
+  line-height: 1.15;
+}
+
+.description {
+  max-width: 38rem;
+  margin: 0 0 1.15rem;
+  color: var(--pico-muted-color);
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .content {
@@ -37,15 +48,49 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 90vw;
-  max-width: 25rem;
+  box-sizing: border-box;
+  width: min(28rem, calc(100vw - 2rem));
   max-height: 85vh;
-  padding: 1rem;
+  margin: 0;
+  padding: 1.25rem;
+  border: none;
+  border-radius: 0.8rem;
+  box-shadow: 0 1.25rem 4rem rgb(0 0 0 / 35%);
   animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .autoOverflow {
   overflow-y: auto;
+}
+
+.content form {
+  margin: 0;
+}
+
+.content form > label {
+  margin-bottom: 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.content form label > input,
+.content form label > select,
+.content form label > textarea {
+  margin-bottom: 0;
+}
+
+.content form > label > small {
+  display: block;
+  margin: 0.15rem 0 0.35rem;
+  color: var(--pico-muted-color);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.content form > .grid {
+  gap: 0.65rem;
+  margin-top: 1.1rem;
 }
 
 .close {
@@ -64,4 +109,11 @@
   height: 2.5rem;
   justify-content: center;
   align-items: center;
+}
+
+@media (max-width: 480px) {
+  .content {
+    width: calc(100vw - 1rem);
+    padding: 1rem;
+  }
 }

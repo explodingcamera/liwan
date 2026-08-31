@@ -111,7 +111,7 @@ export const CollectionSettingsPage = () => {
 				title="Collection"
 				description={
 					<>
-						Global defaults for collection and retention. Entity settings can override these per source. See{" "}
+						Defaults for collection and retention. Entity settings can override these values. See{" "}
 						<a href="https://liwan.dev/guides/cookie-banners/" target="_blank" rel="noopener noreferrer">
 							cookie banner considerations
 						</a>
@@ -126,8 +126,7 @@ export const CollectionSettingsPage = () => {
 							label="Visitor grouping"
 							description={
 								<>
-									Controls how repeat visits are grouped without storing raw IP addresses.{" "}
-									<DocsLink hash="visitor-grouping" />
+									Group repeat visits without storing raw IP addresses. <DocsLink hash="visitor-grouping" />
 								</>
 							}
 							name="visitorGroupMode"
@@ -146,7 +145,7 @@ export const CollectionSettingsPage = () => {
 							label="Geolocation detail"
 							description={
 								<>
-									Choose how much location data to store for new events. <DocsLink hash="geolocation" />
+									Choose the location detail stored for new events. <DocsLink hash="geolocation" />
 								</>
 							}
 							name="trackGeo"
@@ -166,7 +165,7 @@ export const CollectionSettingsPage = () => {
 							label="Track session metrics"
 							description={
 								<>
-									Required for bounce rate, time on site, entry page, and exit page. <DocsLink hash="session-metrics" />
+									Collect bounce rate, time on site, and entry and exit pages. <DocsLink hash="session-metrics" />
 								</>
 							}
 							checked={trackSessions}
@@ -180,8 +179,7 @@ export const CollectionSettingsPage = () => {
 							label="Track UTM parameters"
 							description={
 								<>
-									Stores campaign fields like source, medium, campaign, term, and content.{" "}
-									<DocsLink hash="utm-parameters" />
+									Collect source, medium, campaign, term, and content. <DocsLink hash="utm-parameters" />
 								</>
 							}
 							checked={trackUtmParams}
@@ -239,9 +237,8 @@ export const CollectionSettingsPage = () => {
 							legend="Prune data"
 							description={
 								<>
-									Pruning applies saved retention, UTM, geolocation, and session settings to historical data. Drop rules
-									only affect new events. Settings save automatically; run a dry run first to preview changes.{" "}
-									<DocsLink hash="retention-and-pruning" />
+									Apply saved collection and retention settings to existing events. Drop rules only affect new events.
+									Run a dry run to preview changes. <DocsLink hash="retention-and-pruning" />
 								</>
 							}
 						>
@@ -252,7 +249,11 @@ export const CollectionSettingsPage = () => {
 								<Dialog
 									title="Prune data?"
 									description="This permanently applies the current collection settings to historical data. Run a dry run first to preview the changes."
-									trigger={<button type="button">Prune now</button>}
+									trigger={
+										<button type="button" className="contrast">
+											Prune now
+										</button>
+									}
 								>
 									<div className="grid">
 										<Dialog.Close className="secondary outline">Cancel</Dialog.Close>

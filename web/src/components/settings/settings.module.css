@@ -1,89 +1,5 @@
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.9rem;
-}
-
-.header h1 {
-  margin: 0;
-}
-
-.titleGroup {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.titleGroup h1 {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.backButton {
-  width: 2rem;
-  height: 2rem;
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: var(--pico-muted-color);
-}
-
-.backButton:hover {
-  background: var(--pico-secondary-background);
-  color: var(--pico-color);
-  text-decoration: none;
-}
-
-.saveButton {
-  width: fit-content;
-  padding: 0.45rem 0.75rem;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--pico-muted-border-color);
-}
-
-.tab {
-  width: auto;
-  margin: 0;
-  padding: 0.35rem 0.65rem;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--pico-muted-color);
-  box-shadow: none;
-}
-
-.tab:hover {
-  background: transparent;
-  color: var(--pico-color);
-  box-shadow: none;
-}
-
-.activeTab,
-.activeTab:hover {
-  border-bottom-color: var(--pico-primary);
-  color: var(--pico-primary);
-}
-
-.panel {
-  margin-top: 0.5rem;
-}
-
-.panel h2,
-.panel h3 {
-  font-size: 1rem;
-  line-height: 1.25;
-  margin-bottom: 0.5rem;
+.detailPanel {
+  max-width: 46rem;
 }
 
 .displayHelp {
@@ -94,39 +10,53 @@
 
 .displaySections {
   display: grid;
-  gap: 0.85rem;
+  gap: 1.25rem;
 }
 
 .displaySections fieldset {
-  padding: 0.85rem 0.95rem;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .displaySections legend {
-  padding: 0 0.25rem;
+  margin-bottom: 0.5rem;
+  padding: 0;
   color: var(--pico-color);
-  font-size: 1.02rem;
-  font-weight: 650;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .displayGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
-  gap: 0;
+  gap: 0.15rem 1.25rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-form-element-background-color) 45%, transparent);
 }
 
 .dimensionGroups {
   display: grid;
-  gap: 0.75rem 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  gap: 0.65rem;
+}
+
+.dimensionGroup {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-form-element-background-color) 45%, transparent);
 }
 
 .dimensionGroup h3 {
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.35rem;
   color: var(--pico-muted-color);
-  font-size: 0.88rem;
-  font-weight: 650;
+  font-family: var(--font-family-text);
+  font-size: 0.75rem;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -136,7 +66,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.2rem 0;
+  padding: 0.25rem 0;
   color: color-mix(in srgb, var(--pico-color) 84%, var(--pico-muted-color));
 }
 
@@ -154,7 +84,7 @@
   column-gap: 0.02rem;
   margin-bottom: 0;
   padding: 0.12rem;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid var(--pico-form-element-border-color);
   border-radius: 999px;
   background: var(--pico-card-background-color);
   overflow: hidden;
@@ -308,12 +238,6 @@ details.edit summary + ul {
   background: transparent;
   color: var(--pico-primary-hover);
   box-shadow: none;
-}
-
-@media (min-width: 1050px) {
-  .dimensionGroups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 520px) {

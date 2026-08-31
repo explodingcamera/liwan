@@ -97,8 +97,8 @@ export const MyAccount = () => {
 						/>
 					</label>
 
-					<div>
-						<button type="submit" className="secondary">
+					<div className={styles.passwordActions}>
+						<button type="submit" className="contrast">
 							Update password
 						</button>
 					</div>

@@ -21,8 +21,9 @@ create table external_auth_settings (
     client_secret text,
     issuer_url text,
     allowed_domain text,
-    allowed_organization text,
-    allow_user_creation boolean not null default false check (allow_user_creation in (false, true))
+    tenant_id text,
+    allow_user_creation boolean not null default false check (allow_user_creation in (false, true)),
+    allow_session_reuse boolean not null default true check (allow_session_reuse in (false, true))
 );
 
 insert into external_auth_settings (id) values (1);

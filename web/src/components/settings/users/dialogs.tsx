@@ -2,18 +2,18 @@ import styles from "../dialogs.module.css";
 
 import type { SubmitEvent } from "react";
 import { useRef } from "react";
+import { PlusIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { invalidateUsers, useMe } from "@/hooks/api";
-import { cls } from "@/utils";
 
 export const CreateUser = () => {
 	const { role } = useMe();
 	const closeRef = useRef<HTMLButtonElement>(null);
 
-	const { mutate, error } = useMutation({
+	const { mutate, error, reset } = useMutation({
 		mutationFn: api["/api/dashboard/user"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
@@ -37,19 +37,21 @@ export const CreateUser = () => {
 
 	return (
 		<Dialog
+			onOpenChange={() => reset()}
 			title="Create a new user"
-			description="Non-admin users can only view projects they belong to. They cannot create or edit projects, entities, or users."
+			description="Users can access assigned projects unless administrator access is enabled."
 			trigger={
 				role === "admin" && (
-					<button type="button" className={cls("contrast", styles.new)}>
-						Create
+					<button type="button" className={styles.new} aria-label="Create user" title="Create user">
+						<PlusIcon size={24} strokeWidth={2.25} />
 					</button>
 				)
 			}
 		>
 			<form onSubmit={handleSubmit}>
 				<label>
-					Username <small>(cannot be changed later)</small>
+					Username
+					<small>Cannot be changed later.</small>
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-]{2,20}$"
@@ -75,7 +77,9 @@ export const CreateUser = () => {
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit">Create user</button>
+					<button type="submit" className="contrast">
+						Create user
+					</button>
 				</div>
 				{error && (
 					<article role="alert" className={styles.error}>

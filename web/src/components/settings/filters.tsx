@@ -1,7 +1,7 @@
 import styles from "./filters.module.css";
 
 import { useState } from "react";
-import { Trash2Icon, XIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import type { FilterOption, GenericFilter } from "@/components/dashboard/project/filter";
 import { FilterDialog, filterOptions } from "@/components/dashboard/project/filter";
@@ -161,11 +161,6 @@ export const FiltersEditor = ({
 	<section className={styles.section}>
 		<div className={styles.sectionHeader}>
 			<h2 className={styles.sectionTitle}>{scope === "entity" ? "Additional drop rules" : "Global drop rules"}</h2>
-			<div className={styles.filterAction}>
-				<button type="button" onClick={() => setRules([...rules, { filters: [] }])}>
-					Add rule
-				</button>
-			</div>
 		</div>
 		{scope === "entity" ? (
 			<small className={styles.description}>
@@ -190,30 +185,9 @@ export const FiltersEditor = ({
 								<small>Drop when all of these match</small>
 							</div>
 							<div className={styles.ruleActions}>
-								<FilterDialog
-									buttonText="Add filter"
-									buttonIcon={null}
-									dimensions={[...ingestDimensions]}
-									options={ingestFilterOptions}
-									allowInverted={false}
-									onAdd={(filter: GenericFilter) => {
-										const next = [...rules];
-										next[ruleIndex] = {
-											filters: [
-												...rule.filters,
-												{
-													dimension: filter.dimension,
-													filterType: filter.filterType,
-													value: filter.value,
-												},
-											],
-										};
-										setRules(next);
-									}}
-								/>
 								<button
 									type="button"
-									className="secondary outline"
+									className={styles.iconButton}
 									aria-label="Remove rule"
 									onClick={() => setRules(rules.filter((_, i) => i !== ruleIndex))}
 								>
@@ -234,7 +208,8 @@ export const FiltersEditor = ({
 										</div>
 										<button
 											type="button"
-											className="secondary outline"
+											className={styles.iconButton}
+											aria-label={`Remove ${title(filter.dimension)} filter`}
 											onClick={() => {
 												const next = [...rules];
 												next[ruleIndex] = {
@@ -243,15 +218,44 @@ export const FiltersEditor = ({
 												setRules(next);
 											}}
 										>
-											Remove
+											<XIcon size={15} />
 										</button>
 									</div>
 								))}
 							</div>
 						)}
+						<div className={styles.ruleFooter}>
+							<FilterDialog
+								buttonText="Add filter"
+								buttonIcon={null}
+								dimensions={[...ingestDimensions]}
+								options={ingestFilterOptions}
+								allowInverted={false}
+								onAdd={(filter: GenericFilter) => {
+									const next = [...rules];
+									next[ruleIndex] = {
+										filters: [
+											...rule.filters,
+											{
+												dimension: filter.dimension,
+												filterType: filter.filterType,
+												value: filter.value,
+											},
+										],
+									};
+									setRules(next);
+								}}
+							/>
+						</div>
 					</article>
 				))}
 			</div>
 		)}
+		<div className={styles.addRuleAction}>
+			<button type="button" onClick={() => setRules([...rules, { filters: [] }])}>
+				<PlusIcon size={15} />
+				<span>{rules.length === 0 ? "Add rule" : "Add another rule"}</span>
+			</button>
+		</div>
 	</section>
 );

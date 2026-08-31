@@ -41,7 +41,7 @@ export const Dialog = ({
 
 				<Dia.Viewport>
 					{showClose && (
-						<Dia.Close className={styles.close}>
+						<Dia.Close className={styles.close} aria-label="Close dialog">
 							<XIcon size="24" />
 						</Dia.Close>
 					)}

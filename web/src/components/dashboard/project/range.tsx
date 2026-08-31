@@ -49,10 +49,20 @@ export const SelectRange = ({
 
 	return (
 		<div className={styles.container}>
-			<button type="button" className="secondary" onClick={handleSelect(range.previous())}>
+			<button
+				type="button"
+				className={cls("secondary", styles.stepButton)}
+				aria-label="Previous date range"
+				onClick={handleSelect(range.previous())}
+			>
 				<ChevronLeftIcon size="24" />
 			</button>
-			<button type="button" className="secondary" onClick={handleSelect(range.next())}>
+			<button
+				type="button"
+				className={cls("secondary", styles.stepButton)}
+				aria-label="Next date range"
+				onClick={handleSelect(range.next())}
+			>
 				<ChevronRightIcon size="24" />
 			</button>
 			<details ref={detailsRef} className={cls("dropdown", styles.selectRange)}>

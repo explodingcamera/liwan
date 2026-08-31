@@ -3,7 +3,7 @@ use crate::{
     utils::validate,
 };
 mod http;
-mod providers;
+mod provider;
 
 use std::{
     collections::HashMap,
@@ -16,7 +16,7 @@ use rusqlite::{OptionalExtension, TransactionBehavior};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use providers::{FlowSecret, Provider};
+use provider::{FlowSecret, Provider};
 
 /// An external authentication provider supported by Liwan.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -25,7 +25,6 @@ pub enum ExternalAuthProvider {
     Oidc,
     Google,
     Microsoft,
-    Github,
 }
 
 impl ExternalAuthProvider {
@@ -34,7 +33,6 @@ impl ExternalAuthProvider {
             Self::Oidc => "oidc",
             Self::Google => "google",
             Self::Microsoft => "microsoft",
-            Self::Github => "github",
         }
     }
 }
@@ -47,7 +45,6 @@ impl TryFrom<String> for ExternalAuthProvider {
             "oidc" => Ok(Self::Oidc),
             "google" => Ok(Self::Google),
             "microsoft" => Ok(Self::Microsoft),
-            "github" => Ok(Self::Github),
             _ => bail!("invalid external authentication provider"),
         }
     }
@@ -63,8 +60,9 @@ pub struct ExternalAuthSettings {
     pub client_secret: Option<String>,
     pub issuer_url: Option<String>,
     pub allowed_domain: Option<String>,
-    pub allowed_organization: Option<String>,
+    pub tenant_id: Option<String>,
     pub allow_user_creation: bool,
+    pub allow_session_reuse: bool,
 }
 
 impl std::fmt::Debug for ExternalAuthSettings {
@@ -78,8 +76,9 @@ impl std::fmt::Debug for ExternalAuthSettings {
             .field("client_secret_configured", &self.client_secret.is_some())
             .field("issuer_url", &self.issuer_url)
             .field("allowed_domain", &self.allowed_domain)
-            .field("allowed_organization", &self.allowed_organization)
+            .field("tenant_id", &self.tenant_id)
             .field("allow_user_creation", &self.allow_user_creation)
+            .field("allow_session_reuse", &self.allow_session_reuse)
             .finish()
     }
 }
@@ -125,6 +124,7 @@ struct CachedProvider {
 struct RuntimeState {
     http: reqwest::Client,
     redirect_url: String,
+    settings_update: tokio::sync::Mutex<()>,
     provider: Mutex<Option<CachedProvider>>,
     flows: Mutex<HashMap<String, PendingFlow>>,
 }
@@ -149,6 +149,7 @@ impl LiwanExternalAuth {
             runtime: Arc::new(RuntimeState {
                 http,
                 redirect_url,
+                settings_update: tokio::sync::Mutex::new(()),
                 provider: Mutex::new(None),
                 flows: Mutex::new(HashMap::new()),
             }),
@@ -166,11 +167,12 @@ impl LiwanExternalAuth {
             client_secret,
             issuer_url,
             allowed_domain,
-            allowed_organization,
+            tenant_id,
             allow_user_creation,
+            allow_session_reuse,
         ) = conn.query_row(
             r"select enabled, provider, display_name, client_id, client_secret, issuer_url,
-                      allowed_domain, allowed_organization, allow_user_creation
+                      allowed_domain, tenant_id, allow_user_creation, allow_session_reuse
                from external_auth_settings where id = 1",
             [],
             |row| {
@@ -183,8 +185,9 @@ impl LiwanExternalAuth {
                     row.get("client_secret")?,
                     row.get("issuer_url")?,
                     row.get("allowed_domain")?,
-                    row.get("allowed_organization")?,
+                    row.get("tenant_id")?,
                     row.get("allow_user_creation")?,
+                    row.get("allow_session_reuse")?,
                 ))
             },
         )?;
@@ -196,13 +199,15 @@ impl LiwanExternalAuth {
             client_secret,
             issuer_url,
             allowed_domain,
-            allowed_organization,
+            tenant_id,
             allow_user_creation,
+            allow_session_reuse,
         })
     }
 
     /// Validates and replaces the external authentication settings.
     pub async fn update_settings(&self, settings: &ExternalAuthSettings) -> Result<()> {
+        let _guard = self.runtime.settings_update.lock().await;
         let settings = normalize_settings(settings);
         let provider = if settings.enabled { Some(Arc::new(self.build_provider(&settings).await?)) } else { None };
         self.persist_settings(&settings)?;
@@ -226,8 +231,9 @@ impl LiwanExternalAuth {
                    client_secret = :client_secret,
                    issuer_url = :issuer_url,
                    allowed_domain = :allowed_domain,
-                   allowed_organization = :allowed_organization,
-                   allow_user_creation = :allow_user_creation
+                   tenant_id = :tenant_id,
+                   allow_user_creation = :allow_user_creation,
+                   allow_session_reuse = :allow_session_reuse
                where id = 1",
             rusqlite::named_params! {
                 ":enabled": settings.enabled,
@@ -237,8 +243,9 @@ impl LiwanExternalAuth {
                 ":client_secret": settings.client_secret,
                 ":issuer_url": settings.issuer_url,
                 ":allowed_domain": settings.allowed_domain,
-                ":allowed_organization": settings.allowed_organization,
+                ":tenant_id": settings.tenant_id,
                 ":allow_user_creation": settings.allow_user_creation,
+                ":allow_session_reuse": settings.allow_session_reuse,
             },
         )?;
         Ok(())
@@ -251,9 +258,7 @@ impl LiwanExternalAuth {
 
     /// Starts a short-lived external login flow.
     pub async fn begin(&self, return_to: String) -> Result<ExternalAuthStart> {
-        if !is_local_return_path(&return_to) {
-            bail!("invalid return path");
-        }
+        let return_to = local_return_path(&return_to).context("invalid return path")?;
         let settings = self.settings()?;
         if !settings.enabled {
             bail!("external authentication is disabled");
@@ -298,13 +303,11 @@ impl LiwanExternalAuth {
             bail!("external authentication flow expired");
         }
 
-        let settings = self.settings()?;
-        if !settings.enabled || settings_fingerprint(&settings) != flow.settings_fingerprint {
-            bail!("external authentication settings changed during login");
-        }
-
+        self.current_flow_settings(flow.settings_fingerprint)?;
         let identity = flow.provider.complete(code, flow.secret, &self.runtime.http).await?;
 
+        // Provider requests are asynchronous, so policy may have changed while one was in progress.
+        let settings = self.current_flow_settings(flow.settings_fingerprint)?;
         let username = match self.find_user(&identity.provider_key, &identity.subject)? {
             Some(username) => username,
             None if settings.allow_user_creation => self.create_user(&identity)?,
@@ -316,6 +319,14 @@ impl LiwanExternalAuth {
     /// Cancels an in-progress login flow.
     pub fn cancel(&self, state: &str) {
         self.runtime.flows.lock().expect("external auth flow lock poisoned").remove(state);
+    }
+
+    fn current_flow_settings(&self, fingerprint: blake3::Hash) -> Result<ExternalAuthSettings> {
+        let settings = self.settings()?;
+        if !settings.enabled || settings_fingerprint(&settings) != fingerprint {
+            bail!("external authentication settings changed during login");
+        }
+        Ok(settings)
     }
 
     async fn provider(&self, settings: &ExternalAuthSettings, fingerprint: blake3::Hash) -> Result<Arc<Provider>> {
@@ -442,16 +453,27 @@ fn normalize_settings(settings: &ExternalAuthSettings) -> ExternalAuthSettings {
     let optional = |value: &Option<String>| {
         value.as_ref().map(|value| value.trim()).filter(|value| !value.is_empty()).map(str::to_string)
     };
+    let client_secret = settings.client_secret.as_ref().filter(|secret| !secret.trim().is_empty()).cloned();
+    let (issuer_url, allowed_domain, tenant_id) = match settings.provider {
+        ExternalAuthProvider::Oidc => (optional(&settings.issuer_url), None, None),
+        ExternalAuthProvider::Google => {
+            (None, optional(&settings.allowed_domain).map(|value| value.to_lowercase()), None)
+        }
+        ExternalAuthProvider::Microsoft => {
+            (None, None, optional(&settings.tenant_id).map(|value| value.to_lowercase()))
+        }
+    };
     ExternalAuthSettings {
         enabled: settings.enabled,
         provider: settings.provider,
         display_name: settings.display_name.trim().to_string(),
         client_id: settings.client_id.trim().to_string(),
-        client_secret: optional(&settings.client_secret),
-        issuer_url: optional(&settings.issuer_url),
-        allowed_domain: optional(&settings.allowed_domain).map(|value| value.to_lowercase()),
-        allowed_organization: optional(&settings.allowed_organization).map(|value| value.to_lowercase()),
+        client_secret,
+        issuer_url,
+        allowed_domain,
+        tenant_id,
         allow_user_creation: settings.allow_user_creation,
+        allow_session_reuse: settings.allow_session_reuse,
     }
 }
 
@@ -465,8 +487,9 @@ fn settings_fingerprint(settings: &ExternalAuthSettings) -> blake3::Hash {
         settings.client_secret.as_deref().unwrap_or_default(),
         settings.issuer_url.as_deref().unwrap_or_default(),
         settings.allowed_domain.as_deref().unwrap_or_default(),
-        settings.allowed_organization.as_deref().unwrap_or_default(),
+        settings.tenant_id.as_deref().unwrap_or_default(),
         if settings.allow_user_creation { "true" } else { "false" },
+        if settings.allow_session_reuse { "true" } else { "false" },
     ] {
         hasher.update(&(value.len() as u64).to_le_bytes());
         hasher.update(value.as_bytes());
@@ -474,14 +497,27 @@ fn settings_fingerprint(settings: &ExternalAuthSettings) -> blake3::Hash {
     hasher.finalize()
 }
 
-fn is_local_return_path(path: &str) -> bool {
-    path.parse::<::http::Uri>().is_ok_and(|uri| {
-        uri.scheme().is_none()
-            && uri.authority().is_none()
-            && uri.path().starts_with('/')
-            && !uri.path().starts_with("//")
-            && !path.contains('\\')
-    })
+fn local_return_path(path: &str) -> Option<String> {
+    if !path.starts_with('/') || path.contains('\\') || path.chars().any(char::is_control) {
+        return None;
+    }
+
+    let base = url::Url::parse("http://liwan.invalid").expect("valid return path base");
+    let target = base.join(path).ok()?;
+    if target.origin() != base.origin() {
+        return None;
+    }
+
+    let mut normalized = target.path().to_string();
+    if let Some(query) = target.query() {
+        normalized.push('?');
+        normalized.push_str(query);
+    }
+    if let Some(fragment) = target.fragment() {
+        normalized.push('#');
+        normalized.push_str(fragment);
+    }
+    Some(normalized)
 }
 
 #[cfg(test)]
@@ -500,8 +536,9 @@ mod tests {
             client_secret: Some("secret".to_string()),
             issuer_url: None,
             allowed_domain: Some("example.com".to_string()),
-            allowed_organization: None,
+            tenant_id: None,
             allow_user_creation: true,
+            allow_session_reuse: false,
         };
 
         app.external_auth.update_settings(&settings).await.unwrap();
@@ -528,7 +565,7 @@ mod tests {
         let app = Liwan::new_memory(Config::default()).unwrap();
         app.users.create("person", "password", UserRole::User, &[]).unwrap();
         let identity = ExternalIdentity {
-            provider_key: "github".to_string(),
+            provider_key: "https://issuer.example".to_string(),
             subject: "42".to_string(),
             username_hint: Some("person".to_string()),
         };
@@ -542,7 +579,7 @@ mod tests {
     fn deleting_a_user_removes_auth_records() {
         let app = Liwan::new_memory(Config::default()).unwrap();
         let identity = ExternalIdentity {
-            provider_key: "github.com".to_string(),
+            provider_key: "https://issuer.example".to_string(),
             subject: "42".to_string(),
             username_hint: Some("person".to_string()),
         };
@@ -554,13 +591,15 @@ mod tests {
         assert!(app.sessions.get("session").unwrap().is_none());
     }
 
-    #[tokio::test]
-    async fn rejects_external_return_paths() {
-        let app = Liwan::new_memory(Config::default()).unwrap();
-        assert!(app.external_auth.begin("https://example.com".to_string()).await.is_err());
-        assert!(app.external_auth.begin("//example.com".to_string()).await.is_err());
-        assert!(app.external_auth.begin("/\\example.com".to_string()).await.is_err());
-        assert!(app.external_auth.begin("/path\r\nlocation:https://example.com".to_string()).await.is_err());
+    #[test]
+    fn validates_and_normalizes_return_paths() {
+        assert_eq!(local_return_path("/settings?tab=auth#provider"), Some("/settings?tab=auth#provider".to_string()));
+        assert_eq!(local_return_path("/settings/../projects"), Some("/projects".to_string()));
+        assert_eq!(local_return_path("https://example.com"), None);
+        assert_eq!(local_return_path("//example.com"), None);
+        assert_eq!(local_return_path("/\\example.com"), None);
+        assert_eq!(local_return_path("/\texample.com"), None);
+        assert_eq!(local_return_path("/path\r\nlocation:https://example.com"), None);
     }
 
     #[test]

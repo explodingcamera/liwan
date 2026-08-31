@@ -1,11 +1,25 @@
 form.password {
   display: flex;
   flex-direction: column;
-  align-items: self-start;
-  --pico-spacing: 0.4rem;
-  label {
-    width: 100%;
+  gap: 0.75rem;
+
+  h2 {
+    margin-bottom: 0;
   }
+
+  label,
+  input {
+    margin-bottom: 0;
+  }
+}
+
+.passwordActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.passwordActions button {
+  width: fit-content;
 }
 
 .header {
@@ -24,7 +38,7 @@ form.password {
   p {
     margin: 0;
     font-size: 0.9rem;
-    color: var(--pico-text-color-secondary);
+    color: var(--pico-muted-color);
   }
 }
 

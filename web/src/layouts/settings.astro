@@ -1,5 +1,5 @@
 ---
-import { CodeIcon, DatabaseIcon, TablePropertiesIcon, UserIcon, UsersIcon } from "lucide-react";
+import { CodeIcon, DatabaseIcon, KeyRoundIcon, TablePropertiesIcon, UserIcon, UsersIcon } from "lucide-react";
 
 import Layout from "./layout.astro";
 
@@ -45,6 +45,10 @@ const { title, noContainer } = Astro.props;
             selected={path.startsWith("/settings/users") ? true : undefined}
             value="/settings/users">Users</option
           >
+          <option
+            selected={path.startsWith("/settings/authentication") ? true : undefined}
+            value="/settings/authentication">Authentication</option
+          >
         </optgroup>
       </select>
     </aside>
@@ -54,6 +58,7 @@ const { title, noContainer } = Astro.props;
         <li>
           <a
             data-active={path.startsWith("/settings/me") ? "true" : "false"}
+            aria-current={path.startsWith("/settings/me") ? "page" : undefined}
             class="secondary"
             href="/settings/me"
           >
@@ -69,6 +74,9 @@ const { title, noContainer } = Astro.props;
             data-active={path.startsWith("/settings/projects")
               ? "true"
               : "false"}
+            aria-current={path.startsWith("/settings/projects")
+              ? "page"
+              : undefined}
             class="secondary"
             href="/settings/projects"
           >
@@ -81,6 +89,9 @@ const { title, noContainer } = Astro.props;
             data-active={path.startsWith("/settings/entities")
               ? "true"
               : "false"}
+            aria-current={path.startsWith("/settings/entities")
+              ? "page"
+              : undefined}
             class="secondary"
             href="/settings/entities"
           >
@@ -93,6 +104,9 @@ const { title, noContainer } = Astro.props;
             data-active={path.startsWith("/settings/collection")
               ? "true"
               : "false"}
+            aria-current={path.startsWith("/settings/collection")
+              ? "page"
+              : undefined}
             class="secondary"
             href="/settings/collection"
           >
@@ -103,11 +117,29 @@ const { title, noContainer } = Astro.props;
         <li>
           <a
             data-active={path.startsWith("/settings/users") ? "true" : "false"}
+            aria-current={path.startsWith("/settings/users")
+              ? "page"
+              : undefined}
             class="secondary"
             href="/settings/users"
           >
             <UsersIcon size="20" />
             Users</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/authentication")
+              ? "true"
+              : "false"}
+            aria-current={path.startsWith("/settings/authentication")
+              ? "page"
+              : undefined}
+            class="secondary"
+            href="/settings/authentication"
+          >
+            <KeyRoundIcon size="20" />
+            Authentication</a
           >
         </li>
       </ul>

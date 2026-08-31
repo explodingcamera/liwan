@@ -23,7 +23,7 @@ name = "reports"
 arc-swap = "1.9"
 futures-lite = { version = "2.6", default-features = false, features = ["alloc"] }
 quick_cache = { version = "0.7" }
-tokio = { version = "1.53", default-features = false, features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.53", default-features = false, features = ["macros", "rt-multi-thread", "signal", "sync"] }
 tokio-util = { version = "0.7", features = ["io"] }
 
 # encoding
@@ -35,7 +35,7 @@ password-hash = { version = "0.6.1", features = [
 ] }  # required for getrandom feature
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
-tokio-tar = { package = "astral-tokio-tar", version = "0.6" }
+tokio-tar = { package = "astral-tokio-tar", version = "0.7" }
 zstd = { version = "0.13", default-features = false }
 
 # general
@@ -50,7 +50,7 @@ aide = { version = "0.16.0-alpha.4", default-features = false, features = [
 ] }
 anyhow = { version = "1.0" }
 argh = { version = "0.1", default-features = false, features = ["help"] }
-argon2 = { version = "0.6.0-rc.8", features = [] }
+argon2 = { version = "0.6.0", features = [] }
 async-compression = { version = "0.4", default-features = false, features = ["gzip", "tokio"] }
 blake3 = { version = "1.8" }
 chrono = { version = "0.4", default-features = false, features = ["now", "serde", "std"] }

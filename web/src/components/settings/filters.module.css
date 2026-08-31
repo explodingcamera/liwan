@@ -6,16 +6,13 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   line-height: 1.25;
 }
 
 .sectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
 }
 
 .section p {
@@ -24,27 +21,88 @@
 
 .description {
   display: block;
-  margin-bottom: 0.35rem;
+  margin: 0;
   color: var(--pico-muted-color);
-  font-size: 0.875em;
+  font-size: 0.825rem;
+  line-height: 1.3;
 }
 
 .empty {
-  margin: 0;
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-form-element-background-color) 55%, transparent);
   color: var(--pico-muted-color);
+  font-size: 0.875rem;
+  text-align: center;
 }
 
-.filterAction {
+.ruleFooter {
   display: flex;
-  flex-shrink: 0;
-  justify-content: flex-end;
+  margin-top: 0.5rem;
+  justify-content: flex-start;
 }
 
-.filterAction button {
+.ruleFooter button,
+.ruleFooter button:hover {
   width: fit-content;
   margin: 0;
-  padding: 0.32rem 0.55rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--settings-icon-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0.78;
+  box-shadow: none;
   white-space: nowrap;
+}
+
+.ruleFooter button::before {
+  margin-right: 0.35rem;
+  content: "+";
+}
+
+.ruleFooter button:hover {
+  color: var(--settings-icon-color);
+  opacity: 1;
+}
+
+.addRuleAction {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.65rem;
+}
+
+.addRuleAction button,
+.addRuleAction button:hover {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--settings-icon-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0.78;
+  box-shadow: none;
+}
+
+.addRuleAction button:hover {
+  background: var(--pico-dropdown-hover-background-color);
+  color: var(--settings-icon-color);
+  opacity: 1;
+}
+
+.ruleFooter button:focus-visible,
+.addRuleAction button:focus-visible {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
 }
 
 .hostnameEditor {
@@ -144,32 +202,64 @@
 .ruleList {
   display: grid;
   gap: 0.75rem;
+  margin-top: 0.65rem;
 }
 
 .ruleCard {
   margin: 0;
   padding: 0.85rem 0.95rem;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid var(--pico-form-element-border-color);
   border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+  background: color-mix(in srgb, var(--pico-form-element-background-color) 45%, transparent);
   box-shadow: none;
+}
+
+.ruleCard:has(> small) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.ruleCard:has(> small) .ruleHeader {
+  grid-column: 1 / -1;
+}
+
+.ruleCard:has(> small) > small {
+  color: var(--pico-muted-color);
+}
+
+.ruleCard:has(> small) > .ruleFooter {
+  margin: 0;
 }
 
 .ruleHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.6rem;
 }
 
 .ruleTitle {
-  display: grid;
-  gap: 0.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
 }
 
 .ruleTitle small {
   color: var(--pico-muted-color);
+}
+
+.ruleTitle small::before {
+  margin-right: 0.25rem;
+  content: "·";
+}
+
+.ruleTitle strong {
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .ruleActions {
@@ -185,6 +275,43 @@
   padding: 0.32rem 0.55rem;
 }
 
+.ruleActions .iconButton,
+.ruleActions .iconButton:hover,
+.filterRow .iconButton,
+.filterRow .iconButton:hover {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 1.75rem;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--settings-icon-color);
+  opacity: 0.68;
+  box-shadow: none;
+}
+
+.ruleActions .iconButton:hover,
+.filterRow .iconButton:hover {
+  color: var(--settings-icon-color);
+  opacity: 1;
+}
+
+.ruleActions .iconButton,
+.ruleActions .iconButton:hover {
+  margin-top: -0.2rem;
+  margin-right: -0.3rem;
+}
+
+.ruleActions .iconButton:focus-visible,
+.filterRow .iconButton:focus-visible {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
 .filterRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -193,7 +320,7 @@
   padding: 0.55rem 0.65rem;
   border: 1px solid var(--pico-muted-border-color);
   border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-card-background-color) 82%, transparent);
+  background: var(--pico-form-element-background-color);
 }
 
 .filterText {
@@ -215,6 +342,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 0.12rem 0.3rem;
+  background: var(--pico-dropdown-hover-background-color);
+  color: var(--pico-color);
 }
 
 .filterRow button {
@@ -224,21 +354,11 @@
 }
 
 @media (max-width: 700px) {
-  .ruleHeader,
-  .ruleActions {
-    display: grid;
+  .ruleCard:has(> small) {
     grid-template-columns: 1fr;
   }
 
-  .ruleActions button {
-    width: 100%;
-  }
-
-  .filterRow {
-    grid-template-columns: 1fr;
-  }
-
-  .filterRow button {
-    width: 100%;
+  .ruleCard:has(> small) > .ruleFooter {
+    justify-content: flex-start;
   }
 }

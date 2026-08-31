@@ -2,7 +2,7 @@
   display: flex;
   gap: 0.2rem;
 
-  button {
+  .stepButton {
     display: flex;
     background: transparent;
     opacity: 0.6;
@@ -28,8 +28,11 @@
       button {
         box-sizing: border-box;
         width: 100%;
-        padding: 0.4rem var(--pico-form-element-spacing-horizontal);
+        padding: 0.3rem var(--pico-form-element-spacing-horizontal);
         border-radius: calc(var(--pico-border-radius) - 0.35rem);
+        color: var(--pico-color);
+        font-size: 0.875rem;
+        line-height: 1.25;
       }
     }
   }
@@ -46,9 +49,9 @@ details.selectRange {
   }
 
   .selected {
-    font-weight: 700;
+    background: var(--pico-dropdown-hover-background-color);
     color: var(--pico-primary-hover);
-    text-decoration: underline;
+    font-weight: 600;
   }
 
   summary {
