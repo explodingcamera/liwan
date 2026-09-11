@@ -1,5 +1,6 @@
 mod common;
 use anyhow::Result;
+use liwan::app::models::Entity;
 use serde_json::json;
 
 #[tokio::test]
@@ -78,6 +79,31 @@ async fn event_allows_cross_origin_requests() -> Result<()> {
         )
         .await;
     res.assert_status_success();
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn deleted_entity_does_not_accept_events() -> Result<()> {
+    let app = common::app();
+    let (tx, mut rx) = common::events();
+    let client = common::TestClient::new(app.clone(), tx);
+    app.entities
+        .create(&Entity { id: "entity-to-delete".to_string(), display_name: "Entity to delete".to_string() }, &[])?;
+
+    let event = json!({
+        "entity_id": "entity-to-delete",
+        "name": "pageview",
+        "url": "https://example.com/"
+    });
+    let headers = vec![("user-agent".to_string(), "test".to_string())];
+
+    client.post_with_headers("/api/event", event.clone(), headers.clone()).await.assert_status_success();
+    rx.recv().await.expect("event should be received");
+
+    app.entities.delete("entity-to-delete")?;
+    client.post_with_headers("/api/event", event, headers).await.assert_status_success();
+    assert!(rx.try_recv().is_err(), "deleted entity should not produce an event");
 
     Ok(())
 }

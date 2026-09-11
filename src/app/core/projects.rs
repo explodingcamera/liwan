@@ -18,11 +18,17 @@ impl LiwanProjects {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from project_entities where project_id = ?", rusqlite::params![project_id])?;
-        for entity_id in entity_ids {
-            tx.execute(
-                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
-                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity_id },
-            )?;
+        {
+            let mut exists = tx.prepare_cached("select 1 from entities where id = ? limit 1")?;
+            for entity_id in entity_ids {
+                if !exists.exists([entity_id])? {
+                    bail!("entity not found: {entity_id}");
+                }
+                tx.execute(
+                    "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                    rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity_id },
+                )?;
+            }
         }
         tx.commit()?;
         Ok(())
@@ -99,11 +105,17 @@ impl LiwanProjects {
                 ":secret": project.secret,
             },
         )?;
-        for entity_id in initial_entities {
-            tx.execute(
-                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
-                rusqlite::named_params! { ":project_id": project.id, ":entity_id": entity_id },
-            )?;
+        {
+            let mut exists = tx.prepare_cached("select 1 from entities where id = ? limit 1")?;
+            for entity_id in initial_entities {
+                if !exists.exists([entity_id])? {
+                    bail!("entity not found: {entity_id}");
+                }
+                tx.execute(
+                    "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                    rusqlite::named_params! { ":project_id": project.id, ":entity_id": entity_id },
+                )?;
+            }
         }
         tx.commit()?;
         Ok(project.clone())

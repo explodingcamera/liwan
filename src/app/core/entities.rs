@@ -1,4 +1,6 @@
 use anyhow::{Result, bail};
+use quick_cache::sync::Cache;
+use std::sync::Arc;
 
 use crate::app::{SqlitePool, models};
 use crate::utils::validate;
@@ -6,11 +8,12 @@ use crate::utils::validate;
 #[derive(Clone)]
 pub struct LiwanEntities {
     pool: SqlitePool,
+    existing: Arc<Cache<String, ()>>,
 }
 
 impl LiwanEntities {
     pub fn new(pool: SqlitePool) -> Self {
-        Self { pool }
+        Self { pool, existing: Arc::new(Cache::new(512)) }
     }
 
     /// Get all entities
@@ -34,13 +37,20 @@ impl LiwanEntities {
             "insert into entities (id, display_name) values (:id, :display_name)",
             rusqlite::named_params! { ":id": entity.id, ":display_name": entity.display_name },
         )?;
-        for project_id in initial_projects {
-            tx.execute(
-                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
-                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity.id },
-            )?;
+        {
+            let mut exists = tx.prepare_cached("select 1 from projects where id = ? limit 1")?;
+            for project_id in initial_projects {
+                if !exists.exists([project_id])? {
+                    bail!("project not found: {project_id}");
+                }
+                tx.execute(
+                    "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                    rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity.id },
+                )?;
+            }
         }
         tx.commit()?;
+        self.existing.insert(entity.id.clone(), ());
         Ok(())
     }
 
@@ -57,11 +67,17 @@ impl LiwanEntities {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![entity_id])?;
-        for project_id in project_ids {
-            tx.execute(
-                "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
-                rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity_id },
-            )?;
+        {
+            let mut exists = tx.prepare_cached("select 1 from projects where id = ? limit 1")?;
+            for project_id in project_ids {
+                if !exists.exists([project_id])? {
+                    bail!("project not found: {project_id}");
+                }
+                tx.execute(
+                    "insert into project_entities (project_id, entity_id) values (:project_id, :entity_id)",
+                    rusqlite::named_params! { ":project_id": project_id, ":entity_id": entity_id },
+                )?;
+            }
         }
         tx.commit()?;
         Ok(())
@@ -75,6 +91,7 @@ impl LiwanEntities {
         tx.execute("delete from entities where id = ?", rusqlite::params![id])?;
         tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![id])?;
         tx.commit()?;
+        self.existing.remove(id);
         Ok(())
     }
 
@@ -98,8 +115,16 @@ impl LiwanEntities {
 
     /// Check if an entity exists
     pub fn exists(&self, id: &str) -> Result<bool> {
+        if self.existing.get(id).is_some() {
+            return Ok(true);
+        }
+
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("select 1 from entities where id = ? limit 1")?;
-        Ok(stmt.exists([id])?)
+        let exists = stmt.exists([id])?;
+        if exists {
+            self.existing.insert(id.to_string(), ());
+        }
+        Ok(exists)
     }
 }

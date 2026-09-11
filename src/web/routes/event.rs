@@ -20,7 +20,7 @@ use http::StatusCode;
 use schemars::JsonSchema;
 use std::net::IpAddr;
 use std::str::FromStr;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 use tower_governor::GovernorLayer;
 use tower_governor::governor::GovernorConfigBuilder;
 use url::Url;
@@ -144,9 +144,6 @@ fn extract_utm(url: &mut Url) -> Utm {
     }
 }
 
-static EXISTING_ENTITIES: LazyLock<quick_cache::sync::Cache<String, ()>> =
-    LazyLock::new(|| quick_cache::sync::Cache::new(512));
-
 async fn event_handler(
     state: State<RouterState>,
     ClientIp(ip): ClientIp,
@@ -198,11 +195,8 @@ fn process_event(
     let referrer = referrer.map(|r| r.trim_start_matches("www.").to_string()); // remove www. prefix
     let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
 
-    if EXISTING_ENTITIES.get(&event.entity_id).is_none() {
-        if !app.entities.exists(&event.entity_id).unwrap_or(false) {
-            return Ok(None);
-        }
-        EXISTING_ENTITIES.insert(event.entity_id.clone(), ());
+    if !app.entities.exists(&event.entity_id).unwrap_or(false) {
+        return Ok(None);
     }
 
     let settings = app.settings.resolved_for_entity(&event.entity_id);

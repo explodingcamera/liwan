@@ -104,6 +104,25 @@ impl TestClient {
         }
         request.await
     }
+
+    pub async fn delete_with_headers(&self, path: &str, headers: Vec<(String, String)>) -> axum_test::TestResponse {
+        let mut request = self.server.delete(path);
+        for (key, value) in headers {
+            if key.to_lowercase() == "cookie" {
+                for cookie_str in value.split(';').map(|s| s.trim()) {
+                    if let Some((name, val)) = cookie_str.split_once('=') {
+                        request = request.add_cookie(Cookie::new(name.trim(), val.trim()));
+                    }
+                }
+            } else {
+                request = request.add_header(
+                    key.parse::<axum::http::HeaderName>().unwrap(),
+                    value.parse::<axum::http::HeaderValue>().unwrap(),
+                );
+            }
+        }
+        request.await
+    }
 }
 
 pub fn cookies(res: &axum_test::TestResponse) -> Vec<cookie::Cookie<'static>> {
@@ -121,5 +140,6 @@ pub fn cookie_header(cookies: &[Cookie]) -> String {
 pub async fn login(client: &TestClient, username: &str, password: &str) -> Vec<cookie::Cookie<'static>> {
     let login = json!({ "username": username, "password": password });
     let res = client.post("/api/dashboard/auth/login", login).await;
+    res.assert_status_success();
     cookies(&res)
 }
