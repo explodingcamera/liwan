@@ -52,6 +52,7 @@ pub fn build_graph_buckets(
     range: &DateRange,
     interval: GraphInterval,
     timezone: Option<&str>,
+    max_datapoints: usize,
 ) -> Result<Vec<DateRange>> {
     if range.start >= range.end {
         return Ok(Vec::new());
@@ -71,9 +72,31 @@ pub fn build_graph_buckets(
         GraphInterval::Day => resolve_local_day_start(timezone, range.start.with_timezone(&timezone).date_naive())?,
     };
 
-    let mut buckets = Vec::new();
+    let mut bucket_count = 0;
     let mut bucket_start = aligned_start;
 
+    while bucket_start < range.end {
+        let next_bucket_start = match interval {
+            GraphInterval::Hour => bucket_start + Duration::hours(1),
+            GraphInterval::Day => {
+                let next_date = bucket_start
+                    .with_timezone(&timezone)
+                    .date_naive()
+                    .checked_add_days(Days::new(1))
+                    .context("Failed to advance bucket date")?;
+                resolve_local_day_start(timezone, next_date)?
+            }
+        };
+
+        bucket_count += 1;
+        if bucket_count > max_datapoints {
+            anyhow::bail!("Too many data points");
+        }
+        bucket_start = next_bucket_start;
+    }
+
+    let mut buckets = Vec::with_capacity(bucket_count);
+    bucket_start = aligned_start;
     while bucket_start < range.end {
         let next_bucket_start = match interval {
             GraphInterval::Hour => bucket_start + Duration::hours(1),
@@ -248,7 +271,7 @@ mod tests {
         };
 
         let buckets =
-            build_graph_buckets(&range, GraphInterval::Hour, Some(timezone)).expect("failed to build buckets");
+            build_graph_buckets(&range, GraphInterval::Hour, Some(timezone), 2000).expect("failed to build buckets");
         let local_starts = buckets
             .iter()
             .map(|bucket| bucket.start.with_timezone(&Tz::Asia__Kolkata).format("%Y-%m-%d %H:%M").to_string())
@@ -266,7 +289,8 @@ mod tests {
             end: local_datetime(Tz::America__New_York, 2024, 1, 3, 12, 0),
         };
 
-        let buckets = build_graph_buckets(&range, GraphInterval::Day, Some(timezone)).expect("failed to build buckets");
+        let buckets =
+            build_graph_buckets(&range, GraphInterval::Day, Some(timezone), 2000).expect("failed to build buckets");
         let local_starts = buckets
             .iter()
             .map(|bucket| bucket.start.with_timezone(&Tz::America__New_York).format("%Y-%m-%d %H:%M").to_string())
@@ -299,7 +323,8 @@ mod tests {
             .expect("failed to append events");
 
         let range = DateRange { start, end };
-        let buckets = build_graph_buckets(&range, GraphInterval::Day, Some("UTC")).expect("failed to build buckets");
+        let buckets =
+            build_graph_buckets(&range, GraphInterval::Day, Some("UTC"), 2000).expect("failed to build buckets");
         let conn = app.events_conn().expect("failed to get events conn");
         let report =
             overall_report(&conn, &["entity-1".to_string()], "pageview", &range, &buckets, &[], &Metric::Views)
@@ -307,5 +332,14 @@ mod tests {
 
         let values = report.iter().map(|point| point.value).collect::<Vec<_>>();
         assert_eq!(values, vec![1.0, 1.0]);
+    }
+
+    #[test]
+    fn build_graph_buckets_rejects_excessive_ranges() {
+        let start = local_datetime(Tz::UTC, 2024, 1, 1, 0, 0);
+        let max_datapoints = 2000;
+        let range = DateRange { start, end: start + Duration::hours(max_datapoints as i64 + 1) };
+
+        assert!(build_graph_buckets(&range, GraphInterval::Hour, Some("UTC"), max_datapoints).is_err());
     }
 }

@@ -17,7 +17,7 @@ listen = 9042  # The port to listen on (http)
 # client_ip_headers=["cloudflare", "fly", "X-Forwarded-For", "X-Client-IP"]
 
 # # Trusted reverse proxies (IP or CIDR).
-# # Empty by default, meaning all proxies are trusted.
+# # Empty by default, meaning forwarded client IP and GeoIP headers are not trusted.
 # trusted_proxies=["127.0.0.1", "10.0.0.0/8"]
 
 # # Hour of day, in the server's local timezone, when visitor grouping salts rotate.
@@ -42,7 +42,18 @@ listen = 9042  # The port to listen on (http)
 # # Otherwise, the database will be downloaded automatically and stored in the data_dir
 # maxmind_db_path="./GeoLite2-City.mmdb"
 
+# Database settings
 [duckdb]
 # # See https://liwan.dev/guides/duckdb for guidance
 # threads=2
 # memory_limit=2G
+
+# Resource limits for dashboard reports.
+[limits]
+# report_timeout_seconds=30
+# report_max_concurrency=8
+# report_max_range_days=3660
+# report_max_dimension_results=1000
+# report_max_datapoints=2000
+# report_max_filters=20
+# report_max_filter_value_bytes=2048

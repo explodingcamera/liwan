@@ -150,9 +150,9 @@ impl TrustedProxy {
     }
 }
 
-pub fn parse_header_ip(parts: &http::request::Parts, source: &ClientIpHeaderSource) -> Option<IpAddr> {
+pub fn parse_header_ip(headers: &http::HeaderMap, source: &ClientIpHeaderSource) -> Option<IpAddr> {
     let header = source.as_header_name();
-    let value = parts.headers.get(header)?.to_str().ok()?.trim();
+    let value = headers.get(header)?.to_str().ok()?.trim();
     match header {
         "cloudfront-viewer-address" => value.rsplit_once(':')?.0.parse().ok(),
         "x-forwarded-for" => value.split(',').next_back()?.trim().parse().ok(),
@@ -167,8 +167,44 @@ pub fn parse_header_ip(parts: &http::request::Parts, source: &ClientIpHeaderSour
     }
 }
 
+pub fn parse_client_ip(
+    headers: &http::HeaderMap,
+    source: &ClientIpHeaderSource,
+    peer_ip: Option<IpAddr>,
+    trusted_proxies: &[TrustedProxy],
+) -> Option<IpAddr> {
+    let header = source.as_header_name();
+    let value = headers.get(header)?.to_str().ok()?.trim();
+    let chain = match header {
+        "x-forwarded-for" => value.split(',').map(|part| part.trim().parse().ok()).collect::<Option<Vec<_>>>(),
+        "forwarded" => value
+            .split(',')
+            .map(|entry| {
+                entry
+                    .split(';')
+                    .find_map(|part| part.trim().strip_prefix("for="))
+                    .map(|part| part.trim_matches('"'))
+                    .and_then(|part| part.parse().ok())
+            })
+            .collect::<Option<Vec<_>>>(),
+        _ => return parse_header_ip(headers, source),
+    };
+
+    let mut current = peer_ip?;
+    let mut advanced = false;
+    for forwarded_ip in chain?.into_iter().rev() {
+        if !trusted_proxies.iter().any(|proxy| proxy.contains(current)) {
+            break;
+        }
+        current = forwarded_ip;
+        advanced = true;
+    }
+
+    advanced.then_some(current)
+}
+
 pub fn should_trust_proxy_headers(peer_ip: Option<IpAddr>, proxies: &[TrustedProxy]) -> bool {
-    proxies.is_empty() || peer_ip.is_some_and(|ip| proxies.iter().any(|proxy| proxy.contains(ip)))
+    peer_ip.is_some_and(|ip| proxies.iter().any(|proxy| proxy.contains(ip)))
 }
 
 #[cfg(test)]
@@ -183,18 +219,16 @@ mod tests {
             .header("X-Client-IP", "8.8.4.4")
             .body(())
             .unwrap();
-        let (parts, _) = req.into_parts();
-
         assert_eq!(
-            parse_header_ip(&parts, &ClientIpHeaderSource::Header("x-forwarded-for".to_string())),
+            parse_header_ip(req.headers(), &ClientIpHeaderSource::Header("x-forwarded-for".to_string())),
             Some("8.8.8.8".parse().unwrap())
         );
         assert_eq!(
-            parse_header_ip(&parts, &ClientIpHeaderSource::Header("forwarded".to_string())),
+            parse_header_ip(req.headers(), &ClientIpHeaderSource::Header("forwarded".to_string())),
             Some("1.1.1.1".parse().unwrap())
         );
         assert_eq!(
-            parse_header_ip(&parts, &ClientIpHeaderSource::Header("x-client-ip".to_string())),
+            parse_header_ip(req.headers(), &ClientIpHeaderSource::Header("x-client-ip".to_string())),
             Some("8.8.4.4".parse().unwrap())
         );
     }
@@ -221,6 +255,22 @@ mod tests {
 
         assert!(should_trust_proxy_headers(Some("10.0.0.1".parse().unwrap()), &trusted));
         assert!(!should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &trusted));
-        assert!(should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &[]));
+        assert!(!should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &[]));
+    }
+
+    #[test]
+    fn client_ip_walks_trusted_forwarded_chain() {
+        let request = http::Request::builder().header("x-forwarded-for", "203.0.113.10, 10.0.0.1").body(()).unwrap();
+        let source = ClientIpHeaderSource::Header("x-forwarded-for".to_string());
+        let peer = Some("10.0.0.2".parse().unwrap());
+        let all_trusted =
+            [TrustedProxy::Ip("10.0.0.1".parse().unwrap()), TrustedProxy::Ip("10.0.0.2".parse().unwrap())];
+        let peer_only = [TrustedProxy::Ip("10.0.0.2".parse().unwrap())];
+
+        assert_eq!(
+            parse_client_ip(request.headers(), &source, peer, &all_trusted),
+            Some("203.0.113.10".parse().unwrap())
+        );
+        assert_eq!(parse_client_ip(request.headers(), &source, peer, &peer_only), Some("10.0.0.1".parse().unwrap()));
     }
 }

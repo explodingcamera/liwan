@@ -17,6 +17,7 @@ pub fn dimension_report(
     dimension: &Dimension,
     filters: &[DimensionFilter],
     metric: &Metric,
+    max_results: usize,
 ) -> Result<ReportTable> {
     if entities.is_empty() {
         return Ok(BTreeMap::new());
@@ -87,7 +88,8 @@ pub fn dimension_report(
 			{metric_column} as metric_value
 		from session_data sd
 		group by dimension_value
-		order by metric_value desc;
+		order by metric_value desc
+		limit {max_results};
 	"
     );
 
@@ -110,5 +112,43 @@ pub fn dimension_report(
             let report_table = rows.collect::<Result<BTreeMap<String, f64>, duckdb::Error>>()?;
             Ok(report_table)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::Liwan;
+    use crate::config::Config;
+    use chrono::{Duration, TimeZone, Utc};
+
+    #[test]
+    fn dimension_report_limits_results() {
+        let app = Liwan::new_memory(Config::default()).expect("failed to create app");
+        let max_results = app.config.limits.report_max_dimension_results;
+        let conn = app.events_conn().expect("failed to get events conn");
+        conn.execute_batch(&format!(
+            "insert into events (entity_id, visitor_group_id, event, created_at, fqdn, path)
+             select 'entity-1', 'visitor-' || i, 'pageview', '2024-01-01'::timestamp, 'example.com', '/' || i
+             from range({}) values(i)",
+            max_results + 1
+        ))
+        .expect("failed to insert events");
+        let start = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+        let range = DateRange { start, end: start + Duration::days(1) };
+
+        let report = dimension_report(
+            &conn,
+            &["entity-1".to_string()],
+            "pageview",
+            &range,
+            &Dimension::Path,
+            &[],
+            &Metric::Views,
+            max_results,
+        )
+        .expect("failed to build dimension report");
+
+        assert_eq!(report.len(), max_results);
     }
 }

@@ -52,7 +52,7 @@ async fn test_setup() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    let token = app.onboarding.token().unwrap().expect("onboarding should exist");
+    let token = app.onboarding.token().expect("onboarding should exist");
 
     // Invalid token should return 401
     let setup = json!({ "token": "invalid_token", "username": "admin2", "password": "adminadminadmin" });
@@ -70,7 +70,7 @@ async fn test_setup() -> Result<()> {
     res.assert_status_success();
 
     // Check that the onboarding is cleared
-    assert_eq!(app.onboarding.token().unwrap(), None, "onboarding should be cleared");
+    assert_eq!(app.onboarding.token(), None, "onboarding should be cleared");
     let setup = json!({ "token": token, "username": "admin", "password": "adminadminadmin" });
     let res = client.post("/api/dashboard/auth/setup", setup).await;
     res.assert_status_unauthorized();

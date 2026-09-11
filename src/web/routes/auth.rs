@@ -2,7 +2,6 @@ use aide::{
     UseApi,
     axum::{ApiRouter, IntoApiResponse, routing::*},
 };
-use anyhow::Context;
 use axum::{Json, extract::State};
 use axum_extra::extract::CookieJar;
 use http::{StatusCode, header};
@@ -14,16 +13,21 @@ use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use crate::{
     PASSWORD_MIN_LENGTH,
     app::models::UserRole,
-    utils::hash::onboarding_token_matches,
+    config::Config,
     web::{
         MaybeSessionId, RouterState,
         session::{Auth, LOGOUT_COOKIES, issue_session},
-        webext::{ApiResult, AxumErrExt, empty_response, http_bail},
+        webext::{ApiResult, AxumErrExt, ClientIpKeyExtractor, empty_response, http_bail},
     },
 };
 
-pub fn router() -> ApiRouter<RouterState> {
-    let limiter = GovernorConfigBuilder::default().per_second(2).burst_size(5).finish().expect("valid governor config");
+pub fn router(config: &Config) -> ApiRouter<RouterState> {
+    let limiter = GovernorConfigBuilder::default()
+        .per_second(2)
+        .burst_size(5)
+        .key_extractor(ClientIpKeyExtractor::new(config))
+        .finish()
+        .expect("valid governor config");
 
     let governor_limiter = limiter.limiter().clone();
     tokio::task::spawn(async move {
@@ -65,21 +69,18 @@ async fn me(Auth(user): Auth) -> UseApi<impl IntoApiResponse, Json<MeResponse>> 
 }
 
 async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> ApiResult<impl IntoApiResponse> {
-    let token = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if !token.as_deref().is_some_and(|token| onboarding_token_matches(token, &params.token)) {
-        http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
-    }
-
     if params.password.len() < PASSWORD_MIN_LENGTH {
         http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
     }
 
-    app.users
-        .create(&params.username, &params.password, UserRole::Admin, &[])
-        .http_err("failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
+    let completed = app
+        .onboarding
+        .complete_setup(&params.token, || app.users.create(&params.username, &params.password, UserRole::Admin, &[]))
+        .http_err("failed to complete setup", StatusCode::INTERNAL_SERVER_ERROR)?;
+    if !completed {
+        http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
+    }
 
-    app.onboarding.clear().context("onboarding lock poisoned").http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(empty_response())
 }
 

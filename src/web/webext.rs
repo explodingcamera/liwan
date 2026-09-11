@@ -5,7 +5,10 @@ use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::utils::ip_headers::{parse_geoip_headers, parse_header_ip, should_trust_proxy_headers};
+use crate::config::Config;
+use crate::utils::ip_headers::{
+    ClientIpHeaderSource, TrustedProxy, parse_client_ip, parse_geoip_headers, should_trust_proxy_headers,
+};
 use crate::web::Files;
 use crate::web::RouterState;
 use aide::axum::IntoApiResponse;
@@ -20,6 +23,7 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use serde_json::json;
 use tower::Service;
+use tower_governor::{GovernorError, key_extractor::KeyExtractor};
 
 pub type ApiResult<T, E = ApiError> = Result<T, E>;
 
@@ -283,13 +287,48 @@ impl FromRequestParts<RouterState> for ClientIp {
 
         if should_trust_proxy_headers(peer_ip, &state.config.trusted_proxies) {
             for header in state.config.client_ip_headers.iter() {
-                if let Some(ip) = parse_header_ip(parts, header).filter(is_public) {
+                if let Some(ip) =
+                    parse_client_ip(&parts.headers, header, peer_ip, &state.config.trusted_proxies).filter(is_public)
+                {
                     return Ok(ClientIp(Some(ip)));
                 }
             }
         }
 
         Ok(ClientIp(peer_ip.filter(is_public)))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ClientIpKeyExtractor {
+    headers: Vec<ClientIpHeaderSource>,
+    trusted_proxies: Vec<TrustedProxy>,
+}
+
+impl ClientIpKeyExtractor {
+    pub fn new(config: &Config) -> Self {
+        Self {
+            headers: config.client_ip_headers.as_ref().to_vec(),
+            trusted_proxies: config.trusted_proxies.as_ref().to_vec(),
+        }
+    }
+}
+
+impl KeyExtractor for ClientIpKeyExtractor {
+    type Key = IpAddr;
+
+    fn extract<T>(&self, request: &http::Request<T>) -> Result<Self::Key, GovernorError> {
+        let peer_ip = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(addr)| addr.ip());
+
+        if should_trust_proxy_headers(peer_ip, &self.trusted_proxies) {
+            for header in &self.headers {
+                if let Some(ip) = parse_client_ip(request.headers(), header, peer_ip, &self.trusted_proxies) {
+                    return Ok(ip);
+                }
+            }
+        }
+
+        peer_ip.ok_or(GovernorError::UnableToExtractKey)
     }
 }
 
@@ -315,5 +354,37 @@ impl FromRequestParts<RouterState> for GeoLocationHeaders {
 
         let values = parse_geoip_headers(&parts.headers, &state.config.geoip.headers);
         Ok(Self { country: values.country, city: values.city })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::ip_headers::TrustedProxy;
+
+    fn request(peer_ip: &str) -> http::Request<()> {
+        let mut request = http::Request::builder().header("x-forwarded-for", "203.0.113.10").body(()).unwrap();
+        request.extensions_mut().insert(ConnectInfo(SocketAddr::new(peer_ip.parse().unwrap(), 1234)));
+        request
+    }
+
+    #[test]
+    fn rate_limit_key_uses_headers_only_for_trusted_proxies() {
+        let mut config = Config::default();
+        config.client_ip_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
+        config.trusted_proxies = vec![TrustedProxy::Ip("10.0.0.1".parse().unwrap())].into();
+        let extractor = ClientIpKeyExtractor::new(&config);
+
+        assert_eq!(extractor.extract(&request("10.0.0.1")).unwrap(), "203.0.113.10".parse::<IpAddr>().unwrap());
+        assert_eq!(extractor.extract(&request("10.0.0.2")).unwrap(), "10.0.0.2".parse::<IpAddr>().unwrap());
+    }
+
+    #[test]
+    fn rate_limit_key_ignores_headers_without_trusted_proxies() {
+        let mut config = Config::default();
+        config.client_ip_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
+        let extractor = ClientIpKeyExtractor::new(&config);
+
+        assert_eq!(extractor.extract(&request("10.0.0.1")).unwrap(), "10.0.0.1".parse::<IpAddr>().unwrap());
     }
 }

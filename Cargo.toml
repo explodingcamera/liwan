@@ -106,6 +106,9 @@ tower = { version = "*", features = ["util"] }
 default = ["geoip"]
 geoip = ["dep:maxminddb"]
 
+[lints.clippy]
+too_many_arguments = "allow"
+
 [profile.dev]
 opt-level = 1
 

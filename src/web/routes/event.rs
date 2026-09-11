@@ -2,11 +2,12 @@ use crate::app::models::{
     FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings, VisitorGroupMode, hostname_allowed,
 };
 use crate::app::{Liwan, models::Event};
+use crate::config::Config;
 use crate::utils::hash::{visitor_group_id, visitor_group_id_cidr, visitor_group_id_fallback};
 use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::RouterState;
-use crate::web::webext::{ApiResult, AxumErrExt, ClientIp, GeoLocationHeaders, empty_response};
+use crate::web::webext::{ApiResult, AxumErrExt, ClientIp, ClientIpKeyExtractor, GeoLocationHeaders, empty_response};
 
 use aide::axum::routing::post;
 use aide::axum::{ApiRouter, IntoApiResponse};
@@ -24,9 +25,13 @@ use tower_governor::GovernorLayer;
 use tower_governor::governor::GovernorConfigBuilder;
 use url::Url;
 
-pub fn router() -> ApiRouter<RouterState> {
-    let limiter =
-        GovernorConfigBuilder::default().per_second(2).burst_size(10).finish().expect("valid governor config");
+pub fn router(config: &Config) -> ApiRouter<RouterState> {
+    let limiter = GovernorConfigBuilder::default()
+        .per_second(2)
+        .burst_size(10)
+        .key_extractor(ClientIpKeyExtractor::new(config))
+        .finish()
+        .expect("valid governor config");
     let governor_limiter = limiter.limiter().clone();
 
     tokio::task::spawn(async move {

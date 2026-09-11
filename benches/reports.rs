@@ -30,7 +30,7 @@ fn benchmark_reports(c: &mut Criterion) {
         start: Utc::now().checked_sub_days(Days::new(365)).expect("failed to build range start"),
         end: Utc::now(),
     };
-    let day_buckets = reports::build_graph_buckets(&range, GraphInterval::Day, Some("UTC"))
+    let day_buckets = reports::build_graph_buckets(&range, GraphInterval::Day, Some("UTC"), 2000)
         .expect("failed to build day buckets for benchmark");
 
     let conn = app.events_conn().expect("failed to get events connection");
@@ -80,7 +80,7 @@ fn benchmark_reports(c: &mut Criterion) {
                 &metric,
                 |b, metric| {
                     b.iter(|| {
-                        reports::dimension_report(&conn, &entities, "pageview", &range, &dimension, &[], metric)
+                        reports::dimension_report(&conn, &entities, "pageview", &range, &dimension, &[], metric, 1000)
                             .expect("dimension_report failed")
                     });
                 },

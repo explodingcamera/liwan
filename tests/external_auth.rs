@@ -31,7 +31,7 @@ async fn authenticated_client(role: UserRole) -> Result<(Arc<Liwan>, common::Tes
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
     app.users.create("test-user", "test-password", role, &[])?;
-    app.onboarding.clear()?;
+    app.onboarding.clear();
     let cookies = common::login(&client, "test-user", "test-password").await;
     Ok((app, client, common::cookie_header(&cookies)))
 }
@@ -143,7 +143,7 @@ async fn oidc_start_uses_discovery_pkce_and_state_cookie() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
     app.users.create("admin", "test-password", UserRole::Admin, &[])?;
-    app.onboarding.clear()?;
+    app.onboarding.clear();
     let cookies = common::login(&client, "admin", "test-password").await;
     let cookie_header = common::cookie_header(&cookies);
 

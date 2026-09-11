@@ -20,10 +20,11 @@ use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 use crate::{
     app::{ExternalAuthProvider, ExternalAuthSettings, models::UserRole},
+    config::Config,
     web::{
         RouterState,
         session::{Auth, issue_session},
-        webext::{ApiResult, AxumErrExt, http_bail},
+        webext::{ApiResult, AxumErrExt, ClientIpKeyExtractor, http_bail},
     },
 };
 
@@ -45,11 +46,19 @@ static STATE_COOKIE_REMOVAL: LazyLock<Cookie<'static>> = LazyLock::new(|| {
     cookie
 });
 
-pub fn router() -> ApiRouter<RouterState> {
-    let start_limiter =
-        GovernorConfigBuilder::default().per_second(1).burst_size(5).finish().expect("valid governor config");
-    let callback_limiter =
-        GovernorConfigBuilder::default().per_second(2).burst_size(5).finish().expect("valid governor config");
+pub fn router(config: &Config) -> ApiRouter<RouterState> {
+    let start_limiter = GovernorConfigBuilder::default()
+        .per_second(1)
+        .burst_size(5)
+        .key_extractor(ClientIpKeyExtractor::new(config))
+        .finish()
+        .expect("valid governor config");
+    let callback_limiter = GovernorConfigBuilder::default()
+        .per_second(2)
+        .burst_size(5)
+        .key_extractor(ClientIpKeyExtractor::new(config))
+        .finish()
+        .expect("valid governor config");
     let start_governor = start_limiter.limiter().clone();
     let callback_governor = callback_limiter.limiter().clone();
     tokio::task::spawn(async move {
@@ -135,7 +144,7 @@ fn default_return_to() -> String {
 
 async fn metadata(app: State<RouterState>) -> ApiResult<UseApi<impl IntoApiResponse, Json<ExternalAuthMetadata>>> {
     let settings = app.external_auth.settings().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
-    let onboarded = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.is_none();
+    let onboarded = app.onboarding.token().is_none();
     Ok(Json(ExternalAuthMetadata {
         enabled: settings.enabled && onboarded,
         provider: settings.provider,
@@ -212,7 +221,7 @@ async fn start(
     cookies: CookieJar,
     Query(query): Query<StartQuery>,
 ) -> ApiResult<UseApi<Response, ()>> {
-    if app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.is_some() {
+    if app.onboarding.token().is_some() {
         http_bail!(StatusCode::NOT_FOUND, "external authentication is unavailable");
     }
     let start = app

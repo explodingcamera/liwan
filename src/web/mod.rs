@@ -13,7 +13,7 @@ use rust_embed::RustEmbed;
 
 use aide::{axum::ApiRouter, openapi};
 use http::{HeaderName, HeaderValue, Method, header};
-use tokio::sync::mpsc::Sender;
+use tokio::sync::{Semaphore, mpsc::Sender};
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
@@ -39,6 +39,7 @@ struct Script;
 pub struct RouterState {
     pub app: Arc<Liwan>,
     pub events: Sender<Event>,
+    pub report_permits: Arc<Semaphore>,
 }
 
 // feTS treats directly resolved component references as circular and falls back to less precise types.
@@ -124,19 +125,23 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()
 
     let dashboard = ApiRouter::new()
         .merge(routes::admin::router())
-        .merge(routes::auth::router())
-        .merge(routes::external_auth::router())
+        .merge(routes::auth::router(&app.config))
+        .merge(routes::external_auth::router(&app.config))
         .merge(routes::dashboard::router());
 
     let router = ApiRouter::new()
-        .nest("/api", routes::event::router().layer(event_cors))
+        .nest("/api", routes::event::router(&app.config).layer(event_cors))
         .nest("/api/dashboard", dashboard)
         .route_service("/script.js", StaticFile::<Script>::new("script.min.js").layer(script_cors).into_service())
         .fallback(axum::routing::get(serve))
         .layer(RequestBodyDeadlineLayer::new(Duration::from_secs(30)))
         .layer(CompressionLayer::new())
         .layer(set_headers)
-        .with_state(RouterState { app: app.clone(), events })
+        .with_state(RouterState {
+            app: app.clone(),
+            events,
+            report_permits: Arc::new(Semaphore::new(app.config.limits.report_max_concurrency)),
+        })
         .finish_api(&mut api);
 
     Ok((router, api))
@@ -164,7 +169,7 @@ pub fn save_spec(spec: openapi::OpenApi) -> Result<()> {
 }
 
 pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
-    match app.onboarding.token()? {
+    match app.onboarding.token() {
         Some(onboarding) => {
             let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding);
             tracing::info!("It looks like you're running Liwan for the first time!");

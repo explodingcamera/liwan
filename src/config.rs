@@ -32,6 +32,9 @@ pub struct Config {
     #[serde(default)]
     pub duckdb: DuckdbConfig,
 
+    #[serde(default)]
+    pub limits: LimitsConfig,
+
     /// Client IP header names or provider presets.
     /// Presets: `cloudflare`, `fastly`, `fly`, `cloudfront`, and `akamai`.
     #[serde(default, alias = "trusted_headers")]
@@ -51,6 +54,7 @@ impl Default for Config {
             data_dir: default_data_dir(),
             geoip: Default::default(),
             duckdb: Default::default(),
+            limits: Default::default(),
             disable_favicons: false,
             listen: None,
             port: None,
@@ -83,6 +87,38 @@ pub struct DuckdbConfig {
     pub memory_limit: Option<String>,
     #[serde(default)]
     pub threads: Option<NonZeroU16>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LimitsConfig {
+    #[serde(default = "default_report_max_concurrency")]
+    pub report_max_concurrency: usize,
+    #[serde(default = "default_report_timeout_seconds")]
+    pub report_timeout_seconds: u64,
+    #[serde(default = "default_report_max_range_days")]
+    pub report_max_range_days: i64,
+    #[serde(default = "default_report_max_dimension_results")]
+    pub report_max_dimension_results: usize,
+    #[serde(default = "default_report_max_datapoints")]
+    pub report_max_datapoints: usize,
+    #[serde(default = "default_report_max_filters")]
+    pub report_max_filters: usize,
+    #[serde(default = "default_report_max_filter_value_bytes")]
+    pub report_max_filter_value_bytes: usize,
+}
+
+impl Default for LimitsConfig {
+    fn default() -> Self {
+        Self {
+            report_max_concurrency: default_report_max_concurrency(),
+            report_timeout_seconds: default_report_timeout_seconds(),
+            report_max_range_days: default_report_max_range_days(),
+            report_max_dimension_results: default_report_max_dimension_results(),
+            report_max_datapoints: default_report_max_datapoints(),
+            report_max_filters: default_report_max_filters(),
+            report_max_filter_value_bytes: default_report_max_filter_value_bytes(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -129,6 +165,34 @@ fn default_data_dir() -> String {
 
 fn default_visitor_group_rotation_hour() -> u8 {
     4
+}
+
+fn default_report_max_concurrency() -> usize {
+    8
+}
+
+fn default_report_timeout_seconds() -> u64 {
+    30
+}
+
+fn default_report_max_range_days() -> i64 {
+    3660
+}
+
+fn default_report_max_dimension_results() -> usize {
+    1000
+}
+
+fn default_report_max_datapoints() -> usize {
+    2000
+}
+
+fn default_report_max_filters() -> usize {
+    20
+}
+
+fn default_report_max_filter_value_bytes() -> usize {
+    2048
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -198,6 +262,18 @@ impl Config {
         if config.visitor_group_rotation_hour > 23 {
             bail!("Invalid visitor_group_rotation_hour: must be between 0 and 23");
         }
+        if config.limits.report_max_concurrency == 0 || config.limits.report_max_concurrency > 10 {
+            bail!("Invalid limits.report_max_concurrency: must be between 1 and 10");
+        }
+        if config.limits.report_timeout_seconds == 0
+            || config.limits.report_max_range_days <= 0
+            || config.limits.report_max_dimension_results == 0
+            || config.limits.report_max_datapoints == 0
+            || config.limits.report_max_filters == 0
+            || config.limits.report_max_filter_value_bytes == 0
+        {
+            bail!("Invalid report limit: values must be greater than zero");
+        }
 
         Ok(config)
     }
@@ -216,7 +292,8 @@ fn map_env_key(key: &str) -> Option<String> {
     if key == "geoip_headers" {
         return Some("geoip.headers".to_string());
     }
-    const NESTED_PREFIXES: &[(&str, &str)] = &[("maxmind_", "geoip.maxmind_"), ("duckdb_", "duckdb.")];
+    const NESTED_PREFIXES: &[(&str, &str)] =
+        &[("maxmind_", "geoip.maxmind_"), ("duckdb_", "duckdb."), ("limits_", "limits.")];
 
     for (prefix, mapped_prefix) in NESTED_PREFIXES {
         if let Some(rest) = key.strip_prefix(prefix) {
@@ -274,6 +351,8 @@ mod test {
             ("GEOIP_MAXMIND_EDITION", "test3"),
             ("LIWAN_DUCKDB_MEMORY_LIMIT", "2GB"),
             ("LIWAN_DUCKDB_THREADS", "4"),
+            ("LIWAN_LIMITS_REPORT_MAX_CONCURRENCY", "6"),
+            ("LIWAN_LIMITS_REPORT_TIMEOUT_SECONDS", "45"),
             ("LIWAN_MAXMIND_LICENSE_KEY", "test"),
             ("LIWAN_MAXMIND_ACCOUNT_ID", "test"),
             ("LIWAN_MAXMIND_DB_PATH", "test"),
@@ -290,6 +369,8 @@ mod test {
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
         assert_eq!(config.duckdb.memory_limit, Some("2GB".to_string()));
         assert_eq!(config.duckdb.threads, Some(NonZeroU16::new(4).unwrap()));
+        assert_eq!(config.limits.report_max_concurrency, 6);
+        assert_eq!(config.limits.report_timeout_seconds, 45);
     }
 
     #[test]
@@ -421,5 +502,21 @@ mod test {
         assert_eq!(config.base_url, "http://localhost:9042");
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
         assert!(config.client_ip_headers.is_empty());
+        assert_eq!(config.limits.report_max_concurrency, 8);
+        assert_eq!(config.limits.report_timeout_seconds, 30);
+        assert_eq!(config.limits.report_max_range_days, 3660);
+        assert_eq!(config.limits.report_max_dimension_results, 1000);
+        assert_eq!(config.limits.report_max_datapoints, 2000);
+        assert_eq!(config.limits.report_max_filters, 20);
+        assert_eq!(config.limits.report_max_filter_value_bytes, 2048);
+    }
+
+    #[test]
+    fn test_invalid_report_limits() {
+        let error = Config::load(None, [("LIWAN_LIMITS_REPORT_TIMEOUT_SECONDS", "0")]).unwrap_err();
+        assert!(error.to_string().contains("values must be greater than zero"));
+
+        let error = Config::load(None, [("LIWAN_LIMITS_REPORT_MAX_CONCURRENCY", "11")]).unwrap_err();
+        assert!(error.to_string().contains("must be between 1 and 10"));
     }
 }
