@@ -84,7 +84,8 @@ pub fn overall_stats(
 					e.visitor_group_id,
 					e.created_at,
 					e.time_from_last_event,
-					e.time_to_next_event
+					e.time_to_next_event,
+					e.exited_at
 				from events e
 				where
 					e.event = ?::text and
@@ -112,4 +113,31 @@ pub fn overall_stats(
     })?;
 
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::Liwan;
+    use crate::config::Config;
+    use chrono::Duration;
+
+    #[test]
+    fn overall_stats_uses_terminal_event_exit_duration() {
+        let app = Liwan::new_memory(Config::default()).expect("failed to create app");
+        let created_at = Utc::now() - Duration::minutes(5);
+        let exited_at = created_at + Duration::seconds(90);
+        let conn = app.events_conn().expect("failed to get event connection");
+        conn.execute(
+            "insert into events (entity_id, visitor_group_id, event, created_at, fqdn, path, exited_at) values (?, ?, ?, ?, ?, ?, ?)",
+            duckdb::params!["entity-1", "visitor-1", "pageview", created_at, "example.com", "/", exited_at],
+        )
+        .expect("failed to insert event");
+
+        let range = DateRange { start: created_at - Duration::minutes(1), end: exited_at + Duration::minutes(1) };
+        let stats =
+            overall_stats(&conn, &["entity-1".to_string()], "pageview", &range, &[]).expect("failed to build stats");
+
+        assert_eq!(stats.avg_time_on_site, Some(90.0));
+    }
 }

@@ -11,6 +11,7 @@ type Payload = {
 	referrer?: string;
 	screen_width?: string;
 	orientation?: string;
+	exit?: boolean;
 	// biome-ignore lint/suspicious/noExplicitAny: we want to allow any additional properties to be sent in the payload
 } & Record<string, any>;
 
@@ -44,13 +45,24 @@ export type EventOptions = {
 	 * Required for custom events.
 	 */
 	entity?: string;
+
+	/**
+	 * Whether this event should be reported again when the page becomes hidden.
+	 *
+	 * Defaults to `true` for pageviews and `false` for other events. This option is ignored in server-side environments.
+	 */
+	exit?: boolean;
 };
 
 let scriptEl: HTMLScriptElement | null = null;
 let endpoint: string | null = null;
 let entity: string | null = null;
 let referrer: string | null = null;
+let defaultExit = true;
 const noWindow = typeof window === "undefined";
+let currentExit: { endpoint: string; payload: Payload } | null = null;
+let exitListenerInstalled = false;
+let exitSentWhileHidden = false;
 
 if (typeof document !== "undefined") {
 	scriptEl =
@@ -62,12 +74,39 @@ if (typeof document !== "undefined") {
 
 	entity = scriptEl?.getAttribute("data-entity") || null;
 	referrer = document.referrer;
+	defaultExit = scriptEl?.getAttribute("data-exit") !== "false";
 }
 
 const log = (message: string) => console.info(`[liwan]: ${message}`);
 const ignore = (reason: string) => log(`Ignoring event: ${reason}`);
 const reject = (message: string) => {
 	throw new Error(`Failed to send event: ${message}`);
+};
+
+const sendCurrentExit = () => {
+	if (noWindow || document.visibilityState !== "hidden" || !currentExit || exitSentWhileHidden) return;
+	exitSentWhileHidden = true;
+
+	const body = JSON.stringify({ ...currentExit.payload, exit: true });
+	void fetch(currentExit.endpoint, {
+		method: "POST",
+		headers: { "Content-Type": "text/plain;charset=UTF-8" },
+		keepalive: true,
+		body,
+	}).catch((error) => log(error instanceof Error ? error.message : String(error)));
+};
+
+const installExitListener = () => {
+	if (exitListenerInstalled || noWindow) return;
+	exitListenerInstalled = true;
+
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState !== "hidden") {
+			exitSentWhileHidden = false;
+			return;
+		}
+		sendCurrentExit();
+	});
 };
 
 const ATTRIBUTION_QUERY_PARAMS = [
@@ -104,7 +143,7 @@ const sanitizeUrl = (value: string) => {
 /**
  * Sends an event to the Liwan API.
  *
- * @param name The name of the event. Defaults to "pageview". Currencly, custom event names are not supported and will be treated as "pageview".
+ * @param name The name of the event. Defaults to "pageview".
  * @param options Additional options for the event. See {@link EventOptions}.
  * @returns A promise that resolves when the event has been sent
  * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.
@@ -144,26 +183,38 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 	const url = options?.url || (!noWindow ? location.href : null);
 	if (!url) return reject("url is required");
 
-	const response = await fetch(endpoint_url, {
+	const payload = <Payload>{
+		name,
+		entity_id: options?.entity || entity,
+		referrer: options?.referrer || referrer,
+		url: sanitizeUrl(url),
+		screen_width,
+		orientation: noWindow
+			? undefined
+			: window.screen.orientation?.type.startsWith("portrait")
+				? "portrait"
+				: "landscape",
+	};
+	const request = fetch(endpoint_url, {
 		method: "POST",
 		headers: { "Content-Type": "text/plain;charset=UTF-8" }, // we use text/plain to avoid preflight requests
 		keepalive: true, // allow the request to be sent even if the page is being unloaded
-		body: JSON.stringify(<Payload>{
-			name,
-			entity_id: options?.entity || entity,
-			referrer: options?.referrer || referrer,
-			url: sanitizeUrl(url),
-			screen_width,
-			orientation: noWindow
-				? undefined
-				: window.screen.orientation?.type.startsWith("portrait")
-					? "portrait"
-					: "landscape",
-		}),
+		body: JSON.stringify(payload),
 	});
+
+	const response = await request;
 
 	if (!response.ok) {
 		reject(`${response.status} ${response.statusText}`.trim());
+	}
+
+	if (!noWindow && (options?.exit ?? (name === "pageview" && defaultExit))) {
+		currentExit = { endpoint: endpoint_url, payload };
+		exitSentWhileHidden = false;
+		installExitListener();
+		sendCurrentExit();
+	} else if (!noWindow && name === "pageview") {
+		currentExit = null;
 	}
 }
 

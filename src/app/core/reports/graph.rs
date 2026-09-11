@@ -167,7 +167,8 @@ pub fn overall_report(
 					e.visitor_group_id,
 					e.created_at,
 					e.time_from_last_event,
-					e.time_to_next_event
+					e.time_to_next_event,
+					e.exited_at
 				from events e
 				where
 					e.event = ?::text and
@@ -181,7 +182,8 @@ pub fn overall_report(
 					sd.visitor_group_id,
 					sd.created_at,
 					sd.time_from_last_event,
-					sd.time_to_next_event
+					sd.time_to_next_event,
+					sd.exited_at
 				from (select * from session_data order by created_at) sd
 				asof join (select * from time_bins order by bin_start) tb
 					on sd.created_at >= tb.bin_start

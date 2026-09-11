@@ -3,18 +3,28 @@
 use axum_test::TestServer;
 use cookie::Cookie;
 use liwan::{
-    app::{Liwan, models::Event},
+    app::{
+        Liwan,
+        models::{Event, EventExit},
+    },
     config::Config,
 };
 use serde_json::json;
 use std::sync::Arc;
 
+pub struct EventReceivers {
+    pub events: tokio::sync::mpsc::Receiver<Event>,
+    pub exits: tokio::sync::mpsc::Receiver<EventExit>,
+}
+
 pub fn app() -> std::sync::Arc<Liwan> {
     Liwan::new_memory(Config::default()).unwrap()
 }
 
-pub fn events() -> (tokio::sync::mpsc::Sender<Event>, tokio::sync::mpsc::Receiver<Event>) {
-    tokio::sync::mpsc::channel::<Event>(1024 * 10)
+pub fn events() -> (liwan::web::EventQueues, EventReceivers) {
+    let (events, event_rx) = tokio::sync::mpsc::channel::<Event>(1024 * 10);
+    let (exits, exit_rx) = tokio::sync::mpsc::channel::<EventExit>(1024 * 10);
+    (liwan::web::EventQueues { events, exits }, EventReceivers { events: event_rx, exits: exit_rx })
 }
 
 pub struct TestClient {
@@ -22,8 +32,8 @@ pub struct TestClient {
 }
 
 impl TestClient {
-    pub fn new(app: Arc<Liwan>, events: tokio::sync::mpsc::Sender<Event>) -> Self {
-        let (router, _) = liwan::web::router(app, events).unwrap();
+    pub fn new(app: Arc<Liwan>, queues: liwan::web::EventQueues) -> Self {
+        let (router, _) = liwan::web::router(app, queues).unwrap();
         let server = TestServer::new(router.into_make_service_with_connect_info::<std::net::SocketAddr>());
         Self { server }
     }

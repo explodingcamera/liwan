@@ -75,7 +75,8 @@ pub fn dimension_report(
 					visitor_group_id,
 					created_at,
 					time_from_last_event,
-					time_to_next_event
+					time_to_next_event,
+					exited_at
 				from events sd
 				where
 					sd.event = ?::text and

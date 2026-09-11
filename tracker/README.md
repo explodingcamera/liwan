@@ -19,6 +19,8 @@ When the script is loaded directly in the browser, it will automatically send pa
 ></script>
 ```
 
+Pageviews send a best-effort exit signal when the page becomes hidden. Set `data-exit="false"` to disable exit tracking.
+
 When using the npm package, call `trackPageviews()` to start automatic pageview tracking:
 
 ```ts
@@ -76,6 +78,14 @@ export type EventOptions = {
    * Required for custom events.
    */
   entity?: string;
+
+  /**
+   * Whether this event should be reported again when the page becomes hidden.
+   *
+   * Defaults to `true` for pageviews and `false` for other events. This option
+   * is ignored in server-side environments.
+   */
+  exit?: boolean;
 };
 
 /**
