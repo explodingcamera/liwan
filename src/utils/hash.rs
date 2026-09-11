@@ -72,8 +72,21 @@ pub fn session_token() -> String {
     Alphanumeric.sample_string(&mut rand::rng(), 32)
 }
 
+/// Compare onboarding tokens without short-circuiting on their contents.
+pub(crate) fn onboarding_token_matches(expected: &str, candidate: &str) -> bool {
+    if expected.len() != candidate.len() {
+        return false;
+    }
+
+    let mut difference = 0u8;
+    for (expected, candidate) in expected.bytes().zip(candidate.bytes()) {
+        difference = std::hint::black_box(difference | (expected ^ candidate));
+    }
+    std::hint::black_box(difference) == 0
+}
+
 pub fn onboarding_token() -> String {
-    Alphanumeric.sample_string(&mut rand::rng(), 8)
+    Alphanumeric.sample_string(&mut rand::rng(), 16)
 }
 
 pub fn db_name() -> String {

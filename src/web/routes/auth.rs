@@ -14,6 +14,7 @@ use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use crate::{
     PASSWORD_MIN_LENGTH,
     app::models::UserRole,
+    utils::hash::onboarding_token_matches,
     web::{
         MaybeSessionId, RouterState,
         session::{Auth, LOGOUT_COOKIES, issue_session},
@@ -64,9 +65,9 @@ async fn me(Auth(user): Auth) -> UseApi<impl IntoApiResponse, Json<MeResponse>> 
 }
 
 async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> ApiResult<impl IntoApiResponse> {
-    let token = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+    let token = app.onboarding.token().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if token != Some(params.token) {
+    if !token.as_deref().is_some_and(|token| onboarding_token_matches(token, &params.token)) {
         http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
     }
 

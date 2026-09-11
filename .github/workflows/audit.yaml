@@ -1,0 +1,54 @@
+name: Audit dependencies
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/audit.yaml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "web/package.json"
+      - "web/bun.lock"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/audit.yaml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "web/package.json"
+      - "web/bun.lock"
+  schedule:
+    # Every Monday at 12:30 UTC
+    - cron: "30 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
+    with:
+      runs-on: ubuntu-24.04
+      upload-sarif: false
+      scan-args: |-
+        --lockfile=./Cargo.lock
+        --lockfile=./web/bun.lock
+
+  scan:
+    if: github.event_name != 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
+    with:
+      runs-on: ubuntu-24.04
+      fail-on-vuln: false
+      scan-args: |-
+        --lockfile=./Cargo.lock
+        --lockfile=./web/bun.lock

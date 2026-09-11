@@ -56,12 +56,12 @@ jobs:
           mkdir -p dist/amd64 dist/arm64 dist/data
 
           # sanitize tag: only keep alphanum, dot, underscore, dash
-          SAFE_TAG=$(echo "$INPUT_TAG" | sed 's/[^A-Za-z0-9._-]/_/g')
+          SAFE_TAG="${INPUT_TAG//[^A-Za-z0-9._-]/_}"
 
-          curl -fsSL https://github.com/explodingcamera/liwan/releases/download/$SAFE_TAG/liwan-x86_64-unknown-linux-musl.tar.gz \
+          curl -fsSL "https://github.com/explodingcamera/liwan/releases/download/$SAFE_TAG/liwan-x86_64-unknown-linux-musl.tar.gz" \
             | tar -xz -C dist/amd64 &
 
-          curl -fsSL https://github.com/explodingcamera/liwan/releases/download/$SAFE_TAG/liwan-aarch64-unknown-linux-musl.tar.gz \
+          curl -fsSL "https://github.com/explodingcamera/liwan/releases/download/$SAFE_TAG/liwan-aarch64-unknown-linux-musl.tar.gz" \
             | tar -xz -C dist/arm64 &
 
           wait

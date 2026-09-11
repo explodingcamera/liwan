@@ -5,7 +5,6 @@
     "": {
       "name": "liwan-web",
       "dependencies": {
-        "@astrojs/compiler-rs": "^0.4.0",
         "@astrojs/react": "6.0.5",
         "@base-ui/react": "^1.8.0",
         "@explodingcamera/css": "^0.0.4",

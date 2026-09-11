@@ -71,7 +71,7 @@ jobs:
         with:
           name: web-dist
           path: ./web/dist
-      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
       - uses: taiki-e/upload-rust-binary-action@f0d45ae91ee7b8ee928de7a9d04d893a08bcbec6 # v1.30.2
@@ -86,6 +86,6 @@ jobs:
       packages: write
       contents: read
     needs: [create-release, upload-assets]
-    uses: explodingcamera/liwan/.github/workflows/container.yaml@main
+    uses: $/.github/workflows/container.yaml
     with:
       tag: ${{ github.ref_name }}

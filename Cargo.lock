@@ -2396,7 +2396,6 @@ dependencies = [
  "nix",
  "oauth2",
  "openidconnect",
- "password-hash",
  "quick_cache",
  "r2d2",
  "rand 0.10.2",
@@ -2813,7 +2812,6 @@ checksum = "aab41826031698d6ffcd9cff78ef56ef998e39dc7e5067cdfebe373842d4723b"
 dependencies = [
  "getrandom 0.4.3",
  "phc",
- "rand_core 0.10.1",
 ]
 
 [[package]]
@@ -2846,7 +2844,6 @@ dependencies = [
  "base64ct",
  "ctutils",
  "getrandom 0.4.3",
- "rand_core 0.10.1",
 ]
 
 [[package]]
