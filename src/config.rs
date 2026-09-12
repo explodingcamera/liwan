@@ -23,6 +23,9 @@ pub struct Config {
     // don't load favicons from the duckduckgo api
     pub disable_favicons: bool,
 
+    #[serde(default)]
+    pub disable_ntp_check: bool,
+
     #[serde(default = "default_data_dir")]
     pub data_dir: String,
 
@@ -56,6 +59,7 @@ impl Default for Config {
             duckdb: Default::default(),
             limits: Default::default(),
             disable_favicons: false,
+            disable_ntp_check: false,
             listen: None,
             port: None,
             trusted_headers: default_trusted_headers(),

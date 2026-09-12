@@ -117,6 +117,19 @@ impl Liwan {
     }
 
     pub fn run_background_tasks(&self) {
+        if !self.config.disable_ntp_check {
+            tokio::task::spawn(async {
+                if let Ok(result) = rsntp::AsyncSntpClient::new().synchronize("pool.ntp.org").await {
+                    let offset_seconds = result.clock_offset().as_secs_f64();
+                    if offset_seconds.abs() >= 5.0 * 60.0 {
+                        tracing::warn!(
+                            offset_seconds,
+                            "System clock is not synchronized; analytics timestamps may be inaccurate"
+                        );
+                    }
+                }
+            });
+        }
         #[cfg(feature = "geoip")]
         tokio::task::spawn(core::keep_updated(self.geoip.clone()));
     }
