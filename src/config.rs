@@ -37,8 +37,8 @@ pub struct Config {
 
     /// Client IP header names or provider presets.
     /// Presets: `cloudflare`, `fastly`, `fly`, `cloudfront`, and `akamai`.
-    #[serde(default = "default_client_ip_headers", alias = "trusted_headers")]
-    pub client_ip_headers: OneOrMany<ClientIpHeaderSource>,
+    #[serde(default = "default_trusted_headers")]
+    pub trusted_headers: OneOrMany<ClientIpHeaderSource>,
 
     #[serde(default = "default_trusted_proxies")]
     pub trusted_proxies: OneOrMany<TrustedProxy>,
@@ -58,7 +58,7 @@ impl Default for Config {
             disable_favicons: false,
             listen: None,
             port: None,
-            client_ip_headers: default_client_ip_headers(),
+            trusted_headers: default_trusted_headers(),
             trusted_proxies: default_trusted_proxies(),
             visitor_group_rotation_hour: default_visitor_group_rotation_hour(),
         }
@@ -167,7 +167,7 @@ fn default_visitor_group_rotation_hour() -> u8 {
     4
 }
 
-fn default_client_ip_headers() -> OneOrMany<ClientIpHeaderSource> {
+fn default_trusted_headers() -> OneOrMany<ClientIpHeaderSource> {
     vec![ClientIpHeaderSource::Header("x-forwarded-for".to_string())].into()
 }
 
@@ -317,9 +317,7 @@ fn map_env_key(key: &str) -> Option<String> {
 }
 
 fn parse_env_value(key: &str, value: &str) -> Value {
-    if ["client_ip_headers", "trusted_headers", "trusted_proxies", "geoip.headers"].contains(&key)
-        && value.contains(',')
-    {
+    if ["trusted_headers", "trusted_proxies", "geoip.headers"].contains(&key) && value.contains(',') {
         return Value::from(value.split(',').map(str::trim).collect::<Vec<_>>());
     }
 
@@ -403,8 +401,8 @@ mod test {
         assert_eq!(config.base_url, "http://localhost:8081");
         assert_eq!(config.data_dir, "./liwan-test-data");
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
-        assert_eq!(config.client_ip_headers, default_client_ip_headers());
-        assert_eq!(Config::default().client_ip_headers, default_client_ip_headers());
+        assert_eq!(config.trusted_headers, default_trusted_headers());
+        assert_eq!(Config::default().trusted_headers, default_trusted_headers());
         assert_eq!(config.trusted_proxies, default_trusted_proxies());
         assert_eq!(Config::default().trusted_proxies, default_trusted_proxies());
     }
@@ -414,14 +412,14 @@ mod test {
         let (_temp_dir, config_path) = temp_config(
             "empty-proxies.config.toml",
             r#"
-                client_ip_headers = []
+                trusted_headers = []
                 trusted_proxies = []
             "#,
         );
 
         let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
 
-        assert!(config.client_ip_headers.is_empty());
+        assert!(config.trusted_headers.is_empty());
         assert!(config.trusted_proxies.is_empty());
     }
 
@@ -459,7 +457,7 @@ mod test {
         assert_eq!(config.base_url, "https://example.com");
         assert_eq!(config.geoip.maxmind_account_id, Some(MaxMindAccountId::Number(123)));
         assert_eq!(
-            config.client_ip_headers.as_ref(),
+            config.trusted_headers.as_ref(),
             &[
                 ClientIpHeaderSource::Header("x-forwarded-for".to_string()),
                 ClientIpHeaderSource::Header("forwarded".to_string())
@@ -474,7 +472,7 @@ mod test {
     #[test]
     fn test_env_custom_trusted_header() {
         let config = Config::load(None, vec![("LIWAN_TRUSTED_HEADERS", "X_CLIENT_IP")]).expect("failed to load config");
-        assert_eq!(config.client_ip_headers.as_ref(), &[ClientIpHeaderSource::Header("x-client-ip".to_string())]);
+        assert_eq!(config.trusted_headers.as_ref(), &[ClientIpHeaderSource::Header("x-client-ip".to_string())]);
     }
 
     #[test]
@@ -482,7 +480,7 @@ mod test {
         let (_temp_dir, config_path) = temp_config(
             "headers.config.toml",
             r#"
-                client_ip_headers = ["cloudflare", "fastly", "fly", "akamai", "X-Client-IP"]
+                trusted_headers = ["cloudflare", "fastly", "fly", "akamai", "X-Client-IP"]
 
                 [geoip]
                 headers = ["cloudflare", { country = "X-Country", city = "X-City" }]
@@ -491,7 +489,7 @@ mod test {
 
         let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
         assert_eq!(
-            config.client_ip_headers.as_ref(),
+            config.trusted_headers.as_ref(),
             &[
                 ClientIpHeaderSource::Provider(ClientIpProvider::Cloudflare),
                 ClientIpHeaderSource::Provider(ClientIpProvider::Fastly),
@@ -515,14 +513,14 @@ mod test {
     }
 
     #[test]
-    fn test_legacy_trusted_headers_alias() {
-        let (_temp_dir, config_path) = temp_config("legacy.config.toml", "trusted_headers = \"fly\"");
+    fn test_trusted_headers_serialization() {
+        let (_temp_dir, config_path) = temp_config("headers.config.toml", "trusted_headers = \"fly\"");
         let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
 
-        assert_eq!(config.client_ip_headers.as_ref(), &[ClientIpHeaderSource::Provider(ClientIpProvider::Fly)]);
+        assert_eq!(config.trusted_headers.as_ref(), &[ClientIpHeaderSource::Provider(ClientIpProvider::Fly)]);
         let serialized = serde_json::to_value(config).expect("failed to serialize config");
-        assert!(serialized.get("client_ip_headers").is_some());
-        assert!(serialized.get("trusted_headers").is_none());
+        assert!(serialized.get("trusted_headers").is_some());
+        assert!(serialized.get("client_ip_headers").is_none());
     }
 
     #[test]
@@ -533,7 +531,7 @@ mod test {
         assert!(config.geoip.maxmind_license_key.is_none());
         assert_eq!(config.base_url, "http://localhost:9042");
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
-        assert_eq!(config.client_ip_headers, default_client_ip_headers());
+        assert_eq!(config.trusted_headers, default_trusted_headers());
         assert_eq!(config.limits.report_max_concurrency, 8);
         assert_eq!(config.limits.report_timeout_seconds, 30);
         assert_eq!(config.limits.report_max_range_days, 3660);

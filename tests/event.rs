@@ -113,7 +113,7 @@ async fn deleted_entity_does_not_accept_events() -> Result<()> {
 #[tokio::test]
 async fn exit_payload_uses_the_exit_queue() -> Result<()> {
     let mut config = Config::default();
-    config.client_ip_headers = vec![ClientIpHeaderSource::Header("x-client-ip".to_string())].into();
+    config.trusted_headers = vec![ClientIpHeaderSource::Header("x-client-ip".to_string())].into();
     config.trusted_proxies = vec![TrustedProxy::Ip("127.0.0.1".parse()?)].into();
     let app = liwan::app::Liwan::new_memory(config)?;
     let (queues, mut receivers) = common::events();

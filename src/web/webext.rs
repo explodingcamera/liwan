@@ -286,7 +286,7 @@ impl FromRequestParts<RouterState> for ClientIp {
         };
 
         if should_trust_proxy_headers(peer_ip, &state.config.trusted_proxies) {
-            for header in state.config.client_ip_headers.iter() {
+            for header in state.config.trusted_headers.iter() {
                 if let Some(ip) =
                     parse_client_ip(&parts.headers, header, peer_ip, &state.config.trusted_proxies).filter(is_public)
                 {
@@ -308,7 +308,7 @@ pub struct ClientIpKeyExtractor {
 impl ClientIpKeyExtractor {
     pub fn new(config: &Config) -> Self {
         Self {
-            headers: config.client_ip_headers.as_ref().to_vec(),
+            headers: config.trusted_headers.as_ref().to_vec(),
             trusted_proxies: config.trusted_proxies.as_ref().to_vec(),
         }
     }
@@ -371,7 +371,7 @@ mod tests {
     #[test]
     fn rate_limit_key_uses_headers_only_for_trusted_proxies() {
         let mut config = Config::default();
-        config.client_ip_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
+        config.trusted_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
         config.trusted_proxies = vec![TrustedProxy::Ip("10.0.0.1".parse().unwrap())].into();
         let extractor = ClientIpKeyExtractor::new(&config);
 
@@ -382,7 +382,7 @@ mod tests {
     #[test]
     fn rate_limit_key_ignores_headers_without_trusted_proxies() {
         let mut config = Config::default();
-        config.client_ip_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
+        config.trusted_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
         let extractor = ClientIpKeyExtractor::new(&config);
 
         assert_eq!(extractor.extract(&request("10.0.0.1")).unwrap(), "10.0.0.1".parse::<IpAddr>().unwrap());

@@ -18,30 +18,28 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 > The `liwan-tracker` npm package is intended for current Liwan server releases. Its network protocol may change between Liwan versions. When it does, update the npm tracker alongside Liwan. If you use the tracker script served by Liwan itself, it already uses the matching internal tracker version.
 
-## [Unreleased]
+## [v1.7.0] - 2026-09-12
 
 ### ⚠️ Breaking Changes
 
-- Client IP detection now defaults to `X-Forwarded-For` from IPv4 and IPv6 loopback proxies only. Other headers and proxies must be configured with the `client_ip_headers` and `trusted_proxies` options. See the [configuration reference](https://liwan.dev/reference/configuration/) for details.
+- Client IP detection now defaults to `X-Forwarded-For` from IPv4 and IPv6 loopback proxies only. Other headers and proxies must be configured with the `trusted_headers` and `trusted_proxies` options. See the [configuration reference](https://liwan.dev/reference/configuration/) for details.
 
 ### Features
 
+- Added external authentication with OpenID Connect, Google, and Microsoft Entra ID, including optional user creation and provider access restrictions
+- Improved visit duration accuracy by tracking page exits
 - Added client IP header presets for Akamai, Cloudflare, CloudFront, Fastly, and Fly
 - Added GeoIP header mappings and presets for Akamai, Cloudflare, CloudFront, Netlify, and Vercel, with MaxMind results taking precedence when available
 - Tracker requests now avoid CORS preflight requests by sending JSON as `text/plain` and the event API accepts tracker JSON regardless of content type
-- Added external authentication with OpenID Connect, Google, and Microsoft Entra ID, including optional user creation and provider access restrictions
-- Improved visit duration accuracy by tracking page exits
 
 ### Security
 
-- Added input, result, concurrency, and execution-time limits to dashboard reports
-- Dashboard report limits can be adjusted in the `[limits]` configuration section
+- Added configurable resource limits for reports
 - Rate limits now use configured client IP headers when requests come from a trusted reverse proxy
 - Onboarding tokens are now validated in constant time and consumed atomically when creating the initial administrator
 
 ### Other
 
-- Renamed `trusted_headers` to `client_ip_headers` (the old name remains supported)
 - Removed the redundant `use_forward_headers` option
 
 ## [v1.6.0] - 2026-06-20

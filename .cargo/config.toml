@@ -1,5 +1,4 @@
 [build]
-warnings = "allow"
 
 [alias]
 dev = "run -- dev"

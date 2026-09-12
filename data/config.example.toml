@@ -12,10 +12,10 @@ listen = 9042  # The port to listen on (http)
 ## Trusted client IP headers (used in order), defaults to X-Forwarded-For.
 ## Presets: cloudflare, fastly, fly, cloudfront, akamai.
 ## Provider presets can be combined with standard or custom headers.
-client_ip_headers = ["X-Forwarded-For"]
+# trusted_headers = ["X-Forwarded-For"]
 
 ## Trusted reverse proxies (IP or CIDR), defaults to the IPv4 and IPv6 loopback ranges.
-trusted_proxies = ["127.0.0.1/8", "::1/128"]
+# trusted_proxies = ["127.0.0.1/8", "::1/128"]
 
 ## Hour of day, in the server's local timezone, when visitor grouping salts rotate.
 ## Defaults to 4, meaning 4am local time.
