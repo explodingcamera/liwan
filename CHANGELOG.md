@@ -22,7 +22,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### ⚠️ Breaking Changes
 
-- Proxy-provided client IP headers are no longer trusted by default. Configure `client_ip_headers` and `trusted_proxies` to opt in
+- Client IP detection now defaults to `X-Forwarded-For` from IPv4 and IPv6 loopback proxies only. Other headers and proxies must be configured with the `client_ip_headers` and `trusted_proxies` options. See the [configuration reference](https://liwan.dev/reference/configuration/) for details.
 
 ### Features
 

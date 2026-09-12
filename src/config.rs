@@ -37,10 +37,10 @@ pub struct Config {
 
     /// Client IP header names or provider presets.
     /// Presets: `cloudflare`, `fastly`, `fly`, `cloudfront`, and `akamai`.
-    #[serde(default, alias = "trusted_headers")]
+    #[serde(default = "default_client_ip_headers", alias = "trusted_headers")]
     pub client_ip_headers: OneOrMany<ClientIpHeaderSource>,
 
-    #[serde(default)]
+    #[serde(default = "default_trusted_proxies")]
     pub trusted_proxies: OneOrMany<TrustedProxy>,
 
     #[serde(default = "default_visitor_group_rotation_hour")]
@@ -58,8 +58,8 @@ impl Default for Config {
             disable_favicons: false,
             listen: None,
             port: None,
-            client_ip_headers: OneOrMany::default(),
-            trusted_proxies: OneOrMany::default(),
+            client_ip_headers: default_client_ip_headers(),
+            trusted_proxies: default_trusted_proxies(),
             visitor_group_rotation_hour: default_visitor_group_rotation_hour(),
         }
     }
@@ -165,6 +165,18 @@ fn default_data_dir() -> String {
 
 fn default_visitor_group_rotation_hour() -> u8 {
     4
+}
+
+fn default_client_ip_headers() -> OneOrMany<ClientIpHeaderSource> {
+    vec![ClientIpHeaderSource::Header("x-forwarded-for".to_string())].into()
+}
+
+fn default_trusted_proxies() -> OneOrMany<TrustedProxy> {
+    vec![
+        TrustedProxy::Cidr("127.0.0.1/8".parse().expect("valid default trusted proxy")),
+        TrustedProxy::Cidr("::1/128".parse().expect("valid default trusted proxy")),
+    ]
+    .into()
 }
 
 fn default_report_max_concurrency() -> usize {
@@ -391,6 +403,26 @@ mod test {
         assert_eq!(config.base_url, "http://localhost:8081");
         assert_eq!(config.data_dir, "./liwan-test-data");
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
+        assert_eq!(config.client_ip_headers, default_client_ip_headers());
+        assert_eq!(Config::default().client_ip_headers, default_client_ip_headers());
+        assert_eq!(config.trusted_proxies, default_trusted_proxies());
+        assert_eq!(Config::default().trusted_proxies, default_trusted_proxies());
+    }
+
+    #[test]
+    fn test_empty_proxy_config_overrides_defaults() {
+        let (_temp_dir, config_path) = temp_config(
+            "empty-proxies.config.toml",
+            r#"
+                client_ip_headers = []
+                trusted_proxies = []
+            "#,
+        );
+
+        let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
+
+        assert!(config.client_ip_headers.is_empty());
+        assert!(config.trusted_proxies.is_empty());
     }
 
     #[test]
@@ -501,7 +533,7 @@ mod test {
         assert!(config.geoip.maxmind_license_key.is_none());
         assert_eq!(config.base_url, "http://localhost:9042");
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
-        assert!(config.client_ip_headers.is_empty());
+        assert_eq!(config.client_ip_headers, default_client_ip_headers());
         assert_eq!(config.limits.report_max_concurrency, 8);
         assert_eq!(config.limits.report_timeout_seconds, 30);
         assert_eq!(config.limits.report_max_range_days, 3660);

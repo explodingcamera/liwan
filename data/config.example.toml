@@ -1,55 +1,49 @@
 base_url = "http://localhost:9042"  # The base URL of the Liwan instance
 listen = 9042  # The port to listen on (http)
 
-# # Disable favicon fetching from the DuckDuckGo API.
-# disable_favicons=false
+## Disable favicon fetching from the DuckDuckGo API.
+# disable_favicons = false
 
-# # Folder to store the database in (Will be created if it doesn't exist)
-# # defaults to $HOME/.local/share/liwan/data on linux/macos
-# # defaults to ./liwan-data on other platforms
+## Folder to store the database in (Will be created if it doesn't exist)
+## defaults to $HOME/.local/share/liwan/data on linux/macos
+## defaults to ./liwan-data on other platforms
 # data_dir="./liwan-data"
 
-# # Trusted client IP headers (used in order).
-# # Empty by default, meaning only the direct peer IP is used.
-# # Presets: cloudflare, fastly, fly, cloudfront, akamai.
-# client_ip_headers="cloudflare"
-# # Provider presets can be combined with standard or custom headers.
-# client_ip_headers=["cloudflare", "fly", "X-Forwarded-For", "X-Client-IP"]
+## Trusted client IP headers (used in order), defaults to X-Forwarded-For.
+## Presets: cloudflare, fastly, fly, cloudfront, akamai.
+## Provider presets can be combined with standard or custom headers.
+client_ip_headers = ["X-Forwarded-For"]
 
-# # Trusted reverse proxies (IP or CIDR).
-# # Empty by default, meaning forwarded client IP and GeoIP headers are not trusted.
-# trusted_proxies=["127.0.0.1", "10.0.0.0/8"]
+## Trusted reverse proxies (IP or CIDR), defaults to the IPv4 and IPv6 loopback ranges.
+trusted_proxies = ["127.0.0.1/8", "::1/128"]
 
-# # Hour of day, in the server's local timezone, when visitor grouping salts rotate.
-# # Defaults to 4, meaning 4am local time.
+## Hour of day, in the server's local timezone, when visitor grouping salts rotate.
+## Defaults to 4, meaning 4am local time.
 # visitor_group_rotation_hour=4
 
-# GeoIp settings (Optional)
-[geoip]
-# # Read location data supplied by a trusted proxy.
-# # Presets: akamai, cloudflare, cloudfront, netlify, vercel.
-# headers="cloudflare"
-# # Multiple presets and custom mappings are also supported, in priority order.
-# headers=["cloudflare", { country="X-Country", city="X-City" }]
-
-# # MaxMind account ID and license key
-# # Required to automatically download the database and keep it up to date
+[geoip]  # GeoIp settings (Optional)
+## MaxMind account ID and license key
+## Required to automatically download the database and keep it up to date
 # maxmind_account_id="MY_ACCOUNT_ID"
 # maxmind_license_key="MY_LICENSE_KEY"
 # maxmind_edition="GeoLite2-City"
 
-# # If you don't want to automatically download the database, you can specify a path to a local file
-# # Otherwise, the database will be downloaded automatically and stored in the data_dir
+## If you don't want to automatically download the database, you can specify a path to a local file
+## Otherwise, the database will be downloaded automatically and stored in the data_dir
 # maxmind_db_path="./GeoLite2-City.mmdb"
 
-# Database settings
-[duckdb]
-# # See https://liwan.dev/guides/duckdb for guidance
+## Read location data supplied by a trusted proxy.
+## Presets: akamai, cloudflare, cloudfront, netlify, vercel.
+## Multiple presets and custom mappings are also supported, in priority order:
+# headers=["cloudflare", { country="X-Country", city="X-City" }]
+# headers="cloudflare"
+
+[duckdb]  # Database settings
+## See https://liwan.dev/guides/duckdb for guidance
 # threads=2
 # memory_limit=2G
 
-# Resource limits for dashboard reports.
-[limits]
+[limits]  # Resource limits for dashboard reports.
 # report_timeout_seconds=30
 # report_max_concurrency=8
 # report_max_range_days=3660
