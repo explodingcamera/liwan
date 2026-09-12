@@ -15,6 +15,7 @@ listen = 9042  # The port to listen on (http)
 # trusted_headers = ["X-Forwarded-For"]
 
 ## Trusted reverse proxies (IP or CIDR), defaults to the IPv4 and IPv6 loopback ranges.
+## Use "*" to trust all direct peers only when network access to liwan is restricted.
 # trusted_proxies = ["127.0.0.1/8", "::1/128"]
 
 ## Hour of day, in the server's local timezone, when visitor grouping salts rotate.

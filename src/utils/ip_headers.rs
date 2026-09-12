@@ -134,9 +134,9 @@ pub fn parse_geoip_headers(headers: &http::HeaderMap, sources: &[GeoIpHeaderSour
     values
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(untagged)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TrustedProxy {
+    All,
     Ip(IpAddr),
     Cidr(IpNet),
 }
@@ -144,9 +144,34 @@ pub enum TrustedProxy {
 impl TrustedProxy {
     pub fn contains(&self, ip: IpAddr) -> bool {
         match self {
+            TrustedProxy::All => true,
             TrustedProxy::Ip(proxy_ip) => *proxy_ip == ip,
             TrustedProxy::Cidr(net) => net.contains(&ip),
         }
+    }
+}
+
+impl Serialize for TrustedProxy {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::All => serializer.serialize_str("*"),
+            Self::Ip(ip) => serializer.collect_str(ip),
+            Self::Cidr(network) => serializer.collect_str(network),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for TrustedProxy {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = String::deserialize(deserializer)?;
+        let value = value.trim();
+        if value == "*" {
+            return Ok(Self::All);
+        }
+        if let Ok(ip) = value.parse() {
+            return Ok(Self::Ip(ip));
+        }
+        value.parse().map(Self::Cidr).map_err(serde::de::Error::custom)
     }
 }
 
@@ -256,6 +281,15 @@ mod tests {
         assert!(should_trust_proxy_headers(Some("10.0.0.1".parse().unwrap()), &trusted));
         assert!(!should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &trusted));
         assert!(!should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &[]));
+    }
+
+    #[test]
+    fn wildcard_trusts_all_proxy_addresses() {
+        let proxy: TrustedProxy = serde_json::from_str(r#""*""#).unwrap();
+
+        assert!(proxy.contains("192.0.2.1".parse().unwrap()));
+        assert!(proxy.contains("2001:db8::1".parse().unwrap()));
+        assert_eq!(serde_json::to_string(&proxy).unwrap(), r#""*""#);
     }
 
     #[test]

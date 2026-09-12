@@ -476,6 +476,17 @@ mod test {
     }
 
     #[test]
+    fn test_wildcard_trusted_proxy() {
+        let env_config = Config::load(None, [("LIWAN_TRUSTED_PROXIES", "*")]).expect("failed to load config");
+        assert_eq!(env_config.trusted_proxies.as_ref(), &[TrustedProxy::All]);
+
+        let (_temp_dir, config_path) = temp_config("wildcard-proxy.config.toml", "trusted_proxies = \"*\"");
+        let file_config =
+            Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
+        assert_eq!(file_config.trusted_proxies.as_ref(), &[TrustedProxy::All]);
+    }
+
+    #[test]
     fn test_header_presets_and_geoip_mappings() {
         let (_temp_dir, config_path) = temp_config(
             "headers.config.toml",

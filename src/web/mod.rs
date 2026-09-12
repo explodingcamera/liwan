@@ -4,11 +4,14 @@ pub mod webext;
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::ops::Deref;
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
+use axum::extract::{ConnectInfo, Request, State};
 use axum::handler::{Handler, HandlerWithoutStateExt};
+use axum::middleware::Next;
+use axum::response::Response;
 use rust_embed::RustEmbed;
 
 use aide::{axum::ApiRouter, openapi};
@@ -26,6 +29,7 @@ use crate::app::{
     Liwan,
     models::{Event, EventExit},
 };
+use crate::utils::ip_headers::should_trust_proxy_headers;
 use crate::web::webext::serve;
 
 pub use session::MaybeSessionId;
@@ -45,6 +49,27 @@ pub struct RouterState {
     pub events: Sender<Event>,
     pub exits: Sender<EventExit>,
     pub report_permits: Arc<Semaphore>,
+    untrusted_proxy_warning: Arc<UntrustedProxyWarning>,
+}
+
+const PROXY_WARNING_INTERVAL: Duration = Duration::from_secs(60 * 60);
+
+#[derive(Default)]
+struct UntrustedProxyWarning {
+    last: Mutex<Option<Instant>>,
+}
+
+impl UntrustedProxyWarning {
+    fn should_warn(&self, now: Instant) -> bool {
+        let Ok(mut last) = self.last.lock() else {
+            return false;
+        };
+        if last.is_some_and(|last| now.duration_since(last) < PROXY_WARNING_INTERVAL) {
+            return false;
+        }
+        *last = Some(now);
+        true
+    }
 }
 
 /// Event ingestion queues used by the web server.
@@ -88,6 +113,32 @@ impl Deref for RouterState {
     fn deref(&self) -> &Self::Target {
         &self.app
     }
+}
+
+async fn warn_untrusted_proxy_headers(State(state): State<RouterState>, request: Request, next: Next) -> Response {
+    let peer_ip = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(addr)| addr.ip());
+    let is_private = peer_ip.is_some_and(|ip| {
+        ip.is_loopback()
+            || match ip {
+                std::net::IpAddr::V4(ip) => ip.is_private() || ip.is_link_local(),
+                std::net::IpAddr::V6(ip) => ip.is_unique_local() || ip.is_unicast_link_local(),
+            }
+    });
+    let has_client_ip_header =
+        state.config.trusted_headers.iter().any(|source| request.headers().contains_key(source.as_header_name()));
+
+    if is_private
+        && has_client_ip_header
+        && !should_trust_proxy_headers(peer_ip, &state.config.trusted_proxies)
+        && state.untrusted_proxy_warning.should_warn(Instant::now())
+    {
+        tracing::warn!(
+            peer_ip = %peer_ip.expect("private peer IP is present"),
+            "Ignoring client IP headers from an untrusted private proxy. Add its address or network to `trusted_proxies` or `LIWAN_TRUSTED_PROXIES` if it should be trusted"
+        );
+    }
+
+    next.run(request).await
 }
 
 pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>, openapi::OpenApi)> {
@@ -143,6 +194,13 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .merge(routes::external_auth::router(&app.config))
         .merge(routes::dashboard::router());
 
+    let state = RouterState {
+        app: app.clone(),
+        events: queues.events,
+        exits: queues.exits,
+        report_permits: Arc::new(Semaphore::new(app.config.limits.report_max_concurrency)),
+        untrusted_proxy_warning: Arc::new(UntrustedProxyWarning::default()),
+    };
     let router = ApiRouter::new()
         .nest("/api", routes::event::router(&app.config).layer(event_cors))
         .nest("/api/dashboard", dashboard)
@@ -152,12 +210,8 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .layer(CompressionLayer::new())
         .layer(set_headers)
         .layer(TraceLayer::new_for_http())
-        .with_state(RouterState {
-            app: app.clone(),
-            events: queues.events,
-            exits: queues.exits,
-            report_permits: Arc::new(Semaphore::new(app.config.limits.report_max_concurrency)),
-        })
+        .layer(axum::middleware::from_fn_with_state(state.clone(), warn_untrusted_proxy_headers))
+        .with_state(state)
         .finish_api(&mut api);
 
     Ok((router, api))
@@ -211,4 +265,19 @@ pub async fn start_webserver(app: Arc<Liwan>, queues: EventQueues) -> Result<()>
 
     let service = router.0.into_make_service_with_connect_info::<SocketAddr>();
     axum::serve(listener, service).await.context("server exited unexpectedly")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn untrusted_proxy_warning_is_rate_limited() {
+        let warning = UntrustedProxyWarning::default();
+        let now = Instant::now();
+
+        assert!(warning.should_warn(now));
+        assert!(!warning.should_warn(now + PROXY_WARNING_INTERVAL - Duration::from_secs(1)));
+        assert!(warning.should_warn(now + PROXY_WARNING_INTERVAL));
+    }
 }

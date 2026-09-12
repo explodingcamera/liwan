@@ -11,6 +11,8 @@
 ![GitHub Release](https://img.shields.io/github/v/release/explodingcamera/liwan?style=flat-square)
 [![Container](https://img.shields.io/badge/Container-ghcr.io%2Fexplodingcamera%2Fliwan%3Alatest-blue?style=flat-square)](https://github.com/explodingcamera/liwan/pkgs/container/liwan)
 
+[Live demo](https://demo.liwan.dev/p/liwan.dev) · [Getting started](https://liwan.dev/getting-started/) · [Configuration](https://liwan.dev/reference/configuration/) · [Collected data](https://liwan.dev/collected-data/)
+
 </div>
 
 </div>

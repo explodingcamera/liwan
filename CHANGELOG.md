@@ -22,7 +22,11 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### ⚠️ Breaking Changes
 
-- Client IP detection now defaults to `X-Forwarded-For` from IPv4 and IPv6 loopback proxies only. Other headers and proxies must be configured with the `trusted_headers` and `trusted_proxies` options. See the [configuration reference](https://liwan.dev/reference/configuration/) for details.
+Client IP detection now defaults to `X-Forwarded-For` from IPv4 and IPv6 loopback proxies only. Use `trusted_headers` (`LIWAN_TRUSTED_HEADERS`) to configure different headers and `trusted_proxies` (`LIWAN_TRUSTED_PROXIES`) to configure other proxy addresses or networks.
+
+For Docker deployments where the reverse proxy connects to Liwan through a Docker bridge, add the bridge subnet to `trusted_proxies`, for example `trusted_proxies = ["172.17.0.0/16"]`. If only trusted systems can connect to Liwan over an isolated network, you can set `trusted_proxies = "*"` instead.
+
+Without this configuration, forwarded client addresses from these proxies are ignored. This affects visitor grouping, GeoIP lookup, and rate limits for login and event requests. See the [configuration reference](https://liwan.dev/reference/configuration/) for details.
 
 ### Features
 
@@ -30,6 +34,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Improved visit duration accuracy by tracking page exits
 - Added client IP header presets for Akamai, Cloudflare, CloudFront, Fastly, and Fly
 - Added GeoIP header mappings and presets for Akamai, Cloudflare, CloudFront, Netlify, and Vercel, with MaxMind results taking precedence when available
+- Added `*` support for `trusted_proxies` to trust forwarding headers from any direct peer
 - Tracker requests now avoid CORS preflight requests by sending JSON as `text/plain` and the event API accepts tracker JSON regardless of content type
 
 ### Security
