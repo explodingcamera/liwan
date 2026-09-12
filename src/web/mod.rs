@@ -19,6 +19,7 @@ use tower_http::{
     cors::{Any, CorsLayer},
     set_header::SetResponseHeaderLayer,
     timeout::RequestBodyDeadlineLayer,
+    trace::TraceLayer,
 };
 
 use crate::app::{
@@ -150,6 +151,7 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .layer(RequestBodyDeadlineLayer::new(Duration::from_secs(30)))
         .layer(CompressionLayer::new())
         .layer(set_headers)
+        .layer(TraceLayer::new_for_http())
         .with_state(RouterState {
             app: app.clone(),
             events: queues.events,

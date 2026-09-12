@@ -1,6 +1,6 @@
 import styles from "./authentication.module.css";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SiGoogle, SiOpenid } from "@icons-pack/react-simple-icons";
 import { KeyRoundIcon } from "lucide-react";
 
@@ -105,7 +105,7 @@ const ProviderSettings = ({
 					<SettingsSwitch
 						name="allowUserCreation"
 						label="Allow new users"
-						description="Create an account after a user's first verified sign-in."
+						description="Create an account when a user signs in successfully for the first time."
 						checked={settings.allowUserCreation}
 						onCheckedChange={(allowUserCreation) => update("allowUserCreation", allowUserCreation)}
 					/>
@@ -135,7 +135,10 @@ const ProviderSettings = ({
 						/>
 					</SettingsField>
 				)}
-				<SettingsField label="Client ID" name="clientId">
+				<SettingsField
+					label={settings.provider === "microsoft" ? "Application (client) ID" : "Client ID"}
+					name="clientId"
+				>
 					<input
 						name="clientId"
 						value={settings.clientId}
@@ -192,7 +195,7 @@ const ProviderSettings = ({
 				)}
 				{settings.provider === "microsoft" && (
 					<SettingsField
-						label="Tenant ID"
+						label="Directory (tenant) ID"
 						description="The directory ID for the Microsoft Entra tenant that can sign in."
 						name="tenantId"
 					>
@@ -214,6 +217,9 @@ export const AuthenticationSettingsPage = () => {
 	const [savedSettings, setSavedSettings] = useState<ExternalAuthSettings>();
 	const [error, setError] = useState<string>();
 	const [clientSecret, setClientSecret] = useState("");
+	const providerDrafts = useRef<
+		Partial<Record<ExternalAuthProvider, { settings: ExternalAuthSettings; clientSecret: string }>>
+	>({});
 
 	useEffect(() => {
 		api["/api/dashboard/admin/auth"]
@@ -222,6 +228,7 @@ export const AuthenticationSettingsPage = () => {
 			.then((settings) => {
 				setSettings(settings);
 				setSavedSettings(settings);
+				providerDrafts.current[settings.provider] = { settings, clientSecret: "" };
 			})
 			.catch((error) => setError(errorMessage(error)));
 	}, []);
@@ -232,6 +239,7 @@ export const AuthenticationSettingsPage = () => {
 	const update = <K extends keyof ExternalAuthSettings>(key: K, value: ExternalAuthSettings[K]) =>
 		setSettings({ ...settings, [key]: value });
 	const selectProvider = (provider: ExternalAuthProvider | "internal") => {
+		providerDrafts.current[settings.provider] = { settings, clientSecret };
 		if (provider === "internal") {
 			setSettings({ ...settings, enabled: false });
 			return;
@@ -240,17 +248,25 @@ export const AuthenticationSettingsPage = () => {
 			setSettings({ ...settings, enabled: true });
 			return;
 		}
-		setClientSecret("");
+
+		const draft = providerDrafts.current[provider];
+		if (draft) {
+			setSettings({ ...draft.settings, enabled: true });
+			setClientSecret(draft.clientSecret);
+			return;
+		}
+
 		setSettings({
 			...settings,
 			enabled: true,
 			provider,
-			displayName: provider === "oidc" ? "OpenID Connect" : settings.displayName,
+			displayName: providers.find((item) => item.value === provider)?.label ?? settings.displayName,
 			clientId: "",
 			issuerUrl: null,
 			allowedDomain: null,
 			tenantId: null,
 		});
+		setClientSecret("");
 	};
 
 	const save = () => {
@@ -281,6 +297,7 @@ export const AuthenticationSettingsPage = () => {
 				setSettings(next);
 				setSavedSettings(next);
 				setClientSecret("");
+				providerDrafts.current[next.provider] = { settings: next, clientSecret: "" };
 				createToast("Authentication settings updated", "success");
 			})
 			.catch((error) => {
@@ -319,7 +336,11 @@ export const AuthenticationSettingsPage = () => {
 				{settings.enabled && (
 					<div className={styles.callbackSection}>
 						<h2>Callback URL</h2>
-						<p>Add this exact URL to the provider application's allowed redirect URLs.</p>
+						<p>
+							{settings.provider === "microsoft"
+								? "In Microsoft Entra ID, select the Web platform and add this exact URL as a redirect URI."
+								: "Add this exact URL to the provider application's allowed redirect URLs."}
+						</p>
 						<CopyableValue value={settings.callbackUrl} label="Callback URL" />
 					</div>
 				)}

@@ -224,11 +224,13 @@ async fn start(
     if app.onboarding.token().is_some() {
         http_bail!(StatusCode::NOT_FOUND, "external authentication is unavailable");
     }
-    let start = app
-        .external_auth
-        .begin(query.return_to)
-        .await
-        .http_err("external authentication is unavailable", StatusCode::BAD_REQUEST)?;
+    let start = match app.external_auth.begin(query.return_to).await {
+        Ok(start) => start,
+        Err(error) => {
+            tracing::warn!(%error, "external authentication start failed");
+            http_bail!(StatusCode::BAD_REQUEST, "external authentication is unavailable");
+        }
+    };
     let mut state_cookie = STATE_COOKIE.clone();
     state_cookie.set_secure(app.config.secure());
     state_cookie.set_value(start.state);
@@ -273,7 +275,7 @@ async fn callback(
             }
         },
         Err(error) => {
-            tracing::debug!(%error, "external authentication callback failed");
+            tracing::warn!(%error, "external authentication callback failed");
             (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response()
         }
     };

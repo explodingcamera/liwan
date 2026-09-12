@@ -42,9 +42,12 @@ async fn main() -> Result<()> {
 
 fn setup_logger(log_level: tracing::Level) -> Result<()> {
     // external crates should use WARN
-    let filter = EnvFilter::from_default_env()
+    let mut filter = EnvFilter::from_default_env()
         .add_directive(format!("{}={}", env!("CARGO_PKG_NAME"), log_level).parse()?)
         .add_directive(tracing::Level::WARN.into());
+    if log_level == tracing::Level::DEBUG || log_level == tracing::Level::TRACE {
+        filter = filter.add_directive(format!("tower_http::trace={log_level}").parse()?);
+    }
 
     tracing_subscriber::fmt().with_env_filter(filter).compact().init();
 

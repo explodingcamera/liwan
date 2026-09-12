@@ -82,6 +82,7 @@ tower-http = { version = "0.7", default-features = false, features = [
   "cors",
   "set-header",
   "timeout",
+  "trace",
 ] }
 ua-parser = "0.2"
 url = "2.5"
