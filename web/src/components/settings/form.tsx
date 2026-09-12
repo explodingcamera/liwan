@@ -38,7 +38,7 @@ export const SettingsHeader = ({
 	saveForm?: string;
 }) => (
 	<>
-		<nav className={styles.header}>
+		<nav className={styles.header} data-has-back={backHref ? true : undefined}>
 			<div className={styles.titleGroup}>
 				{backHref && (
 					<a href={backHref} className={styles.backButton} aria-label={backLabel ?? "Back"}>

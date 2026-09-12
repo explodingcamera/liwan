@@ -30,11 +30,17 @@ export type EventOptions = {
      * Required for custom events.
      */
     entity?: string;
+    /**
+     * Whether this event should be reported again when the page becomes hidden.
+     *
+     * Defaults to `true` for pageviews and `false` for other events. This option is ignored in server-side environments.
+     */
+    exit?: boolean;
 };
 /**
  * Sends an event to the Liwan API.
  *
- * @param name The name of the event. Defaults to "pageview". Currencly, custom event names are not supported and will be treated as "pageview".
+ * @param name The name of the event. Defaults to "pageview".
  * @param options Additional options for the event. See {@link EventOptions}.
  * @returns A promise that resolves when the event has been sent
  * @throws If {@link EventOptions.endpoint} is not provided in server-side environments.

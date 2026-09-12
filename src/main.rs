@@ -1,7 +1,10 @@
 #![forbid(unsafe_code)]
 use anyhow::Result;
 
-use liwan::app::{Liwan, models::Event};
+use liwan::app::{
+    Liwan,
+    models::{Event, EventExit},
+};
 use liwan::{cli, config::Config, web};
 use tracing_subscriber::EnvFilter;
 
@@ -16,7 +19,9 @@ async fn main() -> Result<()> {
     setup_logger(args.log_level)?;
 
     let config = Config::load(args.config, std::env::vars())?;
-    let (s, r) = tokio::sync::mpsc::channel::<Event>(1024 * 10);
+    let (events_tx, events_rx) = tokio::sync::mpsc::channel::<Event>(1024 * 10);
+    let (exits_tx, exits_rx) = tokio::sync::mpsc::channel::<EventExit>(1024 * 10);
+    let queues = web::EventQueues { events: events_tx, exits: exits_tx };
 
     if let Some(cmd) = args.cmd {
         return cli::handle_command(config, cmd);
@@ -29,8 +34,9 @@ async fn main() -> Result<()> {
     tokio::select! {
         biased;
         _ = liwan::utils::signals::shutdown() => app_copy.shutdown(),
-        res = web::start_webserver(app.clone(), s) => res,
-        res = app.events.process_events(r) => res,
+        res = web::start_webserver(app.clone(), queues) => res,
+        res = app.events.process_events(events_rx) => res,
+        res = app.events.process_exits(exits_rx) => res,
     }
 }
 

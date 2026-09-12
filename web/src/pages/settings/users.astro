@@ -8,5 +8,17 @@ import Settings from "@/layouts/settings.astro";
     <h1>Users</h1>
     <CreateUser client:only="react" />
   </nav>
+  <p class="description">
+    Manage dashboard access and administrator roles. Configure sign-in methods
+    in <a href="/settings/authentication">Authentication settings</a>.
+  </p>
   <UsersTable client:load />
 </Settings>
+
+<style>
+  .description {
+    max-width: 46rem;
+    margin-bottom: 1rem;
+    color: var(--pico-muted-color);
+  }
+</style>

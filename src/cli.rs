@@ -212,7 +212,8 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
             DevCommand::GenerateOpenApi(_) => {
                 let app = Liwan::try_new(config)?;
                 let (events, _) = tokio::sync::mpsc::channel(1);
-                let (_, spec) = crate::web::router(app, events)?;
+                let (exits, _) = tokio::sync::mpsc::channel(1);
+                let (_, spec) = crate::web::router(app, crate::web::EventQueues { events, exits })?;
                 crate::web::save_spec(spec)?;
                 println!("OpenAPI definition generated");
             }

@@ -13,13 +13,12 @@ type Props = { title: string; hideFooter?: boolean };
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="robots" content="noindex" />
-    <meta name="description" content="Liwan Web Analytics Dashboard" />
+    <meta name="description" content="liwan Web Analytics Dashboard" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <Font cssVariable="--font-stack-sans-text" />
-    <Font cssVariable="--font-stack-sans-headline" />
+    <Font cssVariable="--font-google-sans" />
     <ClientRouter />
     <script id="liwan-config" type="application/json" is:inline>__LIWAN_CONFIG__</script>
-    <title>{Astro.props.title} | Liwan</title>
+    <title>{Astro.props.title} | liwan</title>
   </head>
   <body>
     <slot />
@@ -31,7 +30,7 @@ type Props = { title: string; hideFooter?: boolean };
             <span class="footer-theme"><ThemeSwitcher /></span>
             <small>
               <span>
-                Powered by <a href="https://liwan.dev" target="_blank">Liwan.dev</a>
+                Powered by <a href="https://liwan.dev" target="_blank">liwan.dev</a>
               </span>
             </small>
           </div>

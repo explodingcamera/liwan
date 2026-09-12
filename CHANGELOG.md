@@ -30,6 +30,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Added GeoIP header mappings and presets for Akamai, Cloudflare, CloudFront, Netlify, and Vercel, with MaxMind results taking precedence when available
 - Tracker requests now avoid CORS preflight requests by sending JSON as `text/plain` and the event API accepts tracker JSON regardless of content type
 - Added external authentication with OpenID Connect, Google, and Microsoft Entra ID, including optional user creation and provider access restrictions
+- Improved visit duration accuracy by tracking page exits
 
 ### Security
 

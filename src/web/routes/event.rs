@@ -1,5 +1,6 @@
 use crate::app::models::{
-    FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings, VisitorGroupMode, hostname_allowed,
+    EventExit, FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings, VisitorGroupMode,
+    hostname_allowed,
 };
 use crate::app::{Liwan, models::Event};
 use crate::config::Config;
@@ -53,6 +54,8 @@ struct EventRequest {
     referrer: Option<String>,
     screen_width: Option<String>,
     orientation: Option<String>,
+    #[serde(default)]
+    exit: bool,
 }
 
 impl EventRequest {
@@ -165,9 +168,22 @@ async fn event_handler(
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     match res {
-        Ok(Some(event)) => {
+        Ok(Some((event, false))) => {
             if events.send_timeout(event, std::time::Duration::from_secs(2)).await.is_err() {
                 tracing::warn!("Failed to send event, channel full");
+            }
+        }
+        Ok(Some((event, true))) => {
+            let exit = EventExit {
+                entity_id: event.entity_id,
+                visitor_group_id: event.visitor_group_id,
+                event: event.event,
+                created_at: event.created_at,
+                fqdn: event.fqdn,
+                path: event.path,
+            };
+            if state.exits.send_timeout(exit, std::time::Duration::from_secs(2)).await.is_err() {
+                tracing::warn!("Failed to send event exit, channel full");
             }
         }
         // event was filtered out, do nothing
@@ -185,7 +201,8 @@ fn process_event(
     ip: Option<IpAddr>,
     geo_headers: GeoLocationHeaders,
     user_agent: headers::UserAgent,
-) -> Result<Option<Event>> {
+) -> Result<Option<(Event, bool)>> {
+    let is_exit = event.exit;
     let referrer = match process_referer(event.referrer.as_deref()) {
         Referrer::Fqdn(fqdn) => Some(fqdn),
         Referrer::Unknown(r) => r,
@@ -212,6 +229,14 @@ fn process_event(
     // we delay the user agent parsing as much as possible since it's by far the most expensive operation
     let client = useragent::parse(user_agent.as_str());
     if client.is_bot() {
+        return Ok(None);
+    }
+
+    if is_exit
+        && (!settings.track_sessions
+            || settings.visitor_group_mode == VisitorGroupMode::RandomPerRequest
+            || ip.is_none())
+    {
         return Ok(None);
     }
 
@@ -272,7 +297,7 @@ fn process_event(
         return Ok(None);
     }
 
-    Ok(Some(event))
+    Ok(Some((event, is_exit)))
 }
 
 fn ingest_drop_rule_matches(event: &Event, rule: &IngestDropRule) -> bool {

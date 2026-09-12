@@ -200,15 +200,15 @@ const { title, noContainer } = Astro.props;
   aside {
     display: flex;
     flex-direction: column;
-    width: 12rem;
+    width: 11rem;
     gap: 0.4rem;
-    margin-right: 2rem;
+    margin-right: 1.5rem;
 
     h3 {
       margin: 0;
       margin-left: 0.3rem;
       margin-top: 0.2rem;
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
   }
 
@@ -227,15 +227,22 @@ const { title, noContainer } = Astro.props;
     }
 
     a {
-        line-height: 1.6;
+      line-height: 1.25;
+      font-size: 0.9rem;
       text-decoration: none;
       transition: all 0.2s;
       border-radius: var(--pico-border-radius);
-      padding: 0.2rem 0.4rem;
+      padding: 0.3rem 0.4rem;
       width: 100%;
       display: flex;
       align-items: center;
-      gap: 0.2rem;
+      gap: 0.4rem;
+
+      svg {
+        width: 1.125rem;
+        height: 1.125rem;
+        flex: none;
+      }
     }
 
     a[data-active="true"] {

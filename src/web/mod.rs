@@ -21,7 +21,10 @@ use tower_http::{
     timeout::RequestBodyDeadlineLayer,
 };
 
-use crate::app::{Liwan, models::Event};
+use crate::app::{
+    Liwan,
+    models::{Event, EventExit},
+};
 use crate::web::webext::serve;
 
 pub use session::MaybeSessionId;
@@ -39,7 +42,17 @@ struct Script;
 pub struct RouterState {
     pub app: Arc<Liwan>,
     pub events: Sender<Event>,
+    pub exits: Sender<EventExit>,
     pub report_permits: Arc<Semaphore>,
+}
+
+/// Event ingestion queues used by the web server.
+#[derive(Clone)]
+pub struct EventQueues {
+    /// Queue for normal event inserts.
+    pub events: Sender<Event>,
+    /// Queue for delayed event exit updates.
+    pub exits: Sender<EventExit>,
 }
 
 // feTS treats directly resolved component references as circular and falls back to less precise types.
@@ -76,7 +89,7 @@ impl Deref for RouterState {
     }
 }
 
-pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()>, openapi::OpenApi)> {
+pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>, openapi::OpenApi)> {
     aide::generate::in_context(|ctx| {
         ctx.schema = ctx.schema.settings().clone().with_transform(WrapSchemaRefs).into_generator();
     });
@@ -139,7 +152,8 @@ pub fn router(app: Arc<Liwan>, events: Sender<Event>) -> Result<(axum::Router<()
         .layer(set_headers)
         .with_state(RouterState {
             app: app.clone(),
-            events,
+            events: queues.events,
+            exits: queues.exits,
             report_permits: Arc::new(Semaphore::new(app.config.limits.report_max_concurrency)),
         })
         .finish_api(&mut api);
@@ -168,7 +182,7 @@ pub fn save_spec(spec: openapi::OpenApi) -> Result<()> {
     Ok(())
 }
 
-pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<()> {
+pub async fn start_webserver(app: Arc<Liwan>, queues: EventQueues) -> Result<()> {
     match app.onboarding.token() {
         Some(onboarding) => {
             let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding);
@@ -181,7 +195,7 @@ pub async fn start_webserver(app: Arc<Liwan>, events: Sender<Event>) -> Result<(
         }
     }
 
-    let router = router(app.clone(), events)?;
+    let router = router(app.clone(), queues)?;
 
     #[cfg(debug_assertions)]
     save_spec(router.1)?;

@@ -110,7 +110,12 @@ pub(super) fn metric_aggregate_sql(metric: Metric, alias: &str) -> String {
         Metric::AvgTimeOnSite => {
             format!(
 				"--sql
-			coalesce(avg(extract(epoch from {alias}.time_to_next_event)) filter (where {alias}.time_to_next_event is not null and {alias}.time_to_next_event <= {SESSION_DURATION_SQL}), 0)"
+			coalesce(avg(extract(epoch from case
+				when {alias}.time_to_next_event is not null and {alias}.time_to_next_event between interval '0 seconds' and {SESSION_DURATION_SQL}
+					then {alias}.time_to_next_event
+				when {alias}.exited_at between {alias}.created_at and {alias}.created_at + {SESSION_DURATION_SQL}
+					then {alias}.exited_at - {alias}.created_at
+			end)), 0)"
 			)
         }
     }

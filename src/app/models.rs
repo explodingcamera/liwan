@@ -29,6 +29,17 @@ pub struct Event {
     pub track_sessions: bool,
 }
 
+/// Identifies a stored event that should receive an exit timestamp.
+#[derive(Debug, Clone)]
+pub struct EventExit {
+    pub entity_id: String,
+    pub visitor_group_id: String,
+    pub event: String,
+    pub created_at: DateTime<Utc>,
+    pub fqdn: Option<String>,
+    pub path: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Project {
     pub id: String,
@@ -457,6 +468,7 @@ macro_rules! event_params {
             None::<std::time::Duration>,
             $event.screen_width,
             $event.orientation,
+            None::<chrono::DateTime<chrono::Utc>>,
         ]
     };
 }

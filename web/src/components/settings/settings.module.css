@@ -2,6 +2,14 @@
   max-width: 46rem;
 }
 
+.userDetailPanel {
+  padding-top: 1rem;
+}
+
+.projectAccess {
+  margin-bottom: 0.75rem;
+}
+
 .displayHelp {
   max-width: 46rem;
   margin-bottom: 1rem;

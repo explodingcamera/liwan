@@ -9,12 +9,10 @@ import { CardLink } from "./card";
 export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; project: ProjectResponse }) => {
 	return (
 		<h1 className={styles.statsHeader}>
-			<span>
-				<CardLink href={`/p/${project.id}`}>
-					{project.public ? project.unlisted && <LockOpenIcon size={16} /> : <LockIcon size={16} />}
-					{project.displayName}
-				</CardLink>
-			</span>
+			<CardLink href={`/p/${project.id}`}>
+				{project.public ? project.unlisted && <LockOpenIcon size={16} /> : <LockIcon size={16} />}
+				{project.displayName}
+			</CardLink>
 			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
 		</h1>
 	);

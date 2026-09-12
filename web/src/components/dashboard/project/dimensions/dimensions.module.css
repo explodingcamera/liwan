@@ -5,6 +5,10 @@
 }
 
 .tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
   .tabsList {
     display: flex;
     gap: 0.5rem;
@@ -43,6 +47,7 @@
 
   .tabsContent {
     display: flex;
+    flex: 1;
     flex-direction: column;
   }
 }
@@ -118,7 +123,8 @@
   all: unset;
   cursor: pointer;
   color: var(--pico-contrast);
-  margin-top: 0.2rem;
+  margin-top: auto;
+  padding-top: 0.4rem;
   display: flex;
   justify-content: center;
   align-items: center;
