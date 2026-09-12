@@ -52,13 +52,13 @@
   align-items: center;
   max-width: 100%;
   gap: 0.25rem;
-  padding: 0.18rem 0.28rem 0.18rem 0.55rem;
+  padding: 0.25rem 0.28rem 0.25rem 0.55rem;
   cursor: default;
   border-radius: 0.4rem;
-  background: var(--pico-primary-background);
+  background: var(--tag-background);
   color: var(--pico-primary-inverse);
   font-size: 0.875rem;
-  line-height: 1.4;
+  line-height: 1.25;
 }
 
 .chipRemove {

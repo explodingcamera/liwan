@@ -62,10 +62,9 @@
   margin: 0;
   padding: 0.35rem 0.65rem;
   border: 0;
-  border-bottom: 2px solid transparent;
   border-radius: 0;
   background: transparent;
-  color: var(--pico-muted-color);
+  color: color-mix(in srgb, var(--pico-muted-color) 88%, transparent);
   box-shadow: none;
 }
 
@@ -77,8 +76,7 @@
 
 .activeTab,
 .activeTab:hover {
-  border-bottom-color: var(--pico-primary);
-  color: var(--pico-primary);
+  color: var(--pico-h1-color);
 }
 
 .panel {

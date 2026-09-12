@@ -5,6 +5,7 @@ import { SiGoogle, SiOpenid } from "@icons-pack/react-simple-icons";
 import { KeyRoundIcon } from "lucide-react";
 
 import { api } from "@/api";
+import { CopyableValue } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
 import type { ExternalAuthProvider, ExternalAuthSettings, ExternalAuthSettingsUpdate } from "@/constants";
 import { SettingsField, SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
@@ -55,7 +56,7 @@ const ProviderSettings = ({
 	<>
 		<fieldset className={styles.providerFieldset}>
 			<legend>Sign-in method</legend>
-			<p>Use Liwan passwords only, or add single sign-on with one external provider.</p>
+			<p>Use liwan passwords only, or add single sign-on with one external provider.</p>
 			<div className={styles.providerGrid}>
 				<label className={styles.providerCard}>
 					<input
@@ -70,7 +71,7 @@ const ProviderSettings = ({
 					</span>
 					<span className={styles.providerText}>
 						<strong>Internal</strong>
-						<small>Liwan username and password</small>
+						<small>liwan username and password</small>
 					</span>
 				</label>
 				{providers.map((provider) => (
@@ -93,9 +94,7 @@ const ProviderSettings = ({
 				))}
 			</div>
 			{!settings.enabled && (
-				<p className={styles.internalStatus}>
-					Liwan username and password sign-in is active. No additional setup is required.
-				</p>
+				<p className={styles.internalStatus}>Users sign in with their liwan username and password.</p>
 			)}
 		</fieldset>
 		{settings.enabled && (
@@ -321,7 +320,7 @@ export const AuthenticationSettingsPage = () => {
 					<div className={styles.callbackSection}>
 						<h2>Callback URL</h2>
 						<p>Add this exact URL to the provider application's allowed redirect URLs.</p>
-						<code className={styles.callback}>{settings.callbackUrl}</code>
+						<CopyableValue value={settings.callbackUrl} label="Callback URL" />
 					</div>
 				)}
 				{error && <article role="alert">{error}</article>}

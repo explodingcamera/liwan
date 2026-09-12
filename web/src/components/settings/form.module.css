@@ -10,6 +10,10 @@
   margin-bottom: 0.9rem;
 }
 
+.header[data-has-back] {
+  margin-bottom: 1.25rem;
+}
+
 .titleGroup {
   min-width: 0;
   display: flex;
@@ -22,6 +26,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.header[data-has-back] .titleGroup h1 {
+  font-size: 1rem;
 }
 
 .backButton {
@@ -68,28 +76,25 @@
 .tab {
   --pico-background-color: transparent;
   --pico-border-color: transparent;
-  --pico-color: var(--pico-muted-color);
   width: auto;
   margin: 0;
   padding: 0.35rem 0.65rem;
   border: 0;
-  border-bottom: 2px solid transparent;
   border-radius: 0;
   background: transparent;
-  color: var(--pico-muted-color);
+  color: color-mix(in srgb, var(--pico-muted-color) 88%, transparent);
   box-shadow: none;
 }
 
 .tab:hover {
   background: transparent;
-  color: var(--pico-h1-color);
+  color: var(--pico-color);
   box-shadow: none;
 }
 
 .tab[data-active],
 .tab[data-selected] {
-  border-bottom-color: var(--pico-primary-hover);
-  color: var(--pico-primary-hover);
+  color: var(--pico-h1-color);
 }
 
 .panel {

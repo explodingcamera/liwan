@@ -107,7 +107,7 @@
     width: calc(50% - 1rem);
 
     > div {
-      padding: 1rem;
+      padding: var(--pico-block-spacing-vertical) var(--pico-block-spacing-horizontal);
       padding-left: 0;
     }
   }
@@ -132,7 +132,7 @@
     }
 
     .geoTable {
-      padding: 1rem;
+      padding: var(--pico-block-spacing-vertical) var(--pico-block-spacing-horizontal);
       padding-top: 0;
 
       > div {

@@ -20,6 +20,27 @@
   font-weight: 500;
 }
 
+.value {
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0.7rem 3rem 0.7rem 0.9rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--pico-color) 82%, var(--pico-muted-color));
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.875em;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  box-shadow: none;
+}
+
+.value:focus {
+  border: 0;
+  box-shadow: none;
+}
+
 .tag {
   color: var(--settings-icon-color);
   font-weight: 650;

@@ -3,15 +3,15 @@
 
 :root {
   --font-family-text:
-    var(--font-stack-sans-text), system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial,
+    var(--font-google-sans), system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial,
     "Helvetica Neue", sans-serif, var(--pico-font-family-emoji);
-  --font-family-heading: var(--font-stack-sans-headline), var(--font-family-text);
+  --font-family-heading: var(--font-google-sans), var(--font-family-text);
 
   --pico-background-color: #eef0f9;
   --card-background-base: 0deg 0% 100%;
   --pico-card-background-color: hsl(var(--card-background-base));
-  --pico-block-spacing-vertical: 0.8rem;
-  --pico-block-spacing-horizontal: 0.8rem;
+  --pico-block-spacing-vertical: 1rem;
+  --pico-block-spacing-horizontal: 1rem;
   --pico-card-box-shadow: 0px 0px 13px #15233609;
   --pico-dropdown-background-color: #ffffff;
   --pico-dropdown-hover-background-color: #dfe7f3;
@@ -42,14 +42,17 @@
   font-variant-numeric: tabular-nums;
 
   --metric-button-active-background: #ebeef3;
+  --tag-background: var(--pico-primary-background);
 }
 
 :root[data-theme="dark"] {
   --pico-background-color: #0a0c10;
   --card-background-base: 218.8 23.9% 13.9%;
   --pico-muted-color: #9aa4b5;
+  --pico-muted-border-color: #2a3140;
   --pico-primary: #909ebe;
   --pico-primary-hover: #b0b9d0;
+  --pico-h1-color: #fff;
   --pico-secondary: #969eaf;
   --pico-secondary-hover: #b3b9c5;
   --pico-dropdown-background-color: #181c25;
@@ -63,6 +66,7 @@
   --switch-inactive-bg: var(--pico-secondary-background);
   --settings-icon-color: #dce2ec;
   --metric-button-active-background: #303743;
+  --tag-background: var(--pico-form-element-border-color);
 }
 
 @media only screen and (prefers-color-scheme: dark) {
@@ -70,8 +74,10 @@
     --pico-background-color: #0a0c10;
     --card-background-base: 218.8 23.9% 13.9%;
     --pico-muted-color: #9aa4b5;
+    --pico-muted-border-color: #2a3140;
     --pico-primary: #909ebe;
     --pico-primary-hover: #b0b9d0;
+    --pico-h1-color: #fff;
     --pico-secondary: #969eaf;
     --pico-secondary-hover: #b3b9c5;
     --pico-dropdown-background-color: #181c25;
@@ -85,6 +91,7 @@
     --switch-inactive-bg: var(--pico-secondary-background);
     --settings-icon-color: #dce2ec;
     --metric-button-active-background: #303743;
+    --tag-background: var(--pico-form-element-border-color);
   }
 }
 
@@ -137,18 +144,6 @@ hr {
   background-color: var(--pico-form-element-border-color);
   height: 1px;
   border: 0;
-}
-
-article {
-  --pico-block-spacing-horizontal: 1.2rem;
-  --pico-block-spacing-vertical: 1.2rem;
-}
-
-@media (max-width: 600px) {
-  article {
-    --pico-block-spacing-horizontal: 1rem;
-    --pico-block-spacing-vertical: 1rem;
-  }
 }
 
 details.dropdown.right summary + ul {

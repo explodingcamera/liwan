@@ -10,7 +10,7 @@ import { createToast } from "@/components/ui/toast";
 import { invalidateUsers, useMe, useProjects, useUsers } from "@/hooks/api";
 import { getUsername } from "@/utils";
 import { DeleteDialog } from "../dialogs";
-import { SettingsFieldset, SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
+import { SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
 
@@ -127,10 +127,11 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 	return (
 		<SettingsForm>
 			<SettingsHeader title={user.username} backHref="/settings/users" backLabel="Back to users" />
-			<div className={styles.detailPanel}>
-				<SettingsFieldset legend="Project access" description="Choose which projects this user can view.">
+			<div className={`${styles.detailPanel} ${styles.userDetailPanel}`}>
+				<div className={styles.projectAccess}>
 					<Tags
-						labelText="Projects"
+						labelText="Project access"
+						labelDescription="Choose which projects this user can view."
 						selected={selectedProjects}
 						suggestions={projectTags}
 						onAdd={(tag) => saveUser([...selectedProjects, tag], isAdmin)}
@@ -142,7 +143,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 						}
 						noOptionsText="No matching projects"
 					/>
-				</SettingsFieldset>
+				</div>
 				{me.role === "admin" && (
 					<SettingsSwitch
 						label="Administrator access"

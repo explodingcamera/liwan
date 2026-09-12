@@ -5,6 +5,35 @@ import { CopyIcon } from "lucide-react";
 import { runtimeConfig } from "@/config";
 import { createToast } from "./toast";
 
+const CopyButton = ({ value, label }: { value: string; label: string }) => (
+	<button
+		type="button"
+		className={styles.copyButton}
+		aria-label={`Copy ${label.toLowerCase()}`}
+		onClick={() =>
+			navigator.clipboard
+				.writeText(value)
+				.then(() => createToast(`${label} copied to clipboard`, "info"))
+				.catch(() => createToast(`Failed to copy ${label.toLowerCase()} to clipboard`, "error"))
+		}
+	>
+		<CopyIcon size={16} />
+	</button>
+);
+
+export const CopyableValue = ({ value, label }: { value: string; label: string }) => (
+	<div className={styles.snippet}>
+		<input
+			className={styles.value}
+			aria-label={label}
+			value={value}
+			readOnly
+			onFocus={(event) => event.currentTarget.select()}
+		/>
+		<CopyButton value={value} label={label} />
+	</div>
+);
+
 export const Snippet = ({ entityId }: { entityId: string }) => {
 	const baseUrl = runtimeConfig?.baseUrl ?? window.location.origin;
 	const scriptUrl = `${baseUrl.replace(/\/$/, "")}/script.js`;
@@ -21,19 +50,7 @@ export const Snippet = ({ entityId }: { entityId: string }) => {
 				{`"`}
 				<span className={styles.tag}>{"></script>"}</span>
 			</code>
-			<button
-				type="button"
-				className={styles.copyButton}
-				aria-label="Copy snippet"
-				onClick={() =>
-					navigator.clipboard
-						.writeText(code)
-						.then(() => createToast("Snippet copied to clipboard", "info"))
-						.catch(() => createToast("Failed to copy snippet to clipboard", "error"))
-				}
-			>
-				<CopyIcon size={16} />
-			</button>
+			<CopyButton value={code} label="Snippet" />
 		</div>
 	);
 };

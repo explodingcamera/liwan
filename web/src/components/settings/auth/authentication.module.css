@@ -159,15 +159,6 @@
   margin: 0;
 }
 
-.callback {
-  display: block;
-  padding: 0.15rem 0;
-  background: transparent;
-  color: var(--pico-muted-color);
-  overflow-wrap: anywhere;
-  user-select: all;
-}
-
 @media (max-width: 600px) {
   .optionList,
   .providerGrid {

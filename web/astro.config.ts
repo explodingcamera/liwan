@@ -56,6 +56,14 @@ export default defineConfig({
 			styles: ["normal"],
 			subsets: ["latin", "latin-ext"],
 		},
+		{
+			provider: fontProviders.fontsource(),
+			name: "Google Sans",
+			cssVariable: "--font-google-sans",
+			weights: ["400 500 700"],
+			styles: ["normal"],
+			subsets: ["latin", "latin-ext"],
+		},
 	],
 	vite: {
 		server: { proxy },
