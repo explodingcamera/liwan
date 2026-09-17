@@ -89,13 +89,13 @@ url = "2.5"
 
 # database
 duckdb = { version = "1.10505", features = ["bundled", "chrono", "r2d2"] }
-maxminddb = { version = "0.31", features = ["simdutf8"], optional = true }
+maxminddb = { version = "0.32", optional = true }
 mimalloc = { version = "0.1" }
 r2d2 = { version = "0.8", default-features = false }
 refinery = { version = "0.9", default-features = false }
 refinery-core = { version = "0.9", default-features = false }
-rusqlite = { version = "0.40", features = ["bundled", "chrono", "modern_sqlite"] }
 rsntp = { version = "4.1.2", default-features = false, features = ["async"] }
+rusqlite = { version = "0.40", features = ["bundled", "chrono", "modern_sqlite"] }
 
 [dev-dependencies]
 axum-test = { version = "21" }
