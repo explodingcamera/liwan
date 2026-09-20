@@ -26,9 +26,74 @@ button.reset {
 .worldmap {
   display: flex;
   flex: 1;
+  position: relative;
 
   > svg {
     flex: 1;
+  }
+}
+
+.zoomLockButton {
+  all: unset;
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  z-index: 5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 5px;
+  background: hsla(var(--card-background-base) / 0.75);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--pico-muted-border-color);
+  color: var(--pico-muted-color);
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--pico-color);
+    background: var(--pico-card-background-color);
+    border-color: var(--pico-primary);
+  }
+
+  &.zoomLocked {
+    color: var(--pico-primary);
+    background: var(--pico-primary-background);
+    border-color: var(--pico-primary);
+  }
+}
+
+.zoomLockIconWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.zoomBaseIcon {
+  flex-shrink: 0;
+}
+
+.lockOverlayIcon {
+  position: absolute;
+  bottom: -3px;
+  right: -4px;
+  background: var(--pico-card-background-color);
+  border-radius: 2px;
+  padding: 0.5px;
+  flex-shrink: 0;
+
+  &.locked {
+    color: var(--pico-primary);
+  }
+
+  &.unlocked {
+    color: var(--pico-muted-color);
+    opacity: 0.8;
   }
 }
 

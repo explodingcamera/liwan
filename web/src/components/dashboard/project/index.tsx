@@ -3,6 +3,8 @@ import styles from "./index.module.css";
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
+import { ActivityIcon, Maximize2Icon, Minimize2Icon } from "lucide-react";
+
 import type { DateRange } from "@/api/ranges";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
 import { dimensions, metricNames, metrics } from "@/constants";
@@ -54,9 +56,29 @@ const getDimensionFilter = (dimension: Dimension, value: string): DimensionFilte
 	};
 };
 
+const getStoredChartMinimized = (): boolean => {
+	if (typeof window === "undefined") return false;
+	try {
+		return window.localStorage?.getItem("liwan-chart-minimized") === "true";
+	} catch {
+		return false;
+	}
+};
+
 export const Project = () => {
 	const [projectId, setProjectId] = useState<string | undefined>();
 	const [filters, setFilters] = useState<DimensionFilter[]>([]);
+	const [isChartMinimized, setIsChartMinimized] = useState<boolean>(getStoredChartMinimized);
+
+	const toggleChartMinimize = () => {
+		setIsChartMinimized((prev) => {
+			const next = !prev;
+			try {
+				window.localStorage?.setItem("liwan-chart-minimized", String(next));
+			} catch {}
+			return next;
+		});
+	};
 
 	const { metric, setMetric } = useMetric();
 	const { range, setRange } = useRange();
@@ -171,18 +193,63 @@ export const Project = () => {
 						dimensions={dimensions.filter((dimension) => !project.hiddenDimensions.includes(dimension))}
 					/>
 				</div>
-				<article className={cls(cardStyles.card, styles.graphCard)}>
-					{activeMetric ? (
-						<LineGraph
-							data={graph}
-							title={metricNames[reportMetric]}
-							metric={reportMetric}
-							range={range}
-							isLoading={graphLoading}
-							isUpdating={graphUpdating}
-						/>
+				<article className={cls(cardStyles.card, styles.graphCard, isChartMinimized && styles.graphCardMinimized)}>
+					{isChartMinimized ? (
+						<div
+							className={styles.minimizedGraphHeader}
+							onClick={toggleChartMinimize}
+							role="button"
+							tabIndex={0}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									toggleChartMinimize();
+								}
+							}}
+						>
+							<div className={styles.minimizedTitle}>
+								<ActivityIcon size={16} className={styles.minimizedIcon} />
+								<span>{metricNames[reportMetric]} Chart</span>
+								<span className={styles.minimizedBadge}>Minimized</span>
+							</div>
+							<button
+								type="button"
+								className={styles.chartExpandButton}
+								onClick={(e) => {
+									e.stopPropagation();
+									toggleChartMinimize();
+								}}
+								title="Expand traffic chart"
+								aria-label="Expand traffic chart"
+							>
+								<Maximize2Icon size={14} />
+								<span>Expand chart</span>
+							</button>
+						</div>
 					) : (
-						<div className={styles.emptyReport}>No metrics are visible for this project.</div>
+						<div className={styles.graphWrapper}>
+							<button
+								type="button"
+								className={styles.chartMinimizeButton}
+								onClick={toggleChartMinimize}
+								title="Minimize traffic chart"
+								aria-label="Minimize traffic chart"
+							>
+								<Minimize2Icon size={14} />
+							</button>
+							{activeMetric ? (
+								<LineGraph
+									data={graph}
+									title={metricNames[reportMetric]}
+									metric={reportMetric}
+									range={range}
+									isLoading={graphLoading}
+									isUpdating={graphUpdating}
+								/>
+							) : (
+								<div className={styles.emptyReport}>No metrics are visible for this project.</div>
+							)}
+						</div>
 					)}
 				</article>
 				<div className={styles.tables}>

@@ -7,7 +7,7 @@ import { select } from "d3-selection";
 import type { ZoomBehavior } from "d3-zoom";
 import { zoom as d3Zoom, zoomIdentity } from "d3-zoom";
 import { autoUpdate, FloatingPortal, flip, offset, shift, useFloating } from "@floating-ui/react";
-import { RotateCcwIcon } from "lucide-react";
+import { LockIcon, RotateCcwIcon, UnlockIcon, ZoomInIcon } from "lucide-react";
 import * as topo from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 
@@ -48,6 +48,25 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 
 	const [moved, setMoved] = useState(false);
 	const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
+	const [isZoomLocked, setIsZoomLocked] = useState<boolean>(() => {
+		if (typeof window === "undefined") return false;
+		try {
+			return window.localStorage?.getItem("liwan-map-zoom-locked") === "true";
+		} catch {
+			return false;
+		}
+	});
+
+	const toggleZoomLock = () => {
+		setIsZoomLocked((prev) => {
+			const next = !prev;
+			try {
+				window.localStorage?.setItem("liwan-map-zoom-locked", String(next));
+			} catch {}
+			return next;
+		});
+	};
+
 	const { refs, floatingStyles, update } = useFloating({
 		open: currentLocation !== null,
 		placement: "right",
@@ -63,11 +82,24 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 	if (!zoomBehavior.current) {
 		zoomBehavior.current = d3Zoom<SVGSVGElement, unknown>()
 			.scaleExtent([1, 8]) // Min and max zoom levels
+			.filter((event) => {
+				if (isZoomLocked) return false;
+				return (!event.ctrlKey || event.type === "wheel") && !event.button;
+			})
 			.on("zoom", (event) => {
 				select(svgRef.current).select("g").attr("transform", event.transform);
 				if (!moved) setMoved(true);
 			});
 	}
+
+	useEffect(() => {
+		if (!zoomBehavior.current) return;
+		if (isZoomLocked) {
+			zoomBehavior.current.filter(() => false);
+		} else {
+			zoomBehavior.current.filter((event) => (!event.ctrlKey || event.type === "wheel") && !event.button);
+		}
+	}, [isZoomLocked]);
 
 	useEffect(() => {
 		if (!svgRef.current || !zoomBehavior.current) return;
@@ -119,8 +151,35 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 
 	return (
 		<div ref={containerRef} className={styles.worldmap}>
-			<button type="button" className={cls(styles.reset, moved && styles.moved)} onClick={resetZoom}>
+			<button
+				type="button"
+				className={cls(styles.reset, moved && styles.moved)}
+				onClick={resetZoom}
+				title="Reset map view"
+				aria-label="Reset map view"
+			>
 				<RotateCcwIcon size={18} />
+			</button>
+
+			<button
+				type="button"
+				className={cls(styles.zoomLockButton, isZoomLocked && styles.zoomLocked)}
+				onClick={toggleZoomLock}
+				title={
+					isZoomLocked
+						? "Zoom locked (click to unlock zooming)"
+						: "Lock zoom (prevent zooming in or out)"
+				}
+				aria-label={isZoomLocked ? "Zoom is locked" : "Zoom is unlocked"}
+			>
+				<div className={styles.zoomLockIconWrapper}>
+					<ZoomInIcon size={16} className={styles.zoomBaseIcon} />
+					{isZoomLocked ? (
+						<LockIcon size={9} className={cls(styles.lockOverlayIcon, styles.locked)} />
+					) : (
+						<UnlockIcon size={9} className={cls(styles.lockOverlayIcon, styles.unlocked)} />
+					)}
+				</div>
 			</button>
 
 			<svg ref={svgRef} style={{ display: "block" }} viewBox={"0 0 800 500"} role="img" aria-label="World Map">
