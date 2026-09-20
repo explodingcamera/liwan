@@ -1,22 +1,23 @@
 .project {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0.65rem;
 }
 
 .projectHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.4rem;
-  gap: 1rem;
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  gap: 0.8rem;
 
   details {
     margin: 0;
   }
 
   > h1 {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     margin: 0;
     align-items: first baseline;
   }

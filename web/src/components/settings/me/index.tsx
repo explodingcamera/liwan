@@ -1,17 +1,29 @@
 import styles from "./me.module.css";
 
 import type { SubmitEvent } from "react";
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { User2Icon } from "lucide-react";
 
+import { FONT_SIZES, type FontSize, getStoredFontSize, setAppFontSize } from "@/components/ui/font-size-switcher";
 import { api, useMutation } from "@/api";
 import { Snippet } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
 import { useMe } from "@/hooks/api";
 
 export const MyAccount = () => {
+	const [fontSize, setFontSize] = useState<FontSize>("normal");
 	const newPasswordId = useId();
 	const confirmPasswordId = useId();
+
+	useEffect(() => {
+		setFontSize(getStoredFontSize());
+		const handleCustomChange = (e: Event) => {
+			const customEvent = e as CustomEvent<FontSize>;
+			if (customEvent.detail) setFontSize(customEvent.detail);
+		};
+		window.addEventListener("liwan:font-size", handleCustomChange);
+		return () => window.removeEventListener("liwan:font-size", handleCustomChange);
+	}, []);
 
 	const formRef = useRef<HTMLFormElement>(null);
 	const { role, username, isLoading, authError } = useMe();
@@ -68,6 +80,26 @@ export const MyAccount = () => {
 					<a href="https://npmjs.com/package/liwan-tracker">liwan-tracker</a> npm package, or start with this example:
 				</p>
 				<Snippet entityId="YOUR_ENTITY_ID" />
+			</article>
+			<article>
+				<h2>Appearance</h2>
+				<p>Customize the display font size and density across all dashboards.</p>
+				<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+					{FONT_SIZES.map((item) => (
+						<button
+							key={item.id}
+							type="button"
+							className={fontSize === item.id ? "contrast" : "outline secondary"}
+							style={{ minWidth: "6.5rem", fontSize: "0.82rem", margin: 0 }}
+							onClick={() => {
+								setFontSize(item.id);
+								setAppFontSize(item.id);
+							}}
+						>
+							{item.label} ({item.scale})
+						</button>
+					))}
+				</div>
 			</article>
 			<article>
 				<form className={styles.password} onSubmit={updatePassword} ref={formRef}>

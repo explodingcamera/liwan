@@ -18,6 +18,16 @@ type Props = { title: string; hideFooter?: boolean };
     <Font cssVariable="--font-google-sans" />
     <ClientRouter />
     <script id="liwan-config" type="application/json" is:inline>__LIWAN_CONFIG__</script>
+    <script is:inline>
+      (function() {
+        try {
+          var fs = localStorage.getItem("liwan-font-size");
+          if (fs) {
+            document.documentElement.setAttribute("data-font-size", fs);
+          }
+        } catch(e) {}
+      })();
+    </script>
     <title>{Astro.props.title} | liwan</title>
   </head>
   <body>
@@ -40,13 +50,21 @@ type Props = { title: string; hideFooter?: boolean };
         </footer>
       )
     }
+    <script>
+      document.addEventListener("astro:after-swap", () => {
+        try {
+          const fs = localStorage.getItem("liwan-font-size");
+          if (fs) document.documentElement.setAttribute("data-font-size", fs);
+        } catch(e) {}
+      });
+    </script>
     <style>
       footer {
         box-sizing: border-box;
         width: 100%;
-        max-width: 60rem;
-        padding: 1rem;
-        margin: 0 auto 0.7rem;
+        max-width: min(72rem, 1200px);
+        padding: 0.75rem 1rem;
+        margin: 0 auto 0.5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;

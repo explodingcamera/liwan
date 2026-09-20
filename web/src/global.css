@@ -7,10 +7,13 @@
     "Helvetica Neue", sans-serif, var(--pico-font-family-emoji);
   --font-family-heading: var(--font-google-sans), var(--font-family-text);
 
+  --app-font-scale: 100%;
+  --pico-font-size: var(--app-font-scale);
+
   --pico-background-color: #eef0f9;
   --card-background-base: 0deg 0% 100%;
   --pico-card-background-color: hsl(var(--card-background-base));
-  --pico-block-spacing-vertical: 1rem;
+  --pico-block-spacing-vertical: 0.75rem;
   --pico-block-spacing-horizontal: 1rem;
   --pico-card-box-shadow: 0px 0px 13px #15233609;
   --pico-dropdown-background-color: #ffffff;
@@ -93,6 +96,46 @@
     --metric-button-active-background: #303743;
     --tag-background: var(--pico-form-element-border-color);
   }
+}
+
+:root[data-font-size="compact"],
+html[data-font-size="compact"] {
+  --app-font-scale: 75%;
+}
+
+:root[data-font-size="small"],
+html[data-font-size="small"] {
+  --app-font-scale: 85%;
+}
+
+:root[data-font-size="normal"],
+html[data-font-size="normal"] {
+  --app-font-scale: 100%;
+}
+
+:root[data-font-size="large"],
+html[data-font-size="large"] {
+  --app-font-scale: 115%;
+}
+
+@media (min-width: 576px) {
+  :root, :host { --pico-font-size: var(--app-font-scale) !important; }
+}
+@media (min-width: 768px) {
+  :root, :host { --pico-font-size: var(--app-font-scale) !important; }
+}
+@media (min-width: 1024px) {
+  :root, :host { --pico-font-size: var(--app-font-scale) !important; }
+}
+@media (min-width: 1280px) {
+  :root, :host { --pico-font-size: var(--app-font-scale) !important; }
+}
+@media (min-width: 1536px) {
+  :root, :host { --pico-font-size: var(--app-font-scale) !important; }
+}
+
+html {
+  font-size: var(--app-font-scale) !important;
 }
 
 h1,

@@ -18,7 +18,7 @@ export const LoginButton = () => {
 	return (
 		<details className={cls("dropdown", "right", styles.user)}>
 			<summary role="button" className="outline secondary">
-				<UserIcon size="24" />
+				<UserIcon size="18" />
 				{username}
 			</summary>
 			<ul>

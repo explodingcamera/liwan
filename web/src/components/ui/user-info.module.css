@@ -21,12 +21,13 @@ details.user {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    --pico-form-element-spacing-vertical: 0.5rem;
-    --pico-form-element-spacing-horizontal: 0.6rem;
+    --pico-form-element-spacing-vertical: 0.35rem;
+    --pico-form-element-spacing-horizontal: 0.55rem;
+    font-size: 0.85rem;
     border: none;
 
     svg {
-      margin-right: 0.5rem;
+      margin-right: 0.4rem;
     }
   }
 
