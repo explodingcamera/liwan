@@ -123,8 +123,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 				<RotateCcwIcon size={18} />
 			</button>
 
-			<svg ref={svgRef} style={{ display: "block" }} viewBox={"0 0 800 500"}>
-				<title>WoldMap</title>
+			<svg ref={svgRef} style={{ display: "block" }} viewBox={"0 0 800 500"} role="img" aria-label="World Map">
 				<g>{landmasses}</g>
 			</svg>
 

@@ -145,12 +145,14 @@ export const DimensionTable = (props: DimensionProps) => {
 		...props.query,
 	});
 	const dataTruncated = data?.slice(0, 6);
+	const rowCount = dataTruncated?.length ?? 0;
+	const count = isLoading && rowCount === 0 ? 2 : Math.max(rowCount, 1);
 
 	return (
 		<>
 			<div
 				className={cls(styles.dimensionTable, isLoading && styles.loading)}
-				style={{ "--count": 6 } as React.CSSProperties}
+				style={{ "--count": count } as React.CSSProperties}
 			>
 				{isLoading && <div className={cls("loading-spinner", styles.spinner)} />}
 				{dataTruncated?.map((d) => {

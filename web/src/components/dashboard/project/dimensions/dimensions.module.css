@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
+  height: fit-content;
 }
 
 .tabs {
@@ -100,11 +101,11 @@
 }
 
 .dimensionTable {
-  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: calc(var(--count) * (2.1rem + 0.2rem));
   position: relative;
+  transition: min-height 0.2s ease-in-out;
 
   .spinner {
     position: absolute;
@@ -123,8 +124,8 @@
   all: unset;
   cursor: pointer;
   color: var(--pico-contrast);
-  margin-top: auto;
-  padding-top: 0.4rem;
+  margin-top: 0.6rem;
+  padding-top: 0.2rem;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -139,8 +140,7 @@
 }
 
 .showMoreHidden {
-  opacity: 0;
-  pointer-events: none;
+  display: none;
 }
 
 .dimensionRow {
@@ -185,11 +185,10 @@
 }
 
 .dimensionEmpty {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 1rem;
+  padding: 0.8rem 0;
   opacity: 0.6;
 }
 
