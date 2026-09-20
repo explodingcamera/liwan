@@ -1,0 +1,298 @@
+.card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--pico-color);
+  margin: 0;
+}
+
+.countBadge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  color: var(--pico-muted-color);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.limitSelect {
+  all: unset;
+  user-select: none;
+  appearance: menulist;
+  cursor: pointer;
+  outline: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  color: var(--pico-muted-color);
+}
+
+.refreshButton {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: var(--pico-border-radius);
+  color: var(--pico-muted-color);
+  transition: color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    color: var(--pico-color);
+    background-color: var(--pico-card-background-color);
+  }
+}
+
+.sessionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sessionItem {
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-card-background-color);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--pico-primary);
+  }
+
+  &[data-expanded="true"] {
+    border-color: var(--pico-primary);
+  }
+}
+
+.sessionSummary {
+  display: grid;
+  grid-template-columns: 140px minmax(130px, 1.2fr) minmax(140px, 1fr) 110px 90px 32px;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  user-select: none;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr auto auto;
+    row-gap: 0.4rem;
+  }
+}
+
+.visitorCol {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--pico-font-family-monospace, monospace);
+  font-size: 0.8rem;
+  color: var(--pico-color);
+  font-weight: 500;
+}
+
+.visitorAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.geoCol {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flag {
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.locationText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.techCol {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--pico-muted-color);
+}
+
+.techIcons {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.activityCol {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--pico-muted-color);
+}
+
+.badge {
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--pico-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.timeCol {
+  font-size: 0.8rem;
+  color: var(--pico-muted-color);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.expandCol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pico-muted-color);
+}
+
+.timelineDrawer {
+  border-top: 1px dashed var(--pico-muted-border-color);
+  background: var(--pico-background-color);
+  padding: 0.8rem 1rem;
+}
+
+.timelineHeader {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pico-muted-color);
+  margin-bottom: 0.6rem;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  padding-left: 1.2rem;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0.35rem;
+    top: 0.4rem;
+    bottom: 0.4rem;
+    width: 2px;
+    background: var(--pico-muted-border-color);
+  }
+}
+
+.timelineItem {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -1.05rem;
+    top: 0.35rem;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--pico-primary);
+  }
+}
+
+.eventTime {
+  font-family: var(--pico-font-family-monospace, monospace);
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  min-width: 60px;
+}
+
+.eventPath {
+  font-weight: 500;
+  color: var(--pico-color);
+  word-break: break-all;
+}
+
+.eventReferrer {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.eventBadge {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+}
+
+.emptyState {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--pico-muted-color);
+  font-size: 0.9rem;
+}
+
+.loadingSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}

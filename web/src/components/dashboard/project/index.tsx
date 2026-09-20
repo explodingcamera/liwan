@@ -15,6 +15,7 @@ import { LineGraph } from "./graph";
 import { SelectMetrics } from "./metric";
 import { ProjectHeader } from "./project-header";
 import { SelectRange } from "./range";
+import { SessionsCard } from "./sessions";
 
 const Worldmap = lazy(() => import("./worldmap").then((module) => ({ default: module.Worldmap })));
 export type ProjectQuery = {
@@ -203,6 +204,7 @@ export const Project = () => {
 					{activeMetric && deviceDimensions.length > 0 && (
 						<DimensionDropdownCard dimensions={deviceDimensions} query={query} onSelect={onSelectDimRow} />
 					)}
+					{activeMetric && <SessionsCard query={query} />}
 				</div>
 			</Suspense>
 		</div>

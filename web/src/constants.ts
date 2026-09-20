@@ -29,6 +29,28 @@ export type GeoDetail = CollectionSettings["trackGeo"];
 export type DataRetention = CollectionSettings["dataRetention"] | EntityCollectionSettings["dataRetention"];
 export type DisplayOverride = ProjectDisplaySettings["metricDisplayOverrides"][string];
 
+export type SessionRow = {
+	visitorGroupId: string;
+	firstSeen: string;
+	lastSeen: string;
+	visits: number;
+	views: number;
+	events: number;
+	browser: string | null;
+	platform: string | null;
+	mobile: boolean | null;
+	country: string | null;
+	city: string | null;
+};
+
+export type SessionEvent = {
+	createdAt: string;
+	event: string;
+	fqdn: string | null;
+	path: string | null;
+	referrer: string | null;
+};
+
 export const dimensions = [
 	"platform",
 	"browser",

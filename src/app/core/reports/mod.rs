@@ -1,10 +1,12 @@
 mod dimension;
 mod graph;
+mod sessions;
 mod shared;
 mod stats;
 
 pub use dimension::dimension_report;
 pub use graph::{build_graph_buckets, overall_report};
+pub use sessions::{SessionEvent, SessionRow, session_list_report, session_timeline_report};
 pub use stats::{earliest_timestamp, online_users, overall_stats};
 
 use anyhow::{Result, bail};

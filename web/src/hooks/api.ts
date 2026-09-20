@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/api/client";
 import { queryClient, useQuery } from "@/api/query";
 import type { DateRange } from "@/api/ranges";
-import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
+import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse, SessionEvent, SessionRow } from "@/constants";
 import { toDataPoints } from "../components/dashboard/project/graph";
 
 const getStatusCode = (error: unknown) => (error as { status?: number } | undefined)?.status;
@@ -241,3 +241,84 @@ export const useProjectStats = ({
 export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });
 export const invalidateEntities = () => queryClient.invalidateQueries({ queryKey: ["entities"] });
 export const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ["users"] });
+
+export const useProjectSessions = ({
+	projectId,
+	range,
+	limit = 50,
+	enabled = true,
+}: {
+	projectId?: string;
+	range: DateRange;
+	limit?: number;
+	enabled?: boolean;
+}) => {
+	const { data, isLoading, isError, refetch } = useQuery({
+		queryKey: ["project_sessions", projectId, range.cacheKey(), limit],
+		enabled: projectId !== undefined && enabled,
+		queryFn: async () => {
+			const res = await fetch(`/api/dashboard/project/${projectId}/sessions`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "same-origin",
+				body: JSON.stringify({ range: range.toAPI(), limit }),
+			});
+			if (!res.ok) {
+				const text = await res.text().catch(() => res.statusText);
+				throw new Error(text || "Failed to load sessions");
+			}
+			const json = (await res.json()) as { data: SessionRow[] };
+			return json.data;
+		},
+		placeholderData: (prev) => prev,
+	});
+
+	return {
+		sessions: data ?? [],
+		isLoading,
+		isError,
+		refetch,
+	};
+};
+
+export const useSessionTimeline = ({
+	projectId,
+	visitorGroupId,
+	range,
+	limit = 200,
+	enabled = true,
+}: {
+	projectId?: string;
+	visitorGroupId?: string;
+	range: DateRange;
+	limit?: number;
+	enabled?: boolean;
+}) => {
+	const { data, isLoading, isError } = useQuery({
+		queryKey: ["session_timeline", projectId, visitorGroupId, range.cacheKey(), limit],
+		enabled: Boolean(projectId && visitorGroupId && enabled),
+		queryFn: async () => {
+			const res = await fetch(
+				`/api/dashboard/project/${projectId}/sessions/${encodeURIComponent(visitorGroupId!)}/timeline`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					credentials: "same-origin",
+					body: JSON.stringify({ range: range.toAPI(), limit }),
+				},
+			);
+			if (!res.ok) {
+				const text = await res.text().catch(() => res.statusText);
+				throw new Error(text || "Failed to load timeline");
+			}
+			const json = (await res.json()) as { data: SessionEvent[] };
+			return json.data;
+		},
+	});
+
+	return {
+		timeline: data ?? [],
+		isLoading,
+		isError,
+	};
+};

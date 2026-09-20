@@ -50,6 +50,11 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/project/{project_id}/graph", post(project_graph_handler))
         .api_route("/project/{project_id}/stats", post(project_stats_handler))
         .api_route("/project/{project_id}/dimension", post(project_detailed_handler))
+        .api_route("/project/{project_id}/sessions", post(project_sessions_handler))
+        .api_route(
+            "/project/{project_id}/sessions/{visitor_group_id}/timeline",
+            post(project_session_timeline_handler),
+        )
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -94,6 +99,86 @@ struct DimensionRequest {
 #[serde(rename_all = "camelCase")]
 struct DimensionResponse {
     data: Vec<DimensionTableRow>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SessionsRequest {
+    range: DateRange,
+    #[serde(default = "default_sessions_limit")]
+    limit: usize,
+}
+
+fn default_sessions_limit() -> usize {
+    50
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SessionsResponse {
+    data: Vec<reports::SessionRow>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SessionTimelineRequest {
+    range: DateRange,
+    #[serde(default = "default_timeline_limit")]
+    limit: usize,
+}
+
+fn default_timeline_limit() -> usize {
+    200
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SessionTimelineResponse {
+    data: Vec<reports::SessionEvent>,
+}
+
+async fn project_sessions_handler(
+    app: State<RouterState>,
+    MaybeAuth(user): MaybeAuth,
+    Path(project_id): Path<String>,
+    Json(req): Json<SessionsRequest>,
+) -> ApiResult<Json<SessionsResponse>> {
+    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    if !can_view_project(&project, user.as_ref()) {
+        http_bail!(StatusCode::NOT_FOUND, "Project not found")
+    }
+    let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    reports::validate_request(&req.range, &[], &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    let limit = req.limit.clamp(1, 200);
+
+    let data = run_report(&app, move |conn| {
+        reports::session_list_report(conn, &entities, &req.range, limit)
+    })
+    .await?;
+
+    Ok(Json(SessionsResponse { data }))
+}
+
+async fn project_session_timeline_handler(
+    app: State<RouterState>,
+    MaybeAuth(user): MaybeAuth,
+    Path((project_id, visitor_group_id)): Path<(String, String)>,
+    Json(req): Json<SessionTimelineRequest>,
+) -> ApiResult<Json<SessionTimelineResponse>> {
+    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    if !can_view_project(&project, user.as_ref()) {
+        http_bail!(StatusCode::NOT_FOUND, "Project not found")
+    }
+    let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    reports::validate_request(&req.range, &[], &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    let limit = req.limit.clamp(1, 1000);
+
+    let data = run_report(&app, move |conn| {
+        reports::session_timeline_report(conn, &entities, &visitor_group_id, &req.range, limit)
+    })
+    .await?;
+
+    Ok(Json(SessionTimelineResponse { data }))
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
