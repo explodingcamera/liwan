@@ -272,7 +272,8 @@
   font-family: var(--pico-font-family-monospace, monospace);
   font-size: 0.75rem;
   color: var(--pico-muted-color);
-  min-width: 60px;
+  min-width: 82px;
+  white-space: nowrap;
 }
 
 .eventPath {

@@ -5,6 +5,7 @@ import { ChevronDownIcon, ChevronUpIcon, GlobeIcon, RotateCwIcon, UserIcon } fro
 
 import type { SessionEvent, SessionRow } from "@/constants";
 import { useProjectSessions, useSessionTimeline } from "@/hooks/api";
+import { formatEventTime, type TimeFormat, useTimeFormat } from "@/hooks/persist";
 import { cls, countryCodeToFlag, formatPath, tryParseUrl } from "@/utils";
 import type { ProjectQuery } from "..";
 import { BrowserIcon, MobileDeviceIcon, OSIcon } from "../icons";
@@ -21,23 +22,10 @@ function formatRelativeTime(dateStr: string): string {
 	}
 }
 
-function formatEventTime(dateStr: string): string {
-	try {
-		const d = new Date(dateStr);
-		return d.toLocaleTimeString([], {
-			hour: "2-digit",
-			minute: "2-digit",
-			second: "2-digit",
-			hour12: false,
-		});
-	} catch {
-		return dateStr;
-	}
-}
-
 export const SessionsCard = ({ query }: { query: ProjectQuery }) => {
 	const [limit, setLimit] = useState(50);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const { timeFormat } = useTimeFormat();
 
 	const { sessions, isLoading, refetch } = useProjectSessions({
 		projectId: query.project.id,
@@ -98,6 +86,7 @@ export const SessionsCard = ({ query }: { query: ProjectQuery }) => {
 							isExpanded={expandedId === session.visitorGroupId}
 							onToggle={() => toggleExpand(session.visitorGroupId)}
 							query={query}
+							timeFormat={timeFormat}
 						/>
 					))}
 				</div>
@@ -111,11 +100,13 @@ const SessionItem = ({
 	isExpanded,
 	onToggle,
 	query,
+	timeFormat,
 }: {
 	session: SessionRow;
 	isExpanded: boolean;
 	onToggle: () => void;
 	query: ProjectQuery;
+	timeFormat: TimeFormat;
 }) => {
 	const shortId = session.visitorGroupId.slice(0, 8);
 	const flag = session.country ? countryCodeToFlag(session.country) : null;
@@ -164,7 +155,10 @@ const SessionItem = ({
 					{session.visits > 1 && <span className={styles.badge}>{session.visits} visits</span>}
 				</div>
 
-				<div className={styles.timeCol} title={`Last active: ${session.lastSeen}`}>
+				<div
+					className={styles.timeCol}
+					title={`Last active: ${new Date(session.lastSeen).toLocaleString([], { hour12: timeFormat === "12h" })}`}
+				>
 					{formatRelativeTime(session.lastSeen)}
 				</div>
 
@@ -178,6 +172,7 @@ const SessionItem = ({
 					projectId={query.project.id}
 					visitorGroupId={session.visitorGroupId}
 					query={query}
+					timeFormat={timeFormat}
 				/>
 			)}
 		</div>
@@ -188,10 +183,12 @@ const SessionTimeline = ({
 	projectId,
 	visitorGroupId,
 	query,
+	timeFormat,
 }: {
 	projectId: string;
 	visitorGroupId: string;
 	query: ProjectQuery;
+	timeFormat: TimeFormat;
 }) => {
 	const { timeline, isLoading } = useSessionTimeline({
 		projectId,
@@ -222,15 +219,15 @@ const SessionTimeline = ({
 			<div className={styles.timelineHeader}>Activity Timeline ({timeline.length} events)</div>
 			<div className={styles.timelineList}>
 				{timeline.map((event, idx) => (
-					<TimelineItem key={`${event.createdAt}-${idx}`} event={event} />
+					<TimelineItem key={`${event.createdAt}-${idx}`} event={event} timeFormat={timeFormat} />
 				))}
 			</div>
 		</div>
 	);
 };
 
-const TimelineItem = ({ event }: { event: SessionEvent }) => {
-	const time = formatEventTime(event.createdAt);
+const TimelineItem = ({ event, timeFormat }: { event: SessionEvent; timeFormat: TimeFormat }) => {
+	const time = formatEventTime(event.createdAt, timeFormat);
 	const rawPath = event.path || "/";
 	const urlObj = tryParseUrl(rawPath);
 	const displayPath = typeof urlObj === "string" ? rawPath : formatPath(urlObj);

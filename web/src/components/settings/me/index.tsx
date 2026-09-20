@@ -9,9 +9,11 @@ import { api, useMutation } from "@/api";
 import { Snippet } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
 import { useMe } from "@/hooks/api";
+import { type TimeFormat, useTimeFormat } from "@/hooks/persist";
 
 export const MyAccount = () => {
 	const [fontSize, setFontSize] = useState<FontSize>("normal");
+	const { timeFormat, setTimeFormat } = useTimeFormat();
 	const newPasswordId = useId();
 	const confirmPasswordId = useId();
 
@@ -99,6 +101,34 @@ export const MyAccount = () => {
 							{item.label} ({item.scale})
 						</button>
 					))}
+				</div>
+			</article>
+			<article>
+				<h2>Time format</h2>
+				<p>Choose between 12-hour (AM/PM) and 24-hour clock display for session activity timestamps.</p>
+				<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+					<button
+						type="button"
+						className={timeFormat === "12h" ? "contrast" : "outline secondary"}
+						style={{ minWidth: "9.5rem", fontSize: "0.82rem", margin: 0 }}
+						onClick={() => {
+							setTimeFormat("12h");
+							createToast("Time format set to 12-hour", "success");
+						}}
+					>
+						12-hour (e.g. 2:30:15 PM)
+					</button>
+					<button
+						type="button"
+						className={timeFormat === "24h" ? "contrast" : "outline secondary"}
+						style={{ minWidth: "9.5rem", fontSize: "0.82rem", margin: 0 }}
+						onClick={() => {
+							setTimeFormat("24h");
+							createToast("Time format set to 24-hour", "success");
+						}}
+					>
+						24-hour (e.g. 14:30:15)
+					</button>
 				</div>
 			</article>
 			<article>
