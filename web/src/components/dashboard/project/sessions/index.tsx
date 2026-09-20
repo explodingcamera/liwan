@@ -1,7 +1,7 @@
 import styles from "./sessions.module.css";
 
-import { useState } from "react";
-import { ChevronDownIcon, ChevronUpIcon, GlobeIcon, RotateCwIcon, UserIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUpDownIcon, ChevronDownIcon, ChevronUpIcon, GlobeIcon, RotateCwIcon, UserIcon } from "lucide-react";
 
 import type { SessionEvent, SessionRow } from "@/constants";
 import { useProjectSessions, useSessionTimeline } from "@/hooks/api";
@@ -179,6 +179,12 @@ const SessionItem = ({
 	);
 };
 
+const getStoredSortOrder = (): "asc" | "desc" => {
+	if (typeof window === "undefined") return "asc";
+	const stored = window.localStorage?.getItem("liwan-timeline-sort-order");
+	return stored === "desc" ? "desc" : "asc";
+};
+
 const SessionTimeline = ({
 	projectId,
 	visitorGroupId,
@@ -190,11 +196,36 @@ const SessionTimeline = ({
 	query: ProjectQuery;
 	timeFormat: TimeFormat;
 }) => {
+	const [sortOrder, setSortOrder] = useState<"asc" | "desc">(getStoredSortOrder);
+
+	useEffect(() => {
+		const handler = (e: Event) => {
+			const custom = e as CustomEvent<"asc" | "desc">;
+			if (custom.detail) setSortOrder(custom.detail);
+		};
+		window.addEventListener("liwan:timeline-sort-order", handler);
+		return () => window.removeEventListener("liwan:timeline-sort-order", handler);
+	}, []);
+
+	const toggleSort = () => {
+		const next = sortOrder === "asc" ? "desc" : "asc";
+		setSortOrder(next);
+		try {
+			window.localStorage?.setItem("liwan-timeline-sort-order", next);
+		} catch {}
+		window.dispatchEvent(new CustomEvent("liwan:timeline-sort-order", { detail: next }));
+	};
+
 	const { timeline, isLoading } = useSessionTimeline({
 		projectId,
 		visitorGroupId,
 		range: query.range,
 	});
+
+	const sortedTimeline = useMemo(() => {
+		if (sortOrder === "asc") return timeline;
+		return [...timeline].reverse();
+	}, [timeline, sortOrder]);
 
 	if (isLoading && timeline.length === 0) {
 		return (
@@ -216,9 +247,28 @@ const SessionTimeline = ({
 
 	return (
 		<div className={styles.timelineDrawer}>
-			<div className={styles.timelineHeader}>Activity Timeline ({timeline.length} events)</div>
+			<div className={styles.timelineHeader}>
+				<button
+					type="button"
+					className={styles.timelineSortLink}
+					onClick={toggleSort}
+					title={
+						sortOrder === "asc"
+							? "Currently sorted oldest to newest. Click to sort newest first."
+							: "Currently sorted newest to oldest. Click to sort oldest first."
+					}
+					aria-label={`Activity Timeline, sorted ${sortOrder === "asc" ? "oldest first" : "newest first"}. Click to reverse.`}
+				>
+					<span>Activity Timeline</span>
+					<ArrowUpDownIcon size={12} className={styles.sortIcon} />
+					<span className={styles.sortBadge}>
+						{sortOrder === "asc" ? "Oldest first" : "Newest first"}
+					</span>
+				</button>
+				<span className={styles.eventCount}>({timeline.length} events)</span>
+			</div>
 			<div className={styles.timelineList}>
-				{timeline.map((event, idx) => (
+				{sortedTimeline.map((event, idx) => (
 					<TimelineItem key={`${event.createdAt}-${idx}`} event={event} timeFormat={timeFormat} />
 				))}
 			</div>

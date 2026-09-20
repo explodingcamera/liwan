@@ -222,12 +222,58 @@
 }
 
 .timelineHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--pico-muted-color);
   margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.timelineSortLink {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  color: var(--pico-color);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+
+  &:hover {
+    color: var(--pico-primary);
+    text-decoration-style: solid;
+    text-decoration-color: var(--pico-primary);
+  }
+}
+
+.sortIcon {
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+.sortBadge {
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--pico-primary);
+  background: var(--pico-primary-background);
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  margin-left: 0.15rem;
+}
+
+.eventCount {
+  color: var(--pico-muted-color);
+  font-weight: 400;
+  text-transform: none;
 }
 
 .timelineList {
