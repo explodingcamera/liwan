@@ -279,6 +279,13 @@
   font-weight: 500;
   color: var(--pico-color);
   word-break: break-all;
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--pico-primary);
+    text-decoration: underline;
+  }
 }
 
 .eventReferrer {

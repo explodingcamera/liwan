@@ -196,7 +196,7 @@ const renderUrlDimensionLabel = (value: DimensionTableRow, onSelect: () => void)
 			<a href={getHref(url)} target="_blank" rel="noreferrer" className={styles.external}>
 				<SquareArrowOutUpRightIcon size={16} />
 			</a>
-			{typeof url !== "string" && <span className={styles.hostname}>{formatHost(url)}</span>}
+			{typeof url !== "string" && formatHost(url) ? <span className={styles.hostname}>{formatHost(url)}</span> : null}
 		</>
 	);
 };

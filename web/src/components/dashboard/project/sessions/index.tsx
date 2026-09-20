@@ -231,16 +231,26 @@ const SessionTimeline = ({
 
 const TimelineItem = ({ event }: { event: SessionEvent }) => {
 	const time = formatEventTime(event.createdAt);
-	const urlObj = event.path ? tryParseUrl(event.path) : null;
-	const displayPath = urlObj ? formatPath(urlObj) : event.path || "/";
+	const rawPath = event.path || "/";
+	const urlObj = tryParseUrl(rawPath);
+	const displayPath = typeof urlObj === "string" ? rawPath : formatPath(urlObj);
+	const href = event.fqdn
+		? `https://${event.fqdn}${displayPath.startsWith("/") ? displayPath : `/${displayPath}`}`
+		: displayPath;
 
 	return (
 		<div className={styles.timelineItem}>
 			<span className={styles.eventTime}>{time}</span>
 			{event.event !== "pageview" && <span className={styles.eventBadge}>{event.event}</span>}
-			<span className={styles.eventPath} title={event.path ?? undefined}>
+			<a
+				href={href}
+				target="_blank"
+				rel="noreferrer"
+				className={styles.eventPath}
+				title={event.fqdn ? `https://${event.fqdn}${displayPath}` : displayPath}
+			>
 				{displayPath}
-			</span>
+			</a>
 			{event.referrer && (
 				<span className={styles.eventReferrer} title={`Referrer: ${event.referrer}`}>
 					via {event.referrer}

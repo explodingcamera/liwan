@@ -75,6 +75,14 @@ export const formatDuration = (value: number) => {
 };
 
 export const tryParseUrl = (url: string) => {
+	if (!url) return url;
+	if (url.startsWith("/")) {
+		try {
+			return new URL(url, "https://placeholder.invalid");
+		} catch {
+			return url;
+		}
+	}
 	try {
 		return new URL(url);
 	} catch {
@@ -88,23 +96,30 @@ export const tryParseUrl = (url: string) => {
 
 export const formatHost = (url: string | URL) => {
 	if (typeof url === "string") return url;
+	if (url.hostname === "placeholder.invalid") return "";
 	return url.hostname;
 };
 
 export const formatFullUrl = (url: string | URL) => {
 	if (typeof url === "string") return url;
+	if (url.hostname === "placeholder.invalid") return `${url.pathname}${url.search}`;
 	return `${url.hostname}${url.pathname}${url.search}`;
 };
 
 export const formatPath = (url: string | URL) => {
-	if (typeof url === "string") return url;
-	return url.pathname;
+	if (typeof url === "string") return url.startsWith("/") ? url : `/${url}`;
+	return `${url.pathname}${url.search}`;
 };
 
 export const getHref = (url: string | URL) => {
 	if (typeof url === "string") {
+		if (url.startsWith("/")) return url;
 		if (!url.startsWith("http")) return `https://${url}`;
 		return url;
+	}
+
+	if (url.hostname === "placeholder.invalid") {
+		return `${url.pathname}${url.search}${url.hash}`;
 	}
 
 	return url.href;
