@@ -1,21 +1,14 @@
 import styles from "./collection.module.css";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { api } from "@/api";
+import { api, queryClient, useQuery } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { createToast } from "@/components/ui/toast";
-import type { CollectionSettings, DataRetention, GeoDetail, VisitorGroupMode } from "@/constants";
+import type { CollectionSettings, DataRetention } from "@/constants";
 import { DocsLink, FiltersEditor, GeoSelect, VisitorModeSelect } from "../filters";
-import {
-	SettingsField,
-	SettingsFieldset,
-	SettingsForm,
-	SettingsHeader,
-	SettingsPanel,
-	SettingsSwitch,
-	SettingsTabs,
-} from "../form";
+import { SettingsField, SettingsFieldset, SettingsForm, SettingsPanel, SettingsSwitch, SettingsTabs } from "../form";
 
 type CollectionTab = (typeof collectionTabs)[number];
 
@@ -45,42 +38,26 @@ const retentionValue = (retention: DataRetention) => {
 };
 
 export const CollectionSettingsPage = () => {
-	const [settings, setSettings] = useState<CollectionSettings>();
-	const [error, setError] = useState<string>();
+	const { data: settings, error: loadError } = useQuery({
+		queryKey: ["collection-settings"],
+		staleTime: 30_000,
+		queryFn: () => api["/api/dashboard/settings"].get().json(),
+	});
+	const [saveError, setSaveError] = useState<string>();
 	const [tab, setTab] = useState<CollectionTab>("tracking");
 	const [pruneResult, setPruneResult] = useState<string>();
 	const [pruneResultOpen, setPruneResultOpen] = useState(false);
-	const [visitorGroupMode, setVisitorGroupMode] = useState<VisitorGroupMode>("accurate");
-	const [trackSessions, setTrackSessions] = useState(true);
-	const [trackUtmParams, setTrackUtmParams] = useState(true);
-	const [trackGeo, setTrackGeo] = useState<GeoDetail>("city");
-	const [dataRetention, setDataRetention] = useState<DataRetention>({
-		mode: "all",
-	});
 	const [pruneError, setPruneError] = useState<string>();
 
-	useEffect(() => {
-		api["/api/dashboard/settings"]
-			.get()
-			.json()
-			.then((settings) => {
-				setSettings(settings);
-				setVisitorGroupMode(settings.visitorGroupMode);
-				setTrackSessions(settings.trackSessions);
-				setTrackUtmParams(settings.trackUtmParams);
-				setTrackGeo(settings.trackGeo);
-				setDataRetention(settings.dataRetention);
-			})
-			.catch((err) => setError(err.message));
-	}, []);
-
 	const saveSettings = (next: CollectionSettings) => {
-		setSettings(next);
+		setSaveError(undefined);
+		queryClient.setQueryData(["collection-settings"], next);
 		api["/api/dashboard/settings"]
 			.put({ json: next })
 			.then(() => createToast("Collection settings updated", "success"))
 			.catch((err) => {
-				setError(err instanceof Error ? err.message : "Failed to update collection settings");
+				setSaveError(err instanceof Error ? err.message : "Failed to update collection settings");
+				queryClient.invalidateQueries({ queryKey: ["collection-settings"] });
 				createToast("Failed to update collection settings", "error");
 			});
 	};
@@ -102,174 +79,160 @@ export const CollectionSettingsPage = () => {
 			});
 	};
 
-	if (error) return <article role="alert">{error}</article>;
-	if (!settings) return <div className="loading-spinner" />;
+	const error =
+		saveError ?? (loadError ? (loadError instanceof Error ? loadError.message : "Failed to load settings") : undefined);
 
 	return (
 		<div className={styles.page}>
-			<SettingsHeader
-				title="Collection"
-				description={
-					<>
-						Defaults for collection and retention. Entity settings can override these values. See{" "}
-						<a href="https://liwan.dev/guides/cookie-banners/" target="_blank" rel="noopener noreferrer">
-							cookie banner considerations
-						</a>
-						.
-					</>
-				}
-			/>
-			<SettingsForm id="collection-settings-form">
-				<SettingsTabs value={tab} onValueChange={setTab} tabs={collectionTabItems}>
-					<SettingsPanel value="tracking">
-						<SettingsField
-							label="Visitor grouping"
-							description={
-								<>
-									Group repeat visits without storing raw IP addresses. <DocsLink hash="visitor-grouping" />
-								</>
-							}
-							name="visitorGroupMode"
-						>
-							<VisitorModeSelect
-								id="visitorGroupMode"
-								value={visitorGroupMode}
-								onChange={(value) => {
-									if (!value) return;
-									setVisitorGroupMode(value);
-									saveSettings({ ...settings, visitorGroupMode: value });
-								}}
-							/>
-						</SettingsField>
-						<SettingsField
-							label="Geolocation detail"
-							description={
-								<>
-									Choose the location detail stored for new events. <DocsLink hash="geolocation" />
-								</>
-							}
-							name="trackGeo"
-						>
-							<GeoSelect
-								id="trackGeo"
-								value={trackGeo}
-								onChange={(value) => {
-									if (!value) return;
-									setTrackGeo(value);
-									saveSettings({ ...settings, trackGeo: value });
-								}}
-							/>
-						</SettingsField>
-						<SettingsSwitch
-							name="trackSessions"
-							label="Track session metrics"
-							description={
-								<>
-									Collect bounce rate, time on site, and entry and exit pages. <DocsLink hash="session-metrics" />
-								</>
-							}
-							checked={trackSessions}
-							onCheckedChange={(checked) => {
-								setTrackSessions(checked);
-								saveSettings({ ...settings, trackSessions: checked });
-							}}
-						/>
-						<SettingsSwitch
-							name="trackUtmParams"
-							label="Track UTM parameters"
-							description={
-								<>
-									Collect source, medium, campaign, term, and content. <DocsLink hash="utm-parameters" />
-								</>
-							}
-							checked={trackUtmParams}
-							onCheckedChange={(checked) => {
-								setTrackUtmParams(checked);
-								saveSettings({ ...settings, trackUtmParams: checked });
-							}}
-						/>
-					</SettingsPanel>
-					<SettingsPanel value="filters">
-						<FiltersEditor
-							rules={settings.ingestDropRules}
-							setRules={(ingestDropRules) => saveSettings({ ...settings, ingestDropRules })}
-						/>
-					</SettingsPanel>
-					<SettingsPanel value="retention">
-						<SettingsField
-							label="History retention"
-							description={
-								<>
-									Automatically delete event data older than the selected period.{" "}
-									<DocsLink hash="retention-and-pruning" />
-								</>
-							}
-							name="historyRetention"
-						>
-							<select
-								name="historyRetention"
-								value={retentionValue(dataRetention)}
-								onChange={(event) => {
-									const next = event.currentTarget.value;
-									if (!(retentionValues as readonly string[]).includes(next)) return;
-									if (next === "keep_all") {
-										const dataRetention = { mode: "all" } as const;
-										setDataRetention(dataRetention);
-										saveSettings({ ...settings, dataRetention });
-									} else {
-										const dataRetention = {
-											mode: "days",
-											days: Number(next),
-										} as const;
-										setDataRetention(dataRetention);
-										saveSettings({ ...settings, dataRetention });
-									}
-								}}
+			{error && <article role="alert">{error}</article>}
+			{!settings && !loadError && <LoadingSpinner />}
+			{settings && (
+				<SettingsForm id="collection-settings-form">
+					<SettingsTabs value={tab} onValueChange={setTab} tabs={collectionTabItems}>
+						<SettingsPanel value="tracking">
+							<SettingsField
+								label="Visitor grouping"
+								description={
+									<>
+										Group repeat visits without storing raw IP addresses. <DocsLink hash="visitor-grouping" />
+									</>
+								}
+								name="visitorGroupMode"
 							>
-								{retentionOptions.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
-						</SettingsField>
-						<SettingsFieldset
-							legend="Prune data"
-							description={
-								<>
-									Apply saved collection and retention settings to existing events. Drop rules only affect new events.
-									Run a dry run to preview changes. <DocsLink hash="retention-and-pruning" />
-								</>
-							}
-						>
-							<div className={styles.pruneActions}>
-								<button type="button" className="secondary outline" onClick={() => prune(true)}>
-									Dry run
-								</button>
-								<Dialog
-									title="Prune data?"
-									description="This permanently applies the current collection settings to historical data. Run a dry run first to preview the changes."
-									trigger={
-										<button type="button" className="contrast">
-											Prune now
-										</button>
-									}
+								<VisitorModeSelect
+									id="visitorGroupMode"
+									value={settings.visitorGroupMode}
+									onChange={(value) => {
+										if (!value) return;
+										saveSettings({ ...settings, visitorGroupMode: value });
+									}}
+								/>
+							</SettingsField>
+							<SettingsField
+								label="Geolocation detail"
+								description={
+									<>
+										Choose the location detail stored for new events. <DocsLink hash="geolocation" />
+									</>
+								}
+								name="trackGeo"
+							>
+								<GeoSelect
+									id="trackGeo"
+									value={settings.trackGeo}
+									onChange={(value) => {
+										if (!value) return;
+										saveSettings({ ...settings, trackGeo: value });
+									}}
+								/>
+							</SettingsField>
+							<SettingsSwitch
+								name="trackSessions"
+								label="Track session metrics"
+								description={
+									<>
+										Collect bounce rate, time on site, and entry and exit pages. <DocsLink hash="session-metrics" />
+									</>
+								}
+								checked={settings.trackSessions}
+								onCheckedChange={(checked) => {
+									saveSettings({ ...settings, trackSessions: checked });
+								}}
+							/>
+							<SettingsSwitch
+								name="trackUtmParams"
+								label="Track UTM parameters"
+								description={
+									<>
+										Collect source, medium, campaign, term, and content. <DocsLink hash="utm-parameters" />
+									</>
+								}
+								checked={settings.trackUtmParams}
+								onCheckedChange={(checked) => {
+									saveSettings({ ...settings, trackUtmParams: checked });
+								}}
+							/>
+						</SettingsPanel>
+						<SettingsPanel value="filters">
+							<FiltersEditor
+								rules={settings.ingestDropRules}
+								setRules={(ingestDropRules) => saveSettings({ ...settings, ingestDropRules })}
+							/>
+						</SettingsPanel>
+						<SettingsPanel value="retention">
+							<SettingsField
+								label="History retention"
+								description={
+									<>
+										Automatically delete event data older than the selected period.{" "}
+										<DocsLink hash="retention-and-pruning" />
+									</>
+								}
+								name="historyRetention"
+							>
+								<select
+									name="historyRetention"
+									value={retentionValue(settings.dataRetention)}
+									onChange={(event) => {
+										const next = event.currentTarget.value;
+										if (!(retentionValues as readonly string[]).includes(next)) return;
+										if (next === "keep_all") {
+											const dataRetention = { mode: "all" } as const;
+											saveSettings({ ...settings, dataRetention });
+										} else {
+											const dataRetention = {
+												mode: "days",
+												days: Number(next),
+											} as const;
+											saveSettings({ ...settings, dataRetention });
+										}
+									}}
 								>
-									<div className="grid">
-										<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
-										<Dialog.Close onClick={() => prune(false)}>Prune now</Dialog.Close>
-									</div>
-								</Dialog>
-							</div>
-							{pruneError && <article role="alert">{pruneError}</article>}
-						</SettingsFieldset>
-						<Dialog title="Prune result" open={pruneResultOpen} onOpenChange={setPruneResultOpen} trigger={false}>
-							<p>{pruneResult}</p>
-							<Dialog.Close>Close</Dialog.Close>
-						</Dialog>
-					</SettingsPanel>
-				</SettingsTabs>
-			</SettingsForm>
+									{retentionOptions.map((option) => (
+										<option key={option.value} value={option.value}>
+											{option.label}
+										</option>
+									))}
+								</select>
+							</SettingsField>
+							<SettingsFieldset
+								legend="Prune data"
+								description={
+									<>
+										Apply saved collection and retention settings to existing events. Drop rules only affect new events.
+										Run a dry run to preview changes. <DocsLink hash="retention-and-pruning" />
+									</>
+								}
+							>
+								<div className={styles.pruneActions}>
+									<button type="button" className="secondary outline" onClick={() => prune(true)}>
+										Dry run
+									</button>
+									<Dialog
+										title="Prune data?"
+										description="This permanently applies the current collection settings to historical data. Run a dry run first to preview the changes."
+										trigger={
+											<button type="button" className="contrast">
+												Prune now
+											</button>
+										}
+									>
+										<div className="grid">
+											<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
+											<Dialog.Close onClick={() => prune(false)}>Prune now</Dialog.Close>
+										</div>
+									</Dialog>
+								</div>
+								{pruneError && <article role="alert">{pruneError}</article>}
+							</SettingsFieldset>
+							<Dialog title="Prune result" open={pruneResultOpen} onOpenChange={setPruneResultOpen} trigger={false}>
+								<p>{pruneResult}</p>
+								<Dialog.Close>Close</Dialog.Close>
+							</Dialog>
+						</SettingsPanel>
+					</SettingsTabs>
+				</SettingsForm>
+			)}
 		</div>
 	);
 };

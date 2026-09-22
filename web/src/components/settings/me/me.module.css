@@ -39,11 +39,17 @@ form.password {
     margin: 0;
     font-size: 0.9rem;
     color: var(--pico-muted-color);
+
+    &[data-loading="true"] {
+      visibility: hidden;
+    }
   }
 }
 
 .container {
   flex: 1;
+  animation: fadeIn 0.2s ease;
+
   article {
     display: flex;
     flex-direction: column;
@@ -52,5 +58,17 @@ form.password {
 
   h2 {
     font-size: 1.2rem;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .container {
+    animation: none;
   }
 }

@@ -18,6 +18,12 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 > The `liwan-tracker` npm package is intended for current Liwan server releases. Its network protocol may change between Liwan versions. When it does, update the npm tracker alongside Liwan. If you use the tracker script served by Liwan itself, it already uses the matching internal tracker version.
 
+## [Unreleased]
+
+### Features
+
+- Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
+
 ## [v1.7.0] - 2026-09-13
 
 ### ⚠️ Breaking Changes

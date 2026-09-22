@@ -1,6 +1,6 @@
 import styles from "./range.module.css";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { endOfDay, startOfDay } from "date-fns";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
@@ -21,6 +21,36 @@ export const SelectRange = ({
 	projectId?: string;
 }) => {
 	const detailsRef = useRef<HTMLDetailsElement>(null);
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (
+				event.defaultPrevented ||
+				event.repeat ||
+				event.altKey ||
+				event.ctrlKey ||
+				event.metaKey ||
+				event.shiftKey ||
+				(event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+			) {
+				return;
+			}
+
+			const target = event.target;
+			if (
+				target instanceof Element &&
+				target.closest("a, button, input, select, summary, textarea, [contenteditable='true'], [role='button']")
+			) {
+				return;
+			}
+
+			event.preventDefault();
+			onSelect(event.key === "ArrowLeft" ? range.previous() : range.next());
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [onSelect, range]);
 
 	const handleSelect = (range: DateRange) => () => {
 		if (detailsRef.current) detailsRef.current.open = false;
@@ -53,6 +83,7 @@ export const SelectRange = ({
 				type="button"
 				className={cls("secondary", styles.stepButton)}
 				aria-label="Previous date range"
+				aria-keyshortcuts="ArrowLeft"
 				onClick={handleSelect(range.previous())}
 			>
 				<ChevronLeftIcon size="24" />
@@ -61,6 +92,7 @@ export const SelectRange = ({
 				type="button"
 				className={cls("secondary", styles.stepButton)}
 				aria-label="Next date range"
+				aria-keyshortcuts="ArrowRight"
 				onClick={handleSelect(range.next())}
 			>
 				<ChevronRightIcon size="24" />

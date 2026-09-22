@@ -4,6 +4,19 @@
   display: flex;
   gap: 0.7rem;
 
+  .spinner {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    min-height: 0;
+    border-radius: var(--pico-border-radius);
+    background-color: color-mix(in srgb, var(--pico-card-background-color) 70%, transparent);
+  }
+
+  &.empty button.metric h3 {
+    visibility: hidden;
+  }
+
   @media (max-width: 820px) {
     flex-wrap: wrap;
 

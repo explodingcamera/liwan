@@ -156,7 +156,7 @@ export const useProjectGraph = ({
 	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, interval, timezone];
 
 	const {
-		data: graph,
+		data: graphResult,
 		isError,
 		isLoading,
 		isFetching,
@@ -178,7 +178,7 @@ export const useProjectGraph = ({
 						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
-					return toDataPoints(req.data);
+					return { data: toDataPoints(req.data), metric, range };
 				}),
 		placeholderData: (prev) => prev,
 	});
@@ -186,7 +186,9 @@ export const useProjectGraph = ({
 	const isUpdating = isFetching && isPlaceholderData;
 
 	return {
-		graph,
+		graph: graphResult?.data,
+		displayMetric: graphResult?.metric ?? metric,
+		displayRange: graphResult?.range ?? range,
 		isLoading,
 		isError,
 		isUpdating,
@@ -195,13 +197,11 @@ export const useProjectGraph = ({
 
 export const useProjectStats = ({
 	projectId,
-	metric,
 	range,
 	filters = [],
 	enabled = true,
 }: {
 	projectId?: string;
-	metric: Metric;
 	range: DateRange;
 	filters?: DimensionFilter[];
 	enabled?: boolean;
@@ -210,8 +210,10 @@ export const useProjectStats = ({
 		data: stats,
 		isError,
 		isLoading,
+		isFetching,
+		isPlaceholderData,
 	} = useQuery({
-		queryKey: ["project_stats", projectId, range.cacheKey(), metric, filters],
+		queryKey: ["project_stats", projectId, range.cacheKey(), filters],
 
 		enabled: projectId !== undefined && enabled,
 		queryFn: () =>
@@ -234,6 +236,7 @@ export const useProjectStats = ({
 	return {
 		stats,
 		isLoading,
+		isUpdating: isFetching && isPlaceholderData,
 		isError,
 	};
 };

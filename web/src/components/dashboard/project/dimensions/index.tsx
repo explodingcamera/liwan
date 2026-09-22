@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Tabs } from "@base-ui/react/tabs";
 import { LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { Dimension, DimensionTableRow } from "@/constants";
 import { dimensionNames, metricNames } from "@/constants";
 import { useDimension } from "@/hooks/api";
@@ -152,7 +153,7 @@ export const DimensionTable = (props: DimensionProps) => {
 				className={cls(styles.dimensionTable, isLoading && styles.loading)}
 				style={{ "--count": 6 } as React.CSSProperties}
 			>
-				{isLoading && <div className={cls("loading-spinner", styles.spinner)} />}
+				{isLoading && <LoadingSpinner className={styles.spinner} />}
 				{dataTruncated?.map((d) => {
 					return (
 						<div
@@ -193,7 +194,13 @@ const renderUrlDimensionLabel = (value: DimensionTableRow, onSelect: () => void)
 		<>
 			<LinkIcon size={16} />
 			<DimensionValueButton onSelect={onSelect}>{formatPath(url)}</DimensionValueButton>
-			<a href={getHref(url)} target="_blank" rel="noreferrer" className={styles.external}>
+			<a
+				href={getHref(url)}
+				target="_blank"
+				rel="noreferrer"
+				className={styles.external}
+				aria-label={`Open ${value.dimensionValue} in a new tab`}
+			>
 				<SquareArrowOutUpRightIcon size={16} />
 			</a>
 			{typeof url !== "string" && <span className={styles.hostname}>{formatHost(url)}</span>}
@@ -275,7 +282,13 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 			<>
 				<LinkIcon size={16} />
 				<DimensionValueButton onSelect={onSelect}>{formatHost(url)}</DimensionValueButton>
-				<a href={getHref(url)} target="_blank" rel="noreferrer" className={styles.external}>
+				<a
+					href={getHref(url)}
+					target="_blank"
+					rel="noreferrer"
+					className={styles.external}
+					aria-label={`Open ${value.dimensionValue} in a new tab`}
+				>
 					<SquareArrowOutUpRightIcon size={16} />
 				</a>
 			</>
@@ -316,7 +329,13 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 				<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
 				<DimensionValueButton onSelect={onSelect}>{name}</DimensionValueButton>
 				{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
-					<a href={`https://${value.dimensionValue}`} target="_blank" rel="noreferrer" className={styles.external}>
+					<a
+						href={`https://${value.dimensionValue}`}
+						target="_blank"
+						rel="noreferrer"
+						className={styles.external}
+						aria-label={`Open ${value.dimensionValue} in a new tab`}
+					>
 						<SquareArrowOutUpRightIcon size={16} />
 					</a>
 				)}

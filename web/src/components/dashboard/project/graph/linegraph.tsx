@@ -1,8 +1,8 @@
 import styles from "./linegraph.module.css";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { extent } from "d3-array";
-import { easeCubic, easeCubicOut } from "d3-ease";
+import { easeCubic } from "d3-ease";
 import { scaleLinear, scaleTime } from "d3-scale";
 import { select } from "d3-selection";
 import { area, line } from "d3-shape";
@@ -11,8 +11,9 @@ import "d3-transition";
 import { addMonths, differenceInHours, isSameYear } from "date-fns";
 
 import type { DateRange } from "@/api/ranges";
-import { debounce, formatMetricVal, formatMetricValEvenly } from "@/utils";
-import type { DataPoint, GraphState } from ".";
+import type { Metric } from "@/constants";
+import { formatMetricVal, formatMetricValEvenly } from "@/utils";
+import type { DataPoint } from ".";
 import { axisBottom, axisLeft } from "./axis";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
@@ -111,7 +112,17 @@ const getGraphRenderData = (data: DataPoint[], range: DateRange) => {
 	};
 };
 
-export const LineGraph = ({ state, range }: { state: GraphState; range: DateRange }) => {
+export const LineGraph = ({
+	data,
+	title,
+	metric,
+	range,
+}: {
+	data: DataPoint[];
+	title: string;
+	metric: Metric;
+	range: DateRange;
+}) => {
 	const svgRef = useRef<SVGSVGElement | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -121,37 +132,45 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 		height: number;
 	} | null>(null);
 	useEffect(() => {
-		if (containerRef.current) {
-			const observer = new ResizeObserver((entries) => {
-				for (const {
-					contentRect: { width, height },
-				} of entries) {
-					// setDimensions({ width, height });
-					debounce(() => setDimensions({ width, height }), 100)();
-				}
-			});
-			observer.observe(containerRef.current);
-			return () => observer.disconnect();
-		}
+		const container = containerRef.current;
+		if (!container) return;
+
+		let resizeTimeout: number | undefined;
+		const observer = new ResizeObserver(([entry]) => {
+			if (!entry) return;
+			const { width, height } = entry.contentRect;
+			window.clearTimeout(resizeTimeout);
+			resizeTimeout = window.setTimeout(() => {
+				setDimensions((current) =>
+					current?.width === width && current.height === height ? current : { width, height },
+				);
+			}, 100);
+		});
+		observer.observe(container);
+
+		return () => {
+			window.clearTimeout(resizeTimeout);
+			observer.disconnect();
+		};
 	}, []);
 
 	const firstRender = useRef(true);
 
-	const updateGraph = useCallback(() => {
+	useEffect(() => {
 		if (!svgRef.current || !dimensions) return;
 		const svg = select(svgRef.current);
-		const { domainMaxX, dottedLineData, solidLineData } = getGraphRenderData(state.data, range);
+		const { domainMaxX, dottedLineData, solidLineData } = getGraphRenderData(data, range);
 
-		const [minX] = extent(state.data, (d) => d.x).map((d) => d || new Date());
+		const [minX] = extent(data, (d) => d.x).map((d) => d || new Date());
 		const maxX = domainMaxX;
 		const axisRange = getAxisDateRange(minX, maxX);
-		const [_minY, maxY] = extent(state.data, (d) => d.y).map((d) => d || 0);
+		const [_minY, maxY] = extent(data, (d) => d.y).map((d) => d || 0);
 
-		let xCount = Math.min(state.data.length, 8);
-		if (dimensions.width && dimensions.width < 500) {
-			xCount = Math.min(state.data.length, 6);
-		} else if (dimensions.width && dimensions.width < 400) {
-			xCount = Math.min(state.data.length, 4);
+		let xCount = Math.min(data.length, 8);
+		if (dimensions.width && dimensions.width < 400) {
+			xCount = Math.min(data.length, 4);
+		} else if (dimensions.width && dimensions.width < 500) {
+			xCount = Math.min(data.length, 6);
 		}
 
 		const paddingTop = 30;
@@ -160,7 +179,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 		const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
 
 		const yAxis =
-			state.metric === "bounce_rate"
+			metric === "bounce_rate"
 				? scaleLinear([0, 1], [dimensions.height - paddingBottom - paddingTop, 0])
 				: scaleLinear([0, Math.max(maxY * 1.25 || 0, 20)], [dimensions.height - paddingBottom - paddingTop, 0]);
 
@@ -176,7 +195,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 		svg
 			.selectChild("#background")
 			.attr("transform", `translate(0, ${paddingTop})`)
-			.attr("d", svgArea(state.data) || "");
+			.attr("d", svgArea(data) || "");
 
 		svg
 			.selectChild("#line")
@@ -206,10 +225,10 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 		const leftLabelAxis = axisLeft(yAxis)
 			.disableDomain()
 			.disableTicks()
-			.tickFormat((d) => formatMetricValEvenly(d as number, state.metric, maxY))
+			.tickFormat((d) => formatMetricValEvenly(d as number, metric, maxY))
 			.tickValues(tickValuesY);
 
-		let tickValuesX = pickAxisTicks(state.data, xCount);
+		let tickValuesX = pickAxisTicks(data, xCount);
 		if (tickValuesX.length > 0 && xAxis(tickValuesX[0]) < 20) tickValuesX = tickValuesX.slice(1);
 		if (tickValuesX.length > 0 && xAxis(tickValuesX[tickValuesX.length - 1]) > dimensions.width - 20) {
 			tickValuesX = tickValuesX.slice(0, -1);
@@ -224,6 +243,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 		let xAxisTransition = 200;
 		if (firstRender.current) xAxisTransition = 0;
 		xAxisElement
+			.interrupt()
 			.transition()
 			.ease(easeCubic)
 			.duration(xAxisTransition)
@@ -277,93 +297,86 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 
 			firstRender.current = false;
 		});
-	}, [dimensions, state, range]);
+
+		return () => void xAxisElement.interrupt();
+	}, [data, dimensions, metric, range]);
 
 	useEffect(() => {
-		if (!svgRef.current || !dimensions) return;
+		const svgElement = svgRef.current;
+		if (!svgElement || !dimensions || data.length === 0) return;
+
+		const svg = select(svgElement);
+		const tooltip = svg.selectChild("#tooltip");
+		const needle = svg.selectChild("#needle");
+		const { domainMaxX } = getGraphRenderData(data, range);
+		const [minX] = extent(data, (d) => d.x).map((d) => d || new Date());
+		const xAxis = scaleTime().domain([minX, domainMaxX]).range([0, dimensions.width]);
+		const dateRange = getTooltipDateRange(minX, domainMaxX, range);
+		let animationFrame: number | undefined;
 
 		const mouseMove = (event: MouseEvent) => {
-			if (!svgRef.current || state.data.length === 0) return;
-			const tooltip = select(svgRef.current).selectChild("#tooltip");
-			const tooltipRect = (tooltip.node() as SVGForeignObjectElement | null)?.getBoundingClientRect();
-			const tooltipWidth = tooltipRect?.width || 0;
-			const tooltipHeight = tooltipRect?.height || 0;
-			const tooltipPadding = 10;
+			window.cancelAnimationFrame(animationFrame ?? 0);
+			animationFrame = window.requestAnimationFrame(() => {
+				const tooltipRect = (tooltip.node() as SVGForeignObjectElement | null)?.getBoundingClientRect();
+				const tooltipWidth = tooltipRect?.width || 0;
+				const tooltipHeight = tooltipRect?.height || 0;
+				const tooltipPadding = 10;
 
-			const svgRect = svgRef.current.getBoundingClientRect();
-			const svgWidth = svgRect.width;
-			const svgHeight = svgRect.height;
+				const svgRect = svgElement.getBoundingClientRect();
+				const svgWidth = svgRect.width;
+				const svgHeight = svgRect.height;
+				const isLeftSide = event.clientX - svgRect.left < svgWidth / 2;
+				const tooltipX = isLeftSide
+					? Math.min(event.clientX - svgRect.left + tooltipPadding, svgWidth - tooltipWidth - tooltipPadding)
+					: Math.max(event.clientX - svgRect.left - tooltipWidth - tooltipPadding, tooltipPadding);
+				const tooltipY = Math.min(
+					event.clientY - svgRect.top + tooltipPadding - tooltipHeight / 3,
+					svgHeight - tooltipHeight - tooltipPadding,
+				);
 
-			// Determine if cursor is on the left or right side of the SVG
-			const isLeftSide = event.clientX - svgRect.left < svgWidth / 2;
+				tooltip.attr("x", tooltipX).attr("y", tooltipY).attr("opacity", 1);
 
-			// Calculate tooltip X position based on cursor side
-			const tooltipX = isLeftSide
-				? Math.min(event.clientX - svgRect.left + tooltipPadding, svgWidth - tooltipWidth - tooltipPadding)
-				: Math.max(event.clientX - svgRect.left - tooltipWidth - tooltipPadding, tooltipPadding);
+				const x = event.clientX - svgRect.left - 1;
+				const point = data.reduce((closestPoint, currentPoint) => {
+					const closestDistance = Math.abs(xAxis(closestPoint.x) - x);
+					const currentDistance = Math.abs(xAxis(currentPoint.x) - x);
+					return currentDistance < closestDistance ? currentPoint : closestPoint;
+				});
 
-			// Calculate tooltip Y position
-			const tooltipY = Math.min(
-				event.clientY - svgRect.top + tooltipPadding - tooltipHeight / 3,
-				svgHeight - tooltipHeight - tooltipPadding,
-			);
-
-			const { domainMaxX } = getGraphRenderData(state.data, range);
-			const [minX] = extent(state.data, (d) => d.x).map((d) => d || new Date());
-			const maxX = domainMaxX;
-			const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
-
-			tooltip.transition().duration(200).ease(easeCubicOut).attr("x", tooltipX).attr("y", tooltipY).attr("opacity", 1);
-
-			const needle = select(svgRef.current).selectChild("#needle");
-			const x = event.clientX - svgRect.left - 1;
-			const point = state.data.reduce((closestPoint, currentPoint) => {
-				const closestDistance = Math.abs(xAxis(closestPoint.x) - x);
-				const currentDistance = Math.abs(xAxis(currentPoint.x) - x);
-				return currentDistance < closestDistance ? currentPoint : closestPoint;
+				const snappedX = xAxis(point.x);
+				needle.attr("d", `M ${snappedX} 0 L ${snappedX} ${svgHeight - 40}`);
+				tooltip.select(".date").text(formatDate(new Date(point.x), dateRange));
+				tooltip.select(".value").text(formatMetricVal(point.y, metric));
 			});
-
-			const snappedX = xAxis(point.x);
-			needle
-				.transition()
-				.duration(200)
-				.ease(easeCubicOut)
-				.attr("d", `M ${snappedX} 0 L ${snappedX} ${svgHeight - 40}`);
-
-			const value = point.y;
-
-			const date = new Date(point.x);
-			const dateRange = getTooltipDateRange(minX, maxX, range);
-
-			const tooltipDate = formatDate(date, dateRange);
-			const tooltipValue = formatMetricVal(value, state.metric);
-
-			tooltip.select(".date").text(tooltipDate);
-			tooltip.select(".value").text(tooltipValue);
 		};
 
 		const mouseLeave = () => {
-			select(svgRef.current).selectChild("#tooltip").interrupt().attr("opacity", 0);
-			select(svgRef.current).selectChild("#needle").interrupt().attr("d", "M 0 0 L 0 0");
+			window.cancelAnimationFrame(animationFrame ?? 0);
+			tooltip.interrupt().attr("opacity", 0);
+			needle.interrupt().attr("d", "M 0 0 L 0 0");
 		};
 
-		svgRef.current.addEventListener("mousemove", mouseMove);
-		svgRef.current.addEventListener("mouseleave", mouseLeave);
+		svgElement.addEventListener("mousemove", mouseMove);
+		svgElement.addEventListener("mouseleave", mouseLeave);
 
 		return () => {
-			svgRef.current?.removeEventListener("mousemove", mouseMove);
-			svgRef.current?.removeEventListener("mouseleave", mouseLeave);
+			window.cancelAnimationFrame(animationFrame ?? 0);
+			svgElement.removeEventListener("mousemove", mouseMove);
+			svgElement.removeEventListener("mouseleave", mouseLeave);
+			tooltip.interrupt();
+			needle.interrupt();
 		};
-	});
-
-	useEffect(() => {
-		updateGraph();
-	}, [updateGraph]);
+	}, [data, dimensions, metric, range]);
 
 	return (
 		<div ref={containerRef} className={styles.graph}>
-			<svg ref={svgRef} style={{ display: "block", width: "100%", height: "100%" }}>
-				<title>Graph</title>
+			<svg
+				ref={svgRef}
+				style={{ display: "block", width: "100%", height: "100%" }}
+				role="img"
+				aria-label={`${title} time series`}
+			>
+				<title>{title} graph</title>
 				<defs>
 					<linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
 						<stop offset="0%" stopColor="rgb(var(--graph-fill-color) / 0.25)" />
@@ -383,7 +396,7 @@ export const LineGraph = ({ state, range }: { state: GraphState; range: DateRang
 				/>
 				<foreignObject id="tooltip" width="170" height="100" opacity="0">
 					<div data-theme="dark" className={styles.tooltip}>
-						<h2>{state.title}</h2>
+						<h2>{title}</h2>
 						<h3>
 							<span className="date" /> <span className="value" />
 						</h3>

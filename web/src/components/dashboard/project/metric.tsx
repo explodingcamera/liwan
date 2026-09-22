@@ -2,6 +2,7 @@ import styles from "./metric.module.css";
 
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { Metric, StatsResponse } from "@/constants";
 import { metrics as defaultMetrics } from "@/constants";
 import { cls, formatMetricVal, formatPercent } from "@/utils";
@@ -13,17 +14,20 @@ export const SelectMetrics = ({
 	metrics = defaultMetrics,
 	setMetric,
 	className,
+	isLoading = false,
 }: {
 	data?: StatsResponse;
 	metric: Metric;
 	metrics?: readonly Metric[];
 	setMetric: (value: Metric) => void;
 	className?: string;
+	isLoading?: boolean;
 }) => {
 	const visible = (metric: Metric) => metrics.includes(metric);
 
 	return (
-		<div className={cls(styles.metrics, className)}>
+		<div className={cls(styles.metrics, !data && styles.empty, className)}>
+			{isLoading && <LoadingSpinner className={styles.spinner} />}
 			{visible("views") && (
 				<SelectMetric
 					title="Total Views"

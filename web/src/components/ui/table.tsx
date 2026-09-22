@@ -3,6 +3,8 @@ import styles from "./table.module.css";
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 
+import { LoadingSpinner } from "./loading";
+
 export type Column<T> = {
 	id: string;
 	header?: string | ReactElement;
@@ -25,7 +27,7 @@ export const Table = <T extends { id: string }>({
 	const [loading, setLoading] = useState(true);
 	useEffect(() => setLoading(isLoading), [isLoading]);
 
-	if (loading) return <div className={"loading-spinner"} />;
+	if (loading) return <LoadingSpinner />;
 
 	return (
 		<div className={styles.container}>

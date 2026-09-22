@@ -47,6 +47,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 	const containerRef = useRef<HTMLDivElement | null>(null);
 
 	const [moved, setMoved] = useState(false);
+	const movedRef = useRef(false);
 	const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
 	const { refs, floatingStyles, update } = useFloating({
 		open: currentLocation !== null,
@@ -60,18 +61,27 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 	const countries = useMemo(() => getCountries(data ?? []), [data]);
 
 	const zoomBehavior = useRef<ZoomBehavior<SVGSVGElement, unknown>>(null);
-	if (!zoomBehavior.current) {
-		zoomBehavior.current = d3Zoom<SVGSVGElement, unknown>()
+	useEffect(() => {
+		const svgElement = svgRef.current;
+		if (!svgElement) return;
+
+		const behavior = d3Zoom<SVGSVGElement, unknown>()
 			.scaleExtent([1, 8]) // Min and max zoom levels
 			.on("zoom", (event) => {
-				select(svgRef.current).select("g").attr("transform", event.transform);
-				if (!moved) setMoved(true);
+				select(svgElement).select("g").attr("transform", event.transform);
+				if (!movedRef.current) {
+					movedRef.current = true;
+					setMoved(true);
+				}
 			});
-	}
+		zoomBehavior.current = behavior;
+		select(svgElement).call(behavior);
 
-	useEffect(() => {
-		if (!svgRef.current || !zoomBehavior.current) return;
-		select(svgRef.current).call(zoomBehavior.current);
+		return () => {
+			select(svgElement).on(".zoom", null);
+			behavior.on("zoom", null);
+			zoomBehavior.current = null;
+		};
 	}, []);
 
 	const updateTooltipPosition = useCallback(
@@ -104,6 +114,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 		setCurrentLocation(null);
 		if (zoomBehavior.current && svgRef.current) {
 			select(svgRef.current).call(zoomBehavior.current.transform, zoomIdentity);
+			movedRef.current = false;
 			setMoved(false);
 		}
 	};
@@ -124,7 +135,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 			</button>
 
 			<svg ref={svgRef} style={{ display: "block" }} viewBox={"0 0 800 500"}>
-				<title>WoldMap</title>
+				<title>World map</title>
 				<g>{landmasses}</g>
 			</svg>
 

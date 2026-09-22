@@ -1,0 +1,19 @@
+.spinner {
+  flex: 0 0 4rem;
+  min-height: 4rem;
+  opacity: 0;
+  pointer-events: none;
+  animation: reveal 0.1s ease forwards 0.3s;
+}
+
+@keyframes reveal {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 0s;
+  }
+}

@@ -42,6 +42,12 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .updatingOverlay {
+    animation-duration: 0s;
+  }
+}
+
 .tooltip {
   background-color: var(--pico-secondary-background);
   padding: 0.4rem 0.5rem;

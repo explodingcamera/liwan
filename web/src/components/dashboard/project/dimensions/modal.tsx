@@ -5,6 +5,7 @@ import fuzzysort from "fuzzysort";
 import { ZoomInIcon } from "lucide-react";
 
 import { Dialog } from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { Dimension } from "@/constants";
 import { dimensionNames, metricNames } from "@/constants";
 import { useDimension } from "@/hooks/api";
@@ -46,7 +47,10 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 				</button>
 			}
 		>
-			<div className={styles.dimensionTable} style={{ "--count": data?.length } as React.CSSProperties}>
+			<div
+				className={cls(styles.dimensionTable, isLoading && styles.loading)}
+				style={{ "--count": data?.length } as React.CSSProperties}
+			>
 				<div className={styles.dimensionHeader}>
 					<div>{dimensionNames[dimension]}</div>
 					<div>{metricNames[query.metric]}</div>
@@ -72,11 +76,7 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 						</div>
 					);
 				})}
-				{isLoading && data?.length === 0 && (
-					<div className={styles.dimensionEmpty}>
-						<div>Loading...</div>
-					</div>
-				)}
+				{isLoading && <LoadingSpinner className={styles.spinner} />}
 				{!isLoading && data?.length === 0 && (
 					<div className={styles.dimensionEmpty}>
 						<div>No data available</div>

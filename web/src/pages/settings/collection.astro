@@ -4,5 +4,25 @@ import Settings from "@/layouts/settings.astro";
 ---
 
 <Settings title="Collection">
-  <CollectionSettingsPage client:load />
+  <nav>
+    <h1>Collection</h1>
+  </nav>
+  <p class="description">
+    Defaults for collection and retention. Entity settings can override these
+    values. See
+    <a
+      href="https://liwan.dev/guides/cookie-banners/"
+      target="_blank"
+      rel="noopener noreferrer">cookie banner considerations</a
+    >.
+  </p>
+  <CollectionSettingsPage client:only="react" />
 </Settings>
+
+<style>
+  .description {
+    max-width: 46rem;
+    margin-bottom: 1rem;
+    color: var(--pico-muted-color);
+  }
+</style>

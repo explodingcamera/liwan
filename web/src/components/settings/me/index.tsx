@@ -5,16 +5,19 @@ import { useId, useRef } from "react";
 import { User2Icon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Snippet } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
 import { useMe } from "@/hooks/api";
+import { getUsername } from "@/utils";
 
 export const MyAccount = () => {
 	const newPasswordId = useId();
 	const confirmPasswordId = useId();
 
 	const formRef = useRef<HTMLFormElement>(null);
-	const { role, username, isLoading, authError } = useMe();
+	const { role, username: queriedUsername, authError } = useMe();
+	const username = queriedUsername ?? getUsername();
 
 	const { mutate, error } = useMutation({
 		mutationFn: api["/api/dashboard/user/{username}/password"].put,
@@ -44,7 +47,7 @@ export const MyAccount = () => {
 		return "You don't have permission to view this page.";
 	}
 
-	if (isLoading || !username) return <div className={"loading-spinner"} />;
+	if (!username) return <LoadingSpinner />;
 
 	return (
 		<div className={styles.container}>
@@ -57,7 +60,7 @@ export const MyAccount = () => {
 					<User2Icon size={48} />
 					<div>
 						<h2>{username}</h2>
-						<p>Role: {role === "admin" ? "Administrator" : "User"}</p>
+						<p data-loading={!role}>Role: {role === "admin" ? "Administrator" : "User"}</p>
 					</div>
 				</div>
 			</article>

@@ -115,6 +115,7 @@
   &.loading {
     .dimensionRow {
       opacity: 0.2;
+      transition-delay: 0.3s;
     }
   }
 }
@@ -149,6 +150,13 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.2rem;
+  transition: opacity 0.1s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dimensionRow {
+    transition-duration: 0s;
+  }
 }
 
 .external {

@@ -1,6 +1,6 @@
 import styles from "./linegraph.module.css";
 
-import { lazy, useEffect, useState } from "react";
+import { lazy, Suspense } from "react";
 
 import type { DateRange } from "@/api/ranges.ts";
 import type { GraphResponse, Metric } from "@/constants.ts";
@@ -24,33 +24,34 @@ export const LineGraph = ({
 	metric: Metric;
 	range: DateRange;
 }) => {
-	const [lineGraphState, setLineGraphState] = useState<GraphState | undefined>(undefined);
-
-	useEffect(() => {
-		if (data) {
-			setLineGraphState({
-				data,
-				title,
-				metric,
-			});
-		}
-	}, [data, title, metric]);
+	const loading = isLoading || isUpdating;
 
 	return (
 		<div className={styles.graphContainer}>
-			{(isLoading || isUpdating) && (
-				<div className={styles.updatingOverlay} aria-busy="true" data-no-delay={isLoading}></div>
+			{loading && (
+				<div
+					className={styles.updatingOverlay}
+					role="status"
+					aria-busy="true"
+					aria-label={isLoading ? "Loading graph" : "Updating graph"}
+					data-no-delay={isLoading}
+				></div>
 			)}
-			<LineGraphInner
-				state={
-					lineGraphState || {
-						data: [],
-						title,
-						metric,
-					}
+			<Suspense
+				fallback={
+					loading ? null : (
+						<div
+							className={styles.updatingOverlay}
+							role="status"
+							aria-busy="true"
+							aria-label="Loading graph"
+							data-no-delay="true"
+						></div>
+					)
 				}
-				range={range}
-			/>
+			>
+				<LineGraphInner data={data ?? []} title={title} metric={metric} range={range} />
+			</Suspense>
 		</div>
 	);
 };
@@ -58,12 +59,6 @@ export const LineGraph = ({
 export type DataPoint = {
 	x: Date;
 	y: number;
-};
-
-export type GraphState = {
-	data: DataPoint[];
-	title: string;
-	metric: Metric;
 };
 
 export const toDataPoints = (data: GraphResponse["data"]): DataPoint[] => {

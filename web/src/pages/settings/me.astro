@@ -3,6 +3,6 @@ import { MyAccount } from "@/components/settings/me";
 import Settings from "@/layouts/settings.astro";
 ---
 
-<Settings title="Users" noContainer>
-  <MyAccount client:load />
+<Settings title="My Account" noContainer>
+  <MyAccount client:only="react" />
 </Settings>

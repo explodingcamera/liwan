@@ -1,6 +1,6 @@
 import styles from "./projects.module.css";
 
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Accordion } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
 
@@ -10,6 +10,7 @@ import { LineGraph } from "@/components/dashboard/project/graph";
 import { SelectMetrics } from "@/components/dashboard/project/metric";
 import { ProjectHeader } from "@/components/dashboard/project/project-header";
 import { SelectRange } from "@/components/dashboard/project/range";
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { Metric, ProjectResponse } from "@/constants";
 import { metricNames, metrics } from "@/constants";
 import { useMe, useProjectGraph, useProjectStats } from "@/hooks/api";
@@ -64,7 +65,6 @@ export const Projects = () => {
 		if (range.variant === "allTime") setRange(new DateRange(range.value));
 	}, [range, setRange]);
 
-	if (isLoading) return null;
 	if (isError)
 		return (
 			<div className={styles.info}>
@@ -72,7 +72,7 @@ export const Projects = () => {
 			</div>
 		);
 
-	if (data?.projects.length === 0 && !isLoading && signedIn) return <NoProjects />;
+	if (data?.projects.length === 0 && signedIn) return <NoProjects />;
 	if (data?.projects.length === 0 && !signedIn)
 		return (
 			<div className={styles.info}>
@@ -90,7 +90,8 @@ export const Projects = () => {
 				<SelectRange onSelect={setRange} range={range} />
 			</div>
 
-			<Suspense>
+			{isLoading && <LoadingSpinner />}
+			{data && (
 				<Accordion.Root
 					className="AccordionRoot"
 					multiple
@@ -105,7 +106,7 @@ export const Projects = () => {
 						</Accordion.Item>
 					))}
 				</Accordion.Root>
-			</Suspense>
+			)}
 		</div>
 	);
 };
@@ -125,7 +126,8 @@ const Project = ({
 	const reportMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
 	const {
 		graph,
-		isError: graphError,
+		displayMetric,
+		displayRange,
 		isLoading: graphLoading,
 		isUpdating: graphUpdating,
 	} = useProjectGraph({
@@ -137,39 +139,41 @@ const Project = ({
 
 	const {
 		stats,
-		isError: statsError,
 		isLoading: statsLoading,
+		isUpdating: statsUpdating,
 	} = useProjectStats({
 		projectId: project.id,
-		metric: reportMetric ?? "views",
 		range,
 		enabled: Boolean(reportMetric),
 	});
 
-	const isLoading = graphLoading || statsLoading;
-	const isError = graphError || statsError;
-
 	return (
-		<article className={styles.project} data-loading={isLoading || isError} data-error={isError}>
+		<article className={styles.project}>
 			<div className={styles.projectHeader}>
 				<div className={styles.projectTitle}>
 					<ProjectHeader project={project} stats={stats} />
-					<Accordion.Trigger className={styles.AccordionTrigger} aria-label="Toggle details">
+					<Accordion.Trigger className={styles.AccordionTrigger} aria-label={`Toggle ${project.displayName} details`}>
 						<ChevronDownIcon size={35} strokeWidth={2} color="var(--pico-h1-color)" />
 					</Accordion.Trigger>
 				</div>
-				<SelectMetrics data={stats} metric={reportMetric ?? "views"} metrics={visibleMetrics} setMetric={setMetric} />
+				<SelectMetrics
+					data={stats}
+					metric={reportMetric ?? "views"}
+					metrics={visibleMetrics}
+					setMetric={setMetric}
+					isLoading={statsLoading || statsUpdating}
+				/>
 			</div>
 			{reportMetric && (
 				<Accordion.Panel className={styles.AccordionContent}>
 					<div className={styles.graph}>
 						<LineGraph
 							data={graph}
-							title={metricNames[reportMetric]}
-							metric={reportMetric}
+							title={metricNames[displayMetric]}
+							metric={displayMetric}
 							isLoading={graphLoading}
 							isUpdating={graphUpdating}
-							range={range}
+							range={displayRange}
 						/>
 					</div>
 				</Accordion.Panel>
