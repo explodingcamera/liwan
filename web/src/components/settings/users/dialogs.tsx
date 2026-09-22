@@ -63,16 +63,17 @@ export const CreateUser = () => {
 				</label>
 				<label>
 					Password
+					<small>Must be at least 8 characters.</small>
 					<input required name="password" type="password" autoComplete="new-password" minLength={8} />
 				</label>
-				<label>
+				<label className={styles.switchLabel}>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
 					<input name="admin" type="checkbox" role="switch" />
-					Enable administrator access
-					<br />
-					<small>Administrators can edit and create projects, entities, and users.</small>
+					<span>
+						Enable administrator access
+						<small>Administrators can edit and create projects, entities, and users.</small>
+					</span>
 				</label>
-				<br />
 				<div className="grid">
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel

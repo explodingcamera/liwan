@@ -60,6 +60,7 @@
   --pico-form-element-background-color: #222a37;
   --pico-form-element-border-color: #3a4558;
   --pico-form-element-hover-border-color: #56627a;
+  --pico-del-color: rgb(190, 65, 60);
   --graph-line-color: #a6cee3;
   --graph-fill-color: 166 206 227;
   --close-icon-color: #0a0c10;
@@ -85,6 +86,7 @@
     --pico-form-element-background-color: #222a37;
     --pico-form-element-border-color: #3a4558;
     --pico-form-element-hover-border-color: #56627a;
+    --pico-del-color: rgb(190, 65, 60);
     --graph-line-color: #a6cee3;
     --graph-fill-color: 166 206 227;
     --close-icon-color: #0a0c10;
@@ -130,6 +132,7 @@ button,
 [role="button"] {
   --pico-font-weight: 500;
   --pico-border-radius: 0.4rem;
+  --pico-form-element-spacing-vertical: 0.55rem;
   font-size: 0.8125rem;
 }
 

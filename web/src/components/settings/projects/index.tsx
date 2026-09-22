@@ -230,7 +230,11 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={projectTabs}>
 				<SettingsPanel value="general" className={styles.detailPanel}>
-					<SettingsField label="Project name" name="displayName">
+					<SettingsField
+						label="Project name"
+						description="Identifies this project in the dashboard."
+						name="displayName"
+					>
 						<input
 							required
 							name="displayName"
@@ -282,6 +286,10 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 						noOptionsText="No matching entities"
 					/>
 					<div className={styles.dangerZone}>
+						<div>
+							<strong>Delete project</strong>
+							<p>The project will be deleted. Its entities and event data will remain.</p>
+						</div>
 						<DeleteDialog
 							id={project.id}
 							displayName={project.displayName}
@@ -290,7 +298,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 								window.location.href = "/settings/projects";
 							}}
 							trigger={
-								<button type="button" className={styles.deleteButton}>
+								<button type="button" className={`${styles.deleteButton} outline`}>
 									Delete project
 								</button>
 							}

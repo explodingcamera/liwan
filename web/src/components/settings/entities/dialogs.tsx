@@ -59,6 +59,7 @@ export const CreateEntity = () => {
 				</label>
 				<label>
 					Entity name
+					<small>Identifies this entity in the dashboard.</small>
 					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
 				</label>
 				<div className="grid">

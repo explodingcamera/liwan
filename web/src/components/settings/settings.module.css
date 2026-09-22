@@ -42,7 +42,7 @@
   gap: 0.15rem 1.25rem;
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
+  border-radius: 0.4rem;
   background: color-mix(in srgb, var(--pico-form-element-background-color) 45%, transparent);
 }
 
@@ -153,15 +153,37 @@
 }
 
 .dangerZone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid var(--pico-muted-border-color);
 }
 
+.dangerZone strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.dangerZone p {
+  margin: 0;
+  color: var(--pico-muted-color);
+  font-size: 0.825rem;
+}
+
 .deleteButton {
   width: fit-content;
   border-color: var(--pico-del-color);
-  background: var(--pico-del-color);
+  color: var(--pico-del-color);
+}
+
+.deleteButton:hover {
+  border-color: var(--pico-del-color);
+  color: var(--pico-del-color);
 }
 
 details.edit {
@@ -246,6 +268,68 @@ details.edit summary + ul {
   background: transparent;
   color: var(--pico-primary-hover);
   box-shadow: none;
+}
+
+.apiKeyStatusActive,
+.apiKeyStatusRevoked {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.apiKeyStatusActive {
+  background: color-mix(in srgb, #22c55e 14%, transparent);
+  color: color-mix(in srgb, #22c55e 78%, var(--pico-color));
+}
+
+.apiKeyStatusRevoked {
+  background: color-mix(in srgb, var(--pico-muted-color) 14%, transparent);
+  color: var(--pico-muted-color);
+}
+
+.apiKeyPermissionOption {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-form-element-background-color) 55%, transparent);
+}
+
+.apiKeyPermissionOption:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.apiKeyPermissionOption input {
+  margin: 0.1rem 0 0;
+}
+
+.apiKeyPermissionOption span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.apiKeyPermissionOption strong {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.apiKeyPermissionOption small {
+  color: var(--pico-muted-color);
+  font-size: 0.8rem;
+}
+
+.apiKeyDetailTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 @media (max-width: 520px) {

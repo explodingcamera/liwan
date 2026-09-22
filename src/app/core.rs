@@ -1,3 +1,4 @@
+mod api_keys;
 mod entities;
 mod events;
 mod external_auth;
@@ -8,6 +9,7 @@ mod sessions;
 mod settings;
 mod users;
 
+pub use api_keys::{ApiKeyAccess, LiwanApiKeys};
 pub use entities::LiwanEntities;
 pub use events::{LiwanEvents, PruneStats};
 pub use external_auth::{

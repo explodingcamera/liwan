@@ -11,8 +11,8 @@ use crate::{config::Config, utils::writable::check_directory_writable};
 use crate::utils::r2d2_sqlite::SqliteConnectionManager;
 use anyhow::{Context, Result};
 use core::{
-    LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjectSettings, LiwanProjects, LiwanSessions, LiwanSettings,
-    LiwanUsers,
+    LiwanApiKeys, LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjectSettings, LiwanProjects, LiwanSessions,
+    LiwanSettings, LiwanUsers,
 };
 use duckdb::DuckdbConnectionManager;
 use models::{DisplayOverride, GeoDetail};
@@ -21,12 +21,13 @@ use reports::{Dimension, Metric};
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
 pub type SqlitePool = r2d2::Pool<SqliteConnectionManager>;
-pub use core::PruneStats;
+pub use core::{ApiKeyAccess, PruneStats};
 
 pub struct Liwan {
     events_pool: r2d2::Pool<DuckdbConnectionManager>,
 
     pub events: LiwanEvents,
+    pub api_keys: LiwanApiKeys,
     pub users: LiwanUsers,
     pub sessions: LiwanSessions,
     pub external_auth: LiwanExternalAuth,
@@ -72,6 +73,7 @@ impl Liwan {
             geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
+            api_keys: LiwanApiKeys::new(conn_app.clone()),
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
             external_auth: LiwanExternalAuth::try_new(conn_app.clone(), &config.base_url)?,
@@ -97,6 +99,7 @@ impl Liwan {
             geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
 
             events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
+            api_keys: LiwanApiKeys::new(conn_app.clone()),
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
             external_auth: LiwanExternalAuth::try_new(conn_app.clone(), &config.base_url)?,

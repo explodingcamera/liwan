@@ -14,7 +14,7 @@ use crate::{
     PASSWORD_MIN_LENGTH,
     app::{
         models::{
-            CollectionSettings, Entity, EntityCollectionSettings, Project, ProjectDisplaySettings,
+            ApiPermission, CollectionSettings, Entity, EntityCollectionSettings, Project, ProjectDisplaySettings,
             ResolvedCollectionSettings, UserRole,
         },
         reports::{Dimension, Metric},
@@ -46,6 +46,10 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/entity/{entity_id}", put(entity_update_handler))
         .api_route("/entity/{entity_id}/settings", get(entity_settings_handler))
         .api_route("/entity/{entity_id}/settings", put(entity_settings_update_handler))
+        .api_route("/api-keys", get(api_keys_handler))
+        .api_route("/api-keys", post(api_key_create_handler))
+        .api_route("/api-keys/{key_id}", put(api_key_update_handler))
+        .api_route("/api-keys/{key_id}", delete(api_key_revoke_handler))
         .api_route("/entity/{entity_id}", delete(entity_delete_handler))
         .api_route("/settings", get(settings_handler))
         .api_route("/settings", put(settings_update_handler))
@@ -199,6 +203,60 @@ struct UpdateEntityRequest {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 struct EntitiesResponse {
     entities: Vec<EntityResponse>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ApiKeyResponse {
+    id: String,
+    display_name: String,
+    entities: Vec<String>,
+    permissions: Vec<ApiPermission>,
+    created_at: chrono::DateTime<chrono::Utc>,
+    last_used_at: Option<chrono::DateTime<chrono::Utc>>,
+    revoked_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+struct ApiKeysResponse {
+    keys: Vec<ApiKeyResponse>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct CreateApiKeyRequest {
+    display_name: String,
+    entities: Vec<String>,
+    permissions: Vec<ApiPermission>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct CreateApiKeyResponse {
+    key: ApiKeyResponse,
+    plaintext: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct UpdateApiKeyRequest {
+    display_name: String,
+    entities: Vec<String>,
+    permissions: Vec<ApiPermission>,
+}
+
+impl From<crate::app::models::ApiKey> for ApiKeyResponse {
+    fn from(key: crate::app::models::ApiKey) -> Self {
+        Self {
+            id: key.id,
+            display_name: key.display_name,
+            entities: key.entities,
+            permissions: key.permissions,
+            created_at: key.created_at,
+            last_used_at: key.last_used_at,
+            revoked_at: key.revoked_at,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -563,6 +621,79 @@ async fn entity_settings_update_handler(
         .update_entity(&settings)
         .http_err("Failed to update entity collection settings", StatusCode::BAD_REQUEST)?;
 
+    Ok(empty_response())
+}
+
+async fn api_keys_handler(
+    app: State<RouterState>,
+    Auth(user): Auth,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<ApiKeysResponse>>> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+    let keys = app
+        .api_keys
+        .all()
+        .http_err("Failed to list API keys", StatusCode::INTERNAL_SERVER_ERROR)?
+        .into_iter()
+        .map(Into::into)
+        .collect();
+    Ok(([(http::header::CACHE_CONTROL, "private, no-store")], Json(ApiKeysResponse { keys })).into())
+}
+
+async fn api_key_create_handler(
+    app: State<RouterState>,
+    Auth(user): Auth,
+    Json(request): Json<CreateApiKeyRequest>,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<CreateApiKeyResponse>>> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+    let (key, plaintext) = app
+        .api_keys
+        .create(&request.display_name, &request.entities, &request.permissions)
+        .http_err("Failed to create API key", StatusCode::BAD_REQUEST)?;
+    tracing::info!(key_id = key.id, actor = user.username, "Created API key");
+    Ok((
+        StatusCode::CREATED,
+        [(http::header::CACHE_CONTROL, "private, no-store")],
+        Json(CreateApiKeyResponse { key: key.into(), plaintext }),
+    )
+        .into())
+}
+
+async fn api_key_update_handler(
+    app: State<RouterState>,
+    Path(key_id): Path<String>,
+    Auth(user): Auth,
+    Json(request): Json<UpdateApiKeyRequest>,
+) -> ApiResult<impl IntoApiResponse> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+    if !app
+        .api_keys
+        .update(&key_id, &request.display_name, &request.entities, &request.permissions)
+        .http_err("Failed to update API key", StatusCode::BAD_REQUEST)?
+    {
+        http_bail!(StatusCode::NOT_FOUND, "API key not found")
+    }
+    tracing::info!(key_id, actor = user.username, "Updated API key access");
+    Ok(empty_response())
+}
+
+async fn api_key_revoke_handler(
+    app: State<RouterState>,
+    Path(key_id): Path<String>,
+    Auth(user): Auth,
+) -> ApiResult<impl IntoApiResponse> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+    if !app.api_keys.revoke(&key_id).http_err("Failed to revoke API key", StatusCode::INTERNAL_SERVER_ERROR)? {
+        http_bail!(StatusCode::NOT_FOUND, "API key not found")
+    }
+    tracing::info!(key_id, actor = user.username, "Revoked API key");
     Ok(empty_response())
 }
 

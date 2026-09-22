@@ -96,6 +96,7 @@ refinery = { version = "0.9", default-features = false }
 refinery-core = { version = "0.9", default-features = false }
 rsntp = { version = "4.1.2", default-features = false, features = ["async"] }
 rusqlite = { version = "0.40", features = ["bundled", "chrono", "modern_sqlite"] }
+base64 = "0.23"
 
 [dev-dependencies]
 axum-test = { version = "21" }

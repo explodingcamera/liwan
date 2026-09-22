@@ -65,8 +65,9 @@
 
 .copyButton {
   position: absolute;
-  top: 0.45rem;
+  top: 50%;
   right: 0.45rem;
+  transform: translateY(-50%);
   display: grid;
   place-items: center;
   width: 2rem;

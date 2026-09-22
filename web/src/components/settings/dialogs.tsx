@@ -82,7 +82,7 @@ export const DeleteDialog = ({
 					<Dialog.Close className="secondary outline" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit" className={styles.danger}>
+					<button type="submit" className={`${styles.danger} outline`}>
 						Delete {type}
 					</button>
 				</div>

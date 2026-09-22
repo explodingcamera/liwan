@@ -46,7 +46,7 @@ type Props = { title: string; hideFooter?: boolean };
         width: 100%;
         max-width: 60rem;
         padding: 1rem;
-        margin: 0 auto 0.7rem;
+        margin: 0 auto;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -70,13 +70,19 @@ type Props = { title: string; hideFooter?: boolean };
         .footer-start {
           display: flex;
           align-items: center;
-          gap: 0.8rem;
+          gap: 0.65rem;
         }
 
         .footer-theme {
           display: flex;
           color: var(--pico-muted-color);
           opacity: 0.8;
+        }
+      }
+
+      @media (max-width: 768px) {
+        footer {
+          padding-top: 0.5rem;
         }
       }
     </style>

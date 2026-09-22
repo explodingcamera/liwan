@@ -1,5 +1,13 @@
 ---
-import { CodeIcon, DatabaseIcon, KeyRoundIcon, TablePropertiesIcon, UserIcon, UsersIcon } from "lucide-react";
+import {
+	CodeIcon,
+	DatabaseIcon,
+	KeyRoundIcon,
+	ShieldCheckIcon,
+	TablePropertiesIcon,
+	UserIcon,
+	UsersIcon,
+} from "lucide-react";
 
 import Layout from "./layout.astro";
 
@@ -48,6 +56,10 @@ const { title, noContainer } = Astro.props;
           <option
             selected={path.startsWith("/settings/authentication") ? true : undefined}
             value="/settings/authentication">Authentication</option
+          >
+          <option
+            selected={path.startsWith("/settings/api-keys") ? true : undefined}
+            value="/settings/api-keys">API keys</option
           >
         </optgroup>
       </select>
@@ -138,8 +150,19 @@ const { title, noContainer } = Astro.props;
             class="secondary"
             href="/settings/authentication"
           >
-            <KeyRoundIcon size="20" />
+            <ShieldCheckIcon size="20" />
             Authentication</a
+          >
+        </li>
+        <li>
+          <a
+            data-active={path.startsWith("/settings/api-keys") ? "true" : "false"}
+            aria-current={path.startsWith("/settings/api-keys") ? "page" : undefined}
+            class="secondary"
+            href="/settings/api-keys"
+          >
+            <KeyRoundIcon size="20" />
+            API keys</a
           >
         </li>
       </ul>
@@ -180,12 +203,18 @@ const { title, noContainer } = Astro.props;
   }
 
   .settings :global(nav.list-header) {
-    min-height: 2.75rem;
+    min-height: 2rem;
   }
 
   .settings :global(h1) {
     font-size: 1.5rem;
     margin: 0;
+  }
+
+  .settings :global(.description) {
+    max-width: 46rem;
+    margin-bottom: 1rem;
+    color: var(--pico-muted-color);
   }
 
   .settings {

@@ -158,21 +158,35 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 						onCheckedChange={(checked) => saveUser(selectedProjects, checked)}
 					/>
 				)}
-				{me.role === "admin" && !isSelf && (
+				{me.role === "admin" && (
 					<div className={styles.dangerZone}>
-						<DeleteDialog
-							id={user.username}
-							displayName={user.username}
-							type="user"
-							onDeleted={() => {
-								window.location.href = "/settings/users";
-							}}
-							trigger={
-								<button type="button" className={styles.deleteButton}>
-									Delete user
-								</button>
-							}
-						/>
+						<div>
+							<strong>Delete user</strong>
+							<p>The user will immediately lose access to the dashboard.</p>
+						</div>
+						{isSelf ? (
+							<button
+								type="button"
+								className={`${styles.deleteButton} outline`}
+								onClick={() => createToast("You cannot delete your own account", "error")}
+							>
+								Delete user
+							</button>
+						) : (
+							<DeleteDialog
+								id={user.username}
+								displayName={user.username}
+								type="user"
+								onDeleted={() => {
+									window.location.href = "/settings/users";
+								}}
+								trigger={
+									<button type="button" className={`${styles.deleteButton} outline`}>
+										Delete user
+									</button>
+								}
+							/>
+						)}
 					</div>
 				)}
 			</div>

@@ -225,7 +225,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={entityTabs}>
 				<SettingsPanel value="general" className={styles.detailPanel}>
-					<SettingsField label="Entity name" name="displayName">
+					<SettingsField label="Entity name" description="Identifies this entity in the dashboard." name="displayName">
 						<input
 							required
 							name="displayName"
@@ -261,6 +261,10 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 						noOptionsText="No matching projects"
 					/>
 					<div className={styles.dangerZone}>
+						<div>
+							<strong>Delete entity</strong>
+							<p>The entity will be removed from its projects and will no longer accept events.</p>
+						</div>
 						<DeleteDialog
 							id={entity.id}
 							displayName={entity.displayName}
@@ -269,7 +273,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 								window.location.href = "/settings/entities";
 							}}
 							trigger={
-								<button type="button" className={styles.deleteButton}>
+								<button type="button" className={`${styles.deleteButton} outline`}>
 									Delete entity
 								</button>
 							}
@@ -399,7 +403,11 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							</SettingsField>
 						</SettingsPanel>
 						<SettingsPanel value="filters">
-							<SettingsField label="Allowed hostnames" name="allowedHostnames">
+							<SettingsField
+								label="Allowed hostnames"
+								description="Only accept events from matching hostnames. Leave empty to allow all hostnames."
+								name="allowedHostnames"
+							>
 								<AllowedHostnamesEditor
 									value={settings.allowedHostnames}
 									onChange={(allowedHostnames) => saveCollectionSettings({ allowedHostnames }, "filters")}

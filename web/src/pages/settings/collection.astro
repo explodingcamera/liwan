@@ -9,7 +9,7 @@ import Settings from "@/layouts/settings.astro";
   </nav>
   <p class="description">
     Defaults for collection and retention. Entity settings can override these
-    values. See
+    values. See{" "}
     <a
       href="https://liwan.dev/guides/cookie-banners/"
       target="_blank"
@@ -18,11 +18,3 @@ import Settings from "@/layouts/settings.astro";
   </p>
   <CollectionSettingsPage client:only="react" />
 </Settings>
-
-<style>
-  .description {
-    max-width: 46rem;
-    margin-bottom: 1rem;
-    color: var(--pico-muted-color);
-  }
-</style>

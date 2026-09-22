@@ -4,6 +4,15 @@
   gap: 0.25rem;
 }
 
+.container[data-disabled] .inputGroup {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.container[data-disabled] .chipRemove {
+  display: none;
+}
+
 .label {
   font-size: 0.9rem;
   font-weight: 500;
@@ -28,7 +37,7 @@
   padding: 0.15rem 0.25rem 0.15rem 0.4rem;
   cursor: text;
   border: var(--pico-border-width) solid var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
+  border-radius: 0.4rem;
   background-color: var(--pico-form-element-background-color);
   color: var(--pico-form-element-color);
   outline: none;

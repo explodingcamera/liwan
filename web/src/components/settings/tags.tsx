@@ -18,12 +18,14 @@ export const Tags = ({
 	labelDescription,
 	placeholderText,
 	noOptionsText,
+	disabled,
 }: {
 	onAdd: (tag: Tag) => void;
 	onDelete: (i: number) => void;
 	selected: Tag[];
 	suggestions: Tag[];
 	noOptionsText: string;
+	disabled?: boolean;
 	placeholderText?: string;
 	labelText?: string | React.ReactNode;
 	labelDescription?: string | React.ReactNode;
@@ -44,6 +46,7 @@ export const Tags = ({
 
 	return (
 		<Combobox.Root
+			disabled={disabled}
 			items={items}
 			value={selected}
 			onValueChange={handleValueChange}
@@ -52,7 +55,7 @@ export const Tags = ({
 			isItemEqualToValue={(item, value) => item.value === value.value}
 			multiple
 		>
-			<div className={styles.container}>
+			<div className={styles.container} data-disabled={disabled ? true : undefined}>
 				{labelText && (
 					<label htmlFor={id} className={styles.label}>
 						{labelText}

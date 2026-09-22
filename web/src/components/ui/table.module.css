@@ -27,12 +27,16 @@
   border-radius: var(--pico-border-radius);
   overflow: hidden;
   margin-bottom: 0;
+  font-size: 0.875rem;
 
   tbody tr:last-child td {
     border-bottom: 0;
   }
 
   th {
+    padding-block: 0.65rem;
+    font-size: 0.8rem;
+
     div.icon {
       display: inline-flex;
       align-items: center;

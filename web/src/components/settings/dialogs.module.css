@@ -9,12 +9,11 @@
 }
 
 .new {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2rem;
+  height: 2rem;
   display: grid;
   place-items: center;
-  margin-top: -0.45rem;
-  margin-right: -0.45rem;
+  margin: 0;
   padding: 0;
   animation: newLoad 0.4s ease;
 }
@@ -25,6 +24,27 @@
   background: transparent;
   color: var(--settings-icon-color);
   box-shadow: none;
+}
+
+.switchLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.switchLabel > input {
+  flex: 0 0 auto;
+  margin-top: 0.05rem !important;
+}
+
+.switchLabel > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.switchLabel small {
+  margin: 0 !important;
 }
 
 .new:focus-visible {
@@ -98,13 +118,13 @@
 }
 
 .danger {
-  --pico-background-color: var(--pico-del-color);
+  --pico-background-color: transparent;
   --pico-border-color: var(--pico-del-color);
-  box-shadow: none;
+  color: var(--pico-del-color);
 
   &:hover {
-    --pico-background-color: var(--pico-del-color);
+    --pico-background-color: transparent;
     --pico-border-color: var(--pico-del-color);
-    box-shadow: none;
+    color: var(--pico-del-color);
   }
 }

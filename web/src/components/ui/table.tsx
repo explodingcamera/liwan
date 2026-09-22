@@ -18,10 +18,12 @@ export const Table = <T extends { id: string }>({
 	rows,
 	columns,
 	isLoading,
+	emptyMessage = "No results.",
 }: {
 	rows: T[];
 	columns: Column<T>[];
 	isLoading: boolean;
+	emptyMessage?: string;
 }) => {
 	// prevent hydration mismatch
 	const [loading, setLoading] = useState(true);
@@ -35,7 +37,13 @@ export const Table = <T extends { id: string }>({
 				<thead>
 					<tr>
 						{columns?.map((col) => (
-							<th scope="col" key={col.id} className={col.full ? styles.full : undefined}>
+							<th
+								scope="col"
+								key={col.id}
+								className={
+									[col.full && styles.full, col.nowrap && styles.nowrap].filter(Boolean).join(" ") || undefined
+								}
+							>
 								{col.icon ? (
 									<div className={styles.icon}>
 										{col.icon}
@@ -62,7 +70,7 @@ export const Table = <T extends { id: string }>({
 					) : (
 						<tr>
 							<td colSpan={columns?.length} className="h-24 text-center">
-								No results.
+								{emptyMessage}
 							</td>
 						</tr>
 					)}

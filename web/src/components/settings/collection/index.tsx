@@ -69,9 +69,12 @@ export const CollectionSettingsPage = () => {
 			.json()
 			.then((result) => {
 				if (typeof result === "string") throw new Error(result);
-				setPruneResult(
-					`${dryRun ? "Would delete" : "Deleted"} ${formatCount(result.total.deletedEvents)} of ${formatCount(result.total.totalEvents)} events.`,
-				);
+				const message = `${dryRun ? "Would delete" : "Deleted"} ${formatCount(result.total.deletedEvents)} of ${formatCount(result.total.totalEvents)} events.`;
+				if (dryRun) {
+					createToast(message, "info");
+					return;
+				}
+				setPruneResult(message);
 				setPruneResultOpen(true);
 			})
 			.catch((err) => {

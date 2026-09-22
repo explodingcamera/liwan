@@ -7,6 +7,53 @@ use std::num::NonZeroU32;
 mod common;
 
 #[tokio::test]
+async fn admin_manages_api_keys() -> Result<()> {
+    let app = common::app();
+    let (queues, _receivers) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    app.users.create("admin", "testtest", UserRole::Admin, &[])?;
+    app.entities.create(&Entity { id: "service".into(), display_name: "Service".into() }, &[])?;
+    app.entities.create(&Entity { id: "other".into(), display_name: "Other".into() }, &[])?;
+    let cookies = common::login(&client, "admin", "testtest").await;
+    let headers = || vec![("cookie".to_string(), common::cookie_header(&cookies))];
+
+    let created = client
+        .post_with_headers(
+            "/api/dashboard/api-keys",
+            json!({ "displayName": "Production", "entities": ["service"], "permissions": ["events:write"] }),
+            headers(),
+        )
+        .await;
+    created.assert_status(http::StatusCode::CREATED);
+    let created: Value = created.json();
+    let plaintext = created["plaintext"].as_str().expect("plaintext key");
+    assert!(plaintext.starts_with("liw_"));
+    let key_id = created["key"]["id"].as_str().expect("key ID");
+
+    let listed = client.get_with_headers("/api/dashboard/api-keys", headers()).await;
+    listed.assert_status_success();
+    let listed: Value = listed.json();
+    assert_eq!(listed["keys"].as_array().unwrap().len(), 1);
+    assert!(listed.to_string().find(plaintext).is_none());
+
+    client
+        .put_with_headers(
+            &format!("/api/dashboard/api-keys/{key_id}"),
+            json!({ "displayName": "Production API", "entities": ["other"], "permissions": ["events:write"] }),
+            headers(),
+        )
+        .await
+        .assert_status_success();
+    let access = app.api_keys.authenticate(plaintext)?.expect("valid API key");
+    assert!(!access.can_write_events("service"));
+    assert!(access.can_write_events("other"));
+
+    client.delete_with_headers(&format!("/api/dashboard/api-keys/{key_id}"), headers()).await.assert_status_success();
+    assert!(app.api_keys.authenticate(plaintext)?.is_none());
+    Ok(())
+}
+
+#[tokio::test]
 async fn admin_cannot_delete_self_using_different_casing() -> Result<()> {
     let app = common::app();
     let (tx, _rx) = common::events();

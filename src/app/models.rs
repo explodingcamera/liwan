@@ -55,6 +55,23 @@ pub struct Entity {
     pub display_name: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct ApiKey {
+    pub id: String,
+    pub display_name: String,
+    pub entities: Vec<String>,
+    pub permissions: Vec<ApiPermission>,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub revoked_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+pub enum ApiPermission {
+    #[serde(rename = "events:write")]
+    EventsWrite,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum VisitorGroupMode {

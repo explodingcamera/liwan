@@ -147,7 +147,8 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 				</div>
 				<section className={styles.tabPanel} hidden={tab !== "general"}>
 					<label>
-						Project name <small>(used in the dashboard)</small>
+						Project name
+						<small>Identifies this project in the dashboard.</small>
 						<input required name="displayName" type="text" defaultValue={project.displayName} autoComplete="off" />
 					</label>
 					<Tags
@@ -161,12 +162,12 @@ export const EditProject = ({ project, trigger }: { project: ProjectResponse; tr
 					/>
 					<label>
 						Visibility
+						<small>Unlisted projects are public by direct link, but hidden from public project lists.</small>
 						<select name="visibility" defaultValue={projectVisibility(project)}>
 							<option value="private">Private</option>
 							<option value="unlisted">Unlisted</option>
 							<option value="public">Public</option>
 						</select>
-						<small>Unlisted projects are public by direct link, but hidden from public project lists.</small>
 					</label>
 				</section>
 				{projectSettings && (
@@ -275,7 +276,7 @@ export const CreateProject = () => {
 			<form onSubmit={handleSubmit}>
 				<label>
 					Project ID
-					<small>Cannot be changed later.</small>
+					<small>Used in dashboard URLs and cannot be changed later.</small>
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -287,18 +288,18 @@ export const CreateProject = () => {
 				</label>
 				<label>
 					Project name
+					<small>Identifies this project in the dashboard.</small>
 					<input required name="displayName" type="text" placeholder="My Project" autoComplete="off" />
 				</label>
 				<label>
 					Visibility
+					<small>Unlisted projects are public by direct link, but hidden from public project lists.</small>
 					<select name="visibility" defaultValue="private">
 						<option value="private">Private</option>
 						<option value="unlisted">Unlisted</option>
 						<option value="public">Public</option>
 					</select>
-					<small>Unlisted projects are public by direct link, but hidden from public project lists.</small>
 				</label>
-				<br />
 
 				<div className="grid">
 					<Dialog.Close className="secondary outline">Cancel</Dialog.Close>

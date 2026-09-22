@@ -138,6 +138,12 @@ pub(super) async fn serve(
         path = parts.join("/");
     }
 
+    if path.starts_with("settings/api-keys/") {
+        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
+        parts[2] = "key";
+        path = parts.join("/");
+    }
+
     if path.starts_with("settings/users/") {
         let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
         parts[2] = "user";
