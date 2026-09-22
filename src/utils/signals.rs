@@ -1,17 +1,30 @@
-use anyhow::Result;
-use tokio::task::JoinSet;
-
-pub async fn shutdown() -> Result<()> {
-    let mut shutdown = JoinSet::new();
-    shutdown.spawn(tokio::signal::ctrl_c());
-
+/// Waits for the process shutdown signal.
+pub async fn shutdown() {
     #[cfg(unix)]
-    shutdown.spawn(async {
-        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
-        sigterm.recv().await;
-        Ok(())
-    });
+    {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut sigterm) => {
+                tokio::select! {
+                    result = tokio::signal::ctrl_c() => {
+                        if let Err(error) = result {
+                            tracing::error!(?error, "Failed to listen for Ctrl-C");
+                            sigterm.recv().await;
+                        }
+                    }
+                    _ = sigterm.recv() => {}
+                }
+            }
+            Err(error) => {
+                tracing::error!(?error, "Failed to listen for SIGTERM");
+                if let Err(error) = tokio::signal::ctrl_c().await {
+                    tracing::error!(?error, "Failed to listen for Ctrl-C");
+                }
+            }
+        }
+    }
 
-    shutdown.join_next().await.expect("there are tasks")??;
-    Ok(())
+    #[cfg(not(unix))]
+    if let Err(error) = tokio::signal::ctrl_c().await {
+        tracing::error!(?error, "Failed to listen for Ctrl-C");
+    }
 }

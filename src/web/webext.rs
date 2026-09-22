@@ -35,7 +35,7 @@ pub trait AxumErrExt<T> {
 
 impl<T> AxumErrExt<T> for Option<T> {
     fn http_err(self, message: &str, status: StatusCode) -> ApiResult<T> {
-        self.ok_or_else(|| ApiError { message: message.to_string(), status })
+        self.ok_or_else(|| ApiError { message: message.to_string(), status, retry_after: None })
     }
 
     fn http_status(self, status: StatusCode) -> ApiResult<T> {
@@ -53,7 +53,7 @@ impl<T, E: Display> AxumErrExt<T> for Result<T, E> {
                 } else {
                     tracing::debug!("{message}: {err}", err = e);
                 }
-                Err(ApiError { message: message.to_string(), status })
+                Err(ApiError { message: message.to_string(), status, retry_after: None })
             }
         }
     }
@@ -76,6 +76,7 @@ impl<T, E: Display> AxumErrExt<T> for Result<T, E> {
 pub struct ApiError {
     pub message: String,
     pub status: StatusCode,
+    pub retry_after: Option<u64>,
 }
 
 impl OperationOutput for ApiError {
@@ -84,7 +85,11 @@ impl OperationOutput for ApiError {
 
 impl From<StatusCode> for ApiError {
     fn from(status: StatusCode) -> Self {
-        ApiError { message: status.canonical_reason().unwrap_or("Unknown error").to_string(), status }
+        ApiError {
+            message: status.canonical_reason().unwrap_or("Unknown error").to_string(),
+            status,
+            retry_after: None,
+        }
     }
 }
 
@@ -93,7 +98,13 @@ impl IntoResponse for ApiError {
         let body = Json(
             json!({ "status": self.status.canonical_reason(), "message": self.message, "code": self.status.as_u16() }),
         );
-        (self.status, body).into_response()
+        let mut response = (self.status, body).into_response();
+        if let Some(seconds) = self.retry_after
+            && let Ok(value) = http::HeaderValue::from_str(&seconds.to_string())
+        {
+            response.headers_mut().insert(header::RETRY_AFTER, value);
+        }
+        response
     }
 }
 
@@ -263,6 +274,7 @@ macro_rules! http_bail {
         return Err(crate::web::webext::ApiError {
             message: format!($($arg)*),
             status: $status,
+            retry_after: None,
         })
     };
 }
@@ -336,6 +348,52 @@ impl KeyExtractor for ClientIpKeyExtractor {
 
         peer_ip.ok_or(GovernorError::UnableToExtractKey)
     }
+}
+
+/// A valid server-ingestion API key.
+pub struct AuthenticatedApiKey {
+    pub access: crate::app::ApiKeyAccess,
+}
+
+impl OperationInput for AuthenticatedApiKey {}
+
+impl FromRequestParts<RouterState> for AuthenticatedApiKey {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut http::request::Parts,
+        state: &RouterState,
+    ) -> Result<Self, Self::Rejection> {
+        let credential = parts
+            .headers
+            .get(header::AUTHORIZATION)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.strip_prefix("Bearer "))
+            .filter(|value| !value.is_empty())
+            .ok_or_else(invalid_api_key)?
+            .to_string();
+        let app = state.app.clone();
+        match tokio::task::spawn_blocking(move || app.api_keys.authenticate(&credential)).await {
+            Ok(Ok(Some(access))) => Ok(Self { access }),
+            Ok(Ok(None)) => Err(invalid_api_key()),
+            Ok(Err(error)) => {
+                tracing::error!(?error, "Failed to authenticate API key");
+                Err(ApiError {
+                    message: "Failed to authenticate API key".to_string(),
+                    status: StatusCode::INTERNAL_SERVER_ERROR,
+                    retry_after: None,
+                })
+            }
+            Err(error) => {
+                tracing::error!(?error, "API key authentication task failed");
+                Err(StatusCode::INTERNAL_SERVER_ERROR.into())
+            }
+        }
+    }
+}
+
+fn invalid_api_key() -> ApiError {
+    ApiError { message: "Invalid API key".to_string(), status: StatusCode::UNAUTHORIZED, retry_after: None }
 }
 
 #[derive(Debug, Clone, Default)]

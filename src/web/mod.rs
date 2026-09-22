@@ -151,12 +151,6 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         ..openapi::OpenApi::default()
     };
 
-    let event_cors = CorsLayer::new()
-        .allow_methods([Method::POST])
-        .allow_origin(Any)
-        .allow_credentials(false)
-        .allow_headers([http::header::CONTENT_TYPE, http::header::ACCEPT]);
-
     let script_cors = CorsLayer::new()
         .allow_methods([Method::GET])
         .allow_origin(Any)
@@ -193,7 +187,6 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .merge(routes::auth::router(&app.config))
         .merge(routes::external_auth::router(&app.config))
         .merge(routes::dashboard::router());
-
     let state = RouterState {
         app: app.clone(),
         events: queues.events,
@@ -202,7 +195,8 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         untrusted_proxy_warning: Arc::new(UntrustedProxyWarning::default()),
     };
     let router = ApiRouter::new()
-        .nest("/api", routes::event::router(&app.config).layer(event_cors))
+        .nest("/api/event", routes::event::router(&app.config))
+        .nest("/api/v1", routes::v1::router())
         .nest("/api/dashboard", dashboard)
         .route_service("/script.js", StaticFile::<Script>::new("script.min.js").layer(script_cors).into_service())
         .fallback(axum::routing::get(serve))
@@ -213,6 +207,28 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .layer(axum::middleware::from_fn_with_state(state.clone(), warn_untrusted_proxy_headers))
         .with_state(state)
         .finish_api(&mut api);
+
+    let bearer_scheme = serde_json::from_value(serde_json::json!({
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "liw_<secret>",
+        "description": "API key with events:batch access to the requested entity"
+    }))?;
+    api.components
+        .get_or_insert_default()
+        .security_schemes
+        .insert("apiKey".to_string(), openapi::ReferenceOr::Item(bearer_scheme));
+    if let Some(operation) = api
+        .paths
+        .as_mut()
+        .and_then(|paths| paths.paths.get_mut("/api/v1/events"))
+        .and_then(openapi::ReferenceOr::as_item_mut)
+        .and_then(|path| path.post.as_mut())
+    {
+        let mut requirement = openapi::SecurityRequirement::default();
+        requirement.insert("apiKey".to_string(), Vec::new());
+        operation.security.push(requirement);
+    }
 
     Ok((router, api))
 }
@@ -264,7 +280,10 @@ pub async fn start_webserver(app: Arc<Liwan>, queues: EventQueues) -> Result<()>
         .with_context(|| format!("Failed to bind to address {}", app.config.listen_addr()))?;
 
     let service = router.0.into_make_service_with_connect_info::<SocketAddr>();
-    axum::serve(listener, service).await.context("server exited unexpectedly")
+    axum::serve(listener, service)
+        .with_graceful_shutdown(crate::utils::signals::shutdown())
+        .await
+        .context("server exited unexpectedly")
 }
 
 #[cfg(test)]

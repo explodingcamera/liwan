@@ -137,43 +137,18 @@ impl LiwanEvents {
     }
 
     fn process_events_sync(&self, mut events: Receiver<Event>) -> Result<()> {
-        let mut buffer = Vec::with_capacity(1024);
-        let conn = self.duckdb.clone();
+        let mut buffer = Vec::with_capacity(512);
 
         loop {
-            let count = events.blocking_recv_many(&mut buffer, 512);
-            if count == 0 {
+            let event_count = events.blocking_recv_many(&mut buffer, 512);
+            if event_count == 0 {
                 tracing::info!("Event channel closed, stopping event processing");
                 break Ok(());
             }
 
-            let mut first_event_time = None;
-            let mut session_entities = Vec::new();
-            let mut insert_events = || -> Result<()> {
-                let conn = conn.get().context("Failed to get DuckDB connection")?;
-                let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
-                for event in buffer.drain(..count) {
-                    if event.track_sessions {
-                        if first_event_time.is_none_or(|first_event_time| event.created_at < first_event_time) {
-                            first_event_time = Some(event.created_at);
-                        }
-                        if !session_entities.contains(&event.entity_id) {
-                            session_entities.push(event.entity_id.clone());
-                        }
-                    }
-                    appender.append_row(event_params![event]).context("Failed to append event to DuckDB")?;
-                }
-
-                appender.flush().context("Failed to flush events to DuckDB")?;
-                if let Some(first_event_time) = first_event_time {
-                    update_event_times(&conn, first_event_time, &session_entities)?;
-                }
-                Ok(())
-            };
-
-            match insert_events() {
-                Err(err) => tracing::error!("Event processing task panicked: {:?}", err),
-                _ => tracing::debug!("Processed {} events", count),
+            match self.append(buffer.drain(..)) {
+                Err(err) => tracing::error!(?err, "Failed to process events"),
+                Ok(()) => tracing::debug!(event_count, "Processed events"),
             }
         }
     }

@@ -68,8 +68,8 @@ pub struct ApiKey {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
 pub enum ApiPermission {
-    #[serde(rename = "events:write")]
-    EventsWrite,
+    #[serde(rename = "events:batch")]
+    EventsBatch,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]

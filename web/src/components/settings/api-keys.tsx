@@ -17,7 +17,7 @@ type ApiKey = {
 	id: string;
 	displayName: string;
 	entities: string[];
-	permissions: "events:write"[];
+	permissions: "events:batch"[];
 	createdAt: string;
 	lastUsedAt?: string | null;
 	revokedAt?: string | null;
@@ -58,7 +58,7 @@ export const ApiKeys = () => {
 				json: {
 					displayName,
 					entities: selectedEntities.map((entity) => entity.value),
-					permissions: ["events:write"],
+					permissions: ["events:batch"],
 				},
 			})
 			.json()
@@ -303,9 +303,9 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 					/>
 					<SettingsFieldset legend="Permissions" description="Permissions cannot be changed after the key is created.">
 						<label className={styles.apiKeyPermissionOption}>
-							<input type="checkbox" checked={key.permissions.includes("events:write")} disabled />
+							<input type="checkbox" checked={key.permissions.includes("events:batch")} disabled />
 							<span>
-								<strong>events:write</strong>
+								<strong>events:batch</strong>
 								<small>Send events to assigned entities.</small>
 							</span>
 						</label>

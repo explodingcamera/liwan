@@ -23,6 +23,8 @@ Since this is not a library, this changelog focuses on the changes that are rele
 ### Features
 
 - Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
+- Added authenticated batch event ingestion endpoint
+- Added API key management UI
 
 ## [v1.7.0] - 2026-09-13
 

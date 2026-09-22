@@ -44,7 +44,7 @@ listen = 9042  # The port to listen on (http)
 # threads=2
 # memory_limit=2G
 
-[limits]  # Resource limits for dashboard reports.
+[limits]  # Resource limits
 # report_timeout_seconds=30
 # report_max_concurrency=8
 # report_max_range_days=3660

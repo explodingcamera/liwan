@@ -21,8 +21,12 @@ pub struct ApiKeyAccess {
 }
 
 impl ApiKeyAccess {
-    pub fn can_write_events(&self, entity_id: &str) -> bool {
-        self.permissions.contains(&ApiPermission::EventsWrite) && self.entities.contains(entity_id)
+    pub fn has_permission(&self, permission: ApiPermission) -> bool {
+        self.permissions.contains(&permission)
+    }
+
+    pub fn can_access_entity(&self, entity_id: &str) -> bool {
+        self.entities.contains(entity_id)
     }
 }
 
@@ -211,20 +215,21 @@ mod tests {
         app.entities.create(&Entity { id: "docs".into(), display_name: "Docs".into() }, &[]).unwrap();
         app.entities.create(&Entity { id: "shop".into(), display_name: "Shop".into() }, &[]).unwrap();
         let (key, plaintext) =
-            app.api_keys.create("production", &["docs".into()], &[ApiPermission::EventsWrite]).unwrap();
+            app.api_keys.create("production", &["docs".into()], &[ApiPermission::EventsBatch]).unwrap();
 
         let access = app.api_keys.authenticate(&plaintext).unwrap().unwrap();
         assert_eq!(access.id, key.id);
         assert!(app.api_keys.all().unwrap()[0].last_used_at.is_some());
-        assert!(access.can_write_events("docs"));
-        assert!(!access.can_write_events("shop"));
+        assert!(access.has_permission(ApiPermission::EventsBatch));
+        assert!(access.can_access_entity("docs"));
+        assert!(!access.can_access_entity("shop"));
         app.entities.delete("docs").unwrap();
-        assert!(!app.api_keys.authenticate(&plaintext).unwrap().unwrap().can_write_events("docs"));
-        app.api_keys.update(&key.id, "Production", &["shop".into()], &[ApiPermission::EventsWrite]).unwrap();
+        assert!(!app.api_keys.authenticate(&plaintext).unwrap().unwrap().can_access_entity("docs"));
+        app.api_keys.update(&key.id, "Production", &["shop".into()], &[ApiPermission::EventsBatch]).unwrap();
         assert_eq!(app.api_keys.all().unwrap()[0].display_name, "Production");
-        assert!(app.api_keys.authenticate(&plaintext).unwrap().unwrap().can_write_events("shop"));
+        assert!(app.api_keys.authenticate(&plaintext).unwrap().unwrap().can_access_entity("shop"));
         app.api_keys.update(&key.id, "Production", &["shop".into()], &[]).unwrap();
-        assert!(!app.api_keys.authenticate(&plaintext).unwrap().unwrap().can_write_events("shop"));
+        assert!(!app.api_keys.authenticate(&plaintext).unwrap().unwrap().has_permission(ApiPermission::EventsBatch));
         assert!(app.api_keys.revoke(&key.id).unwrap());
         assert!(app.api_keys.authenticate(&plaintext).unwrap().is_none());
     }

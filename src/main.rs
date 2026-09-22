@@ -28,16 +28,24 @@ async fn main() -> Result<()> {
     }
 
     let app = Liwan::try_new(config)?;
-    let app_copy = app.clone();
     app.run_background_tasks();
+
+    let server = web::start_webserver(app.clone(), queues);
+    let event_processor = app.events.process_events(events_rx);
+    let exit_processor = app.events.process_exits(exits_rx);
+    tokio::pin!(server, event_processor, exit_processor);
 
     tokio::select! {
         biased;
-        _ = liwan::utils::signals::shutdown() => app_copy.shutdown(),
-        res = web::start_webserver(app.clone(), queues) => res,
-        res = app.events.process_events(events_rx) => res,
-        res = app.events.process_exits(exits_rx) => res,
-    }
+        res = &mut server => res?,
+        res = &mut event_processor => return res,
+        res = &mut exit_processor => return res,
+    };
+
+    // The stopped server has dropped its senders. Drain every event it accepted before checkpointing.
+    event_processor.await?;
+    exit_processor.await?;
+    app.shutdown()
 }
 
 fn setup_logger(log_level: tracing::Level) -> Result<()> {

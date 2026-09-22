@@ -1,6 +1,6 @@
 mod common;
 use anyhow::Result;
-use liwan::app::models::Entity;
+use liwan::app::models::{ApiPermission, Entity};
 use liwan::config::Config;
 use liwan::utils::ip_headers::{ClientIpHeaderSource, TrustedProxy};
 use serde_json::json;
@@ -21,6 +21,15 @@ async fn test_event() -> Result<()> {
     // Require User-Agent
     let res = client.post("/api/event", event.clone()).await;
     res.assert_status_bad_request();
+
+    client
+        .post_with_headers(
+            "/api/event",
+            json!({ "entity_id": "entity-1", "name": "pageview", "url": "not a URL" }),
+            vec![("user-agent".to_string(), "test".to_string())],
+        )
+        .await
+        .assert_status_bad_request();
 
     // Create event
     let res = client.post_with_headers("/api/event", event, vec![("user-agent".to_string(), "test".to_string())]).await;
@@ -143,5 +152,91 @@ async fn exit_payload_uses_the_exit_queue() -> Result<()> {
     assert_eq!(exit.fqdn.as_deref(), Some("example.com"));
     assert!(receivers.events.try_recv().is_err(), "exit payload should not insert an event");
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> {
+    let app = common::app();
+    let (queues, mut receivers) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    app.entities.create(&Entity { id: "server".into(), display_name: "Server".into() }, &[])?;
+    let (key, plaintext) = app.api_keys.create("test", &["server".into()], &[ApiPermission::EventsBatch])?;
+    let headers = || vec![("authorization".to_string(), format!("Bearer {plaintext}"))];
+    let created_at = "2000-01-01T00:00:00+00:00";
+
+    let response = client
+        .post_with_headers(
+            "/api/v1/events",
+            json!({ "entityId": "server", "events": [
+                { "name": "pageview", "url": "https://example.com/docs", "createdAt": created_at, "ip": "8.8.8.8" },
+                { "name": "pageview", "url": "https://example.com/bot", "userAgent": "Googlebot" }
+            ] }),
+            headers(),
+        )
+        .await;
+    response.assert_status(http::StatusCode::ACCEPTED);
+    let body: serde_json::Value = response.json();
+    assert_eq!(body, json!({ "accepted": 1, "filtered": 1 }));
+    let event = receivers.events.recv().await.expect("event should be queued");
+    assert_eq!(event.entity_id, "server");
+    assert_eq!(event.created_at.to_rfc3339(), created_at);
+
+    let invalid = client
+        .post_with_headers(
+            "/api/v1/events",
+            json!({ "entityId": "server", "events": [
+                { "name": "pageview", "url": "https://example.com/valid" },
+                { "name": "pageview", "url": "https://example.com/invalid", "ip": "not-an-ip" }
+            ] }),
+            headers(),
+        )
+        .await;
+    invalid.assert_status_bad_request();
+    assert!(receivers.events.try_recv().is_err());
+
+    client
+        .post_with_headers(
+            "/api/v1/events",
+            json!({ "entityId": "other", "events": [{ "name": "pageview", "url": "https://example.com" }] }),
+            headers(),
+        )
+        .await
+        .assert_status_forbidden();
+
+    app.api_keys.revoke(&key.id)?;
+    client
+        .post_with_headers(
+            "/api/v1/events",
+            json!({ "entityId": "server", "events": [{ "name": "pageview", "url": "https://example.com" }] }),
+            headers(),
+        )
+        .await
+        .assert_status_unauthorized();
+    Ok(())
+}
+
+#[tokio::test]
+async fn full_queue_rejects_the_complete_batch() -> Result<()> {
+    let app = common::app();
+    let (events, mut receiver) = tokio::sync::mpsc::channel(1);
+    let (exits, _exit_receiver) = tokio::sync::mpsc::channel(1);
+    let client = common::TestClient::new(app.clone(), liwan::web::EventQueues { events, exits });
+    app.entities.create(&Entity { id: "server".into(), display_name: "Server".into() }, &[])?;
+    let (_, plaintext) = app.api_keys.create("test", &["server".into()], &[ApiPermission::EventsBatch])?;
+
+    let response = client
+        .post_with_headers(
+            "/api/v1/events",
+            json!({ "entityId": "server", "events": [
+                { "name": "pageview", "url": "https://example.com/one" },
+                { "name": "pageview", "url": "https://example.com/two" }
+            ] }),
+            vec![("authorization".to_string(), format!("Bearer {plaintext}"))],
+        )
+        .await;
+
+    response.assert_status(http::StatusCode::SERVICE_UNAVAILABLE);
+    assert!(receiver.try_recv().is_err());
     Ok(())
 }

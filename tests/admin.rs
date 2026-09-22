@@ -20,7 +20,7 @@ async fn admin_manages_api_keys() -> Result<()> {
     let created = client
         .post_with_headers(
             "/api/dashboard/api-keys",
-            json!({ "displayName": "Production", "entities": ["service"], "permissions": ["events:write"] }),
+            json!({ "displayName": "Production", "entities": ["service"], "permissions": ["events:batch"] }),
             headers(),
         )
         .await;
@@ -39,14 +39,14 @@ async fn admin_manages_api_keys() -> Result<()> {
     client
         .put_with_headers(
             &format!("/api/dashboard/api-keys/{key_id}"),
-            json!({ "displayName": "Production API", "entities": ["other"], "permissions": ["events:write"] }),
+            json!({ "displayName": "Production API", "entities": ["other"], "permissions": ["events:batch"] }),
             headers(),
         )
         .await
         .assert_status_success();
     let access = app.api_keys.authenticate(plaintext)?.expect("valid API key");
-    assert!(!access.can_write_events("service"));
-    assert!(access.can_write_events("other"));
+    assert!(!access.can_access_entity("service"));
+    assert!(access.can_access_entity("other"));
 
     client.delete_with_headers(&format!("/api/dashboard/api-keys/{key_id}"), headers()).await.assert_status_success();
     assert!(app.api_keys.authenticate(plaintext)?.is_none());
