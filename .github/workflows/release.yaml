@@ -34,16 +34,15 @@ jobs:
         with:
           bun-version: latest
           no-cache: true
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
       - name: Build web project
-        run: |
-          bun install --frozen-lockfile
-          bun run build
-        working-directory: ./web
+        run: bun run build:web
       - name: Upload web assets
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: web-dist
-          path: ./web/dist
+          path: ./packages/web/dist
 
   upload-assets:
     permissions:
@@ -70,7 +69,7 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: web-dist
-          path: ./web/dist
+          path: ./packages/web/dist
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           build-warnings: warn
@@ -87,6 +86,6 @@ jobs:
       packages: write
       contents: read
     needs: [create-release, upload-assets]
-    uses: $/.github/workflows/container.yaml
+    uses: ./.github/workflows/container.yaml
     with:
       tag: ${{ github.ref_name }}

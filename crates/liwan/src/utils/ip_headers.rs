@@ -1,0 +1,235 @@
+use ipnet::IpNet;
+use serde::{Deserialize, Serialize};
+use std::convert::Infallible;
+use std::net::{IpAddr, SocketAddr};
+use std::str::FromStr;
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
+#[serde(untagged)]
+pub enum ClientIpHeaderSource {
+    Provider(ClientIpProvider),
+    Header(String),
+}
+
+impl ClientIpHeaderSource {
+    pub fn as_header_name(&self) -> &str {
+        match self {
+            Self::Provider(ClientIpProvider::Cloudflare) => "cf-connecting-ip",
+            Self::Provider(ClientIpProvider::Fastly) => "fastly-client-ip",
+            Self::Provider(ClientIpProvider::Fly) => "fly-client-ip",
+            Self::Provider(ClientIpProvider::Cloudfront) => "cloudfront-viewer-address",
+            Self::Provider(ClientIpProvider::Akamai) => "true-client-ip",
+            Self::Header(value) => value,
+        }
+    }
+}
+
+impl FromStr for ClientIpHeaderSource {
+    type Err = Infallible;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let value = value.trim().to_ascii_lowercase().replace('_', "-");
+        let provider = match value.as_str() {
+            "akamai" => ClientIpProvider::Akamai,
+            "cloudflare" => ClientIpProvider::Cloudflare,
+            "cloudfront" => ClientIpProvider::Cloudfront,
+            "fastly" => ClientIpProvider::Fastly,
+            "fly" => ClientIpProvider::Fly,
+            _ => return Ok(Self::Header(value)),
+        };
+        Ok(Self::Provider(provider))
+    }
+}
+
+impl<'de> Deserialize<'de> for ClientIpHeaderSource {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = String::deserialize(deserializer)?;
+        Ok(value.parse().expect("ClientIpHeaderSource parsing is infallible"))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum ClientIpProvider {
+    Akamai,
+    Cloudflare,
+    Cloudfront,
+    Fastly,
+    Fly,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TrustedProxy {
+    All,
+    Ip(IpAddr),
+    Cidr(IpNet),
+}
+
+impl From<IpAddr> for TrustedProxy {
+    fn from(value: IpAddr) -> Self {
+        Self::Ip(value)
+    }
+}
+
+impl From<IpNet> for TrustedProxy {
+    fn from(value: IpNet) -> Self {
+        Self::Cidr(value)
+    }
+}
+
+impl TrustedProxy {
+    pub fn contains(&self, ip: IpAddr) -> bool {
+        match self {
+            TrustedProxy::All => true,
+            TrustedProxy::Ip(proxy_ip) => *proxy_ip == ip,
+            TrustedProxy::Cidr(net) => net.contains(&ip),
+        }
+    }
+}
+
+impl Serialize for TrustedProxy {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::All => serializer.serialize_str("*"),
+            Self::Ip(ip) => serializer.collect_str(ip),
+            Self::Cidr(network) => serializer.collect_str(network),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for TrustedProxy {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = String::deserialize(deserializer)?;
+        let value = value.trim();
+        if value == "*" {
+            return Ok(Self::All);
+        }
+        if let Ok(ip) = value.parse() {
+            return Ok(Self::Ip(ip));
+        }
+        value.parse().map(Self::Cidr).map_err(serde::de::Error::custom)
+    }
+}
+
+pub fn parse_header_ip(headers: &http::HeaderMap, source: &ClientIpHeaderSource) -> Option<IpAddr> {
+    let header = source.as_header_name();
+    let value = headers.get(header)?.to_str().ok()?.trim();
+    match header {
+        "cloudfront-viewer-address" => value.parse::<SocketAddr>().ok().map(|address| address.ip()),
+        "x-forwarded-for" => value.split(',').next_back()?.trim().parse().ok(),
+        "forwarded" => value
+            .split(',')
+            .next_back()?
+            .split(';')
+            .find_map(|p| p.trim().strip_prefix("for="))
+            .map(|p| p.trim_matches('"'))
+            .and_then(|p| p.parse().ok()),
+        _ => value.parse().ok(),
+    }
+}
+
+pub fn parse_client_ip(
+    headers: &http::HeaderMap,
+    source: &ClientIpHeaderSource,
+    peer_ip: Option<IpAddr>,
+    trusted_proxies: &[TrustedProxy],
+) -> Option<IpAddr> {
+    let header = source.as_header_name();
+    let value = headers.get(header)?.to_str().ok()?.trim();
+    let chain = match header {
+        "x-forwarded-for" => value.split(',').map(|part| part.trim().parse().ok()).collect::<Option<Vec<_>>>(),
+        "forwarded" => value
+            .split(',')
+            .map(|entry| {
+                entry
+                    .split(';')
+                    .find_map(|part| part.trim().strip_prefix("for="))
+                    .map(|part| part.trim_matches('"'))
+                    .and_then(|part| part.parse().ok())
+            })
+            .collect::<Option<Vec<_>>>(),
+        _ => return parse_header_ip(headers, source),
+    };
+
+    let mut current = peer_ip?;
+    let mut advanced = false;
+    for forwarded_ip in chain?.into_iter().rev() {
+        if !trusted_proxies.iter().any(|proxy| proxy.contains(current)) {
+            break;
+        }
+        current = forwarded_ip;
+        advanced = true;
+    }
+
+    advanced.then_some(current)
+}
+
+pub fn should_trust_proxy_headers(peer_ip: Option<IpAddr>, proxies: &[TrustedProxy]) -> bool {
+    peer_ip.is_some_and(|ip| proxies.iter().any(|proxy| proxy.contains(ip)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_known_and_custom_headers() {
+        let req = http::Request::builder()
+            .header("x-forwarded-for", "9.9.9.9, 8.8.8.8")
+            .header("Forwarded", "for=1.1.1.1;proto=https")
+            .header("X-Client-IP", "8.8.4.4")
+            .header("CloudFront-Viewer-Address", "[2001:db8::1]:443")
+            .body(())
+            .unwrap();
+        assert_eq!(
+            parse_header_ip(req.headers(), &ClientIpHeaderSource::Header("x-forwarded-for".to_string())),
+            Some("8.8.8.8".parse().unwrap())
+        );
+        assert_eq!(
+            parse_header_ip(req.headers(), &ClientIpHeaderSource::Header("forwarded".to_string())),
+            Some("1.1.1.1".parse().unwrap())
+        );
+        assert_eq!(
+            parse_header_ip(req.headers(), &ClientIpHeaderSource::Header("x-client-ip".to_string())),
+            Some("8.8.4.4".parse().unwrap())
+        );
+        assert_eq!(
+            parse_header_ip(req.headers(), &ClientIpHeaderSource::Provider(ClientIpProvider::Cloudfront)),
+            Some("2001:db8::1".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn trust_decision_respects_flag_and_proxy_list() {
+        let trusted = vec![TrustedProxy::Ip("10.0.0.1".parse().unwrap())];
+
+        assert!(should_trust_proxy_headers(Some("10.0.0.1".parse().unwrap()), &trusted));
+        assert!(!should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &trusted));
+        assert!(!should_trust_proxy_headers(Some("10.0.0.2".parse().unwrap()), &[]));
+    }
+
+    #[test]
+    fn wildcard_trusts_all_proxy_addresses() {
+        let proxy: TrustedProxy = serde_json::from_str(r#""*""#).unwrap();
+
+        assert!(proxy.contains("192.0.2.1".parse().unwrap()));
+        assert!(proxy.contains("2001:db8::1".parse().unwrap()));
+        assert_eq!(serde_json::to_string(&proxy).unwrap(), r#""*""#);
+    }
+
+    #[test]
+    fn client_ip_walks_trusted_forwarded_chain() {
+        let request = http::Request::builder().header("x-forwarded-for", "203.0.113.10, 10.0.0.1").body(()).unwrap();
+        let source = ClientIpHeaderSource::Header("x-forwarded-for".to_string());
+        let peer = Some("10.0.0.2".parse().unwrap());
+        let all_trusted =
+            [TrustedProxy::Ip("10.0.0.1".parse().unwrap()), TrustedProxy::Ip("10.0.0.2".parse().unwrap())];
+        let peer_only = [TrustedProxy::Ip("10.0.0.2".parse().unwrap())];
+
+        assert_eq!(
+            parse_client_ip(request.headers(), &source, peer, &all_trusted),
+            Some("203.0.113.10".parse().unwrap())
+        );
+        assert_eq!(parse_client_ip(request.headers(), &source, peer, &peer_only), Some("10.0.0.1".parse().unwrap()));
+    }
+}

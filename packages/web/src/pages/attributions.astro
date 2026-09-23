@@ -1,0 +1,279 @@
+---
+import Layout from "@/layouts/layout.astro";
+import licensesNpm from "../../../../data/licenses-npm.json" with { type: "json" };
+import licensesCargo from "../../../../data/licenses-cargo.json" with { type: "json" };
+
+const getRepositoryUrl = (repository: (typeof licensesNpm)[0]["repository"]) => {
+	let repo = typeof repository === "object" ? (repository?.url ?? "") : repository;
+	if (repo.startsWith("git+")) repo = repo.slice(4);
+	if (repo.endsWith(".git")) repo = repo.slice(0, -4);
+	repo = repo.replace("git://", "https://");
+	if (!repo.startsWith("https://")) repo = `https://github.com/${repo}`; // Some npm packages don't have the full URL and only have the repo name
+	return repo;
+};
+
+const removeEmails = (authors: string[]) =>
+	authors
+		.map((author) => author.replace(/<.*>/, ""))
+		.map((author) => author.trim())
+		.filter((author) => author.length > 0);
+
+const licenseText = (text: string) => {
+	const lines = text.split("\n");
+
+	// remove the minimum number of leading spaces from each line (ignoring empty lines)
+	const leadingSpaces = lines
+		.filter((line) => line.trim().length > 0)
+		.map((line) => line.match(/^\s*/)?.[0].length ?? 0);
+	const minLeadingSpaces = Math.min(...leadingSpaces);
+	lines.forEach((line, i) => {
+		lines[i] = line.slice(minLeadingSpaces);
+	});
+
+	if (lines[0].trim().length === 0) {
+		lines.shift();
+	}
+	if (lines[0].startsWith("Copyright")) {
+		lines.shift();
+	}
+	if (lines[0].startsWith("All rights reserved.")) {
+		lines.shift();
+	}
+
+	return lines.join("\n");
+};
+---
+
+<Layout title="Open Source Licenses">
+  <div class="page">
+    <h1>Open Source Licenses</h1>
+
+    <section class="intro">
+      <h2>liwan</h2>
+      <p>
+        liwan is available under the Apache-2.0 license. See <a
+          href="https://liwan.dev">liwan.dev</a
+        > and <a href="https://github.com/explodingcamera/liwan">GitHub</a> for more information.
+      </p>
+    </section>
+
+    <section class="intro">
+      <h2>Attributions</h2>
+      <p>liwan uses the following frontend and backend packages:</p>
+    </section>
+
+    <section>
+      <h3>Frontend</h3>
+      <ul class="packages">
+        <li class="packageHeader">
+          <span>Package</span>
+          <span>Author</span>
+          <span>License</span>
+          <span>Links</span>
+        </li>
+        {
+          licensesNpm.map((license) => (
+            <li>
+              <div class="packageName">
+                <strong>{license.name}</strong>
+                <span>{license.version}</span>
+              </div>
+              <span class="packageMeta" data-label="Author">{license.author?.name ?? "—"}</span>
+              <span class="packageLicense" data-label="License">{license.license}</span>
+              <span class="packageLinks" data-label="Links">
+                {license.repository && (
+                  <a href={getRepositoryUrl(license.repository)}>Source</a>
+                )}
+                {license.homepage && <a href={license.homepage}>Homepage</a>}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h3>Backend</h3>
+      <ul class="packages">
+        <li class="packageHeader">
+          <span>Package</span>
+          <span>Author</span>
+          <span>License</span>
+          <span>Links</span>
+        </li>
+        {
+          licensesCargo.crates.map(({ license, package: pkg }) => (
+            <li>
+              <div class="packageName">
+                <strong>{pkg.name}</strong>
+                <span>{pkg.version}</span>
+              </div>
+              <span class="packageMeta" data-label="Author">
+                {removeEmails(pkg.authors)[0] ?? "—"}
+              </span>
+              <span class="packageLicense" data-label="License">{license}</span>
+              <span class="packageLinks" data-label="Links">
+                {pkg.repository && (
+                  <a href={getRepositoryUrl(pkg.repository)}>Source</a>
+                )}
+              </span>
+            </li>
+          ))
+        }
+        <li>
+          <div class="packageName"><strong>Useragent Regexes</strong></div>
+          <span class="packageMeta" data-label="Author">Google Inc.</span>
+          <span class="packageLicense" data-label="License">Apache-2.0</span>
+          <span class="packageLinks" data-label="Links">
+            <a href="https://github.com/ua-parser/uap-core/blob/master/regexes.yaml"
+              >Source</a
+            >
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="licenseTexts">
+      <h3>License Texts</h3>
+      {
+        licensesCargo.licenses
+          .filter((license) => license.first_of_kind)
+          .map((license) => (
+            <div class="license">
+              <h4>{license.name}</h4>
+              <pre>{licenseText(license.text)}</pre>
+            </div>
+          ))
+      }
+    </section>
+  </div>
+</Layout>
+
+<style>
+  h1 {
+    margin-bottom: 1.5rem;
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    margin-bottom: 0.35rem;
+    font-size: 1.15rem;
+  }
+
+  h3 {
+    margin: 1.75rem 0 0.55rem;
+    font-size: 1rem;
+  }
+
+  .intro {
+    max-width: 52rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .intro p {
+    color: var(--pico-muted-color);
+    line-height: 1.45;
+  }
+
+  .packages {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--pico-muted-border-color);
+  }
+
+  .packages li {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) 12rem 6.5rem 9.5rem;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+    margin: 0;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+    list-style: none;
+    font-size: 0.825rem;
+  }
+
+  .packageName {
+    min-width: 0;
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .packageName strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+  }
+
+  .packageName span,
+  .packageMeta {
+    color: var(--pico-muted-color);
+  }
+
+  .packageLicense {
+    color: var(--pico-muted-color);
+  }
+
+  .packageLinks {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: start;
+    gap: 0.75rem;
+  }
+
+  .packageHeader {
+    color: var(--pico-muted-color);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .licenseTexts {
+    margin-top: 2rem;
+  }
+
+  .license h4 {
+    margin: 1.25rem 0 0.4rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  pre {
+    width: 100%;
+    max-width: 100%;
+    max-height: 24rem;
+    margin: 0;
+    padding: 0.75rem;
+    overflow: auto;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+
+  @media (max-width: 760px) {
+    .packages li {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+
+    .packageHeader {
+      display: none;
+    }
+
+    .packageLinks {
+      display: flex;
+    }
+
+    [data-label]::before {
+      display: inline-block;
+      width: 4rem;
+      color: var(--pico-muted-color);
+      content: attr(data-label);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+  }
+</style>

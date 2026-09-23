@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>liwan.dev social preview</title>
+    <style>
+      @font-face {
+        font-family: "Google Sans Variable";
+        font-style: normal;
+        font-display: swap;
+        font-weight: 400 700;
+        src: url("https://cdn.jsdelivr.net/fontsource/fonts/google-sans:vf@5.3.1/latin-wght-normal.woff2")
+          format("woff2-variations");
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1280px;
+        height: 640px;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      body {
+        background: #080b10;
+        color: #f7f8fb;
+        font-family: "Google Sans Variable", Arial, sans-serif;
+      }
+
+      .preview {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        isolation: isolate;
+      }
+
+      .collage {
+        position: absolute;
+        top: -260px;
+        left: -35px;
+        display: flex;
+        gap: 0;
+        transform: rotate(5deg);
+      }
+
+      .dashboard {
+        width: 675px;
+        flex: none;
+      }
+
+      .dashboard img {
+        width: 100%;
+        display: block;
+      }
+
+      .dashboard-one {
+        transform: translateY(260px);
+      }
+
+      .dashboard-two {
+        transform: translateY(-180px);
+      }
+
+      .shade {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background:
+          radial-gradient(
+            circle at center,
+            rgba(9, 13, 20, 0.16) 0 28%,
+            rgba(7, 10, 15, 0.32) 72%
+          ),
+          linear-gradient(rgba(8, 11, 16, 0.04), rgba(8, 11, 16, 0.14));
+      }
+
+      .content {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding-bottom: 4px;
+        text-align: center;
+        text-shadow: 0 3px 24px rgba(0, 0, 0, 0.72);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        margin-bottom: 58px;
+        font-size: 76px;
+        font-weight: 500;
+        letter-spacing: -3.6px;
+        line-height: 1;
+      }
+
+      .mark {
+        width: 76px;
+        height: 76px;
+        filter: invert(1);
+      }
+
+      h1 {
+        max-width: 1040px;
+        margin: 0;
+        font-size: 74px;
+        font-weight: 400;
+        letter-spacing: -3.2px;
+        line-height: 1.08;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="preview">
+      <div class="collage">
+        <div class="dashboard dashboard-one">
+          <img src="../../data/images/liwan-desktop-full-dark.png" alt="" />
+        </div>
+        <div class="dashboard dashboard-two">
+          <img src="../../data/images/liwan-desktop-full-dark.png" alt="" />
+        </div>
+      </div>
+      <div class="shade"></div>
+      <section class="content">
+        <div class="brand">
+          <img class="mark" src="../../packages/web/public/favicon.svg" alt="" />
+          <span>liwan.dev</span>
+        </div>
+        <h1>Self-hosted, privacy-first<br />web analytics</h1>
+      </section>
+    </main>
+  </body>
+</html>

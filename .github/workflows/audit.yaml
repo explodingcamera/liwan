@@ -6,16 +6,16 @@ on:
       - ".github/workflows/audit.yaml"
       - "Cargo.toml"
       - "Cargo.lock"
-      - "web/package.json"
-      - "web/bun.lock"
+      - "packages/**/package.json"
+      - "bun.lock"
   push:
     branches: [main]
     paths:
       - ".github/workflows/audit.yaml"
       - "Cargo.toml"
       - "Cargo.lock"
-      - "web/package.json"
-      - "web/bun.lock"
+      - "packages/**/package.json"
+      - "bun.lock"
   schedule:
     # Every Monday at 12:30 UTC
     - cron: "30 12 * * 1"
@@ -37,7 +37,7 @@ jobs:
       upload-sarif: false
       scan-args: |-
         --lockfile=./Cargo.lock
-        --lockfile=./web/bun.lock
+        --lockfile=./bun.lock
 
   scan:
     if: github.event_name != 'pull_request'
@@ -51,4 +51,4 @@ jobs:
       fail-on-vuln: false
       scan-args: |-
         --lockfile=./Cargo.lock
-        --lockfile=./web/bun.lock
+        --lockfile=./bun.lock

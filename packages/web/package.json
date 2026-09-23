@@ -1,0 +1,62 @@
+{
+	"name": "liwan-web",
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"build": "bun run --bun astro build",
+		"dev": "bun run --bun astro dev",
+		"preview": "bun run --bun astro preview",
+		"typecheck": "bun run --bun tsc --noEmit"
+	},
+	"dependencies": {
+		"@astrojs/react": "7.0.0",
+		"@base-ui/react": "^1.8.0",
+		"@explodingcamera/css": "^0.0.4",
+		"@floating-ui/react": "^0.27.20",
+		"@icons-pack/react-simple-icons": "^13.15.1",
+		"@picocss/pico": "^2.1.1",
+		"@tanstack/react-query": "^5.103.2",
+		"d3-array": "^3.2.4",
+		"d3-ease": "^3.0.1",
+		"d3-geo": "^3.1.1",
+		"d3-scale": "^4.0.2",
+		"d3-selection": "^3.0.0",
+		"d3-shape": "^3.2.0",
+		"d3-transition": "^3.0.1",
+		"d3-zoom": "^3.0.0",
+		"date-fns": "^4.4.0",
+		"fets": "^0.8.12",
+		"fuzzysort": "^4.0.2",
+		"little-date": "^1.2.1",
+		"lucide-react": "1.47.0",
+		"react": "19.3.0",
+		"react-dom": "19.3.0",
+		"topojson-client": "^3.1.0"
+	},
+	"devDependencies": {
+		"@astrojs/check": "^0.9.10",
+		"@biomejs/biome": "2.5.14",
+		"@types/bun": "^1.4.2",
+		"@types/d3-array": "^3.2.2",
+		"@types/d3-ease": "^3.0.2",
+		"@types/d3-geo": "^3.1.1",
+		"@types/d3-scale": "^4.0.9",
+		"@types/d3-selection": "^3.0.12",
+		"@types/d3-shape": "^3.2.0",
+		"@types/d3-transition": "^3.0.9",
+		"@types/d3-zoom": "^3.0.8",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"@types/topojson-client": "^3.1.5",
+		"@types/topojson-specification": "^1.0.5",
+		"astro": "7.3.4",
+		"oxc-transform-react": "^0.151.0",
+		"rollup-plugin-license": "^3.7.1",
+		"typescript": "^7.0.2"
+	},
+	"packageManager": "bun@1.4.2",
+	"trustedDependencies": [
+		"@biomejs/biome",
+		"esbuild"
+	]
+}

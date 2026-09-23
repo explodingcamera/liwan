@@ -2,7 +2,7 @@
 
 <div align="center">
     <h2>
-        <img float="left" src="./web/public/favicon.svg" width="16px"/>
+        <img float="left" src="./packages/web/public/favicon.svg" width="16px"/>
         <a href="https://liwan.dev">liwan.dev</a> - Self-hosted, privacy-first web analytics
     </h2>
 <div>
