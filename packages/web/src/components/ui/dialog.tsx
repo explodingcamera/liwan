@@ -39,24 +39,29 @@ export const Dialog = ({
 			<Dia.Portal>
 				<Dia.Backdrop className={styles.overlay} />
 
-				<Dia.Viewport>
-					{showClose && (
-						<Dia.Close className={styles.close} aria-label="Close dialog">
-							<XIcon size="24" />
-						</Dia.Close>
-					)}
-					<Dia.Popup>
-						<article className={cls(styles.content, autoOverflow && styles.autoOverflow, className)}>
-							<Dia.Title className={styles.title} hidden={hideTitle}>
-								{title}
-							</Dia.Title>
-							{description && (
-								<Dia.Description hidden={hideDescription} className={styles.description}>
-									{description}
-								</Dia.Description>
-							)}
-							{children}
-						</article>
+				<Dia.Viewport className={styles.viewport}>
+					<Dia.Popup
+						className={cls(
+							styles.content,
+							showClose && styles.withClose,
+							autoOverflow && styles.autoOverflow,
+							className,
+						)}
+					>
+						{showClose && (
+							<Dia.Close className={styles.close} aria-label="Close dialog">
+								<XIcon size="24" />
+							</Dia.Close>
+						)}
+						<Dia.Title className={styles.title} hidden={hideTitle}>
+							{title}
+						</Dia.Title>
+						{description && (
+							<Dia.Description hidden={hideDescription} className={styles.description}>
+								{description}
+							</Dia.Description>
+						)}
+						{children}
 					</Dia.Popup>
 				</Dia.Viewport>
 			</Dia.Portal>

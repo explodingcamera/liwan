@@ -306,8 +306,8 @@ export const FilterDialog = ({
 					</label>
 				)}
 
-				<div className="grid">
-					<Dialog.Close ref={closeRef} className="secondary outline">
+				<div className="action-row">
+					<Dialog.Close ref={closeRef} className="button-secondary">
 						Cancel
 					</Dialog.Close>
 					<button type="submit">Add filter</button>

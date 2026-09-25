@@ -12,6 +12,7 @@
 }
 
 .toast {
+  --toast-accent: var(--accent);
   --gap: 0.65rem;
   --peek: 0.45rem;
   --scale: calc(max(0, 1 - (var(--toast-index) * 0.06)));
@@ -25,11 +26,11 @@
   box-sizing: border-box;
   width: 100%;
   height: var(--height);
-  border: 1px solid color-mix(in srgb, var(--pico-primary-background) 82%, var(--pico-primary-inverse));
-  border-radius: var(--pico-border-radius);
-  background: var(--pico-primary-background);
-  color: var(--pico-primary-inverse);
-  box-shadow: var(--pico-card-box-shadow);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: 0 0.7rem 2rem rgb(0 0 0 / 18%);
   cursor: default;
   overflow: hidden;
   transform-origin: bottom right;
@@ -44,6 +45,16 @@
     transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.3s,
     height 0.15s;
+}
+
+.toast[data-tone="success"] {
+  --toast-accent: light-dark(#15803d, #4ade80);
+}
+.toast[data-tone="error"] {
+  --toast-accent: var(--danger);
+}
+.toast[data-tone="warning"] {
+  --toast-accent: light-dark(#a16207, #fbbf24);
 }
 
 .toast::after {
@@ -96,7 +107,7 @@
 .indicator {
   width: 0.35rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--pico-primary-inverse) 78%, transparent);
+  background: var(--toast-accent);
 }
 
 .text {
@@ -109,7 +120,7 @@
 
 .title {
   margin: 0;
-  color: var(--pico-primary-inverse);
+  color: var(--text-strong);
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.25;
@@ -117,7 +128,7 @@
 
 .description {
   margin: 0;
-  color: color-mix(in srgb, var(--pico-primary-inverse) 92%, transparent);
+  color: var(--text-muted);
   font-size: 0.86rem;
   line-height: 1.35;
 }
@@ -133,18 +144,18 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: color-mix(in srgb, var(--pico-primary-inverse) 78%, transparent);
+  color: var(--text-muted);
   box-shadow: none;
 }
 
 .close:hover {
-  background: color-mix(in srgb, var(--pico-primary-inverse) 14%, transparent);
-  color: var(--pico-primary-inverse);
+  background: var(--surface-hover);
+  color: var(--text);
   box-shadow: none;
 }
 
 .close:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 

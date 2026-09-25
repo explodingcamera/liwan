@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 
 import { api } from "@/api";
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
@@ -70,7 +71,7 @@ export const UserSettingsPage = ({ username: usernameProp }: { username: string 
 		setUsername(getSettingsPathId("/settings/users/") || usernameProp);
 	}, [usernameProp]);
 
-	if (!username) return <div className="loading-spinner" />;
+	if (!username) return <LoadingSpinner />;
 	return <UserSettingsContent username={username} />;
 };
 
@@ -121,7 +122,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 	};
 
 	if (authError) return <p>You don't have permission to view this page.</p>;
-	if (isLoading) return <div className="loading-spinner" />;
+	if (isLoading) return <LoadingSpinner />;
 	if (!user) return <p>User not found.</p>;
 
 	return (
@@ -167,7 +168,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 						{isSelf ? (
 							<button
 								type="button"
-								className={`${styles.deleteButton} outline`}
+								className={`${styles.deleteButton} button-danger`}
 								onClick={() => createToast("You cannot delete your own account", "error")}
 							>
 								Delete user
@@ -181,7 +182,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 									window.location.href = "/settings/users";
 								}}
 								trigger={
-									<button type="button" className={`${styles.deleteButton} outline`}>
+									<button type="button" className={`${styles.deleteButton} button-danger`}>
 										Delete user
 									</button>
 								}

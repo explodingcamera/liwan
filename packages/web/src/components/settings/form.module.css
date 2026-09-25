@@ -39,12 +39,12 @@
   display: grid;
   place-items: center;
   border-radius: 999px;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .backButton:hover {
-  background: var(--pico-dropdown-hover-background-color);
-  color: var(--pico-color);
+  background: var(--surface-hover);
+  color: var(--text);
   text-decoration: none;
 }
 
@@ -56,7 +56,7 @@
 .description,
 .fieldsetDescription,
 .fieldDescription {
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .description {
@@ -70,31 +70,29 @@
   display: flex;
   gap: 0.25rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  border-bottom: 1px solid var(--border);
 }
 
 .tab {
-  --pico-background-color: transparent;
-  --pico-border-color: transparent;
   width: auto;
   margin: 0;
   padding: 0.35rem 0.65rem;
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--pico-muted-color) 88%, transparent);
+  color: color-mix(in srgb, var(--text-muted) 88%, transparent);
   box-shadow: none;
 }
 
 .tab:hover {
   background: transparent;
-  color: var(--pico-color);
+  color: var(--text);
   box-shadow: none;
 }
 
 .tab[data-active],
 .tab[data-selected] {
-  color: var(--pico-h1-color);
+  color: var(--text-strong);
 }
 
 .panel {
@@ -130,7 +128,7 @@
 }
 
 .fieldset {
-  margin: 0 0 var(--pico-spacing);
+  margin: 0 0 0.75rem;
   padding: 0;
   border: 0;
 }
@@ -182,7 +180,7 @@
   display: flex;
   align-items: center;
   padding: 0.13rem;
-  border: 1px solid var(--pico-form-element-border-color);
+  border: 1px solid var(--field-border);
   border-radius: 999px;
   background: var(--switch-inactive-bg);
   cursor: pointer;
@@ -192,8 +190,8 @@
 }
 
 .switchRoot[data-checked] {
-  border-color: var(--pico-primary);
-  background: var(--pico-primary);
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .switchRoot:disabled {
@@ -202,7 +200,7 @@
 }
 
 .switchRoot:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -210,7 +208,7 @@
   width: 1.05rem;
   height: 1.05rem;
   border-radius: 999px;
-  background: var(--pico-card-background-color);
+  background: var(--surface);
   box-shadow: 0 1px 3px rgb(0 0 0 / 24%);
   transition: translate 0.15s ease;
 }

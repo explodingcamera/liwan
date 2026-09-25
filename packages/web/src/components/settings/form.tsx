@@ -8,6 +8,8 @@ import { Switch } from "@base-ui/react/switch";
 import { Tabs } from "@base-ui/react/tabs";
 import { ArrowLeftIcon } from "lucide-react";
 
+import { cls } from "@/utils";
+
 type TabItem<T extends string> = { value: T; label: ReactNode };
 
 export const SettingsForm = ({
@@ -48,7 +50,7 @@ export const SettingsHeader = ({
 				<h1>{title}</h1>
 			</div>
 			{saveForm && (
-				<button type="submit" form={saveForm} className={`${styles.saveButton} contrast`}>
+				<button type="submit" form={saveForm} className={`${styles.saveButton} button-primary`}>
 					Save
 				</button>
 			)}
@@ -89,7 +91,7 @@ export const SettingsPanel = ({
 	className?: string;
 	children: ReactNode;
 }) => (
-	<Tabs.Panel value={value} className={[styles.panel, className].filter(Boolean).join(" ")}>
+	<Tabs.Panel value={value} className={cls(styles.panel, className)}>
 		{children}
 	</Tabs.Panel>
 );

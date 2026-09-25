@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-surface);
 }
 
 .tabs {
@@ -75,7 +79,7 @@
     left: 0;
     width: var(--percentage);
     height: 100%;
-    background: var(--pico-h5-color);
+    background: var(--text-strong);
     opacity: 0.09;
     z-index: -1;
     transition:
@@ -90,12 +94,12 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  color: var(--pico-h5-color);
+  color: var(--text-strong);
   margin-bottom: 1rem;
 
   > div:first-of-type {
     font-weight: 600;
-    color: var(--pico-color);
+    color: var(--text);
   }
 }
 
@@ -123,7 +127,7 @@
 .showMore {
   all: unset;
   cursor: pointer;
-  color: var(--pico-contrast);
+  color: var(--text-strong);
   margin-top: auto;
   padding-top: 0.4rem;
   display: flex;
@@ -172,7 +176,7 @@
 .dimensionItemSelect {
   all: unset;
   position: relative;
-  color: var(--pico-h2-color);
+  color: var(--text-strong);
   padding: 0.5rem 0;
   max-width: calc(100% - 3rem);
   overflow: hidden;
@@ -184,7 +188,7 @@
 
   &:hover {
     text-decoration: underline;
-    text-decoration-color: var(--pico-h4-color);
+    text-decoration-color: var(--text-strong);
     text-decoration-style: dotted;
     text-decoration-thickness: 0.1rem;
   }
@@ -202,5 +206,42 @@
 }
 
 .detailsModal.detailsModal {
-  max-width: 35em;
+  width: min(35rem, 100%);
+  max-width: 35rem;
+}
+
+.detailsModal .dimensionTable {
+  min-height: 0;
+}
+.detailsModal .dimensionHeader {
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.detailsModal .dimensionHeader > div:nth-of-type(2) {
+  margin-left: auto;
+  margin-right: 2rem;
+}
+.detailsModal .dimensionRow > div:last-child {
+  margin-right: 2rem;
+}
+.detailsClose {
+  all: unset;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.detailsClose svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.detailsClose:hover {
+  color: var(--text-strong);
+}
+.detailsModal .search {
+  margin-bottom: 0.75rem;
 }

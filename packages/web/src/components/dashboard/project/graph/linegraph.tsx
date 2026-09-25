@@ -258,7 +258,7 @@ export const LineGraph = ({
 
 			ax.selectAll(".tick line")
 				.attr("x2", dimensions.width)
-				.attr("stroke", "var(--pico-secondary-background)")
+				.attr("stroke", "var(--accent-fill)")
 				.attr("stroke-width", 0.5)
 				.attr("stroke-dasharray", "2, 2");
 
@@ -292,7 +292,7 @@ export const LineGraph = ({
 					.attr("opacity", 0.6)
 					.attr("height", 20)
 					.attr("rx", 6)
-					.attr("fill", "var(--pico-card-background-color)");
+					.attr("fill", "var(--surface)");
 			});
 
 			firstRender.current = false;
@@ -308,6 +308,8 @@ export const LineGraph = ({
 		const svg = select(svgElement);
 		const tooltip = svg.selectChild("#tooltip");
 		const needle = svg.selectChild("#needle");
+		const tooltipElement = tooltip.node() as SVGForeignObjectElement | null;
+		const tooltipHeight = Number(tooltipElement?.getAttribute("height")) || 100;
 		const { domainMaxX } = getGraphRenderData(data, range);
 		const [minX] = extent(data, (d) => d.x).map((d) => d || new Date());
 		const xAxis = scaleTime().domain([minX, domainMaxX]).range([0, dimensions.width]);
@@ -317,24 +319,27 @@ export const LineGraph = ({
 		const mouseMove = (event: MouseEvent) => {
 			window.cancelAnimationFrame(animationFrame ?? 0);
 			animationFrame = window.requestAnimationFrame(() => {
-				const tooltipRect = (tooltip.node() as SVGForeignObjectElement | null)?.getBoundingClientRect();
-				const tooltipWidth = tooltipRect?.width || 0;
-				const tooltipHeight = tooltipRect?.height || 0;
 				const tooltipPadding = 10;
 
 				const svgRect = svgElement.getBoundingClientRect();
 				const svgWidth = svgRect.width;
 				const svgHeight = svgRect.height;
+				const tooltipWidth = Math.min(220, Math.max(0, svgWidth - tooltipPadding * 2));
+				tooltipElement?.setAttribute("width", String(tooltipWidth));
 				const isLeftSide = event.clientX - svgRect.left < svgWidth / 2;
 				const tooltipX = isLeftSide
-					? Math.min(event.clientX - svgRect.left + tooltipPadding, svgWidth - tooltipWidth - tooltipPadding)
-					: Math.max(event.clientX - svgRect.left - tooltipWidth - tooltipPadding, tooltipPadding);
-				const tooltipY = Math.min(
-					event.clientY - svgRect.top + tooltipPadding - tooltipHeight / 3,
-					svgHeight - tooltipHeight - tooltipPadding,
+					? event.clientX - svgRect.left + tooltipPadding
+					: event.clientX - svgRect.left - tooltipWidth - tooltipPadding;
+				const clampedX = Math.max(tooltipPadding, Math.min(tooltipX, svgWidth - tooltipWidth - tooltipPadding));
+				const tooltipY = Math.max(
+					tooltipPadding,
+					Math.min(
+						event.clientY - svgRect.top + tooltipPadding - tooltipHeight / 3,
+						svgHeight - tooltipHeight - tooltipPadding,
+					),
 				);
 
-				tooltip.attr("x", tooltipX).attr("y", tooltipY).attr("opacity", 1);
+				tooltip.attr("x", clampedX).attr("y", tooltipY).attr("opacity", 1);
 
 				const x = event.clientX - svgRect.left - 1;
 				const point = data.reduce((closestPoint, currentPoint) => {
@@ -344,7 +349,7 @@ export const LineGraph = ({
 				});
 
 				const snappedX = xAxis(point.x);
-				needle.attr("d", `M ${snappedX} 0 L ${snappedX} ${svgHeight - 40}`);
+				needle.attr("d", `M ${snappedX} 0 L ${snappedX} ${svgHeight - 40}`).attr("opacity", 1);
 				tooltip.select(".date").text(formatDate(new Date(point.x), dateRange));
 				tooltip.select(".value").text(formatMetricVal(point.y, metric));
 			});
@@ -353,7 +358,7 @@ export const LineGraph = ({
 		const mouseLeave = () => {
 			window.cancelAnimationFrame(animationFrame ?? 0);
 			tooltip.interrupt().attr("opacity", 0);
-			needle.interrupt().attr("d", "M 0 0 L 0 0");
+			needle.interrupt().attr("opacity", 0);
 		};
 
 		svgElement.addEventListener("mousemove", mouseMove);
@@ -379,22 +384,16 @@ export const LineGraph = ({
 				<title>{title} graph</title>
 				<defs>
 					<linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
-						<stop offset="0%" stopColor="rgb(var(--graph-fill-color) / 0.25)" />
-						<stop offset="100%" stopColor="rgb(var(--graph-fill-color) / 0)" />
+						<stop offset="0%" stopColor="var(--graph-line-color)" stopOpacity="0.25" />
+						<stop offset="100%" stopColor="var(--graph-line-color)" stopOpacity="0" />
 					</linearGradient>
 				</defs>
 				<g id="y-grid" />
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
 				<path id="line" fill="none" stroke="var(--graph-line-color)" />
 				<path id="line-dotted" fill="none" stroke="var(--graph-line-color)" strokeDasharray="5, 5" />
-				<path
-					id="needle"
-					fill="none"
-					stroke="var(--pico-secondary-background)"
-					strokeDasharray="5, 5"
-					strokeWidth="2"
-				/>
-				<foreignObject id="tooltip" width="170" height="100" opacity="0">
+				<path id="needle" opacity="0" fill="none" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
+				<foreignObject id="tooltip" width="220" height="100" opacity="0">
 					<div data-theme="dark" className={styles.tooltip}>
 						<h2>{title}</h2>
 						<h3>

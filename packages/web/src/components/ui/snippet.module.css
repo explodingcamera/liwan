@@ -3,9 +3,9 @@
   max-width: 100%;
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
-  background: var(--pico-form-element-background-color);
+  border: 1px solid var(--field-border);
+  border-radius: var(--control-radius);
+  background: var(--field);
 }
 
 .snippet code {
@@ -13,7 +13,7 @@
   min-width: 0;
   padding: 0.9rem 3rem 0.9rem 0.9rem;
   background: transparent;
-  color: color-mix(in srgb, var(--pico-color) 82%, var(--pico-muted-color));
+  color: color-mix(in srgb, var(--text) 82%, var(--text-muted));
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -28,8 +28,8 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--pico-color) 82%, var(--pico-muted-color));
-  font-family: var(--pico-font-family-monospace);
+  color: color-mix(in srgb, var(--text) 82%, var(--text-muted));
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 0.875em;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -76,7 +76,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--pico-color);
+  color: var(--text);
   opacity: 0.68;
   box-shadow: none;
 }
@@ -84,12 +84,12 @@
 .copyButton:hover {
   border: 0;
   background: transparent;
-  color: var(--pico-color);
+  color: var(--text);
   opacity: 1;
   box-shadow: none;
 }
 
 .copyButton:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }

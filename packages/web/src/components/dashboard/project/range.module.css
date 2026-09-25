@@ -1,68 +1,47 @@
 .container {
   display: flex;
+  align-items: center;
   gap: 0.2rem;
-
-  .stepButton {
-    display: flex;
-    background: transparent;
-    opacity: 0.6;
-    border: none;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    color: var(--pico-contrast);
-    transition:
-      background-color 0.1s,
-      opacity 0.1s;
-
-    &:hover {
-      background-color: var(--pico-dropdown-hover-background-color);
-      opacity: 1;
-    }
-  }
-
-  ul {
-    li {
-      padding: 0;
-
-      button {
-        box-sizing: border-box;
-        width: 100%;
-        padding: 0.3rem var(--pico-form-element-spacing-horizontal);
-        border-radius: calc(var(--pico-border-radius) - 0.35rem);
-        color: var(--pico-color);
-        font-size: 0.875rem;
-        line-height: 1.25;
-      }
-    }
-  }
 }
-
-details.selectRange {
+.mobileRange {
+  display: none;
+}
+.stepButton {
+  display: grid;
+  place-items: center;
+  padding: 0.35rem;
+  border-radius: var(--radius);
+  opacity: 0.75;
+}
+.stepButton:hover {
+  opacity: 1;
+}
+.selectRange {
   min-width: 11rem;
   max-width: 16rem;
-  line-height: 1;
-
-  button {
-    all: unset;
-    cursor: pointer;
-  }
-
-  .selected {
-    background: var(--pico-dropdown-hover-background-color);
-    color: var(--pico-primary-hover);
-    font-weight: 600;
-  }
-
-  summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    --pico-form-element-spacing-vertical: 0.5rem;
-    --pico-form-element-spacing-horizontal: 0.6rem;
-  }
+  justify-content: space-between;
+  background: var(--field);
+  color: var(--text);
+  border-color: var(--field-border);
+  border-radius: var(--radius);
+}
+.selectRange:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.rangeDialog {
+  width: min(30rem, 100%);
 }
 
-article.rangeDialog {
-  width: unset;
+@media (max-width: 700px) {
+  .desktopRange {
+    display: none;
+  }
+
+  .mobileRange {
+    display: block;
+    width: 11rem;
+    margin: 0;
+    border-radius: var(--radius);
+  }
 }

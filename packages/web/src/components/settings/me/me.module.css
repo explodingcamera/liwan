@@ -24,8 +24,9 @@ form.password {
 
 .header {
   display: flex;
-  background-color: var(--pico-background-color);
-  border-radius: var(--pico-border-radius);
+  background-color: var(--inset-surface);
+  border: 1px solid var(--surface-outline);
+  border-radius: var(--radius);
   padding: 1rem;
   align-items: center;
   gap: 0.5rem;
@@ -38,7 +39,7 @@ form.password {
   p {
     margin: 0;
     font-size: 0.9rem;
-    color: var(--pico-muted-color);
+    color: var(--text-muted);
 
     &[data-loading="true"] {
       visibility: hidden;
@@ -48,12 +49,23 @@ form.password {
 
 .container {
   flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 1rem;
   animation: fadeIn 0.2s ease;
 
   article {
     display: flex;
     flex-direction: column;
     width: 100%;
+    gap: 0.5rem;
+    padding: 0;
+    background: transparent;
+  }
+
+  > article + article {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
   }
 
   h2 {

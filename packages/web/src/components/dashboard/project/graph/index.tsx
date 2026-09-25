@@ -3,6 +3,7 @@ import styles from "./linegraph.module.css";
 import { lazy, Suspense } from "react";
 
 import type { DateRange } from "@/api/ranges.ts";
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { GraphResponse, Metric } from "@/constants.ts";
 
 export type { GraphRange } from "./linegraph.tsx";
@@ -35,7 +36,9 @@ export const LineGraph = ({
 					aria-busy="true"
 					aria-label={isLoading ? "Loading graph" : "Updating graph"}
 					data-no-delay={isLoading}
-				></div>
+				>
+					<LoadingSpinner immediate />
+				</div>
 			)}
 			<Suspense
 				fallback={
@@ -46,7 +49,9 @@ export const LineGraph = ({
 							aria-busy="true"
 							aria-label="Loading graph"
 							data-no-delay="true"
-						></div>
+						>
+							<LoadingSpinner immediate />
+						</div>
 					)
 				}
 			>

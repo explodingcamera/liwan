@@ -1,27 +1,33 @@
 .container {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.container label {
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.container input {
+  margin-top: 0.4rem;
+}
+
+.actions {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
 
-  label {
-    width: 100%;
-    &:first-of-type {
-      margin-bottom: 1rem;
-    }
-  }
+.actions button {
+  min-width: 6rem;
+}
 
-  input {
-    margin-bottom: 0;
-  }
-
-  button {
-    margin-top: 1rem;
-    width: 100%;
-  }
-
-  > div {
-    display: flex;
-    width: 100%;
-    gap: 0.5rem;
+@media (max-width: 440px) {
+  .container {
+    grid-template-columns: 1fr;
   }
 }

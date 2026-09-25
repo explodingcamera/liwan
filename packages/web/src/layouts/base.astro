@@ -15,7 +15,13 @@ type Props = { title: string; hideFooter?: boolean };
     <meta name="robots" content="noindex" />
     <meta name="description" content="liwan Web Analytics Dashboard" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <Font cssVariable="--font-google-sans" />
+    <Font cssVariable="--font-google-sans" preload={[{ subset: "latin" }]} />
+    <script is:inline>
+      try {
+        const theme = localStorage.getItem("theme");
+        if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
     <ClientRouter />
     <script id="liwan-config" type="application/json" is:inline>__LIWAN_CONFIG__</script>
     <title>{Astro.props.title} | liwan</title>
@@ -25,7 +31,7 @@ type Props = { title: string; hideFooter?: boolean };
     <ToastHost client:only="react" />
     {
       !Astro.props.hideFooter && (
-        <footer class="container-fluid footer">
+        <footer class="page-shell footer">
           <div class="footer-start">
             <span class="footer-theme"><ThemeSwitcher /></span>
             <small>
@@ -44,8 +50,8 @@ type Props = { title: string; hideFooter?: boolean };
       footer {
         box-sizing: border-box;
         width: 100%;
-        max-width: 60rem;
-        padding: 1rem;
+        max-width: 64rem;
+        padding: 1rem var(--page-gutter);
         margin: 0 auto;
         display: flex;
         align-items: center;
@@ -58,7 +64,7 @@ type Props = { title: string; hideFooter?: boolean };
           align-items: center;
           justify-content: flex-end;
           gap: 0.35rem 0.8rem;
-          color: var(--pico-muted-color);
+          color: var(--text-muted);
           font-size: 0.75rem;
         }
 
@@ -75,7 +81,7 @@ type Props = { title: string; hideFooter?: boolean };
 
         .footer-theme {
           display: flex;
-          color: var(--pico-muted-color);
+          color: var(--text-muted);
           opacity: 0.8;
         }
       }

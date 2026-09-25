@@ -69,7 +69,7 @@ export const Table = <T extends { id: string }>({
 						))
 					) : (
 						<tr>
-							<td colSpan={columns?.length} className="h-24 text-center">
+							<td colSpan={columns?.length} className={styles.empty}>
 								{emptyMessage}
 							</td>
 						</tr>

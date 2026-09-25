@@ -10,11 +10,11 @@ const { title } = Astro.props;
 ---
 
 <Base {title}>
-  <header class="container-fluid">
+  <header class="page-shell">
     <nav>
       <ul>
         <li>
-          <a href="/" class="contrast logo">
+          <a href="/" class="logo">
             <img src="/favicon.svg" alt="liwan logo" width="24" height="24" />
             <strong>liwan</strong>
           </a>
@@ -25,7 +25,7 @@ const { title } = Astro.props;
       </ul>
     </nav>
   </header>
-  <main class="container-fluid">
+  <main class="page-shell">
     <slot />
   </main>
 </Base>
@@ -40,23 +40,44 @@ const { title } = Astro.props;
   }
 
   nav {
-    height: 3rem;
+    min-height: 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  nav ul {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
   .logo {
     display: flex;
     align-items: center;
     gap: 0.3rem;
+    color: var(--text-strong);
+    text-decoration: none;
+  }
+
+  .logo strong {
+    font-weight: 500;
   }
 
   main,
   header {
-    max-width: 60rem;
-    padding: 1rem 1rem;
+    max-width: 64rem;
+    padding: 1rem var(--page-gutter);
   }
 
   header {
-    padding-top: 1rem;
+    padding-top: 0.5rem;
     padding-bottom: 0;
+  }
+
+  @media (min-width: 70rem) {
+    header { padding-top: 1rem; }
   }
 </style>

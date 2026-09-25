@@ -1,9 +1,32 @@
 .spinner {
-  flex: 0 0 4rem;
+  flex: 1 0 4rem;
   min-height: 4rem;
+  display: grid;
+  place-items: center;
   opacity: 0;
   pointer-events: none;
   animation: reveal 0.1s ease forwards 0.3s;
+}
+
+.spinner::after {
+  content: "";
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.immediate {
+  opacity: 1;
+  animation: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes reveal {
@@ -15,5 +38,8 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation-duration: 0s;
+  }
+  .spinner::after {
+    animation-duration: 2s;
   }
 }

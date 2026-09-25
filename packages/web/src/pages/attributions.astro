@@ -171,14 +171,14 @@ const licenseText = (text: string) => {
   }
 
   .intro p {
-    color: var(--pico-muted-color);
+    color: var(--text-muted);
     line-height: 1.45;
   }
 
   .packages {
     margin: 0;
     padding: 0;
-    border-top: 1px solid var(--pico-muted-border-color);
+    border-top: 1px solid var(--border);
   }
 
   .packages li {
@@ -188,7 +188,7 @@ const licenseText = (text: string) => {
     align-items: baseline;
     margin: 0;
     padding: 0.5rem 0;
-    border-bottom: 1px solid var(--pico-muted-border-color);
+    border-bottom: 1px solid var(--border);
     list-style: none;
     font-size: 0.825rem;
   }
@@ -207,11 +207,11 @@ const licenseText = (text: string) => {
 
   .packageName span,
   .packageMeta {
-    color: var(--pico-muted-color);
+    color: var(--text-muted);
   }
 
   .packageLicense {
-    color: var(--pico-muted-color);
+    color: var(--text-muted);
   }
 
   .packageLinks {
@@ -222,7 +222,7 @@ const licenseText = (text: string) => {
   }
 
   .packageHeader {
-    color: var(--pico-muted-color);
+    color: var(--text-muted);
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -257,7 +257,7 @@ const licenseText = (text: string) => {
       gap: 0.25rem;
     }
 
-    .packageHeader {
+    .packages .packageHeader {
       display: none;
     }
 
@@ -268,7 +268,7 @@ const licenseText = (text: string) => {
     [data-label]::before {
       display: inline-block;
       width: 4rem;
-      color: var(--pico-muted-color);
+      color: var(--text-muted);
       content: attr(data-label);
       font-size: 0.7rem;
       font-weight: 600;

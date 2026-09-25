@@ -48,61 +48,13 @@
 }
 
 .new:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
 .new:hover {
   color: var(--settings-icon-color);
   opacity: 0.68;
-}
-
-.editDialog {
-  width: min(48rem, 94vw);
-  max-width: 48rem;
-}
-
-.editDialog h2,
-.editDialog h3 {
-  font-size: 1rem;
-  line-height: 1.25;
-  margin-bottom: 0.5rem;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--pico-muted-border-color);
-}
-
-.tab {
-  --pico-background-color: transparent;
-  --pico-border-color: transparent;
-  width: auto;
-  margin: 0;
-  padding: 0.35rem 0.65rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: color-mix(in srgb, var(--pico-muted-color) 88%, transparent);
-  box-shadow: none;
-}
-
-.tab:hover {
-  background: transparent;
-  color: var(--pico-color);
-  box-shadow: none;
-}
-
-.activeTab,
-.activeTab:hover,
-.tab[data-selected] {
-  color: var(--pico-h1-color);
-}
-
-.tabPanel {
-  margin-top: 0.5rem;
 }
 
 @keyframes newLoad {
@@ -118,13 +70,9 @@
 }
 
 .danger {
-  --pico-background-color: transparent;
-  --pico-border-color: var(--pico-del-color);
-  color: var(--pico-del-color);
+  color: var(--danger);
 
   &:hover {
-    --pico-background-color: transparent;
-    --pico-border-color: var(--pico-del-color);
-    color: var(--pico-del-color);
+    color: var(--danger);
   }
 }

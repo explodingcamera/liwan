@@ -1,5 +1,5 @@
 .detailPanel {
-  max-width: 46rem;
+  width: 100%;
 }
 
 .userDetailPanel {
@@ -13,7 +13,7 @@
 .displayHelp {
   max-width: 46rem;
   margin-bottom: 1rem;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .displaySections {
@@ -31,19 +31,19 @@
 .displaySections legend {
   margin-bottom: 0.5rem;
   padding: 0;
-  color: var(--pico-color);
+  color: var(--text);
   font-size: 0.9rem;
   font-weight: 500;
 }
 
 .displayGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.15rem 1.25rem;
   padding: 0.7rem 0.85rem;
-  border: 1px solid var(--pico-form-element-border-color);
-  border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--pico-form-element-background-color) 45%, transparent);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--field) 45%, transparent);
 }
 
 .dimensionGroups {
@@ -54,14 +54,14 @@
 
 .dimensionGroup {
   padding: 0.7rem 0.85rem;
-  border: 1px solid var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-form-element-background-color) 45%, transparent);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--field) 45%, transparent);
 }
 
 .dimensionGroup h3 {
   margin: 0 0 0.35rem;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   font-family: var(--font-family-text);
   font-size: 0.75rem;
   font-weight: 600;
@@ -75,7 +75,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.25rem 0;
-  color: color-mix(in srgb, var(--pico-color) 84%, var(--pico-muted-color));
+  color: color-mix(in srgb, var(--text) 84%, var(--text-muted));
 }
 
 .displayRow > span {
@@ -92,9 +92,9 @@
   column-gap: 0.02rem;
   margin-bottom: 0;
   padding: 0.12rem;
-  border: 1px solid var(--pico-form-element-border-color);
+  border: 1px solid var(--field-border);
   border-radius: 999px;
-  background: var(--pico-card-background-color);
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -105,7 +105,7 @@
   left: 0.12rem;
   width: calc((100% - 0.28rem) / 3);
   border-radius: 999px;
-  background: var(--pico-primary-background);
+  background: var(--accent-fill);
   content: "";
   transition: transform 160ms ease;
 }
@@ -122,12 +122,13 @@
   position: relative;
   z-index: 1;
   width: auto;
+  min-height: 1.7rem;
   margin: 0;
-  padding: 0.25rem 0.42rem;
+  padding: 0.15rem 0.42rem;
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.2;
   box-shadow: none;
@@ -136,16 +137,16 @@
 
 .segmented button:hover {
   background: transparent;
-  color: var(--pico-color);
+  color: var(--text);
   box-shadow: none;
 }
 
 .segmented button[data-pressed]:hover {
-  color: var(--pico-primary-inverse);
+  color: var(--accent-contrast);
 }
 
 .segmented button[data-pressed] {
-  color: var(--pico-primary-inverse);
+  color: var(--accent-contrast);
 }
 
 .error {
@@ -159,7 +160,7 @@
   gap: 1rem;
   margin-top: 1.25rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--pico-muted-border-color);
+  border-top: 1px solid var(--border);
 }
 
 .dangerZone strong {
@@ -171,19 +172,19 @@
 
 .dangerZone p {
   margin: 0;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   font-size: 0.825rem;
 }
 
 .deleteButton {
   width: fit-content;
-  border-color: var(--pico-del-color);
-  color: var(--pico-del-color);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .deleteButton:hover {
-  border-color: var(--pico-del-color);
-  color: var(--pico-del-color);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 details.edit {
@@ -210,9 +211,8 @@ details.edit summary + ul {
   a {
     all: unset;
     cursor: pointer;
-    margin: calc(var(--pico-form-element-spacing-vertical) * -0.5)
-      calc(var(--pico-form-element-spacing-horizontal) * -1);
-    padding: calc(var(--pico-form-element-spacing-vertical) * 0.5) var(--pico-form-element-spacing-horizontal);
+    margin: -0.25rem -0.6rem;
+    padding: 0.25rem 0.6rem;
     width: 100%;
 
     align-items: center;
@@ -222,13 +222,13 @@ details.edit summary + ul {
 
   button:hover,
   a:hover {
-    background-color: var(--pico-dropdown-hover-background-color);
+    background-color: var(--surface-hover);
   }
 }
 
 .danger {
   svg {
-    color: var(--pico-del-color);
+    color: var(--danger);
   }
 }
 
@@ -238,12 +238,13 @@ details.edit summary + ul {
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .settingsLink:hover {
-  background: var(--pico-dropdown-hover-background-color);
-  color: var(--pico-color);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-surface);
   text-decoration: none;
 }
 
@@ -266,7 +267,7 @@ details.edit summary + ul {
 
 .entityId:hover {
   background: transparent;
-  color: var(--pico-primary-hover);
+  color: var(--accent-hover);
   box-shadow: none;
 }
 
@@ -281,12 +282,16 @@ details.edit summary + ul {
 
 .apiKeyStatusActive {
   background: color-mix(in srgb, #22c55e 14%, transparent);
-  color: color-mix(in srgb, #22c55e 78%, var(--pico-color));
+  color: color-mix(in srgb, #22c55e 78%, var(--text));
 }
 
 .apiKeyStatusRevoked {
-  background: color-mix(in srgb, var(--pico-muted-color) 14%, transparent);
-  color: var(--pico-muted-color);
+  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+  color: var(--text-muted);
+}
+
+.apiKeyPermissions {
+  margin-top: 1rem;
 }
 
 .apiKeyPermissionOption {
@@ -297,9 +302,9 @@ details.edit summary + ul {
   width: 100%;
   margin: 0;
   padding: 0.65rem 0.75rem;
-  border: 1px solid var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-form-element-background-color) 55%, transparent);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--field) 55%, transparent);
 }
 
 .apiKeyPermissionOption:has(input:disabled) {
@@ -322,7 +327,7 @@ details.edit summary + ul {
 }
 
 .apiKeyPermissionOption small {
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 

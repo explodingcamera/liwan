@@ -6,7 +6,11 @@ import { XIcon } from "lucide-react";
 export type ToastType = "success" | "error" | "info" | "warning";
 export type ToastData = { tone: ToastType };
 
-export const toastManager = Toast.createToastManager<ToastData>();
+const toastGlobal = globalThis as typeof globalThis & {
+	__liwanToastManager?: ReturnType<typeof Toast.createToastManager<ToastData>>;
+};
+export const toastManager = toastGlobal.__liwanToastManager ?? Toast.createToastManager<ToastData>();
+toastGlobal.__liwanToastManager = toastManager;
 
 const toastTitles: Record<ToastType, string> = {
 	success: "Success",
@@ -40,7 +44,13 @@ const ToastList = () => {
 	const { toasts } = Toast.useToastManager();
 
 	return toasts.map((toast) => (
-		<Toast.Root key={toast.id} toast={toast} className={styles.toast} swipeDirection={["right", "down"]}>
+		<Toast.Root
+			key={toast.id}
+			toast={toast}
+			className={styles.toast}
+			data-tone={toast.data?.tone}
+			swipeDirection={["right", "down"]}
+		>
 			<Toast.Content className={styles.content}>
 				<span className={styles.indicator} aria-hidden />
 				<div className={styles.text}>

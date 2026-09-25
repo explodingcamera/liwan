@@ -4,7 +4,7 @@ import Layout from "@/layouts/base.astro";
 ---
 
 <Layout title="Setup" hideFooter>
-  <section class="container">
+  <section class="page-shell">
     <ThemeSwitcher class="theme-switcher" />
     <h1>Let's get started</h1>
     <p>
@@ -97,10 +97,15 @@ import Layout from "@/layouts/base.astro";
     flex-direction: column;
     justify-content: center;
     max-width: 25rem;
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: 1rem;
     height: 100%;
 
     #login-form {
       position: relative;
+      display: grid;
+      gap: 0.85rem;
     }
 
     article {

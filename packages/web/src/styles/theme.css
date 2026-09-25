@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light dark;
+  --font-family-text: var(--font-google-sans), system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-family-heading: var(--font-family-text);
+  --page: light-dark(#eef0f9, #0a0c10);
+  --surface: light-dark(#fff, #1b212c);
+  --inset-surface: light-dark(#f7f8fc, #0a0c10);
+  --surface-outline: light-dark(#d4d8e0, transparent);
+  --surface-raised: light-dark(#fff, #181c25);
+  --surface-hover: light-dark(#f6f6f7, #2d3442);
+  --field: light-dark(#fff, #222a37);
+  --field-border: light-dark(#cbd0d9, #3a4558);
+  --field-border-hover: light-dark(#aab4c5, #56627a);
+  --text: light-dark(#202a38, #c2c7d0);
+  --text-strong: light-dark(#172033, #fff);
+  --text-muted: light-dark(#424b5b, #9aa4b5);
+  --border: light-dark(#d4d8e0, #2a3140);
+  --accent: light-dark(#4a5873, #909ebe);
+  --accent-hover: light-dark(#37445c, #b0b9d0);
+  --accent-fill: light-dark(#4a5873, #525f7a);
+  --accent-fill-hover: light-dark(#37445c, #64718d);
+  --accent-contrast: #fff;
+  --focus: light-dark(#4a5873, #b0b9d0);
+  --danger: light-dark(#a83232, #df7772);
+  --shadow-card: 0 0 13px light-dark(transparent, #15233609);
+  --shadow-surface: var(--shadow-card), 0 0 0 1px var(--surface-outline);
+  --radius: 0.6rem;
+  --control-radius: 0.4rem;
+  --graph-line-color: light-dark(#2563eb, #a6cee3);
+  --switch-inactive-bg: light-dark(#e2e8f0, #303743);
+  --settings-icon-color: light-dark(#3f4858, #dce2ec);
+  --metric-button-active-background: light-dark(transparent, #303743);
+  --metric-button-hover-background: light-dark(#f6f6f7, #252c38);
+  --tag-background: light-dark(#4a5873, #3a4558);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

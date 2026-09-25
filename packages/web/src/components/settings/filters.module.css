@@ -22,7 +22,7 @@
 .description {
   display: block;
   margin: 0;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   font-size: 0.825rem;
   line-height: 1.3;
 }
@@ -30,10 +30,10 @@
 .empty {
   margin: 0.5rem 0 0;
   padding: 0.75rem;
-  border: 1px dashed var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-form-element-background-color) 55%, transparent);
-  color: var(--pico-muted-color);
+  border: 1px dashed var(--field-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--field) 55%, transparent);
+  color: var(--text-muted);
   font-size: 0.875rem;
   text-align: center;
 }
@@ -94,14 +94,14 @@
 }
 
 .addRuleAction button:hover {
-  background: var(--pico-dropdown-hover-background-color);
+  background: var(--surface-hover);
   color: var(--settings-icon-color);
   opacity: 1;
 }
 
 .ruleFooter button:focus-visible,
 .addRuleAction button:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -115,22 +115,23 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
-  min-height: 2.35rem;
-  padding: 0.25rem;
-  border: var(--pico-border-width) solid var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
-  background-color: var(--pico-form-element-background-color);
-  color: var(--pico-form-element-color);
+  min-height: 2.15rem;
+  padding: 0.15rem 0.25rem;
+  border: 1px solid var(--field-border);
+  border-radius: var(--control-radius);
+  background-color: var(--field);
+  color: var(--text);
 }
 
 .hostnameBox:focus-within {
-  border-color: var(--pico-secondary-hover);
+  border-color: var(--accent-hover);
 }
 
 .hostnameBox input {
   flex: 1;
   min-width: 6rem;
   height: 1.5rem;
+  min-height: 1.5rem;
   margin: 0;
   padding: 0 0.25rem;
   border: 0;
@@ -148,7 +149,7 @@
 }
 
 .hostnameBox input::placeholder {
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   opacity: 1;
 }
 
@@ -159,8 +160,8 @@
   gap: 0.25rem;
   padding: 0.18rem 0.28rem 0.18rem 0.55rem;
   border-radius: 0.4rem;
-  background: var(--pico-primary-background);
-  color: var(--pico-primary-inverse);
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
   font-size: 0.875rem;
   line-height: 1.4;
 }
@@ -186,7 +187,7 @@
 }
 
 .hostnameHelp {
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .hostnameHelp code {
@@ -208,9 +209,9 @@
 .ruleCard {
   margin: 0;
   padding: 0.85rem 0.95rem;
-  border: 1px solid var(--pico-form-element-border-color);
-  border-radius: var(--pico-border-radius);
-  background: color-mix(in srgb, var(--pico-form-element-background-color) 45%, transparent);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--field) 45%, transparent);
   box-shadow: none;
 }
 
@@ -226,7 +227,7 @@
 }
 
 .ruleCard:has(> small) > small {
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .ruleCard:has(> small) > .ruleFooter {
@@ -249,7 +250,7 @@
 }
 
 .ruleTitle small {
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .ruleTitle small::before {
@@ -307,7 +308,7 @@
 
 .ruleActions .iconButton:focus-visible,
 .filterRow .iconButton:focus-visible {
-  outline: 2px solid var(--pico-primary-focus);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
   opacity: 1;
 }
@@ -318,9 +319,9 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.55rem 0.65rem;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--pico-border-radius);
-  background: var(--pico-form-element-background-color);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--field);
 }
 
 .filterText {
@@ -329,11 +330,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .filterText strong {
-  color: var(--pico-color);
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -343,8 +344,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0.12rem 0.3rem;
-  background: var(--pico-dropdown-hover-background-color);
-  color: var(--pico-color);
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 .filterRow button {

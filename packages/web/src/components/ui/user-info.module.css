@@ -1,48 +1,27 @@
 .loginLink {
   display: inline-flex;
-  margin: 0;
   padding: 0.35rem 0;
-  color: var(--pico-secondary);
+  color: var(--accent);
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
 }
-
 .loginLink:hover {
-  color: var(--pico-secondary-hover);
-  text-decoration: none;
+  color: var(--accent-hover);
 }
-
-details.user {
-  margin: 0;
-  position: initial;
-
-  summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    --pico-form-element-spacing-vertical: 0.5rem;
-    --pico-form-element-spacing-horizontal: 0.6rem;
-    border: none;
-
-    svg {
-      margin-right: 0.5rem;
-    }
-  }
-
-  summary + ul {
-    margin-top: 0.3rem;
-    padding-top: 0.1rem;
-    padding-bottom: 0.1rem;
-
-    li a {
-      display: flex;
-      gap: 0.6rem;
-      align-items: center;
-    }
-  }
+.trigger {
+  gap: 0.5rem;
+  padding-right: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 500;
 }
-
+.trigger:hover {
+  border-color: var(--surface-outline);
+  background: transparent;
+  color: var(--accent-hover);
+}
 .external {
   margin-left: auto;
 }

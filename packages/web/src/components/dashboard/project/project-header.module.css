@@ -27,11 +27,11 @@
 .settingsButton {
   display: inline-flex;
   vertical-align: middle;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
 }
 
 .settingsButton:hover {
-  color: var(--pico-color);
+  color: var(--text);
 }
 
 @keyframes pulse {

@@ -13,11 +13,10 @@ import Layout from "./layout.astro";
 
 type Props = {
 	title: string;
-	noContainer?: boolean;
 };
 
 const path = Astro.url.pathname;
-const { title, noContainer } = Astro.props;
+const { title } = Astro.props;
 ---
 
 <Layout {title}>
@@ -33,8 +32,6 @@ const { title, noContainer } = Astro.props;
             selected={path.startsWith("/settings/me") ? true : undefined}
             value="/settings/me">My Account</option
           >
-        </optgroup>
-        <optgroup label="Admin">
           <option
             selected={path.startsWith("/settings/projects") ? true : undefined}
             value="/settings/projects">Projects</option
@@ -43,6 +40,8 @@ const { title, noContainer } = Astro.props;
             selected={path.startsWith("/settings/entities") ? true : undefined}
             value="/settings/entities">Entities</option
           >
+        </optgroup>
+        <optgroup label="Admin">
           <option
             selected={path.startsWith("/settings/collection")
               ? true
@@ -59,7 +58,7 @@ const { title, noContainer } = Astro.props;
           >
           <option
             selected={path.startsWith("/settings/api-keys") ? true : undefined}
-            value="/settings/api-keys">API keys</option
+            value="/settings/api-keys">API Keys</option
           >
         </optgroup>
       </select>
@@ -71,16 +70,13 @@ const { title, noContainer } = Astro.props;
           <a
             data-active={path.startsWith("/settings/me") ? "true" : "false"}
             aria-current={path.startsWith("/settings/me") ? "page" : undefined}
-            class="secondary"
             href="/settings/me"
           >
             <UserIcon size="20" />
             My Account</a
           >
         </li>
-      </ul>
-      <h3>Admin</h3>
-      <ul class="sidebar">
+
         <li>
           <a
             data-active={path.startsWith("/settings/projects")
@@ -89,7 +85,6 @@ const { title, noContainer } = Astro.props;
             aria-current={path.startsWith("/settings/projects")
               ? "page"
               : undefined}
-            class="secondary"
             href="/settings/projects"
           >
             <TablePropertiesIcon size="20" />
@@ -104,13 +99,15 @@ const { title, noContainer } = Astro.props;
             aria-current={path.startsWith("/settings/entities")
               ? "page"
               : undefined}
-            class="secondary"
             href="/settings/entities"
           >
             <CodeIcon size="20" />
             Entities</a
           >
         </li>
+      </ul>
+      <h3>Admin</h3>
+      <ul class="sidebar">
         <li>
           <a
             data-active={path.startsWith("/settings/collection")
@@ -119,7 +116,6 @@ const { title, noContainer } = Astro.props;
             aria-current={path.startsWith("/settings/collection")
               ? "page"
               : undefined}
-            class="secondary"
             href="/settings/collection"
           >
             <DatabaseIcon size="20" />
@@ -132,7 +128,6 @@ const { title, noContainer } = Astro.props;
             aria-current={path.startsWith("/settings/users")
               ? "page"
               : undefined}
-            class="secondary"
             href="/settings/users"
           >
             <UsersIcon size="20" />
@@ -147,7 +142,6 @@ const { title, noContainer } = Astro.props;
             aria-current={path.startsWith("/settings/authentication")
               ? "page"
               : undefined}
-            class="secondary"
             href="/settings/authentication"
           >
             <ShieldCheckIcon size="20" />
@@ -158,24 +152,17 @@ const { title, noContainer } = Astro.props;
           <a
             data-active={path.startsWith("/settings/api-keys") ? "true" : "false"}
             aria-current={path.startsWith("/settings/api-keys") ? "page" : undefined}
-            class="secondary"
             href="/settings/api-keys"
           >
             <KeyRoundIcon size="20" />
-            API keys</a
+            API Keys</a
           >
         </li>
       </ul>
     </aside>
-    {
-      noContainer ? (
-        <slot />
-      ) : (
-        <article class="content">
-          <slot />
-        </article>
-      )
-    }
+    <article class="content">
+      <slot />
+    </article>
   </div>
 </Layout>
 
@@ -197,13 +184,18 @@ const { title, noContainer } = Astro.props;
   .settings :global(nav) {
     display: flex;
     justify-content: space-between;
-    align-items: start;
+    align-items: center;
     margin-bottom: 0.5rem;
-    min-height: 2rem;
+    min-height: 2.15rem;
   }
 
   .settings :global(nav.list-header) {
-    min-height: 2rem;
+    min-height: 2.15rem;
+  }
+
+  .settings :global(nav.list-header button),
+  .settings :global(nav > button[type="submit"]) {
+    translate: 7px -2px;
   }
 
   .settings :global(h1) {
@@ -214,7 +206,7 @@ const { title, noContainer } = Astro.props;
   .settings :global(.description) {
     max-width: 46rem;
     margin-bottom: 1rem;
-    color: var(--pico-muted-color);
+    color: var(--text-muted);
   }
 
   .settings {
@@ -228,6 +220,11 @@ const { title, noContainer } = Astro.props;
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    padding: 0.8rem 1rem;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-surface);
   }
 
   aside {
@@ -264,12 +261,13 @@ const { title, noContainer } = Astro.props;
       font-size: 0.9rem;
       text-decoration: none;
       transition: all 0.2s;
-      border-radius: var(--pico-border-radius);
+      border-radius: var(--radius);
       padding: 0.3rem 0.4rem;
       width: 100%;
       display: flex;
       align-items: center;
       gap: 0.4rem;
+      color: var(--accent);
 
       svg {
         width: 1.125rem;
@@ -279,15 +277,15 @@ const { title, noContainer } = Astro.props;
     }
 
     a[data-active="true"] {
-      color: var(--pico-h1-color);
-      background: var(--pico-card-background-color);
-      box-shadow: var(--pico-card-box-shadow);
+      color: var(--text-strong);
+      background: var(--surface);
+      box-shadow: var(--shadow-surface);
     }
 
     a:hover {
-      color: var(--pico-h1-color);
-      background: var(--pico-card-background-color);
-      box-shadow: var(--pico-card-box-shadow);
+      color: var(--text-strong);
+      background: var(--surface);
+      box-shadow: var(--shadow-surface);
     }
   }
 
@@ -310,5 +308,6 @@ const { title, noContainer } = Astro.props;
     .settings {
       flex-direction: column;
     }
+    .content { padding: 0.8rem; }
   }
 </style>

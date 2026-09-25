@@ -1,0 +1,102 @@
+:where(
+  button,
+  .button,
+  a.button-primary,
+  a.button-secondary,
+  input:is([type="button"], [type="submit"], [type="reset"])
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.15rem;
+  padding: 0.48rem 0.75rem;
+  border: 1px solid var(--accent-fill);
+  border-radius: var(--control-radius);
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-decoration: none;
+}
+:where(button, .button, a.button-primary, a.button-secondary):hover:not(:disabled) {
+  background: var(--accent-fill-hover);
+  color: var(--accent-contrast);
+  text-decoration: none;
+}
+:where(button, .button):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.button-secondary {
+  background: var(--surface-raised);
+  border-color: var(--field-border);
+  color: var(--text);
+}
+.button-secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.button-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+.button-ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--accent-hover);
+}
+.button-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.button-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+:where(
+  input:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="range"],
+    [type="file"],
+    [type="button"],
+    [type="submit"],
+    [type="reset"]
+  ),
+  select,
+  textarea
+) {
+  display: block;
+  width: 100%;
+  min-height: 2.15rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--field-border);
+  border-radius: var(--control-radius);
+  background: var(--field);
+  color: var(--text);
+  line-height: 1.35;
+}
+:where(input, select, textarea):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+:where(input, select, textarea):hover:not(:disabled) {
+  border-color: var(--field-border-hover);
+}
+:where(input, select, textarea)::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+:where(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--accent);
+}
+:where(label) {
+  display: block;
+}
+:where(label > input, label > select, label > textarea) {
+  margin-top: 0.35rem;
+}

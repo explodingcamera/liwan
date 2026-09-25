@@ -62,9 +62,9 @@ export const CreateEntity = () => {
 					<small>Identifies this entity in the dashboard.</small>
 					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
 				</label>
-				<div className="grid">
-					<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
-					<button type="submit" className="contrast">
+				<div className="action-row">
+					<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
+					<button type="submit" className="button-primary">
 						Create entity
 					</button>
 				</div>

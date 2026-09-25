@@ -1,197 +1,100 @@
-@import "@explodingcamera/css/all.css" layer(base);
-@import "@picocss/pico/css/pico.slate.min.css" layer(pico);
+@import "@explodingcamera/css/all.css" layer(reset);
+@import "./styles/theme.css" layer(app);
+@import "./styles/controls.css" layer(app);
 
-:root {
-  --font-family-text:
-    var(--font-google-sans), system-ui, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial,
-    "Helvetica Neue", sans-serif, var(--pico-font-family-emoji);
-  --font-family-heading: var(--font-google-sans), var(--font-family-text);
+@layer reset, app;
 
-  --pico-background-color: #eef0f9;
-  --card-background-base: 0deg 0% 100%;
-  --pico-card-background-color: hsl(var(--card-background-base));
-  --pico-block-spacing-vertical: 1rem;
-  --pico-block-spacing-horizontal: 1rem;
-  --pico-card-box-shadow: 0px 0px 13px #15233609;
-  --pico-dropdown-background-color: #ffffff;
-  --pico-dropdown-hover-background-color: #dfe7f3;
-  --pico-muted-color: #424b5b;
-  --pico-primary: #4a5873;
-  --pico-primary-hover: #37445c;
-  --pico-secondary: #4a5873;
-  --pico-secondary-hover: #37445c;
-  --pico-form-element-background-color: #ffffff;
-  --pico-form-element-border-color: #cbd3e1;
-  --pico-form-element-hover-border-color: #aab4c5;
-  --graph-line-color: #2563eb;
-  --graph-fill-color: 37 99 235;
-  --close-icon-color: #ffffff;
-  --switch-inactive-bg: #e2e8f0;
-  --settings-icon-color: #3f4858;
-  --pico-line-height: 1.2;
-  --pico-form-element-active-border-color: var(--pico-secondary-hover);
-  --pico-form-element-focus-color: transparent;
-  --pico-border-radius: 0.6rem;
-  --pico-spacing: 0.75rem;
-  --pico-form-element-spacing-vertical: 0.425rem;
-  --pico-form-element-spacing-horizontal: 0.6rem;
-  --pico-table-border-color: var(--pico-card-background-color);
-
-  --pico-font-family: var(--font-family-text);
-  --pico-font-family-sans-serif: var(--pico-font-family);
-  font-variant-numeric: tabular-nums;
-
-  --metric-button-active-background: #ebeef3;
-  --tag-background: var(--pico-primary-background);
-}
-
-:root[data-theme="dark"] {
-  --pico-background-color: #0a0c10;
-  --card-background-base: 218.8 23.9% 13.9%;
-  --pico-muted-color: #9aa4b5;
-  --pico-muted-border-color: #2a3140;
-  --pico-primary: #909ebe;
-  --pico-primary-hover: #b0b9d0;
-  --pico-h1-color: #fff;
-  --pico-secondary: #969eaf;
-  --pico-secondary-hover: #b3b9c5;
-  --pico-dropdown-background-color: #181c25;
-  --pico-dropdown-hover-background-color: #2d3442;
-  --pico-form-element-background-color: #222a37;
-  --pico-form-element-border-color: #3a4558;
-  --pico-form-element-hover-border-color: #56627a;
-  --pico-del-color: rgb(190, 65, 60);
-  --graph-line-color: #a6cee3;
-  --graph-fill-color: 166 206 227;
-  --close-icon-color: #0a0c10;
-  --switch-inactive-bg: var(--pico-secondary-background);
-  --settings-icon-color: #dce2ec;
-  --metric-button-active-background: #303743;
-  --tag-background: var(--pico-form-element-border-color);
-}
-
-@media only screen and (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --pico-background-color: #0a0c10;
-    --card-background-base: 218.8 23.9% 13.9%;
-    --pico-muted-color: #9aa4b5;
-    --pico-muted-border-color: #2a3140;
-    --pico-primary: #909ebe;
-    --pico-primary-hover: #b0b9d0;
-    --pico-h1-color: #fff;
-    --pico-secondary: #969eaf;
-    --pico-secondary-hover: #b3b9c5;
-    --pico-dropdown-background-color: #181c25;
-    --pico-dropdown-hover-background-color: #2d3442;
-    --pico-form-element-background-color: #222a37;
-    --pico-form-element-border-color: #3a4558;
-    --pico-form-element-hover-border-color: #56627a;
-    --pico-del-color: rgb(190, 65, 60);
-    --graph-line-color: #a6cee3;
-    --graph-fill-color: 166 206 227;
-    --close-icon-color: #0a0c10;
-    --switch-inactive-bg: var(--pico-secondary-background);
-    --settings-icon-color: #dce2ec;
-    --metric-button-active-background: #303743;
-    --tag-background: var(--pico-form-element-border-color);
+@layer app {
+  :root {
+    --page-gutter: 1rem;
+    font-family: var(--font-family-text);
+    font-size: clamp(100%, calc(0.875rem + 0.35vw), 125%);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.35;
   }
-}
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  --pico-font-weight: 500;
-  font-family: var(--font-family-heading);
-}
+  body {
+    background: var(--page);
+    color: var(--text);
+  }
 
-html body[data-scroll-locked] {
-  margin-right: 0;
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-family-heading);
+    font-weight: 500;
+    line-height: 1.2;
+  }
 
-.full {
-  min-height: 100%;
-}
+  h1 {
+    font-size: 1.8rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+  }
+  h3 {
+    font-size: 1.25rem;
+  }
+  h4 {
+    font-size: 1.125rem;
+  }
 
-[type="search"] {
-  --pico-border-radius: 0.6rem;
-}
-
-[type="button"],
-[type="reset"],
-[type="submit"] {
-  margin-bottom: 0;
-}
-
-button,
-[type="button"],
-[type="reset"],
-[type="submit"],
-[role="button"] {
-  --pico-font-weight: 500;
-  --pico-border-radius: 0.4rem;
-  --pico-form-element-spacing-vertical: 0.55rem;
-  font-size: 0.8125rem;
-}
-
-input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
-select,
-textarea {
-  border-radius: 0.4rem;
-  line-height: 1.35;
-}
-
-hr {
-  background-color: var(--pico-form-element-border-color);
-  height: 1px;
-  border: 0;
-}
-
-details.dropdown.right summary + ul {
-  left: unset;
-  right: 0;
-  transform: translateX(-4px);
-  min-width: 11rem;
-  width: auto;
-}
-
-details.dropdown summary + ul {
-  border: 1px solid var(--pico-muted-border-color);
-  background: var(--pico-dropdown-background-color);
-  box-shadow: var(--pico-card-box-shadow);
-}
-
-details.dropdown summary + ul li a,
-details.dropdown summary + ul li button {
-  cursor: pointer;
-}
-
-details.dropdown summary + ul li a:hover,
-details.dropdown summary + ul li button:hover {
-  background: var(--pico-dropdown-hover-background-color);
-}
-
-details.dropdown summary + ul li:has(hr) {
-  &::before {
-    display: none;
+  a {
+    color: var(--accent);
+    text-underline-offset: 0.15em;
+  }
+  a:hover {
+    color: var(--accent-hover);
   }
 
   hr {
-    margin: 0;
+    height: 1px;
+    border: 0;
+    background: var(--border);
+  }
+  pre,
+  code,
+  kbd {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  }
+
+  html body[data-scroll-locked] {
+    margin-right: 0;
+  }
+  .full {
+    min-height: 100%;
+  }
+  .page-shell {
+    width: min(100%, 64rem);
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+  .action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+  .action-row > * {
+    flex: 1 1 8rem;
   }
 }
 
-td,
-th {
-  background: unset;
+@media (min-width: 480px) {
+  :root {
+    --page-gutter: 1.25rem;
+  }
 }
 
-.loading-spinner {
-  flex: 1;
-  background-image: var(--pico-icon-loading);
-  background-size: 1.5em auto;
-  background-repeat: no-repeat;
-  background-position: center;
+:is(a, button, summary, [tabindex]:not(input, select, textarea)):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+:where(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 18%, transparent);
 }

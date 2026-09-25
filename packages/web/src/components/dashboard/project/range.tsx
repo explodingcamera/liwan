@@ -1,6 +1,8 @@
+import menuStyles from "@/components/ui/menu.module.css";
 import styles from "./range.module.css";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { Menu } from "@base-ui/react/menu";
 import { endOfDay, startOfDay } from "date-fns";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
@@ -20,7 +22,7 @@ export const SelectRange = ({
 	range: DateRange;
 	projectId?: string;
 }) => {
-	const detailsRef = useRef<HTMLDetailsElement>(null);
+	const [customOpen, setCustomOpen] = useState(false);
 
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
@@ -52,10 +54,7 @@ export const SelectRange = ({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [onSelect, range]);
 
-	const handleSelect = (range: DateRange) => () => {
-		if (detailsRef.current) detailsRef.current.open = false;
-		onSelect(range);
-	};
+	const handleSelect = (range: DateRange) => () => onSelect(range);
 
 	const allTime = useQuery({
 		queryKey: ["allTime", projectId],
@@ -74,14 +73,18 @@ export const SelectRange = ({
 		});
 		range.variant = "allTime";
 		onSelect(range);
-		if (detailsRef.current) detailsRef.current.open = false;
+	};
+	const selectMobileRange = (value: string) => {
+		if (value === "custom") setCustomOpen(true);
+		else if (value === "allTime") void selectAllTime();
+		else onSelect(new DateRange(value as RangeName));
 	};
 
 	return (
 		<div className={styles.container}>
 			<button
 				type="button"
-				className={cls("secondary", styles.stepButton)}
+				className={cls("button-ghost", styles.stepButton)}
 				aria-label="Previous date range"
 				aria-keyshortcuts="ArrowLeft"
 				onClick={handleSelect(range.previous())}
@@ -90,61 +93,80 @@ export const SelectRange = ({
 			</button>
 			<button
 				type="button"
-				className={cls("secondary", styles.stepButton)}
+				className={cls("button-ghost", styles.stepButton)}
 				aria-label="Next date range"
 				aria-keyshortcuts="ArrowRight"
 				onClick={handleSelect(range.next())}
 			>
 				<ChevronRightIcon size="24" />
 			</button>
-			<details ref={detailsRef} className={cls("dropdown", styles.selectRange)}>
-				<summary>{range.format()}</summary>
-				<ul>
-					{Object.entries(wellKnownRanges).map(([key, value]) => (
-						<li key={key}>
-							<button
-								type="button"
-								className={key === range.serialize() ? styles.selected : ""}
-								onClick={handleSelect(new DateRange(key as RangeName))}
-							>
-								{value}
-							</button>
-						</li>
-					))}
-					{projectId && allTime.data && (
-						<li>
-							<button
-								type="button"
-								className={range.variant === "allTime" ? styles.selected : ""}
-								onClick={selectAllTime}
-							>
-								All Time
-							</button>
-						</li>
-					)}
-					<li>
-						<Dialog
-							className={styles.rangeDialog}
-							description="Select a custom date range."
-							hideDescription
-							trigger={
-								<button type="button" className={range.isCustom() ? styles.selected : ""}>
+			<div className={styles.desktopRange}>
+				<Menu.Root>
+					<Menu.Trigger className={styles.selectRange}>{range.format()}</Menu.Trigger>
+					<Menu.Portal>
+						<Menu.Positioner className={menuStyles.positioner} align="start" sideOffset={4}>
+							<Menu.Popup className={menuStyles.popup}>
+								{Object.entries(wellKnownRanges).map(([key, value]) => (
+									<Menu.Item
+										key={key}
+										className={menuStyles.item}
+										data-selected={key === range.serialize() ? "true" : undefined}
+										onClick={handleSelect(new DateRange(key as RangeName))}
+									>
+										{value}
+									</Menu.Item>
+								))}
+								{projectId && allTime.data && (
+									<Menu.Item
+										className={menuStyles.item}
+										data-selected={range.variant === "allTime" ? "true" : undefined}
+										onClick={selectAllTime}
+									>
+										All Time
+									</Menu.Item>
+								)}
+								<Menu.Item
+									className={menuStyles.item}
+									data-selected={range.isCustom() ? "true" : undefined}
+									onClick={() => setCustomOpen(true)}
+								>
 									Custom
-								</button>
-							}
-							onOpenChange={(open) => {
-								if (open && detailsRef.current) detailsRef.current.open = false;
-							}}
-							title="Custom Range"
-							showClose
-							hideTitle
-							autoOverflow
-						>
-							<DatePickerRange onSelect={(range) => handleSelect(range)()} />
-						</Dialog>
-					</li>
-				</ul>
-			</details>
+								</Menu.Item>
+							</Menu.Popup>
+						</Menu.Positioner>
+					</Menu.Portal>
+				</Menu.Root>
+			</div>
+			<select
+				className={styles.mobileRange}
+				aria-label="Date range"
+				value={range.isCustom() ? "custom-range" : range.variant === "allTime" ? "allTime" : range.serialize()}
+				onChange={(event) => selectMobileRange(event.currentTarget.value)}
+			>
+				{Object.entries(wellKnownRanges).map(([key, value]) => (
+					<option key={key} value={key}>
+						{value}
+					</option>
+				))}
+				{projectId && (allTime.data || range.variant === "allTime") && <option value="allTime">All Time</option>}
+				{range.isCustom() && <option value="custom-range">{range.format()}</option>}
+				<option value="custom">Custom...</option>
+			</select>
+			<Dialog
+				className={styles.rangeDialog}
+				description="Choose a start and end date for the report."
+				open={customOpen}
+				onOpenChange={setCustomOpen}
+				title="Custom Range"
+				autoOverflow
+			>
+				<DatePickerRange
+					onSelect={(value) => {
+						onSelect(value);
+						setCustomOpen(false);
+					}}
+				/>
+			</Dialog>
 		</div>
 	);
 };

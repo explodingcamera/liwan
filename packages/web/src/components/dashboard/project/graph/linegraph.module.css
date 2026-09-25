@@ -5,6 +5,16 @@
   :global(.tick) {
     pointer-events: none;
   }
+
+  :global(#tooltip) {
+    pointer-events: none;
+  }
+
+  :global(#needle) {
+    transition:
+      d 70ms linear,
+      opacity 100ms ease;
+  }
 }
 
 .graphContainer {
@@ -21,7 +31,7 @@
     bottom: 0;
     z-index: 1;
     opacity: 0;
-    background-color: var(--pico-card-background-color);
+    background-color: var(--surface);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -46,10 +56,13 @@
   .updatingOverlay {
     animation-duration: 0s;
   }
+  .graph :global(#needle) {
+    transition: none;
+  }
 }
 
 .tooltip {
-  background-color: var(--pico-secondary-background);
+  background-color: var(--accent-fill);
   padding: 0.4rem 0.5rem;
   border-radius: 0.4rem;
   min-width: 7rem;
@@ -57,7 +70,7 @@
   h2 {
     margin-bottom: 0.3rem;
     font-size: 1rem;
-    color: var(--pico-contrast);
+    color: var(--accent-contrast);
   }
 
   h3 {
@@ -65,15 +78,27 @@
     display: flex;
     justify-content: space-between;
     margin: 0;
-    color: var(--pico-contrast);
+    color: var(--accent-contrast);
     font-weight: 800;
     align-items: center;
+    gap: 0.35rem;
 
     span {
-      color: var(--pico-h3-color);
+      color: var(--accent-contrast);
       padding: 0.1rem 0.2rem;
       font-weight: 500;
       border-radius: 0.2rem;
+    }
+
+    span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span:last-child {
+      flex: none;
     }
   }
 }

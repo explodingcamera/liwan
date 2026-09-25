@@ -82,13 +82,12 @@ export const LoginPage = () => {
 	};
 
 	return (
-		<section className={`container ${styles.page}`}>
+		<section className={styles.page}>
 			<h1>Sign in</h1>
 			{externalAuth && (
 				<div>
 					<a
-						role="button"
-						className={`secondary ${styles.externalAuth}`}
+						className={`button-secondary ${styles.externalAuth}`}
 						href={`/api/dashboard/auth/external/start?${new URLSearchParams({ returnTo: getReturnTo() })}`}
 					>
 						<span className={styles.providerIcon}>

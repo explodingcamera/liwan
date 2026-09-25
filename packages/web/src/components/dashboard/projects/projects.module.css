@@ -5,9 +5,17 @@
   align-items: center;
 }
 
+.projectList {
+  display: grid;
+  gap: 1rem;
+}
+
 .project {
   position: relative;
   padding: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-surface);
 
   .graph {
     height: 14rem;
@@ -20,7 +28,6 @@
     display: flex;
     justify-content: space-between;
     flex-direction: column;
-    --pico-card-background-color: var(--metric-button-active-background);
 
     .projectTitle {
       display: flex;
@@ -29,6 +36,11 @@
       position: relative;
       z-index: 0;
       margin-bottom: 0.4rem;
+
+      :global(a:hover) {
+        background: light-dark(transparent, #303743);
+        box-shadow: inset 0 0 0 1px var(--surface-outline);
+      }
     }
   }
 
@@ -87,10 +99,18 @@
 .AccordionTrigger {
   all: unset;
   display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 0.9rem;
-  margin: -1.1rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--control-radius);
   transition: transform 150ms ease-out;
+
+  &:hover {
+    background: var(--surface-hover);
+    box-shadow: inset 0 0 0 1px var(--surface-outline);
+  }
 
   &[data-panel-open] {
     transform: rotate(180deg);

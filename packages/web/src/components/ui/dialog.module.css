@@ -10,11 +10,11 @@
 @keyframes contentShow {
   from {
     opacity: 0;
-    transform: translate(-50%, -48%) scale(0.96);
+    transform: translateY(2%) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -37,30 +37,43 @@
 .description {
   max-width: 38rem;
   margin: 0 0 1.15rem;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   font-size: 0.9rem;
   line-height: 1.35;
 }
 
-.content {
+.viewport {
   position: fixed;
   z-index: 100;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
   box-sizing: border-box;
-  width: min(28rem, calc(100vw - 2rem));
-  max-height: 85vh;
+  width: min(28rem, 100%);
+  max-height: min(85vh, calc(100dvh - 2rem));
   margin: 0;
   padding: 1.25rem;
   border: none;
+  background: var(--surface-raised);
+  color: var(--text);
   border-radius: 0.8rem;
   box-shadow: 0 1.25rem 4rem rgb(0 0 0 / 35%);
   animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
 }
 
 .autoOverflow {
   overflow-y: auto;
+}
+
+.content.withClose {
+  padding-top: 2.15rem;
 }
 
 .content form {
@@ -89,38 +102,42 @@
 .content form label > small {
   display: block;
   margin: 0.15rem 0 0.35rem;
-  color: var(--pico-muted-color);
+  color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 400;
   line-height: 1.3;
 }
 
-.content form > :global(.grid) {
+.content form > :global(.action-row) {
   gap: 0.65rem;
   margin-top: 1.5rem;
 }
 
 .close {
-  position: fixed;
-  z-index: 1000;
-  background-color: var(--pico-dropdown-color);
-  color: var(--close-icon-color);
+  position: absolute;
+  background: transparent;
+  color: var(--text-muted);
   border: none;
-  right: 0;
-  top: 0;
-  margin: 0.5rem;
+  right: 0.75rem;
+  top: 0.2rem;
   pointer-events: auto;
-  border-radius: 3rem;
-  display: flex;
-  width: 2.5rem;
-  height: 2.5rem;
-  justify-content: center;
-  align-items: center;
+  border-radius: var(--control-radius);
+  width: 1.5rem;
+  height: 1.5rem;
+  min-height: 0;
+  padding: 0;
+}
+
+.close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 @media (max-width: 480px) {
   .content {
-    width: calc(100vw - 1rem);
     padding: 1rem;
+  }
+  .viewport {
+    padding: 0.5rem;
   }
 }

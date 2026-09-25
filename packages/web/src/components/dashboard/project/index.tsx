@@ -159,37 +159,39 @@ export const Project = () => {
 
 	return (
 		<div className={styles.project}>
-			<div className={styles.projectHeader}>
-				<ProjectHeader project={project} stats={stats} />
-				<SelectRange onSelect={setRange} range={range} projectId={project.id} />
+			<div className={styles.projectReport}>
+				<div className={styles.projectHeader}>
+					<ProjectHeader project={project} stats={stats} />
+					<SelectRange onSelect={setRange} range={range} projectId={project.id} />
+				</div>
+				<SelectMetrics
+					data={stats}
+					metric={reportMetric}
+					metrics={visibleMetrics}
+					setMetric={setMetric}
+					className={styles.projectStats}
+					isLoading={statsLoading || statsUpdating}
+				/>
+				<SelectFilters
+					value={visibleFilters}
+					onChange={setFilters}
+					dimensions={dimensions.filter((dimension) => !project.hiddenDimensions.includes(dimension))}
+				/>
+				<article className={cls(cardStyles.card, styles.graphCard)}>
+					{activeMetric ? (
+						<LineGraph
+							data={graph}
+							title={metricNames[displayMetric]}
+							metric={displayMetric}
+							range={displayRange}
+							isLoading={graphLoading}
+							isUpdating={graphUpdating}
+						/>
+					) : (
+						<div className={styles.emptyReport}>No metrics are visible for this project.</div>
+					)}
+				</article>
 			</div>
-			<SelectMetrics
-				data={stats}
-				metric={reportMetric}
-				metrics={visibleMetrics}
-				setMetric={setMetric}
-				className={styles.projectStats}
-				isLoading={statsLoading || statsUpdating}
-			/>
-			<SelectFilters
-				value={visibleFilters}
-				onChange={setFilters}
-				dimensions={dimensions.filter((dimension) => !project.hiddenDimensions.includes(dimension))}
-			/>
-			<article className={cls(cardStyles.card, styles.graphCard)}>
-				{activeMetric ? (
-					<LineGraph
-						data={graph}
-						title={metricNames[displayMetric]}
-						metric={displayMetric}
-						range={displayRange}
-						isLoading={graphLoading}
-						isUpdating={graphUpdating}
-					/>
-				) : (
-					<div className={styles.emptyReport}>No metrics are visible for this project.</div>
-				)}
-			</article>
 			<div className={styles.tables}>
 				{activeMetric && pageDimensions.length > 0 && (
 					<PageDimensionTabsCard dimensions={pageDimensions} query={query} onSelect={onSelectDimRow} />

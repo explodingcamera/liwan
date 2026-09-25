@@ -208,20 +208,20 @@ export const CollectionSettingsPage = () => {
 								}
 							>
 								<div className={styles.pruneActions}>
-									<button type="button" className="secondary outline" onClick={() => prune(true)}>
+									<button type="button" className="button-secondary" onClick={() => prune(true)}>
 										Dry run
 									</button>
 									<Dialog
 										title="Prune data?"
 										description="This permanently applies the current collection settings to historical data. Run a dry run first to preview the changes."
 										trigger={
-											<button type="button" className="contrast">
+											<button type="button" className="button-primary">
 												Prune now
 											</button>
 										}
 									>
-										<div className="grid">
-											<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
+										<div className="action-row">
+											<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
 											<Dialog.Close onClick={() => prune(false)}>Prune now</Dialog.Close>
 										</div>
 									</Dialog>

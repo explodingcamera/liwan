@@ -93,7 +93,7 @@ export const Projects = () => {
 			{isLoading && <LoadingSpinner />}
 			{data && (
 				<Accordion.Root
-					className="AccordionRoot"
+					className={styles.projectList}
 					multiple
 					onValueChange={(value) =>
 						setHiddenProjects(data?.projects.map((p) => p.id).filter((id) => !value.includes(id)) ?? [])
@@ -153,7 +153,7 @@ const Project = ({
 				<div className={styles.projectTitle}>
 					<ProjectHeader project={project} stats={stats} />
 					<Accordion.Trigger className={styles.AccordionTrigger} aria-label={`Toggle ${project.displayName} details`}>
-						<ChevronDownIcon size={35} strokeWidth={2} color="var(--pico-h1-color)" />
+						<ChevronDownIcon size={22} strokeWidth={2} color="var(--text-strong)" />
 					</Accordion.Trigger>
 				</div>
 				<SelectMetrics

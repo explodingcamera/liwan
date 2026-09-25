@@ -5,6 +5,7 @@ import { SiGoogle, SiOpenid } from "@icons-pack/react-simple-icons";
 import { KeyRoundIcon } from "lucide-react";
 
 import { api } from "@/api";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { CopyableValue } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
 import type { ExternalAuthProvider, ExternalAuthSettings, ExternalAuthSettingsUpdate } from "@/constants";
@@ -234,7 +235,7 @@ export const AuthenticationSettingsPage = () => {
 	}, []);
 
 	if (error && !settings) return <article role="alert">{error}</article>;
-	if (!settings) return <div className="loading-spinner" />;
+	if (!settings) return <LoadingSpinner />;
 
 	const update = <K extends keyof ExternalAuthSettings>(key: K, value: ExternalAuthSettings[K]) =>
 		setSettings({ ...settings, [key]: value });

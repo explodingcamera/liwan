@@ -74,11 +74,11 @@ export const CreateUser = () => {
 						<small>Administrators can edit and create projects, entities, and users.</small>
 					</span>
 				</label>
-				<div className="grid">
-					<Dialog.Close className="secondary outline" ref={closeRef}>
+				<div className="action-row">
+					<Dialog.Close className="button-secondary" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit" className="contrast">
+					<button type="submit" className="button-primary">
 						Create user
 					</button>
 				</div>

@@ -33,7 +33,7 @@ button.reset {
 }
 
 .geo {
-  stroke: var(--pico-card-background-color);
+  stroke: var(--surface);
   stroke-width: 1;
   transition:
     fill 0.3s,
@@ -61,7 +61,7 @@ button.reset {
 }
 
 div.tooltip {
-  background-color: var(--pico-secondary-background);
+  background-color: var(--accent-fill);
   padding: 0.4rem 0.5rem;
   border-radius: 0.4rem;
   min-width: 7rem;
@@ -69,7 +69,7 @@ div.tooltip {
   h2 {
     margin-bottom: 0.3rem;
     font-size: 1rem;
-    color: var(--pico-contrast);
+    color: var(--accent-contrast);
   }
 
   h3 {
@@ -77,12 +77,12 @@ div.tooltip {
     display: flex;
     justify-content: space-between;
     margin: 0;
-    color: var(--pico-contrast);
+    color: var(--accent-contrast);
     font-weight: 800;
     align-items: center;
 
     span {
-      color: var(--pico-h3-color);
+      color: var(--accent-contrast);
       padding: 0.1rem 0.2rem;
       font-weight: 500;
       border-radius: 0.2rem;

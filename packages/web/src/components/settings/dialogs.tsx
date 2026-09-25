@@ -78,11 +78,11 @@ export const DeleteDialog = ({
 			trigger={role === "admin" && trigger}
 		>
 			<form onSubmit={handleSubmit}>
-				<div className="grid">
-					<Dialog.Close className="secondary outline" ref={closeRef}>
+				<div className="action-row">
+					<Dialog.Close className="button-secondary" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit" className={`${styles.danger} outline`}>
+					<button type="submit" className={`${styles.danger} button-danger`}>
 						Delete {type}
 					</button>
 				</div>

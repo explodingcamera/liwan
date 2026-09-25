@@ -1,11 +1,3 @@
 .icon {
-  color: var(--light);
-}
-
-@media only screen and (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    .icon {
-      color: var(--dark);
-    }
-  }
+  color: light-dark(var(--light), var(--dark));
 }

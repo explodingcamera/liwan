@@ -6,6 +6,7 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { SettingsIcon } from "lucide-react";
 
 import { api } from "@/api";
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
@@ -17,7 +18,7 @@ import { SettingsField, SettingsForm, SettingsHeader, SettingsPanel, SettingsTab
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
 
-export { CreateProject, EditProject } from "./dialogs";
+export { CreateProject } from "./dialogs";
 
 type ProjectTab = "general" | "display";
 type ProjectVisibility = "private" | "unlisted" | "public";
@@ -114,7 +115,7 @@ export const ProjectSettingsPage = ({ projectId }: { projectId: string }) => {
 		setResolvedProjectId(getSettingsPathId("/settings/projects/") || projectId);
 	}, [projectId]);
 
-	if (!resolvedProjectId) return <div className="loading-spinner" />;
+	if (!resolvedProjectId) return <LoadingSpinner />;
 	return <ProjectSettingsContent projectId={resolvedProjectId} />;
 };
 
@@ -218,7 +219,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 		});
 	};
 
-	if (isLoading) return <div className="loading-spinner" />;
+	if (isLoading) return <LoadingSpinner />;
 	if (!project) return <p>Project not found.</p>;
 
 	return (
@@ -298,7 +299,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 								window.location.href = "/settings/projects";
 							}}
 							trigger={
-								<button type="button" className={`${styles.deleteButton} outline`}>
+								<button type="button" className={`${styles.deleteButton} button-danger`}>
 									Delete project
 								</button>
 							}

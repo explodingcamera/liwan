@@ -6,8 +6,9 @@
 	"scripts": {
 		"build:tracker": "bun run --cwd packages/tracker build",
 		"build:web": "bun run --cwd packages/web build",
-        "build": "bun run build:tracker && bun run build:web",
-        "typecheck": "bun run --cwd packages/web typecheck"
+		"dev": "bun run --cwd packages/web dev",
+		"build": "bun run build:tracker && bun run build:web",
+		"typecheck": "bun run --cwd packages/web typecheck"
 	},
 	"devDependencies": {
 		"tsdown": "^0.23.0"

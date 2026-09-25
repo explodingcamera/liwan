@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 
 import { api } from "@/api";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { Snippet } from "@/components/ui/snippet";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
@@ -65,12 +66,32 @@ const EntityId = ({ id }: { id: string }) => (
 	<button
 		type="button"
 		className={styles.entityId}
-		onClick={() =>
-			navigator.clipboard
-				.writeText(id)
-				.then(() => createToast("Entity ID copied to clipboard", "info"))
-				.catch(() => {})
-		}
+		onClick={async () => {
+			try {
+				if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+				await navigator.clipboard.writeText(id);
+				createToast("Entity ID copied to clipboard", "info");
+			} catch {
+				const input = document.createElement("textarea");
+				input.value = id;
+				input.style.position = "fixed";
+				input.style.opacity = "0";
+				document.body.append(input);
+				input.select();
+				let copied = false;
+				try {
+					copied = document.execCommand("copy");
+				} catch {
+					// Clipboard access may be blocked by the browser.
+				} finally {
+					input.remove();
+				}
+				createToast(
+					copied ? "Entity ID copied to clipboard" : "Failed to copy entity ID to clipboard",
+					copied ? "info" : "error",
+				);
+			}
+		}}
 	>
 		{id}
 	</button>
@@ -129,7 +150,7 @@ export const EntitySettingsPage = ({ entityId }: { entityId: string }) => {
 		setResolvedEntityId(getSettingsPathId("/settings/entities/") || entityId);
 	}, [entityId]);
 
-	if (!resolvedEntityId) return <div className="loading-spinner" />;
+	if (!resolvedEntityId) return <LoadingSpinner />;
 	return <EntitySettingsContent entityId={resolvedEntityId} />;
 };
 
@@ -213,7 +234,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 	};
 
 	if (authError) return <p>You don't have permission to view this page.</p>;
-	if (isLoading) return <div className="loading-spinner" />;
+	if (isLoading) return <LoadingSpinner />;
 	if (!entity) return <p>Entity not found.</p>;
 
 	return (
@@ -273,7 +294,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 								window.location.href = "/settings/entities";
 							}}
 							trigger={
-								<button type="button" className={`${styles.deleteButton} outline`}>
+								<button type="button" className={`${styles.deleteButton} button-danger`}>
 									Delete entity
 								</button>
 							}

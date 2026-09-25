@@ -61,6 +61,7 @@ export default defineConfig({
 			provider: fontProviders.fontsource(),
 			name: "Google Sans",
 			cssVariable: "--font-google-sans",
+			display: "block",
 			weights: ["400 500 700"],
 			styles: ["normal"],
 			subsets: ["latin", "latin-ext"],

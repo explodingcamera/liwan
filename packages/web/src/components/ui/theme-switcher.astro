@@ -10,90 +10,59 @@ const { class: className, ...rest } = Astro.props;
 </button>
 
 <style>
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
   button {
-    all: initial;
-    cursor: pointer;
-    color: var(--pico-contrast-background);
-    transition: color 0.4s;
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
   }
-
-  .moon {
-    display: none;
-  }
-
+  button:hover { background: transparent; color: var(--text); }
+  button svg { width: 1.25rem; height: 1.25rem; }
+  .moon { display: none; }
+  :global(:root[data-theme="dark"]) .sun { display: none; }
+  :global(:root[data-theme="dark"]) .moon { display: block; }
   @media (prefers-color-scheme: dark) {
-    .sun {
-      display: none;
-    }
-    .moon {
-      display: block;
-    }
+    :global(:root:not([data-theme])) .sun { display: none; }
+    :global(:root:not([data-theme])) .moon { display: block; }
   }
 </style>
 
 <script>
-  let theme = window.localStorage?.getItem("theme") ?? "auto";
-  const prefers = window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-  if (theme === "auto") theme = prefers;
-
-  if (theme !== prefers) {
-    document.querySelector("html")?.setAttribute("data-theme", theme);
-  }
-
-  const setTheme = (theme: string) => {
-    document.querySelector("html")?.setAttribute("data-theme", theme);
-    window.localStorage?.setItem("theme", theme === prefers ? "auto" : theme);
-  };
-
+  const preference = () => document.documentElement.dataset.theme;
+  const systemTheme = () => matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  const nextTheme = () => (preference() ?? systemTheme()) === "dark" ? "light" : "dark";
   const init = () => {
-    const button = document.querySelector(
-      "#theme-switcher"
-    ) as HTMLButtonElement;
-
-    const sun = document.querySelector(
-      "#theme-switcher .sun"
-    ) as HTMLElement | null;
-    const moon = document.querySelector(
-      "#theme-switcher .moon"
-    ) as HTMLElement | null;
-    if (!sun || !moon) return;
-
-    if (theme === "dark") {
-      sun.style.display = "none";
-      moon.style.display = "block";
-    } else {
-      sun.style.display = "block";
-      moon.style.display = "none";
-    }
-
-    button.addEventListener("click", () => {
-      if (theme === "dark") {
-        setTheme("light");
-        sun.style.display = "block";
-        moon.style.display = "none";
-        theme = "light";
-      } else {
-        setTheme("dark");
-        sun.style.display = "none";
-        moon.style.display = "block";
-        theme = "dark";
-      }
-    });
+    const button = document.getElementById("theme-switcher");
+    if (!button) return;
+    const updateLabel = () => {
+      const next = nextTheme();
+      button.setAttribute("aria-label", `Switch to ${next} mode`);
+    };
+    updateLabel();
+    button.onclick = () => {
+      const next = nextTheme();
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("theme", next);
+      updateLabel();
+    };
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateLabel, { signal: themeListener.signal });
   };
-
-  document.addEventListener("astro:page-load", init);
-  document.addEventListener("astro:after-swap", () =>
-    document.querySelector("html")?.setAttribute("data-theme", theme)
-  );
+  let themeListener = new AbortController();
+  document.addEventListener("astro:page-load", () => {
+    themeListener.abort();
+    themeListener = new AbortController();
+    init();
+  });
+  document.addEventListener("astro:after-swap", () => {
+    try {
+      const theme = localStorage.getItem("theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+      else delete document.documentElement.dataset.theme;
+    } catch {}
+  });
 </script>

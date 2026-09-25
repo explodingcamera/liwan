@@ -53,7 +53,7 @@ export const MyAccount = () => {
 		<div className={styles.container}>
 			<article>
 				<nav>
-					<h1>My account</h1>
+					<h1>My Account</h1>
 				</nav>
 
 				<div className={styles.header}>
@@ -101,7 +101,7 @@ export const MyAccount = () => {
 					</label>
 
 					<div className={styles.passwordActions}>
-						<button type="submit" className="contrast">
+						<button type="submit" className="button-primary">
 							Update password
 						</button>
 					</div>

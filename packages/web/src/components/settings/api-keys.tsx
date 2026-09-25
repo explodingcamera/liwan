@@ -6,6 +6,7 @@ import { PlusIcon, SettingsIcon } from "lucide-react";
 
 import { api } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { CopyableValue } from "@/components/ui/snippet";
 import { type Column, Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
@@ -122,7 +123,7 @@ export const ApiKeys = () => {
 	return (
 		<>
 			<nav className="list-header">
-				<h1>API keys</h1>
+				<h1>API Keys</h1>
 				<button
 					type="button"
 					className={dialogStyles.new}
@@ -167,9 +168,9 @@ export const ApiKeys = () => {
 						onDelete={(index) => setSelectedEntities((entities) => entities.filter((_, i) => i !== index))}
 						noOptionsText="No more entities"
 					/>
-					<div className="grid">
-						<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
-						<button type="submit" className="contrast" disabled={!displayName.trim() || creating}>
+					<div className="action-row">
+						<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
+						<button type="submit" className="button-primary" disabled={!displayName.trim() || creating}>
 							{creating ? "Creating…" : "Create API key"}
 						</button>
 					</div>
@@ -184,8 +185,8 @@ export const ApiKeys = () => {
 			>
 				<form>
 					<CopyableValue value={plaintext ?? ""} label="API key" />
-					<div className="grid">
-						<Dialog.Close className="contrast">Continue</Dialog.Close>
+					<div className="action-row">
+						<Dialog.Close className="button-primary">Continue</Dialog.Close>
 					</div>
 				</form>
 			</Dialog>
@@ -233,7 +234,7 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 		);
 	}, [key, entities]);
 
-	if (loading) return <div className="loading-spinner" />;
+	if (loading) return <LoadingSpinner />;
 	if (!key) return <p>API key not found.</p>;
 
 	const save = (event: SubmitEvent<HTMLFormElement>) => {
@@ -278,7 +279,7 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 						</span>
 					}
 					backHref="/settings/api-keys"
-					backLabel="Back to API keys"
+					backLabel="Back to API Keys"
 					saveForm={key.revokedAt ? undefined : "api-key-settings"}
 				/>
 				<div className={`${styles.detailPanel} ${styles.userDetailPanel}`}>
@@ -301,22 +302,31 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 						onDelete={(index) => setSelectedEntities((entities) => entities.filter((_, i) => i !== index))}
 						noOptionsText="No more entities"
 					/>
-					<SettingsFieldset legend="Permissions" description="Permissions cannot be changed after the key is created.">
-						<label className={styles.apiKeyPermissionOption}>
-							<input type="checkbox" checked={key.permissions.includes("events:batch")} disabled />
-							<span>
-								<strong>events:batch</strong>
-								<small>Send events to assigned entities.</small>
-							</span>
-						</label>
-					</SettingsFieldset>
+					<div className={styles.apiKeyPermissions}>
+						<SettingsFieldset
+							legend="Permissions"
+							description="Permissions cannot be changed after the key is created."
+						>
+							<label className={styles.apiKeyPermissionOption}>
+								<input type="checkbox" checked={key.permissions.includes("events:batch")} disabled />
+								<span>
+									<strong>events:batch</strong>
+									<small>Send events to assigned entities.</small>
+								</span>
+							</label>
+						</SettingsFieldset>
+					</div>
 					{!key.revokedAt && (
 						<div className={styles.dangerZone}>
 							<div>
 								<strong>Revoke API key</strong>
 								<p>Applications using this key will immediately stop being able to send events.</p>
 							</div>
-							<button type="button" className={`${styles.deleteButton} outline`} onClick={() => setRevokeOpen(true)}>
+							<button
+								type="button"
+								className={`${styles.deleteButton} button-danger`}
+								onClick={() => setRevokeOpen(true)}
+							>
 								Revoke
 							</button>
 						</div>
@@ -335,9 +345,9 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 						revoke();
 					}}
 				>
-					<div className="grid">
-						<Dialog.Close className="secondary outline">Cancel</Dialog.Close>
-						<button type="submit" className={`${styles.deleteButton} outline`}>
+					<div className="action-row">
+						<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
+						<button type="submit" className={`${styles.deleteButton} button-danger`}>
 							Revoke API key
 						</button>
 					</div>

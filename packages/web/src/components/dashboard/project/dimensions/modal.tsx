@@ -2,7 +2,7 @@ import styles from "./dimensions.module.css";
 
 import { useDeferredValue, useMemo, useState } from "react";
 import fuzzysort from "fuzzysort";
-import { ZoomInIcon } from "lucide-react";
+import { XIcon, ZoomInIcon } from "lucide-react";
 
 import { Dialog } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -37,7 +37,6 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${metricNames[query.metric]}.`}
 			hideTitle
 			hideDescription
-			showClose
 			autoOverflow
 			className={styles.detailsModal}
 			trigger={
@@ -54,6 +53,9 @@ export const DetailsModal = ({ dimension, query }: { dimension: Dimension; query
 				<div className={styles.dimensionHeader}>
 					<div>{dimensionNames[dimension]}</div>
 					<div>{metricNames[query.metric]}</div>
+					<Dialog.Close className={styles.detailsClose} aria-label="Close dialog">
+						<XIcon size={22} />
+					</Dialog.Close>
 				</div>
 				<input
 					type="search"

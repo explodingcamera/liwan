@@ -1,11 +1,8 @@
 a.card {
   all: unset;
   cursor: pointer;
-
-  position: relative;
   box-sizing: border-box;
   user-select: none;
-  z-index: 0;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -13,28 +10,8 @@ a.card {
   margin: 0;
   padding: 0.3rem 0.4rem 0.2rem 0.4rem;
 
+  border-radius: var(--radius);
   transition: background-color 0.2s ease;
-
-  &::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: calc(var(--pico-border-radius) - 3px);
-    background-color: var(--pico-card-background-color);
-    box-shadow: var(--pico-card-box-shadow);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  &:hover {
-    &::before {
-      opacity: 1;
-    }
-  }
 }
 
 button.card {
@@ -49,37 +26,16 @@ button.card {
   margin: 0;
   padding: 0.55rem 0.6rem 0.25rem;
 
-  transition: background-color 0.2s ease;
-  border-radius: var(--pico-border-radius);
-
-  &::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: var(--pico-border-radius);
-    background-color: var(--pico-card-background-color);
-    opacity: 0;
-    transform: scale(0.94) scaleX(1.04);
-    transition:
-      opacity 0.2s ease,
-      transform 0.2s ease;
-  }
+  border-radius: var(--radius);
+  background: transparent;
 
   &[data-active="true"] {
-    &::before {
-      box-shadow: var(--pico-card-box-shadow);
-      opacity: 1;
-      transform: scale(1) scaleX(1);
-    }
+    background: var(--metric-button-active-background);
+    box-shadow: inset 0 0 0 1px var(--surface-outline);
   }
 
   &:hover:not([data-active="true"]) {
-    &::before {
-      opacity: 0.5;
-    }
+    background: var(--metric-button-hover-background);
+    box-shadow: inset 0 0 0 1px var(--surface-outline);
   }
 }
