@@ -15,7 +15,7 @@
 		"build": "tsdown",
 		"check:browser": "bun build src/index.ts --target browser --outdir ../../target/liwan-api-browser",
 		"test": "bun test tests",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "bun run build && tsc --noEmit"
 	},
 	"exports": {
 		".": {
