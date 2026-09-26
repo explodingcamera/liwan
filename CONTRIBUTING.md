@@ -20,4 +20,4 @@ Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) when 
 
 ## Licensing
 
-Unless you explicitly state otherwise, contributions are licensed under the repository's [MIT](./LICENSE-MIT) and [Apache-2.0](./LICENSE-APACHE) licenses.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in Liwan by you, as defined in the [Apache License, Version 2.0](LICENSE.md), shall be licensed under Apache-2.0, without any additional terms or conditions.

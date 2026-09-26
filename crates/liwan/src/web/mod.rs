@@ -40,7 +40,7 @@ use webext::StaticFile;
 pub struct Files;
 
 #[derive(RustEmbed, Clone)]
-#[folder = "../../packages/tracker"]
+#[folder = "../../packages/tracker/lib"]
 struct Script;
 
 #[derive(Clone)]

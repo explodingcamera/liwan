@@ -17,22 +17,23 @@
 		"url": "https://github.com/explodingcamera/liwan/issues",
 		"email": "hi@liwan.dev"
 	},
-	"license": "MIT",
+	"license": "Apache-2.0",
 	"author": {
 		"name": "Henry Gressmann",
 		"email": "npm@henrygressmann.de",
 		"url": "https://henrygressmann.de"
 	},
 	"type": "module",
-	"scripts": { "build": "tsdown" },
+	"scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
+	"devDependencies": {
+		"tsdown": "^0.23.0",
+		"typescript": "^7.0.2"
+	},
+	"files": ["lib", "README.md"],
 	"exports": {
 		".": {
-			"import": {
-				"types": "./script.d.ts",
-				"default": "./script.js"
-			}
+			"types": "./lib/script.d.ts",
+			"import": "./lib/script.js"
 		}
-	},
-	"module": "script.js",
-	"types": "script.d.ts"
+	}
 }

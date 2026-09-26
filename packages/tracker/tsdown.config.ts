@@ -1,8 +1,8 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-	entry: ["./script.ts"],
-	outDir: ".",
+	entry: ["./src/script.ts"],
+	outDir: "lib",
 	clean: false,
 	format: "esm",
 	platform: "browser",

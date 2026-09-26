@@ -8,9 +8,7 @@
 		"build:web": "bun run --cwd packages/web build",
 		"dev": "bun run --cwd packages/web dev",
 		"build": "bun run build:tracker && bun run build:web",
-		"typecheck": "bun run --cwd packages/web typecheck"
-	},
-	"devDependencies": {
-		"tsdown": "^0.23.0"
+		"screenshot": "bun run --cwd packages/screenshots screenshots",
+		"typecheck": "bun run --cwd packages/web typecheck && bun run --cwd packages/api typecheck && bun run --cwd packages/tracker typecheck && bun run --cwd packages/screenshots typecheck"
 	}
 }

@@ -1,4 +1,4 @@
-//#region script.d.ts
+//#region src/script.d.ts
 declare global {
   interface Window {
     __liwan_loaded?: boolean;

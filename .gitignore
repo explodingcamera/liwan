@@ -1,5 +1,8 @@
-/target
+/target/
+/liwan-data/
 liwan.config.toml
-/liwan-data
 profile.json
-node_modules
+
+node_modules/
+dist/
+.astro/

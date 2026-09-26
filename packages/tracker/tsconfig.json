@@ -6,5 +6,5 @@
 		"strict": true,
 		"lib": ["ESNext", "DOM"]
 	},
-	"include": ["script.ts"]
+	"include": ["src/**/*.ts"]
 }

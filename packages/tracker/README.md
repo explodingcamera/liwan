@@ -15,7 +15,7 @@ When the script is loaded directly in the browser, it will automatically send pa
 ```html
 <script
   type="module"
-  src="https://liwan.example.com/tracker.js"
+  src="https://liwan.example.com/script.js"
   data-entity="example"
   data-api="https://liwan.example.com/api/event"
 ></script>
@@ -116,4 +116,6 @@ export const trackPageviews: (options?: EventOptions) => void;
 
 ## License
 
-The Liwan tracker is licensed under the [MIT License](LICENSE.md). Liwan itself is available under the [Apache-2.0 License](https://github.com/explodingcamera/liwan/blob/main/LICENSE.md).
+Licensed under the [Apache License, Version 2.0](https://github.com/explodingcamera/liwan/blob/main/LICENSE.md).
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in Liwan by you, as defined in the Apache-2.0 license, shall be licensed under Apache-2.0, without any additional terms or conditions.

@@ -45,4 +45,6 @@ Manage accounts with Google Workspaces, Microsoft Entra, or your own OpenID Conn
 
 ## License
 
-Unless otherwise noted, the code in this repository is available under the terms of the Apache-2.0 license. See [LICENSE](LICENSE.md) for more information.
+Unless otherwise noted, this repository is licensed under the [Apache License, Version 2.0](LICENSE.md).
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in Liwan by you, as defined in the Apache-2.0 license, shall be licensed under Apache-2.0, without any additional terms or conditions.

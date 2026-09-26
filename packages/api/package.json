@@ -1,0 +1,57 @@
+{
+	"name": "liwan-api",
+	"description": "Server-side Liwan analytics API client",
+	"homepage": "https://liwan.dev",
+	"version": "1.0.0",
+	"license": "Apache-2.0",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/explodingcamera/liwan.git",
+		"directory": "packages/api"
+	},
+	"files": ["dist", "examples", "README.md"],
+	"scripts": {
+		"build": "tsdown",
+		"check:browser": "bun build src/index.ts --target browser --outdir ../../target/liwan-api-browser",
+		"test": "bun test tests",
+		"typecheck": "tsc --noEmit"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./express": {
+			"types": "./dist/express.d.ts",
+			"import": "./dist/express.js"
+		},
+		"./hono": {
+			"types": "./dist/hono.d.ts",
+			"import": "./dist/hono.js"
+		}
+	},
+	"peerDependencies": {
+		"express": "^4.0.0 || ^5.0.0",
+		"hono": "^4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"express": {
+			"optional": true
+		},
+		"hono": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@types/bun": "^1.4.2",
+		"@types/express": "^5.0.6",
+		"express": "^5.2.1",
+		"hono": "^4.13.8",
+		"tsdown": "^0.23.0",
+		"typescript": "^7.0.2"
+	},
+	"dependencies": {
+		"ipaddr.js": "^2.5.0"
+	}
+}

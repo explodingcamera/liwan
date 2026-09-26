@@ -7,6 +7,7 @@ default-members = ["crates/liwan"]
 version = "1.6.0"
 edition = "2024"
 rust-version = "1.98"
+homepage = "https://liwan.dev"
 repository = "https://github.com/explodingcamera/liwan"
 license = "Apache-2.0"
 

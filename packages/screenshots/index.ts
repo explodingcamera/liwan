@@ -1,14 +1,12 @@
 import { join } from "node:path";
 import { $ } from "bun";
-import captureWebsite from "capture-website";
+import puppeteer from "puppeteer-core";
 
 const geoCardMargin = ".geocard { margin-bottom: 2rem !important; }";
 const cornerRadius = 28;
 
 async function addRoundedCorners(imagePath: string, radius: number) {
-	const dimensions = (
-		await $`magick identify -format %w,%h ${imagePath}`.text()
-	).trim();
+	const dimensions = (await $`magick identify -format %w,%h ${imagePath}`.text()).trim();
 	const [widthText, heightText] = dimensions.split(",");
 	const width = Number(widthText);
 	const height = Number(heightText);
@@ -27,57 +25,23 @@ async function addRoundedCorners(imagePath: string, radius: number) {
 	await $`rm ${maskPath}`;
 }
 
-const screenshots: Array<{
-	imagePath: string;
-	options: Parameters<typeof captureWebsite.file>[2];
-}> = [
-	{
-		imagePath: join(__dirname, "../../data/images/liwan-desktop.png"),
-		options: {
-			overwrite: true,
-			width: 1100,
-			height: 1445,
-			quality: 0.8,
-			styles: [geoCardMargin],
-		},
-	},
-	{
-		imagePath: join(__dirname, "../../data/images/liwan-desktop-dark.png"),
-		options: {
-			darkMode: true,
-			overwrite: true,
-			width: 1100,
-			height: 1445,
-			quality: 0.8,
-			styles: [geoCardMargin],
-		},
-	},
-	{
-		imagePath: join(__dirname, "../../data/images/liwan-desktop-full.png"),
-		options: {
-			overwrite: true,
-			width: 1100,
-			fullPage: true,
-			quality: 0.8,
-		},
-	},
-	{
-		imagePath: join(__dirname, "../../data/images/liwan-desktop-full-dark.png"),
-		options: {
-			darkMode: true,
-			overwrite: true,
-			width: 1100,
-			fullPage: true,
-			quality: 0.8,
-		},
-	},
-];
-
-for (const { imagePath, options } of screenshots) {
-	await captureWebsite.file(
-		"https://demo.liwan.dev/p/liwan.dev",
-		imagePath,
-		options,
-	);
+const executablePath = Bun.which("google-chrome") ?? Bun.which("google-chrome-stable");
+if (!executablePath) throw new Error("google-chrome or google-chrome-stable not found on PATH");
+const browser = await puppeteer.launch({ executablePath });
+for (const [name, darkMode, fullPage] of [
+	["liwan-desktop.png", false, false],
+	["liwan-desktop-dark.png", true, false],
+	["liwan-desktop-full.png", false, true],
+	["liwan-desktop-full-dark.png", true, true],
+] as const) {
+	const page = await browser.newPage();
+	await page.setViewport({ width: 1100, height: 1445 });
+	await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: darkMode ? "dark" : "light" }]);
+	await page.goto("https://demo.liwan.dev/p/liwan.dev", { waitUntil: "networkidle2" });
+	if (!fullPage) await page.addStyleTag({ content: geoCardMargin });
+	const imagePath = join(__dirname, "../../data/images", name);
+	await page.screenshot({ path: imagePath, fullPage });
+	await page.close();
 	await addRoundedCorners(imagePath, cornerRadius);
 }
+await browser.close();

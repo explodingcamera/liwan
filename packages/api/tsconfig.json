@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"strict": true,
+		"types": ["bun"],
+		"lib": ["ESNext", "DOM"]
+	},
+	"include": ["src/**/*.ts", "tests/**/*.ts", "examples/**/*.ts"]
+}

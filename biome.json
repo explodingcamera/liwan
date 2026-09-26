@@ -69,24 +69,11 @@
 		}
 	},
 	"files": {
-		"includes": [
-			"packages/web/**/*.{ts,tsx,astro,css}",
-			"!packages/web/dist",
-			"!packages/web/node_modules",
-			"!packages/web/.astro",
-			"!packages/web/src/api/dashboard.ts",
-			"packages/tracker/script.ts",
-			"packages/api/src/**/*.ts",
-			"packages/api/examples/**/*.ts",
-			"packages/api/*.test.ts"
-		]
+		"includes": ["packages/**/*.{ts,tsx,astro,css}", "!packages/tracker/lib", "!packages/web/src/api/dashboard.ts"]
 	},
 	"overrides": [
 		{
 			"includes": ["**/*.astro"],
-			"assist": {
-				"enabled": false
-			},
 			"linter": {
 				"rules": {
 					"correctness": {
