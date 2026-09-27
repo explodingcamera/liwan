@@ -270,6 +270,22 @@ impl Config {
         if !["http", "https"].contains(&base_url.scheme()) {
             bail!("Invalid base URL: protocol must be either http or https");
         }
+        if base_url.host_str().is_none()
+            || base_url.query().is_some()
+            || base_url.fragment().is_some()
+            || base_url.username() != ""
+            || base_url.password().is_some()
+        {
+            bail!(
+                "Invalid base URL: expected an HTTP(S) origin and optional path, without credentials, query or fragment"
+            );
+        }
+        if config.base_url.ends_with('/') && base_url.path() != "/" {
+            bail!("Invalid base URL: remove the trailing slash from the path");
+        }
+        if config.base_path().starts_with("//") || base_url.path().trim_end_matches('/') != config.base_path() {
+            bail!("Invalid base URL: path must not contain dot segments or require URL normalization");
+        }
         if base_url.scheme() != "https" {
             tracing::warn!("Base URL is not using HTTPS");
         }
@@ -302,7 +318,25 @@ impl Config {
     }
 
     pub fn secure(&self) -> bool {
-        self.base_url.starts_with("https")
+        self.base_url.split_once("://").is_some_and(|(scheme, _)| scheme.eq_ignore_ascii_case("https"))
+    }
+
+    /// Returns the configured URL path prefix, or an empty string at the origin root.
+    pub fn base_path(&self) -> &str {
+        let url = self.base_url.split_once("://").map(|(_, rest)| rest).unwrap_or(&self.base_url);
+        url.find('/').map(|index| url[index..].trim_end_matches('/')).unwrap_or("")
+    }
+
+    /// Prefixes an application path (starting with `/`) with the configured base path.
+    pub fn path(&self, path: &str) -> String {
+        format!("{}{path}", self.base_path())
+    }
+
+    /// Builds a public URL for an application path (starting with `/`).
+    pub fn public_url(&self, path: &str) -> Result<Url> {
+        let mut url = Url::parse(&self.base_url).context("Invalid base URL")?;
+        url.set_path(&self.path(path));
+        Ok(url)
     }
 }
 

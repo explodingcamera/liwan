@@ -8,6 +8,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
+import { appPath, basePath } from "@/config";
 import { invalidateUsers, useMe, useProjects, useUsers } from "@/hooks/api";
 import { getUsername } from "@/utils";
 import { DeleteDialog } from "../dialogs";
@@ -18,7 +19,7 @@ import { Tags } from "../tags";
 export { CreateUser } from "./dialogs";
 
 const getSettingsPathId = (prefix: string) => {
-	const path = window.location.pathname.replace(/\/$/, "");
+	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
 	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
 };
 
@@ -44,7 +45,7 @@ export const UsersTable = () => {
 		{
 			id: "username",
 			header: "Username",
-			render: (row) => <a href={`/settings/users/${row.username}`}>{row.username}</a>,
+			render: (row) => <a href={appPath(`/settings/users/${row.username}`)}>{row.username}</a>,
 			nowrap: true,
 		},
 		{
@@ -56,7 +57,7 @@ export const UsersTable = () => {
 		{
 			id: "edit",
 			render: (row) => (
-				<SettingsLink href={`/settings/users/${row.username}`} label={`Open ${row.username} settings`} />
+				<SettingsLink href={appPath(`/settings/users/${row.username}`)} label={`Open ${row.username} settings`} />
 			),
 		},
 	];
@@ -127,7 +128,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 
 	return (
 		<SettingsForm>
-			<SettingsHeader title={user.username} backHref="/settings/users" backLabel="Back to users" />
+			<SettingsHeader title={user.username} backHref={appPath("/settings/users")} backLabel="Back to users" />
 			<div className={`${styles.detailPanel} ${styles.userDetailPanel}`}>
 				<div className={styles.projectAccess}>
 					<Tags
@@ -179,7 +180,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 								displayName={user.username}
 								type="user"
 								onDeleted={() => {
-									window.location.href = "/settings/users";
+									window.location.href = appPath("/settings/users");
 								}}
 								trigger={
 									<button type="button" className={`${styles.deleteButton} button-danger`}>

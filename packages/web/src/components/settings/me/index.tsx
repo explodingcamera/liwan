@@ -8,6 +8,7 @@ import { api, useMutation } from "@/api";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Snippet } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
+import { appPath } from "@/config";
 import { useMe } from "@/hooks/api";
 import { getUsername } from "@/utils";
 
@@ -67,7 +68,8 @@ export const MyAccount = () => {
 			<article>
 				<h2>Tracking snippet</h2>
 				<p>
-					Copy the tracking snippet for a specific entity from <a href="/settings/entities">entity settings</a>, use the{" "}
+					Copy the tracking snippet for a specific entity from{" "}
+					<a href={appPath("/settings/entities")}>entity settings</a>, use the{" "}
 					<a href="https://npmjs.com/package/liwan-tracker">liwan-tracker</a> npm package, or start with this example:
 				</p>
 				<Snippet entityId="YOUR_ENTITY_ID" />

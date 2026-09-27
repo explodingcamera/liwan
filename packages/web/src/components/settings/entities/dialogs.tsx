@@ -7,6 +7,7 @@ import { PlusIcon } from "lucide-react";
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
+import { appPath } from "@/config";
 import { invalidateEntities, useMe } from "@/hooks/api";
 
 export const CreateEntity = () => {
@@ -16,7 +17,7 @@ export const CreateEntity = () => {
 		onSuccess: (_res, variables) => {
 			createToast("Entity created", "success");
 			invalidateEntities();
-			navigate(`/settings/entities/${variables.json.id}`);
+			navigate(appPath(`/settings/entities/${variables.json.id}`));
 		},
 		onError: console.error,
 	});

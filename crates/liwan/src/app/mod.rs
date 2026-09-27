@@ -76,7 +76,10 @@ impl Liwan {
             api_keys: LiwanApiKeys::new(conn_app.clone()),
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
-            external_auth: LiwanExternalAuth::try_new(conn_app.clone(), &config.base_url)?,
+            external_auth: LiwanExternalAuth::try_new(
+                conn_app.clone(),
+                config.public_url("/api/dashboard/auth/external/callback")?,
+            )?,
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
             settings: LiwanSettings::try_new(conn_app.clone())?,
@@ -102,7 +105,10 @@ impl Liwan {
             api_keys: LiwanApiKeys::new(conn_app.clone()),
             onboarding: LiwanOnboarding::try_new(&conn_app)?,
             sessions: LiwanSessions::new(conn_app.clone()),
-            external_auth: LiwanExternalAuth::try_new(conn_app.clone(), &config.base_url)?,
+            external_auth: LiwanExternalAuth::try_new(
+                conn_app.clone(),
+                config.public_url("/api/dashboard/auth/external/callback")?,
+            )?,
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
             settings: LiwanSettings::try_new(conn_app.clone())?,

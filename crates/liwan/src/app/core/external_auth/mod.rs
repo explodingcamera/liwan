@@ -138,8 +138,7 @@ pub struct LiwanExternalAuth {
 
 impl LiwanExternalAuth {
     /// Creates the external authentication service and its restricted HTTP client.
-    pub fn try_new(pool: SqlitePool, base_url: &str) -> Result<Self> {
-        let redirect_url = url::Url::parse(base_url)?.join("/api/dashboard/auth/external/callback")?.to_string();
+    pub fn try_new(pool: SqlitePool, redirect_url: url::Url) -> Result<Self> {
         let http = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .timeout(Duration::from_secs(10))
@@ -148,7 +147,7 @@ impl LiwanExternalAuth {
             pool,
             runtime: Arc::new(RuntimeState {
                 http,
-                redirect_url,
+                redirect_url: redirect_url.to_string(),
                 settings_update: tokio::sync::Mutex::new(()),
                 provider: Mutex::new(None),
                 flows: Mutex::new(HashMap::new()),

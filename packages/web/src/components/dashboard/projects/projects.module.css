@@ -6,7 +6,7 @@
 }
 
 .loading {
-  min-height: calc(100dvh - 8rem);
+  flex: 1;
   display: grid;
   place-items: center;
 }

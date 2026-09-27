@@ -16,7 +16,7 @@ use crate::{
     config::Config,
     web::{
         MaybeSessionId, RouterState,
-        session::{Auth, LOGOUT_COOKIES, issue_session},
+        session::{Auth, clear_session, issue_session},
         webext::{ApiResult, AxumErrExt, ClientIpKeyExtractor, empty_response, http_bail},
     },
 };
@@ -112,5 +112,5 @@ async fn logout(
     if let Some(session_id) = session_id {
         let _ = app.sessions.delete(&session_id);
     }
-    Ok((LOGOUT_COOKIES.clone(), empty_response()))
+    Ok((clear_session(&app), empty_response()))
 }

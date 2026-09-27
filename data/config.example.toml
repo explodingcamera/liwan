@@ -1,4 +1,4 @@
-base_url = "http://localhost:9042"  # The base URL of the Liwan instance
+base_url = "http://localhost:9042"  # Public URL, optionally with a path, e.g. https://example.com/liwan
 listen = 9042  # The port to listen on (http)
 
 ## Disable favicon fetching from the DuckDuckGo API.

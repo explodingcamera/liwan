@@ -40,23 +40,8 @@ function setPrerender(): AstroIntegration {
 
 // https://astro.build/config
 export default defineConfig({
+	build: { assets: "_assets" },
 	fonts: [
-		{
-			provider: fontProviders.fontsource(),
-			name: "Stack Sans Text",
-			cssVariable: "--font-stack-sans-text",
-			weights: ["200 700"],
-			styles: ["normal"],
-			subsets: ["latin", "latin-ext"],
-		},
-		{
-			provider: fontProviders.fontsource(),
-			name: "Stack Sans Headline",
-			cssVariable: "--font-stack-sans-headline",
-			weights: ["200 700"],
-			styles: ["normal"],
-			subsets: ["latin", "latin-ext"],
-		},
 		{
 			provider: fontProviders.fontsource(),
 			name: "Google Sans",
@@ -68,6 +53,11 @@ export default defineConfig({
 		},
 	],
 	vite: {
+		experimental: {
+			renderBuiltUrl() {
+				return { relative: true };
+			},
+		},
 		server: { proxy },
 		preview: { proxy },
 		plugins: [

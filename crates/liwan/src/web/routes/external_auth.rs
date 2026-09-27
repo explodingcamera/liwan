@@ -1,4 +1,4 @@
-use std::{sync::LazyLock, time::Duration};
+use std::time::Duration;
 
 use aide::{
     UseApi,
@@ -31,20 +31,15 @@ use crate::{
 const STATE_COOKIE_NAME: &str = "liwan-external-auth-state";
 const CALLBACK_ERROR_PATH: &str = "/login?externalAuthError=1";
 
-static STATE_COOKIE: LazyLock<Cookie<'static>> = LazyLock::new(|| {
+fn state_cookie(config: &Config) -> Cookie<'static> {
     let mut cookie = Cookie::new(STATE_COOKIE_NAME, "");
     cookie.set_http_only(true);
     cookie.set_max_age(Some(Duration::from_secs(10 * 60).try_into().unwrap()));
-    cookie.set_path("/api/dashboard/auth/external/callback");
+    cookie.set_path(config.path("/api/dashboard/auth/external/callback"));
     cookie.set_same_site(SameSite::Lax);
+    cookie.set_secure(config.secure());
     cookie
-});
-
-static STATE_COOKIE_REMOVAL: LazyLock<Cookie<'static>> = LazyLock::new(|| {
-    let mut cookie = STATE_COOKIE.clone();
-    cookie.make_removal();
-    cookie
-});
+}
 
 pub fn router(config: &Config) -> ApiRouter<RouterState> {
     let start_limiter = GovernorConfigBuilder::default()
@@ -224,15 +219,26 @@ async fn start(
     if app.onboarding.token().is_some() {
         http_bail!(StatusCode::NOT_FOUND, "external authentication is unavailable");
     }
-    let start = match app.external_auth.begin(query.return_to).await {
+    let return_to = query.return_to;
+    let return_to = if return_to == "/" { app.config.path("/") } else { return_to };
+    let allowed_path = app.config.path("/");
+    let normalized_path = url::Url::parse(&app.config.base_url)
+        .ok()
+        .and_then(|base| base.join(&return_to).ok())
+        .map(|url| url.path().to_string());
+    if !return_to.starts_with(&allowed_path)
+        || !normalized_path.as_deref().is_some_and(|path| path.starts_with(&allowed_path))
+    {
+        http_bail!(StatusCode::BAD_REQUEST, "return path must be within the Liwan base path");
+    }
+    let start = match app.external_auth.begin(return_to).await {
         Ok(start) => start,
         Err(error) => {
             tracing::warn!(%error, "external authentication start failed");
             http_bail!(StatusCode::BAD_REQUEST, "external authentication is unavailable");
         }
     };
-    let mut state_cookie = STATE_COOKIE.clone();
-    state_cookie.set_secure(app.config.secure());
+    let mut state_cookie = state_cookie(&app.config);
     state_cookie.set_value(start.state);
     Ok((cookies.add(state_cookie), Redirect::to(start.authorization_url.as_str())).into_response().into())
 }
@@ -242,28 +248,29 @@ async fn callback(
     cookies: CookieJar,
     Query(query): Query<CallbackQuery>,
 ) -> UseApi<Response, ()> {
+    let error_path = app.config.path(CALLBACK_ERROR_PATH);
     let cookie_state = cookies.get(STATE_COOKIE_NAME).map(|cookie| cookie.value().to_string());
     let Some(cookie_state) = cookie_state else {
         tracing::debug!("external authentication callback has no state cookie");
-        return (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response().into();
+        return (cookies, Redirect::to(&error_path)).into_response().into();
     };
     if query.state.as_deref() != Some(cookie_state.as_str()) {
         tracing::debug!("external authentication callback has an invalid state");
-        return (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response().into();
+        return (cookies, Redirect::to(&error_path)).into_response().into();
     }
 
-    let mut removal = STATE_COOKIE_REMOVAL.clone();
-    removal.set_secure(app.config.secure());
+    let mut removal = state_cookie(&app.config);
+    removal.make_removal();
     let cookies = cookies.add(removal);
     if query.error.is_some() {
         app.external_auth.cancel(&cookie_state);
         tracing::debug!(provider_error = ?query.error, "external authentication callback was rejected");
-        return (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response().into();
+        return (cookies, Redirect::to(&error_path)).into_response().into();
     }
     let Some(code) = query.code else {
         app.external_auth.cancel(&cookie_state);
         tracing::debug!("external authentication callback has no authorization code");
-        return (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response().into();
+        return (cookies, Redirect::to(&error_path)).into_response().into();
     };
 
     let response = match app.external_auth.finish(&cookie_state, code).await {
@@ -271,12 +278,12 @@ async fn callback(
             Ok(cookies) => (cookies, Redirect::to(&login.return_to)).into_response(),
             Err(error) => {
                 tracing::error!(%error, "failed to create external authentication session");
-                (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response()
+                (cookies, Redirect::to(&error_path)).into_response()
             }
         },
         Err(error) => {
             tracing::warn!(%error, "external authentication callback failed");
-            (cookies, Redirect::to(CALLBACK_ERROR_PATH)).into_response()
+            (cookies, Redirect::to(&error_path)).into_response()
         }
     };
     response.into()
@@ -302,5 +309,19 @@ fn settings_response(app: &RouterState, settings: ExternalAuthSettings) -> Exter
         allow_user_creation: settings.allow_user_creation,
         allow_session_reuse: settings.allow_session_reuse,
         callback_url: app.external_auth.callback_url().to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn state_cookie_is_scoped_to_callback_path() {
+        let mut config = Config::default();
+        config.base_url = "https://example.com/liwan".to_string();
+        let cookie = state_cookie(&config);
+        assert_eq!(cookie.path(), Some("/liwan/api/dashboard/auth/external/callback"));
+        assert_eq!(cookie.secure(), Some(true));
     }
 }

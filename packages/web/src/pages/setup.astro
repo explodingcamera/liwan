@@ -51,6 +51,7 @@ import Layout from "@/layouts/base.astro";
   import { navigate } from "astro:transitions/client";
 
   import { api } from "@/api/client";
+  import { appPath } from "@/config";
 
   document.addEventListener("astro:page-load", () => {
     const form = document.getElementById("login-form") as HTMLFormElement;
@@ -75,7 +76,7 @@ import Layout from "@/layouts/base.astro";
           if (!(res as { ok: boolean })?.ok)
             return Promise.reject(new Error("Invalid token or username"));
 
-          navigate("/login");
+          navigate(appPath("/login"));
         })
         .catch((_) => alert.setAttribute("aria-hidden", "false"));
 

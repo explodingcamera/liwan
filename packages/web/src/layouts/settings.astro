@@ -168,11 +168,12 @@ const { title } = Astro.props;
 
 <script>
   import { navigate } from "astro:transitions/client";
+  import { appPath } from "@/config";
 
   const adminPaths = ["/settings/collection", "/settings/users", "/settings/authentication", "/settings/api-keys"];
 
   function handleSelectChange(event: Event) {
-    navigate((event.currentTarget as HTMLSelectElement).value);
+    navigate(appPath((event.currentTarget as HTMLSelectElement).value));
   }
 
   document.addEventListener("astro:page-load", async () => {
@@ -181,18 +182,18 @@ const { title } = Astro.props;
     document.getElementById("select-settings-page")?.addEventListener("change", handleSelectChange);
 
     try {
-      const response = await fetch("/api/dashboard/auth/me");
+      const response = await fetch(appPath("/api/dashboard/auth/me"));
       if (response.status === 401) {
         const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        window.location.replace(`/login?${new URLSearchParams({ returnTo })}`);
+        window.location.replace(appPath(`/login?${new URLSearchParams({ returnTo })}`));
         return;
       }
       if (!response.ok) throw new Error("Failed to load account");
 
       const { role } = await response.json();
       if (role !== "admin") {
-        if (adminPaths.some((path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`))) {
-          window.location.replace("/settings/me");
+        if (adminPaths.some((path) => window.location.pathname === appPath(path) || window.location.pathname.startsWith(`${appPath(path)}/`))) {
+          window.location.replace(appPath("/settings/me"));
           return;
         }
         settings.querySelector("optgroup[data-admin-nav]")?.remove();

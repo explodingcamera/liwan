@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { api, queryClient } from "@/api";
+import { appPath, basePath } from "@/config";
 import { getUsername } from "@/utils";
 
 export const LoginButton = () => {
@@ -19,7 +20,7 @@ export const LoginButton = () => {
 	const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 	if (!username)
 		return (
-			<a className={styles.loginLink} href={`/login?${new URLSearchParams({ returnTo })}`}>
+			<a className={styles.loginLink} href={appPath(`/login?${new URLSearchParams({ returnTo })}`)}>
 				Login
 			</a>
 		);
@@ -34,10 +35,10 @@ export const LoginButton = () => {
 			<Menu.Portal>
 				<Menu.Positioner className={menuStyles.positioner} align="end" sideOffset={4}>
 					<Menu.Popup className={menuStyles.popup}>
-						<Menu.LinkItem className={menuStyles.item} href="/settings/me">
+						<Menu.LinkItem className={menuStyles.item} href={appPath("/settings/me")}>
 							<UserIcon size="16" /> My Account
 						</Menu.LinkItem>
-						<Menu.LinkItem className={menuStyles.item} href="/settings/projects">
+						<Menu.LinkItem className={menuStyles.item} href={appPath("/settings/projects")}>
 							<SettingsIcon size="16" /> Settings
 						</Menu.LinkItem>
 						<Menu.LinkItem className={menuStyles.item} href="https://liwan.dev" target="_blank" rel="noreferrer">
@@ -48,9 +49,14 @@ export const LoginButton = () => {
 						<Menu.Item
 							className={menuStyles.item}
 							onClick={() => {
+								// Remove the public cookie left at / when moving an existing installation to a subpath.
+								if (basePath) {
+									// biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API is not supported in all browsers.
+									document.cookie = "liwan-username=; Max-Age=0; Path=/";
+								}
 								api["/api/dashboard/auth/logout"].post().then(() => {
 									queryClient.clear();
-									window.location.href = "/";
+									window.location.href = appPath("/");
 								});
 							}}
 						>

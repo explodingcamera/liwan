@@ -1,4 +1,4 @@
-use std::{sync::LazyLock, time::Duration};
+use std::time::Duration;
 
 use aide::OperationInput;
 use axum::{
@@ -19,42 +19,43 @@ pub const MAX_SESSION_AGE: Duration = Duration::from_secs(24 * 60 * 60 * 14);
 pub static PUBLIC_COOKIE_NAME: &str = "liwan-username";
 pub static SESSION_COOKIE_NAME: &str = "liwan-session";
 
-pub static PUBLIC_COOKIE: LazyLock<Cookie<'static>> = LazyLock::new(|| {
+fn public_cookie(app: &Liwan) -> Cookie<'static> {
     let mut public_cookie = Cookie::new(PUBLIC_COOKIE_NAME, "");
     public_cookie.set_max_age(Some(MAX_SESSION_AGE.try_into().unwrap()));
     public_cookie.set_http_only(false);
-    public_cookie.set_path("/");
+    let path = app.config.base_path();
+    public_cookie.set_path(if path.is_empty() { "/".to_string() } else { path.to_string() });
     public_cookie.set_same_site(SameSite::Strict);
+    public_cookie.set_secure(app.config.secure());
     public_cookie
-});
+}
 
-pub static SESSION_COOKIE: LazyLock<Cookie<'static>> = LazyLock::new(|| {
+fn session_cookie(app: &Liwan) -> Cookie<'static> {
     let mut session_cookie = Cookie::new(SESSION_COOKIE_NAME, "");
     session_cookie.set_max_age(Some(MAX_SESSION_AGE.try_into().unwrap()));
     session_cookie.set_http_only(true);
-    session_cookie.set_path("/api/dashboard");
+    session_cookie.set_path(app.config.path("/api/dashboard"));
     session_cookie.set_same_site(SameSite::Strict);
+    session_cookie.set_secure(app.config.secure());
     session_cookie
-});
+}
 
-pub static LOGOUT_COOKIES: LazyLock<CookieJar> = LazyLock::new(|| {
-    let mut session_cookie = SESSION_COOKIE.clone();
+pub(crate) fn clear_session(app: &Liwan) -> CookieJar {
+    let mut session_cookie = session_cookie(app);
     session_cookie.make_removal();
-    let mut public_cookie = PUBLIC_COOKIE.clone();
+    let mut public_cookie = public_cookie(app);
     public_cookie.make_removal();
     CookieJar::new().add(session_cookie).add(public_cookie)
-});
+}
 
 /// Creates a Liwan session and adds its browser cookies.
 pub(crate) fn issue_session(app: &Liwan, cookies: CookieJar, username: &str) -> anyhow::Result<CookieJar> {
     let session_id = session_token();
     app.sessions.create(&session_id, username, Utc::now() + MAX_SESSION_AGE)?;
 
-    let mut public_cookie = PUBLIC_COOKIE.clone();
-    let mut session_cookie = SESSION_COOKIE.clone();
-    public_cookie.set_secure(app.config.secure());
+    let mut public_cookie = public_cookie(app);
+    let mut session_cookie = session_cookie(app);
     public_cookie.set_value(username.to_string());
-    session_cookie.set_secure(app.config.secure());
     session_cookie.set_value(session_id);
 
     Ok(cookies.add(public_cookie).add(session_cookie))
@@ -73,8 +74,8 @@ impl OperationInput for Auth {}
 impl OperationInput for MaybeAuth {}
 impl OperationInput for MaybeSessionId {}
 
-fn logout_response() -> Response {
-    (LOGOUT_COOKIES.clone(), StatusCode::UNAUTHORIZED).into_response()
+fn logout_response(app: &Liwan) -> Response {
+    (clear_session(app), StatusCode::UNAUTHORIZED).into_response()
 }
 
 impl axum::extract::FromRequestParts<RouterState> for MaybeSessionId {
@@ -91,7 +92,7 @@ impl axum::extract::FromRequestParts<RouterState> for MaybeSessionId {
         {
             let username = username_cookie.value();
             tracing::info!(username, "user has username cookie but no session cookie, logging out");
-            return Err(logout_response());
+            return Err(logout_response(&state.app));
         }
 
         if let Some(session_cookie) = session_cookie
@@ -100,7 +101,7 @@ impl axum::extract::FromRequestParts<RouterState> for MaybeSessionId {
             let session_id = session_cookie.value();
             tracing::info!(session_id, "user has session cookie but no username cookie, logging out");
             let _ = state.app.sessions.delete(session_cookie.value());
-            return Err(logout_response());
+            return Err(logout_response(&state.app));
         }
 
         Ok(MaybeSessionId(jar.get(SESSION_COOKIE_NAME).map(|c| c.value().to_string())))
@@ -111,8 +112,14 @@ impl axum::extract::FromRequestParts<RouterState> for Auth {
     type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
-        let session_id = MaybeSessionId::from_request_parts(parts, state).await?.0.ok_or_else(logout_response)?;
-        let user = state.app.sessions.get(&session_id).map_err(|_| logout_response())?.ok_or_else(logout_response)?;
+        let session_id =
+            MaybeSessionId::from_request_parts(parts, state).await?.0.ok_or_else(|| logout_response(&state.app))?;
+        let user = state
+            .app
+            .sessions
+            .get(&session_id)
+            .map_err(|_| logout_response(&state.app))?
+            .ok_or_else(|| logout_response(&state.app))?;
         Ok(Auth(user))
     }
 }
@@ -124,7 +131,12 @@ impl axum::extract::FromRequestParts<RouterState> for MaybeAuth {
         let MaybeSessionId(Some(session_id)) = MaybeSessionId::from_request_parts(parts, state).await? else {
             return Ok(MaybeAuth(None));
         };
-        let user = state.app.sessions.get(&session_id).map_err(|_| logout_response())?.ok_or_else(logout_response)?;
+        let user = state
+            .app
+            .sessions
+            .get(&session_id)
+            .map_err(|_| logout_response(&state.app))?
+            .ok_or_else(|| logout_response(&state.app))?;
         Ok(MaybeAuth(Some(user)))
     }
 }

@@ -9,6 +9,7 @@ import { Snippet } from "@/components/ui/snippet";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
+import { appPath, basePath } from "@/config";
 import type { EntityCollectionSettings } from "@/constants";
 import { invalidateEntities, useEntities, useMe, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
@@ -41,7 +42,7 @@ const retentionValue = (retention: EntityCollectionSettings["dataRetention"]) =>
 };
 
 const getSettingsPathId = (prefix: string) => {
-	const path = window.location.pathname.replace(/\/$/, "");
+	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
 	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
 };
 
@@ -108,7 +109,7 @@ export const EntitiesTable = () => {
 		{
 			id: "displayName",
 			header: "Name",
-			render: (row) => <a href={`/settings/entities/${row.id}`}>{row.displayName}</a>,
+			render: (row) => <a href={appPath(`/settings/entities/${row.id}`)}>{row.displayName}</a>,
 			nowrap: true,
 		},
 		{
@@ -125,7 +126,7 @@ export const EntitiesTable = () => {
 					{row.projects.map((project, i) => (
 						<Fragment key={project.id}>
 							{i > 0 && ", "}
-							<a href={`/settings/projects/${project.id}`}>{project.displayName}</a>
+							<a href={appPath(`/settings/projects/${project.id}`)}>{project.displayName}</a>
 						</Fragment>
 					))}
 				</>
@@ -135,7 +136,7 @@ export const EntitiesTable = () => {
 		{
 			id: "edit",
 			render: (row) => (
-				<SettingsLink href={`/settings/entities/${row.id}`} label={`Open ${row.displayName} settings`} />
+				<SettingsLink href={appPath(`/settings/entities/${row.id}`)} label={`Open ${row.displayName} settings`} />
 			),
 		},
 	];
@@ -241,7 +242,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 		<SettingsForm>
 			<SettingsHeader
 				title={displayName || entity.displayName}
-				backHref="/settings/entities"
+				backHref={appPath("/settings/entities")}
 				backLabel="Back to entities"
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={entityTabs}>
@@ -291,7 +292,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							displayName={entity.displayName}
 							type="entity"
 							onDeleted={() => {
-								window.location.href = "/settings/entities";
+								window.location.href = appPath("/settings/entities");
 							}}
 							trigger={
 								<button type="button" className={`${styles.deleteButton} button-danger`}>

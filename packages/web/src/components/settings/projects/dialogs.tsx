@@ -7,6 +7,7 @@ import { PlusIcon } from "lucide-react";
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
+import { appPath } from "@/config";
 import { invalidateProjects, useMe } from "@/hooks/api";
 
 type ProjectVisibility = "private" | "unlisted" | "public";
@@ -20,7 +21,7 @@ export const CreateProject = () => {
 		onSuccess: (_res, variables) => {
 			createToast("Project created", "success");
 			invalidateProjects();
-			navigate(`/settings/projects/${variables.params.project_id}`);
+			navigate(appPath(`/settings/projects/${variables.params.project_id}`));
 		},
 		onError: console.error,
 	});

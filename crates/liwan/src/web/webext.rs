@@ -121,7 +121,14 @@ pub(super) async fn serve(
     orig_uri: extract::OriginalUri,
     req: Request,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let mut path = req.uri().path().trim_start_matches('/').trim_end_matches('/').to_string();
+    let mut path = req
+        .uri()
+        .path()
+        .strip_prefix(state.config.base_path())
+        .unwrap_or(req.uri().path())
+        .trim_start_matches('/')
+        .trim_end_matches('/')
+        .to_string();
     if path.is_empty() {
         path = "index.html".to_string();
     }
@@ -168,7 +175,7 @@ pub(super) async fn serve(
     };
 
     let orig_path = orig_uri.path();
-    if orig_path.ends_with('/') && file.is_some() && orig_path.len() > 1 {
+    if orig_path.ends_with('/') && file.is_some() && orig_path != format!("{}/", state.config.base_path()) {
         let redirect = orig_uri.path().trim_start_matches('/').trim_end_matches('/');
         return Ok(Response::builder()
             .status(StatusCode::MOVED_PERMANENTLY)
@@ -193,7 +200,17 @@ pub(super) async fn serve(
             tracing::error!("failed to serialize HTML config: {err}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+        let base_path = state.config.base_path();
         let body = html.replace(CONFIG_PLACEHOLDER, &config_json.replace('<', "\\u003c"));
+        let body = if base_path.is_empty() {
+            body
+        } else {
+            body.replace("href=\"/", &format!("href=\"{base_path}/"))
+                .replace("src=\"/", &format!("src=\"{base_path}/"))
+                .replace("=\"/_assets/", &format!("=\"{base_path}/_assets/"))
+                .replace("url=/", &format!("url={base_path}/"))
+                .replace("url(\"/_assets/", &format!("url(\"{base_path}/_assets/"))
+        };
         let hash = blake3::hash(body.as_bytes()).to_hex().to_string();
         (Body::from(body), hash)
     } else {
@@ -209,7 +226,7 @@ pub(super) async fn serve(
 
     let mut builder = Response::builder().header(header::CONTENT_TYPE, mime).header(header::ETAG, hash);
 
-    if path.starts_with("_astro/") {
+    if path.starts_with("_assets/") {
         builder = builder.header(header::CACHE_CONTROL, "public, max-age=604800, immutable");
     }
 

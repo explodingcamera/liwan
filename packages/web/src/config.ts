@@ -21,3 +21,7 @@ const readConfig = (): RuntimeConfig | undefined => {
 	return undefined;
 };
 export const runtimeConfig = readConfig();
+
+export const basePath = runtimeConfig ? new URL(runtimeConfig.baseUrl).pathname.replace(/\/$/, "") : "";
+
+export const appPath = (path: string) => `${basePath}${path}`;

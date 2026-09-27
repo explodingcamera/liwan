@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { CopyableValue } from "@/components/ui/snippet";
 import { type Column, Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
+import { appPath, basePath } from "@/config";
 import { useEntities, useProjects } from "@/hooks/api";
 import { SettingsField, SettingsFieldset, SettingsForm, SettingsHeader } from "./form";
 import { type Tag, Tags } from "./tags";
@@ -157,7 +158,7 @@ export const ApiKeys = () => {
 			id: "edit",
 			render: (key) => (
 				<a
-					href={`/settings/api-keys/${key.id}`}
+					href={appPath(`/settings/api-keys/${key.id}`)}
 					className={styles.settingsLink}
 					aria-label={`Open ${key.displayName} settings`}
 					title={`Open ${key.displayName} settings`}
@@ -351,7 +352,7 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 	);
 
 	useEffect(() => {
-		const path = window.location.pathname.replace(/\/$/, "");
+		const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
 		setKeyId(path.startsWith("/settings/api-keys/") ? path.slice("/settings/api-keys/".length) : keyIdProp);
 	}, [keyIdProp]);
 
@@ -400,7 +401,7 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 			.delete({ params: { key_id: key.id } })
 			.then(() => {
 				createToast("API key deleted", "success");
-				window.location.href = "/settings/api-keys";
+				window.location.href = appPath("/settings/api-keys");
 			})
 			.catch(() => createToast("Failed to delete API key", "error"));
 	};
@@ -425,7 +426,7 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 	return (
 		<>
 			<SettingsForm>
-				<SettingsHeader title={key.displayName} backHref="/settings/api-keys" backLabel="Back to API Keys" />
+				<SettingsHeader title={key.displayName} backHref={appPath("/settings/api-keys")} backLabel="Back to API Keys" />
 				<div className={`${styles.detailPanel} ${styles.userDetailPanel}`}>
 					<SettingsField label="Name" description="Identifies this key in the dashboard." name="displayName">
 						<input

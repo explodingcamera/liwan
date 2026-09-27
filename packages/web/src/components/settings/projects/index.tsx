@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
+import { appPath, basePath } from "@/config";
 import type { Dimension, DisplayOverride, ProjectDisplaySettings, ProjectResponse } from "@/constants";
 import { dimensionNames, displayOverrides, metricNames, metrics } from "@/constants";
 import { invalidateProjects, useEntities, useMe, useProjects } from "@/hooks/api";
@@ -24,7 +25,7 @@ type ProjectTab = "general" | "display";
 type ProjectVisibility = "private" | "unlisted" | "public";
 
 const getSettingsPathId = (prefix: string) => {
-	const path = window.location.pathname.replace(/\/$/, "");
+	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
 	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
 };
 const projectVisibility = (project: ProjectResponse): ProjectVisibility => {
@@ -73,7 +74,7 @@ export const ProjectsTable = () => {
 		{
 			id: "displayName",
 			header: "Name",
-			render: (row) => <a href={`/settings/projects/${row.id}`}>{row.displayName}</a>,
+			render: (row) => <a href={appPath(`/settings/projects/${row.id}`)}>{row.displayName}</a>,
 			nowrap: true,
 		},
 		{
@@ -89,7 +90,7 @@ export const ProjectsTable = () => {
 					{row.entities.map((entity, i) => (
 						<Fragment key={entity.id}>
 							{i > 0 && ", "}
-							<a href={`/settings/entities/${entity.id}`}>{entity.displayName}</a>
+							<a href={appPath(`/settings/entities/${entity.id}`)}>{entity.displayName}</a>
 						</Fragment>
 					))}
 				</>
@@ -99,7 +100,7 @@ export const ProjectsTable = () => {
 		{
 			id: "edit",
 			render: (row) => (
-				<SettingsLink href={`/settings/projects/${row.id}`} label={`Open ${row.displayName} settings`} />
+				<SettingsLink href={appPath(`/settings/projects/${row.id}`)} label={`Open ${row.displayName} settings`} />
 			),
 		},
 	];
@@ -225,7 +226,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 		<SettingsForm>
 			<SettingsHeader
 				title={displayName || project.displayName}
-				backHref="/settings/projects"
+				backHref={appPath("/settings/projects")}
 				backLabel="Back to projects"
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={projectTabs}>
@@ -295,7 +296,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 							displayName={project.displayName}
 							type="project"
 							onDeleted={() => {
-								window.location.href = "/settings/projects";
+								window.location.href = appPath("/settings/projects");
 							}}
 							trigger={
 								<button type="button" className={`${styles.deleteButton} button-danger`}>

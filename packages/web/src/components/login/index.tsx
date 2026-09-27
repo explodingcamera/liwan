@@ -6,15 +6,18 @@ import { SiGoogle, SiOpenid } from "@icons-pack/react-simple-icons";
 
 import { api } from "@/api/client";
 import { queryClient } from "@/api/query";
+import { appPath, basePath } from "@/config";
 import type { ExternalAuthMetadata, ExternalAuthProvider } from "@/constants";
 
 const getReturnTo = () => {
-	if (typeof window === "undefined") return "/";
-	const requested = new URLSearchParams(window.location.search).get("returnTo") ?? "/";
-	if (!requested.startsWith("/") || !URL.canParse(requested, window.location.origin)) return "/";
+	if (typeof window === "undefined") return appPath("/");
+	const requested = new URLSearchParams(window.location.search).get("returnTo") ?? appPath("/");
+	if (!requested.startsWith(`${basePath}/`) || !URL.canParse(requested, window.location.origin)) return appPath("/");
 
 	const url = new URL(requested, window.location.origin);
-	return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : "/";
+	return url.origin === window.location.origin && url.pathname.startsWith(`${basePath}/`)
+		? `${url.pathname}${url.search}${url.hash}`
+		: appPath("/");
 };
 
 const MicrosoftLogo = () => (
@@ -88,7 +91,7 @@ export const LoginPage = () => {
 				<div>
 					<a
 						className={`button-secondary ${styles.externalAuth}`}
-						href={`/api/dashboard/auth/external/start?${new URLSearchParams({ returnTo: getReturnTo() })}`}
+						href={appPath(`/api/dashboard/auth/external/start?${new URLSearchParams({ returnTo: getReturnTo() })}`)}
 					>
 						<span className={styles.providerIcon}>
 							<ProviderLogo provider={externalAuth.provider} />

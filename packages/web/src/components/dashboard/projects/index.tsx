@@ -11,6 +11,7 @@ import { SelectMetrics } from "@/components/dashboard/project/metric";
 import { ProjectHeader } from "@/components/dashboard/project/project-header";
 import { SelectRange } from "@/components/dashboard/project/range";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { appPath } from "@/config";
 import type { Metric, ProjectResponse } from "@/constants";
 import { metricNames, metrics } from "@/constants";
 import { useMe, useProjectGraph, useProjectStats } from "@/hooks/api";
@@ -28,7 +29,7 @@ const NoProjects = () => {
 				<h3>
 					You do not have any projects yet.
 					<br />
-					<a href="/settings/projects">Create a new project</a>
+					<a href={appPath("/settings/projects")}>Create a new project</a>
 					&nbsp;to get started.
 				</h3>
 			) : (
@@ -86,7 +87,7 @@ export const Projects = () => {
 				<h3>
 					There are no public projects available.
 					<br />
-					<a href="/login">Login</a> to view all projects.
+					<a href={appPath("/login")}>Login</a> to view all projects.
 				</h3>
 			</div>
 		);

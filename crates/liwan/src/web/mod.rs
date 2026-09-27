@@ -15,7 +15,7 @@ use axum::response::Response;
 use rust_embed::RustEmbed;
 
 use aide::{axum::ApiRouter, openapi};
-use http::{HeaderName, HeaderValue, Method, header};
+use http::{HeaderName, HeaderValue, Method, StatusCode, header};
 use tokio::sync::{Semaphore, mpsc::Sender};
 use tower_http::{
     compression::CompressionLayer,
@@ -200,13 +200,32 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .nest("/api/dashboard", dashboard)
         .route_service("/script.js", StaticFile::<Script>::new("script.js").layer(script_cors).into_service())
         .fallback(axum::routing::get(serve))
-        .layer(RequestBodyDeadlineLayer::new(Duration::from_secs(30)))
-        .layer(CompressionLayer::new())
-        .layer(set_headers)
-        .layer(TraceLayer::new_for_http())
-        .layer(axum::middleware::from_fn_with_state(state.clone(), warn_untrusted_proxy_headers))
-        .with_state(state)
+        .with_state(state.clone())
         .finish_api(&mut api);
+
+    let base_path = app.config.base_path();
+    let router = if base_path.is_empty() {
+        router
+    } else {
+        let root = axum::routing::get({
+            let state = state.clone();
+            move |uri, request| serve(State(state.clone()), uri, request)
+        });
+        let slash_path = format!("{base_path}/");
+        let redirect = axum::routing::get({
+            let slash_path = slash_path.clone();
+            move || {
+                let slash_path = slash_path.clone();
+                async move { (StatusCode::MOVED_PERMANENTLY, [(header::LOCATION, slash_path)]) }
+            }
+        });
+        axum::Router::new().nest(base_path, router).route(base_path, redirect).route(&slash_path, root)
+    }
+    .layer(RequestBodyDeadlineLayer::new(Duration::from_secs(30)))
+    .layer(CompressionLayer::new())
+    .layer(set_headers)
+    .layer(TraceLayer::new_for_http())
+    .layer(axum::middleware::from_fn_with_state(state.clone(), warn_untrusted_proxy_headers));
 
     let bearer_scheme = serde_json::from_value(serde_json::json!({
         "type": "http",
@@ -257,7 +276,8 @@ pub fn save_spec(spec: openapi::OpenApi) -> Result<()> {
 pub async fn start_webserver(app: Arc<Liwan>, queues: EventQueues) -> Result<()> {
     match app.onboarding.token() {
         Some(onboarding) => {
-            let get_started = format!("{}/setup?t={}", app.config.base_url, onboarding);
+            let mut get_started = app.config.public_url("/setup")?;
+            get_started.query_pairs_mut().append_pair("t", &onboarding);
             tracing::info!("It looks like you're running Liwan for the first time!");
             tracing::info!("You can get started by visiting: {get_started}");
             tracing::info!("To see all available commands, run `liwan --help`");
