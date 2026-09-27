@@ -338,6 +338,29 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 								</div>
 							</fieldset>
 							<fieldset>
+								<legend>Cards</legend>
+								<div className={styles.displayRow}>
+									<span>Custom events</span>
+									<ToggleGroup
+										aria-label="Custom events display"
+										className={styles.segmented}
+										value={[settings.metricDisplayOverrides.custom_events ?? "auto"]}
+										onValueChange={(values) => {
+											const next = values.at(-1);
+											if ((displayOverrides as readonly string[]).includes(next ?? "")) {
+												setMetricDisplay("custom_events", next as DisplayOverride);
+											}
+										}}
+									>
+										{displayOverrides.map((display) => (
+											<Toggle key={display} value={display}>
+												{displayLabels[display]}
+											</Toggle>
+										))}
+									</ToggleGroup>
+								</div>
+							</fieldset>
+							<fieldset>
 								<legend>Dimensions</legend>
 								<div className={styles.dimensionGroups}>
 									{displayDimensionGroups.map((group) => (

@@ -1,6 +1,6 @@
 mod common;
 use anyhow::Result;
-use liwan::app::models::{ApiPermission, Entity};
+use liwan::app::models::{ApiPermission, DisplayOverride, Entity};
 use liwan::config::Config;
 use liwan::utils::ip_headers::{ClientIpHeaderSource, TrustedProxy};
 use serde_json::json;
@@ -62,6 +62,89 @@ async fn test_event() -> Result<()> {
     let rows = body["data"].as_array().expect("data should be an array");
     let row = rows.iter().find(|r| r["dimensionValue"].as_str() == Some("example.com/")).expect("url row should exist");
     assert_eq!(row["value"].as_f64(), Some(1.0));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn custom_event_reports_respect_display_setting() -> Result<()> {
+    let app = common::app();
+    let (queues, _) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    app.seed_database(0)?;
+
+    let now = chrono::Utc::now();
+    let conn = app.events_conn()?;
+    conn.execute(
+        "insert into events (entity_id, visitor_group_id, event, created_at, path) values (?, ?, ?, ?, ?)",
+        duckdb::params!["entity-1", "visitor-1", "pageview", now, "/home"],
+    )?;
+    let range = json!({ "start": (now - chrono::Duration::hours(1)), "end": now + chrono::Duration::hours(1) });
+    let report = || json!({ "range": range, "filters": [] });
+    let endpoint = "/api/dashboard/project/public-project/custom-events";
+
+    let response = client.post(endpoint, report()).await;
+    response.assert_status_success();
+    assert_eq!(response.json::<serde_json::Value>()["hasCustomEvents"], false);
+
+    conn.execute(
+        "insert into events (entity_id, visitor_group_id, event, created_at, path) values (?, ?, ?, ?, ?)",
+        duckdb::params!["entity-1", "visitor-1", "signup", now, "/signup"],
+    )?;
+    let response = client.post(endpoint, report()).await;
+    response.assert_status_success();
+    let body: serde_json::Value = response.json();
+    assert_eq!(body["rows"][0]["name"], "signup");
+
+    let selected = json!({ "range": range, "filters": [], "event": "signup" });
+    let response = client.post("/api/dashboard/project/public-project/stats", selected.clone()).await;
+    response.assert_status_success();
+    let stats: serde_json::Value = response.json();
+    assert_eq!(stats["stats"]["totalViews"], 1);
+    assert!(stats["stats"]["bounceRate"].is_null());
+    assert!(stats["stats"]["avgTimeOnSite"].is_null());
+    let response = client
+        .post(
+            "/api/dashboard/project/public-project/dimension",
+            json!({ "range": range, "filters": [], "event": "signup", "metric": "views", "dimension": "path" }),
+        )
+        .await;
+    response.assert_status_success();
+    let rows = &response.json::<serde_json::Value>()["data"];
+    assert_eq!(rows[0]["dimensionValue"], "/signup");
+    assert_eq!(rows[0]["value"], 1.0);
+    let response = client
+        .post(
+            "/api/dashboard/project/public-project/graph",
+            json!({ "range": range, "filters": [], "event": "signup", "metric": "views", "interval": "hour" }),
+        )
+        .await;
+    response.assert_status_success();
+    let graph: serde_json::Value = response.json();
+    assert_eq!(graph["data"].as_array().unwrap().iter().map(|row| row["value"].as_f64().unwrap()).sum::<f64>(), 1.0);
+    let response = client
+        .post(
+            "/api/dashboard/project/public-project/dimension",
+            json!({ "range": range, "filters": [], "event": "signup", "metric": "views", "dimension": "url_entry" }),
+        )
+        .await;
+    response.assert_status(http::StatusCode::BAD_REQUEST);
+    let response = client
+        .post(
+            "/api/dashboard/project/public-project/graph",
+            json!({ "range": range, "filters": [], "event": "signup", "metric": "bounce_rate", "interval": "hour" }),
+        )
+        .await;
+    response.assert_status(http::StatusCode::BAD_REQUEST);
+
+    let mut settings = app.project_settings.get("public-project")?;
+    settings.metric_display_overrides.insert("custom_events".into(), DisplayOverride::Hide);
+    app.project_settings.update(&settings)?;
+    client.post(endpoint, report()).await.assert_status(http::StatusCode::BAD_REQUEST);
+    client
+        .post("/api/dashboard/project/public-project/stats", selected)
+        .await
+        .assert_status(http::StatusCode::BAD_REQUEST);
 
     Ok(())
 }
@@ -129,20 +212,26 @@ async fn exit_payload_uses_the_exit_queue() -> Result<()> {
     let client = common::TestClient::new(app.clone(), queues);
     app.seed_database(0)?;
 
+    let headers =
+        vec![("user-agent".to_string(), "test".to_string()), ("x-client-ip".to_string(), "8.8.8.8".to_string())];
+    client
+        .post_with_headers(
+            "/api/event",
+            json!({ "entity_id": "entity-1", "name": "signup", "url": "https://example.com/", "exit": true }),
+            headers.clone(),
+        )
+        .await
+        .assert_status_success();
+    assert!(receivers.exits.try_recv().is_err(), "custom events should not enqueue exit signals");
+    assert!(receivers.events.try_recv().is_err(), "custom exit payloads should not insert events");
+
     let event = json!({
         "entity_id": "entity-1",
         "name": "pageview",
         "url": "https://example.com/",
         "exit": true
     });
-    client
-        .post_with_headers(
-            "/api/event",
-            event,
-            vec![("user-agent".to_string(), "test".to_string()), ("x-client-ip".to_string(), "8.8.8.8".to_string())],
-        )
-        .await
-        .assert_status_success();
+    client.post_with_headers("/api/event", event, headers).await.assert_status_success();
 
     let exit = tokio::time::timeout(std::time::Duration::from_secs(1), receivers.exits.recv())
         .await

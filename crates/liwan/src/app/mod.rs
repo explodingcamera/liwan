@@ -162,6 +162,15 @@ impl Liwan {
         }
     }
 
+    /// Return the custom-events card visibility preference for a project.
+    pub fn custom_events_display(&self, project_id: &str) -> DisplayOverride {
+        self.project_settings
+            .get(project_id)
+            .ok()
+            .and_then(|settings| settings.metric_display_overrides.get("custom_events").copied())
+            .unwrap_or(DisplayOverride::Auto)
+    }
+
     pub fn is_dimension_hidden(&self, project_id: &str, entities: &[String], dimension: Dimension) -> bool {
         match self
             .project_settings

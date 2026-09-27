@@ -27,7 +27,7 @@ pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Opti
     Ok(earliest_timestamp)
 }
 
-/// Count visitor groups active in the last five minutes
+/// Count visitor groups with pageviews in the last five minutes.
 pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
     if entities.is_empty() {
         return Ok(0);
@@ -39,7 +39,7 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
 			select count(distinct e.visitor_group_id)
 			from events e
 			where
-				e.entity_id in ({vars}) and
+				e.event = 'pageview' and e.entity_id in ({vars}) and
 				e.created_at >= (now()::timestamp - interval '5 minutes');
 	"
     );
@@ -66,8 +66,11 @@ pub fn overall_stats(
 
     let metric_total = metric_aggregate_sql(Metric::Views, "sd");
     let metric_unique_visitors = metric_aggregate_sql(Metric::UniqueVisitors, "sd");
-    let metric_bounce_rate = metric_aggregate_sql(Metric::BounceRate, "sd");
-    let metric_avg_time_on_site = metric_aggregate_sql(Metric::AvgTimeOnSite, "sd");
+    let (metric_bounce_rate, metric_avg_time_on_site) = if event == "pageview" {
+        (metric_aggregate_sql(Metric::BounceRate, "sd"), metric_aggregate_sql(Metric::AvgTimeOnSite, "sd"))
+    } else {
+        ("null::double".into(), "null::double".into())
+    };
 
     let mut params = ParamVec::new();
     params.push(event);
@@ -121,6 +124,21 @@ mod tests {
     use crate::app::Liwan;
     use crate::config::Config;
     use chrono::Duration;
+
+    #[test]
+    fn online_users_counts_only_pageviews() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let conn = app.events_conn().unwrap();
+        for (visitor, event) in [("visitor-1", "pageview"), ("visitor-2", "signup")] {
+            conn.execute(
+                "insert into events (entity_id, visitor_group_id, event, created_at) values (?, ?, ?, ?)",
+                duckdb::params!["entity-1", visitor, event, Utc::now()],
+            )
+            .unwrap();
+        }
+
+        assert_eq!(online_users(&conn, &["entity-1".into()]).unwrap(), 1);
+    }
 
     #[test]
     fn overall_stats_uses_terminal_event_exit_duration() {

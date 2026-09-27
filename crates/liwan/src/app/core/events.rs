@@ -70,7 +70,7 @@ impl LiwanEvents {
         let mut session_entities = Vec::new();
         let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
         for event in events {
-            if event.track_sessions {
+            if event.track_sessions && event.event == "pageview" {
                 if first_event_time.is_none_or(|first_event_time| event.created_at < first_event_time) {
                     first_event_time = Some(event.created_at);
                 }
@@ -317,18 +317,19 @@ fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[S
             filtered_events as (
                 select *
                 from events
-                where entity_id in ({entity_vars}) and (created_at >= ?::timestamp or visitor_group_id in (
+                where event = 'pageview' and entity_id in ({entity_vars}) and (created_at >= ?::timestamp or visitor_group_id in (
                     select visitor_group_id
                     from events
-                    where entity_id in ({entity_vars}) and created_at >= now()::timestamp - interval '24 hours' and created_at < ?::timestamp and time_to_next_event is null
+                    where event = 'pageview' and entity_id in ({entity_vars}) and created_at >= now()::timestamp - interval '24 hours' and created_at < ?::timestamp and time_to_next_event is null
                 ))
             ),
             cte as (
                 select
+                    entity_id,
                     visitor_group_id,
                     created_at,
-                    created_at - lag(created_at) over (partition by visitor_group_id order by created_at) as time_from_last_event,
-                    lead(created_at) over (partition by visitor_group_id order by created_at) - created_at as time_to_next_event
+                    created_at - lag(created_at) over (partition by entity_id, visitor_group_id order by created_at) as time_from_last_event,
+                    lead(created_at) over (partition by entity_id, visitor_group_id order by created_at) - created_at as time_to_next_event
                 from filtered_events
             )
         update events
@@ -336,7 +337,7 @@ fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[S
                 time_from_last_event = cte.time_from_last_event,
                 time_to_next_event = cte.time_to_next_event
             from cte
-            where events.visitor_group_id = cte.visitor_group_id and events.created_at = cte.created_at;
+            where events.event = 'pageview' and events.entity_id = cte.entity_id and events.visitor_group_id = cte.visitor_group_id and events.created_at = cte.created_at;
     ");
 
     let mut params = ParamVec::new();
@@ -384,7 +385,9 @@ mod tests {
         let app = Liwan::new_memory(Config::default()).expect("failed to create app");
         let first = Utc::now() - chrono::Duration::minutes(2);
         let second = first + chrono::Duration::minutes(1);
-        app.events.append(vec![event(first), event(second)].into_iter()).expect("failed to append events");
+        let mut custom = event(second + chrono::Duration::seconds(5));
+        custom.event = "signup".into();
+        app.events.append(vec![event(first), event(second), custom].into_iter()).expect("failed to append events");
 
         let conn = app.events_conn().expect("failed to get event connection");
         let matched = update_event_exit(
@@ -413,5 +416,35 @@ mod tests {
             Some((second + chrono::Duration::seconds(15)).timestamp_millis())
         );
         assert_eq!(rows[0], None);
+        assert_eq!(rows[2], None);
+    }
+
+    #[test]
+    fn custom_events_do_not_change_pageview_intervals() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let first = Utc::now() - chrono::Duration::minutes(3);
+        let middle = first + chrono::Duration::minutes(1);
+        let last = middle + chrono::Duration::minutes(1);
+        let mut custom = event(middle);
+        custom.event = "signup".into();
+        app.events.append(vec![event(first), custom, event(last)].into_iter()).unwrap();
+
+        let conn = app.events_conn().unwrap();
+        let rows = conn
+            .prepare("select event, time_from_last_event, time_to_next_event from events order by created_at")
+            .unwrap()
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<chrono::Duration>>(1)?,
+                    row.get::<_, Option<chrono::Duration>>(2)?,
+                ))
+            })
+            .unwrap()
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(rows[0].2, Some(chrono::Duration::seconds(120)));
+        assert_eq!(rows[1], ("signup".into(), None, None));
+        assert_eq!(rows[2].1, Some(chrono::Duration::seconds(120)));
     }
 }

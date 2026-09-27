@@ -13,10 +13,14 @@ export const SelectFilters = ({
 	value,
 	onChange,
 	dimensions,
+	eventName,
+	onClearEvent,
 }: {
 	value: DimensionFilter[];
 	onChange: (filters: DimensionFilter[]) => void;
 	dimensions?: string[];
+	eventName?: string;
+	onClearEvent?: () => void;
 }) => {
 	const addFilter = (filter: GenericFilter) => {
 		onChange([
@@ -32,6 +36,18 @@ export const SelectFilters = ({
 
 	return (
 		<div className={styles.filters}>
+			{eventName && eventName !== "pageview" && (
+				<article className={styles.filter}>
+					<div className={styles.filterField}>
+						<span>Event</span>
+						<span className={styles.filterType}>is</span>
+						<span className={styles.filterValue}>{eventName}</span>
+					</div>
+					<button type="button" aria-label="Remove event filter" onClick={onClearEvent} className={styles.remove}>
+						<XIcon size={20} />
+					</button>
+				</article>
+			)}
 			{value.map((filter, i) => (
 				<article className={cls(styles.filter)} key={i}>
 					<div className={styles.filterField}>

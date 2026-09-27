@@ -22,6 +22,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### Features
 
+- Added support for custom events
 - Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
 - Added authenticated batch event ingestion endpoint
 - Added API key management UI

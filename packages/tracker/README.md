@@ -36,12 +36,12 @@ trackPageviews({
 
 ### Custom events
 
+Call `event` when an action happens. In the browser, the tracker uses the current page URL and referrer.
+
 ```ts
 import { event } from "liwan-tracker";
 
-await event("pageview", {
-  url: "https://example.com",
-  referrer: "https://google.com",
+await event("signup", {
   endpoint: "https://liwan.example.com/api/event",
   entity: "example",
 });
@@ -82,10 +82,9 @@ export type EventOptions = {
   entity?: string;
 
   /**
-   * Whether this event should be reported again when the page becomes hidden.
+   * Whether to send a pageview exit signal when the page becomes hidden.
    *
-   * Defaults to `true` for pageviews and `false` for other events. This option
-   * is ignored in server-side environments.
+   * Defaults to `true`. Ignored for custom events and in server-side environments.
    */
   exit?: boolean;
 };

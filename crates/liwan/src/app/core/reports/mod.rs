@@ -1,8 +1,10 @@
+mod custom_events;
 mod dimension;
 mod graph;
 mod shared;
 mod stats;
 
+pub use custom_events::{CustomEventsReport, custom_events_report};
 pub use dimension::dimension_report;
 pub use graph::{build_graph_buckets, overall_report};
 pub use stats::{earliest_timestamp, online_users, overall_stats};
@@ -244,6 +246,13 @@ pub struct DimensionFilter {
     pub(super) inversed: Option<bool>,
     pub(super) strict: Option<bool>,
     pub(super) value: Option<String>,
+}
+
+impl DimensionFilter {
+    /// Whether this filter depends on pageview session boundaries.
+    pub fn is_session_page_filter(&self) -> bool {
+        matches!(self.dimension, Dimension::UrlEntry | Dimension::UrlExit)
+    }
 }
 
 #[cfg(test)]

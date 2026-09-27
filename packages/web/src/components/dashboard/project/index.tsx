@@ -6,10 +6,11 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import type { DateRange } from "@/api/ranges";
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
-import { dimensions, metricNames, metrics } from "@/constants";
+import { dimensions, eventMetricName, metrics } from "@/constants";
 import { useDimension, useProject, useProjectGraph, useProjectStats } from "@/hooks/api";
 import { useMetric, useRange } from "@/hooks/persist";
 import { cls } from "@/utils";
+import { CustomEventsCard } from "./custom-events";
 import { DimensionDropdownCard, DimensionTabs, DimensionTabsCard, PageDimensionTabsCard } from "./dimensions";
 import { SelectFilters } from "./filter";
 import { LineGraph } from "./graph";
@@ -23,9 +24,10 @@ export type ProjectQuery = {
 	metric: Metric;
 	range: DateRange;
 	filters: DimensionFilter[];
+	eventName: string;
 };
 
-const getDimensionFilter = (dimension: Dimension, value: string): DimensionFilter => {
+export const getDimensionFilter = (dimension: Dimension, value: string): DimensionFilter => {
 	if (dimension === "city")
 		// remove the first two characters from the dimension value
 		// which are the country code
@@ -59,20 +61,31 @@ export const Project = () => {
 		typeof window === "undefined" ? undefined : window.location.pathname.split("/").pop(),
 	);
 	const [filters, setFilters] = useState<DimensionFilter[]>([]);
+	const [eventName, setEventName] = useState("pageview");
 
 	const { metric, setMetric } = useMetric();
 	const { range, setRange } = useRange();
 
 	const { project, notFound } = useProject(projectId);
 	const visibleMetrics: Metric[] = useMemo(
-		() => metrics.filter((item) => !project?.hiddenMetrics.includes(item)),
-		[project?.hiddenMetrics],
+		() =>
+			metrics.filter(
+				(item) =>
+					!project?.hiddenMetrics.includes(item) &&
+					(eventName === "pageview" || item === "views" || item === "unique_visitors"),
+			),
+		[project?.hiddenMetrics, eventName],
 	);
 	const activeMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
 	const reportMetric: Metric = activeMetric ?? "views";
 	const visibleFilters = useMemo(
-		() => filters.filter((filter) => !project?.hiddenDimensions.includes(filter.dimension)),
-		[filters, project?.hiddenDimensions],
+		() =>
+			filters.filter(
+				(filter) =>
+					!project?.hiddenDimensions.includes(filter.dimension) &&
+					(eventName === "pageview" || (filter.dimension !== "url_entry" && filter.dimension !== "url_exit")),
+			),
+		[filters, project?.hiddenDimensions, eventName],
 	);
 	const {
 		graph,
@@ -85,6 +98,7 @@ export const Project = () => {
 		metric: reportMetric,
 		range,
 		filters: visibleFilters,
+		eventName,
 		enabled: Boolean(activeMetric),
 	});
 	const {
@@ -95,6 +109,7 @@ export const Project = () => {
 		projectId,
 		range,
 		filters: visibleFilters,
+		eventName,
 		enabled: Boolean(activeMetric),
 	});
 
@@ -105,25 +120,37 @@ export const Project = () => {
 			metric: reportMetric,
 			range,
 			filters: visibleFilters,
+			eventName,
 		}),
-		[project, reportMetric, range, visibleFilters],
+		[project, reportMetric, range, visibleFilters, eventName],
 	);
 
 	useEffect(() => {
-		if (activeMetric && activeMetric !== metric) setMetric(activeMetric);
-	}, [activeMetric, metric, setMetric]);
+		if (eventName === "pageview" && activeMetric && activeMetric !== metric) setMetric(activeMetric);
+	}, [activeMetric, eventName, metric, setMetric]);
 
 	const toggleFilter = useCallback(
 		(filter: DimensionFilter) => {
 			const index = filters.findIndex((f) => f.dimension === filter.dimension && f.filterType === filter.filterType);
 			if (index === -1) {
 				setFilters([...filters, filter]);
+			} else if (filters[index].value !== filter.value || filters[index].inversed || filters[index].strict) {
+				setFilters(filters.map((current, i) => (i === index ? filter : current)));
 			} else {
 				setFilters(filters.filter((_, i) => i !== index));
 			}
 		},
 		[filters],
 	);
+
+	const selectEvent = (name: string) => {
+		setEventName(name);
+		if (name !== "pageview") {
+			setFilters((current) =>
+				current.filter((filter) => filter.dimension !== "url_entry" && filter.dimension !== "url_exit"),
+			);
+		}
+	};
 
 	const onSelectDimRow = useCallback(
 		(value: DimensionTableRow, dimension: Dimension) => {
@@ -143,7 +170,11 @@ export const Project = () => {
 			</div>
 		);
 	const visibleDimensions = (items: Dimension[]) =>
-		items.filter((dimension) => !project.hiddenDimensions.includes(dimension));
+		items.filter(
+			(dimension) =>
+				!project.hiddenDimensions.includes(dimension) &&
+				(eventName === "pageview" || (dimension !== "url_entry" && dimension !== "url_exit")),
+		);
 	const pageDimensions = visibleDimensions(["url", "url_entry", "url_exit", "fqdn"]);
 	const campaignDimensions = visibleDimensions([
 		"referrer",
@@ -165,23 +196,30 @@ export const Project = () => {
 					<SelectRange onSelect={setRange} range={range} projectId={project.id} />
 				</div>
 				<SelectMetrics
+					className={styles.projectStats}
 					data={stats}
 					metric={reportMetric}
 					metrics={visibleMetrics}
 					setMetric={setMetric}
-					className={styles.projectStats}
 					isLoading={statsLoading || statsUpdating}
+					eventName={eventName}
 				/>
 				<SelectFilters
+					eventName={eventName}
+					onClearEvent={() => selectEvent("pageview")}
 					value={visibleFilters}
 					onChange={setFilters}
-					dimensions={dimensions.filter((dimension) => !project.hiddenDimensions.includes(dimension))}
+					dimensions={dimensions.filter(
+						(dimension) =>
+							!project.hiddenDimensions.includes(dimension) &&
+							(eventName === "pageview" || (dimension !== "url_entry" && dimension !== "url_exit")),
+					)}
 				/>
 				<article className={cls(cardStyles.card, styles.graphCard)}>
 					{activeMetric ? (
 						<LineGraph
 							data={graph}
-							title={metricNames[displayMetric]}
+							title={eventMetricName(displayMetric, eventName)}
 							metric={displayMetric}
 							range={displayRange}
 							isLoading={graphLoading}
@@ -211,6 +249,14 @@ export const Project = () => {
 				{activeMetric && deviceDimensions.length > 0 && (
 					<DimensionDropdownCard dimensions={deviceDimensions} query={query} onSelect={onSelectDimRow} />
 				)}
+				<CustomEventsCard
+					projectId={project.id}
+					range={range}
+					filters={visibleFilters}
+					display={project.customEventsDisplay}
+					selectedEvent={eventName}
+					onSelectEvent={selectEvent}
+				/>
 			</div>
 		</div>
 	);

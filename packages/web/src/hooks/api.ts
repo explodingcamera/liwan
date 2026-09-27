@@ -56,6 +56,36 @@ export const useProject = (projectId?: string) => {
 	};
 };
 
+export const useCustomEvents = ({
+	projectId,
+	range,
+	filters,
+	enabled = true,
+}: {
+	projectId?: string;
+	range: DateRange;
+	filters: DimensionFilter[];
+	enabled?: boolean;
+}) => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["custom_events", projectId, range.cacheKey(), filters],
+		enabled: projectId !== undefined && enabled,
+		refetchInterval: range.endsToday() ? 60_000 : undefined,
+		queryFn: () =>
+			api["/api/dashboard/project/{project_id}/custom-events"]
+				.post({
+					params: { project_id: projectId ?? "" },
+					json: { range: range.toAPI(), filters },
+				})
+				.json()
+				.then((result) => {
+					if (typeof result === "string") throw new Error(result);
+					return result;
+				}),
+	});
+	return { data, isLoading, error };
+};
+
 export const useEntities = () => {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["entities"],
@@ -86,12 +116,14 @@ export const useDimension = ({
 	metric,
 	range,
 	filters,
+	eventName = "pageview",
 }: {
 	project: ProjectResponse;
 	dimension: Dimension;
 	metric: Metric;
 	filters: DimensionFilter[];
 	range: DateRange;
+	eventName?: string;
 }): {
 	data: DimensionTableRow[] | undefined;
 	biggest: number;
@@ -100,8 +132,8 @@ export const useDimension = ({
 	error: unknown;
 } => {
 	const { data, isLoading, error } = useQuery({
-		placeholderData: (prev) => prev,
-		queryKey: ["dimension", project.id, dimension, metric, range.cacheKey(), filters],
+		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
+		queryKey: ["dimension", project.id, dimension, metric, range.cacheKey(), filters, eventName],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/dimension"]
 				.post({
@@ -110,6 +142,7 @@ export const useDimension = ({
 						dimension,
 						filters,
 						metric,
+						event: eventName,
 						range: range.toAPI(),
 					},
 				})
@@ -137,12 +170,14 @@ export const useProjectGraph = ({
 	metric,
 	range,
 	filters = [],
+	eventName = "pageview",
 	enabled = true,
 }: {
 	projectId?: string;
 	metric: Metric;
 	range: DateRange;
 	filters?: DimensionFilter[];
+	eventName?: string;
 	enabled?: boolean;
 }) => {
 	let refetchInterval: number | undefined;
@@ -153,7 +188,7 @@ export const useProjectGraph = ({
 	}
 	const interval = range.getGraphInterval();
 	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, interval, timezone];
+	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, interval, timezone, eventName];
 
 	const {
 		data: graphResult,
@@ -169,7 +204,7 @@ export const useProjectGraph = ({
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
 				.post({
-					json: { range: range.toAPI(), metric, interval, timezone, filters },
+					json: { range: range.toAPI(), metric, interval, timezone, filters, event: eventName },
 					params: { project_id: projectId ?? "" },
 				})
 				.json()
@@ -180,7 +215,7 @@ export const useProjectGraph = ({
 					}
 					return { data: toDataPoints(req.data), metric, range };
 				}),
-		placeholderData: (prev) => prev,
+		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
 	});
 
 	const isUpdating = isFetching && isPlaceholderData;
@@ -199,11 +234,13 @@ export const useProjectStats = ({
 	projectId,
 	range,
 	filters = [],
+	eventName = "pageview",
 	enabled = true,
 }: {
 	projectId?: string;
 	range: DateRange;
 	filters?: DimensionFilter[];
+	eventName?: string;
 	enabled?: boolean;
 }) => {
 	const {
@@ -213,13 +250,13 @@ export const useProjectStats = ({
 		isFetching,
 		isPlaceholderData,
 	} = useQuery({
-		queryKey: ["project_stats", projectId, range.cacheKey(), filters],
+		queryKey: ["project_stats", projectId, range.cacheKey(), filters, eventName],
 
 		enabled: projectId !== undefined && enabled,
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/stats"]
 				.post({
-					json: { range: range.toAPI(), filters },
+					json: { range: range.toAPI(), filters, event: eventName },
 					params: { project_id: projectId ?? "" },
 				})
 				.json()
@@ -230,7 +267,7 @@ export const useProjectStats = ({
 					}
 					return req;
 				}),
-		placeholderData: (prev) => prev,
+		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
 	});
 
 	return {

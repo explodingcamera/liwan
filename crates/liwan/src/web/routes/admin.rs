@@ -126,6 +126,7 @@ pub struct ProjectResponse {
     pub unlisted: bool,
     pub hidden_metrics: Vec<Metric>,
     pub hidden_dimensions: Vec<Dimension>,
+    pub custom_events_display: crate::app::models::DisplayOverride,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -154,6 +155,7 @@ impl ProjectResponse {
                 .collect(),
             public: project.public,
             unlisted: project.unlisted,
+            custom_events_display: app.custom_events_display(&project.id),
             hidden_metrics: Metric::all()
                 .iter()
                 .copied()

@@ -47,9 +47,9 @@ export type EventOptions = {
 	entity?: string;
 
 	/**
-	 * Whether this event should be reported again when the page becomes hidden.
+	 * Whether to send a pageview exit signal when the page becomes hidden.
 	 *
-	 * Defaults to `true` for pageviews and `false` for other events. This option is ignored in server-side environments.
+	 * Defaults to `true`. Ignored for custom events and in server-side environments.
 	 */
 	exit?: boolean;
 };
@@ -208,7 +208,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 		reject(`${response.status} ${response.statusText}`.trim());
 	}
 
-	if (!noWindow && (options?.exit ?? (name === "pageview" && defaultExit))) {
+	if (!noWindow && name === "pageview" && (options?.exit ?? defaultExit)) {
 		currentExit = { endpoint: endpoint_url, payload };
 		exitSentWhileHidden = false;
 		installExitListener();

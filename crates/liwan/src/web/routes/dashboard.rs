@@ -1,4 +1,5 @@
 use crate::app::DuckDBConn;
+use crate::app::models::DisplayOverride;
 use crate::app::reports::{self, DateRange, Dimension, DimensionFilter, GraphInterval, Metric, ReportStats};
 use crate::utils::validate::can_view_project;
 use crate::web::RouterState;
@@ -50,6 +51,7 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/project/{project_id}/graph", post(project_graph_handler))
         .api_route("/project/{project_id}/stats", post(project_stats_handler))
         .api_route("/project/{project_id}/dimension", post(project_detailed_handler))
+        .api_route("/project/{project_id}/custom-events", post(project_custom_events_handler))
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -61,6 +63,38 @@ struct GraphResponse {
 struct StatsRequest {
     range: DateRange,
     filters: Vec<DimensionFilter>,
+    event: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct CustomEventsRequest {
+    range: DateRange,
+    filters: Vec<DimensionFilter>,
+}
+
+async fn project_custom_events_handler(
+    app: State<RouterState>,
+    Path(project_id): Path<String>,
+    MaybeAuth(user): MaybeAuth,
+    Json(req): Json<CustomEventsRequest>,
+) -> ApiResult<Json<reports::CustomEventsReport>> {
+    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+    if !can_view_project(&project, user.as_ref()) {
+        http_bail!(StatusCode::NOT_FOUND, "Project not found")
+    }
+    if app.custom_events_display(&project.id) == DisplayOverride::Hide {
+        http_bail!(StatusCode::BAD_REQUEST, "Custom events are hidden for this project")
+    }
+    reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    if req.filters.iter().any(DimensionFilter::is_session_page_filter) {
+        http_bail!(StatusCode::BAD_REQUEST, "Entry and exit page filters are not supported for custom events")
+    }
+    let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let limit = app.config.limits.report_max_dimension_results;
+    let report =
+        run_report(&app, move |conn| reports::custom_events_report(conn, &entities, &req.range, &req.filters, limit))
+            .await?;
+    Ok(Json(report))
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -71,6 +105,7 @@ struct GraphRequest {
     interval: GraphInterval,
     timezone: Option<String>,
     metric: Metric,
+    event: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -88,6 +123,29 @@ struct DimensionRequest {
     filters: Vec<DimensionFilter>,
     metric: Metric,
     dimension: Dimension,
+    event: Option<String>,
+}
+
+fn report_event(
+    event: Option<&str>,
+    filters: &[DimensionFilter],
+    metric: Option<Metric>,
+    display: DisplayOverride,
+) -> ApiResult<String> {
+    let event = event.unwrap_or("pageview");
+    if event.trim().is_empty() || event.len() > 255 {
+        http_bail!(StatusCode::BAD_REQUEST, "Invalid event name")
+    }
+    if event != "pageview" && display == DisplayOverride::Hide {
+        http_bail!(StatusCode::BAD_REQUEST, "Custom events are hidden for this project")
+    }
+    if event != "pageview"
+        && (filters.iter().any(DimensionFilter::is_session_page_filter)
+            || matches!(metric, Some(Metric::BounceRate | Metric::AvgTimeOnSite)))
+    {
+        http_bail!(StatusCode::BAD_REQUEST, "Pageview session metrics and filters are not supported for custom events")
+    }
+    Ok(event.to_owned())
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -141,6 +199,8 @@ async fn project_graph_handler(
     }
 
     reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    let event =
+        report_event(req.event.as_deref(), &req.filters, Some(req.metric), app.custom_events_display(&project.id))?;
 
     if app.is_metric_hidden(&project.id, &entities, req.metric) {
         http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
@@ -155,7 +215,7 @@ async fn project_graph_handler(
     .http_status(StatusCode::BAD_REQUEST)?;
 
     let report = run_report(&app, move |conn| {
-        reports::overall_report(conn, &entities, "pageview", &req.range, &buckets, &req.filters, &req.metric)
+        reports::overall_report(conn, &entities, &event, &req.range, &buckets, &req.filters, &req.metric)
     })
     .await?;
 
@@ -173,16 +233,18 @@ async fn project_stats_handler(
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
     }
     reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    let event = report_event(req.event.as_deref(), &req.filters, None, app.custom_events_display(&project.id))?;
 
     let entities = app.projects.entity_ids(&project.id).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
     let (entities2, entities3) = (entities.clone(), entities.clone());
 
     let req2 = req.clone();
+    let event_prev = event.clone();
 
     let (mut stats, mut stats_prev) = tokio::try_join!(
-        run_report(&app, move |conn| reports::overall_stats(conn, &entities, "pageview", &req.range, &req.filters)),
+        run_report(&app, move |conn| reports::overall_stats(conn, &entities, &event, &req.range, &req.filters)),
         run_report(&app, move |conn| {
-            reports::overall_stats(conn, &entities2, "pageview", &req2.range.prev(), &req2.filters)
+            reports::overall_stats(conn, &entities2, &event_prev, &req2.range.prev(), &req2.filters)
         }),
     )?;
 
@@ -213,6 +275,11 @@ async fn project_detailed_handler(
         http_bail!(StatusCode::NOT_FOUND, "Project not found")
     }
     reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    let event =
+        report_event(req.event.as_deref(), &req.filters, Some(req.metric), app.custom_events_display(&project.id))?;
+    if event != "pageview" && matches!(req.dimension, Dimension::UrlEntry | Dimension::UrlExit) {
+        http_bail!(StatusCode::BAD_REQUEST, "Entry and exit pages are not supported for custom events")
+    }
 
     if app.is_metric_hidden(&project.id, &entities, req.metric) {
         http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
@@ -226,7 +293,7 @@ async fn project_detailed_handler(
         reports::dimension_report(
             conn,
             &entities,
-            "pageview",
+            &event,
             &req.range,
             &req.dimension,
             &req.filters,

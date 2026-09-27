@@ -3,6 +3,20 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngExt;
 
 const PATHS: &[&str] = &["/", "/about", "/contact", "/pricing", "/blog", "/login", "/signup"];
+const CUSTOM_EVENTS: &[&str] = &[
+    "signup",
+    "login",
+    "purchase",
+    "checkout_started",
+    "add_to_cart",
+    "download",
+    "newsletter_subscribed",
+    "trial_started",
+    "contact_form_submitted",
+    "video_played",
+    "search",
+    "share",
+];
 const REFERRERS: &[&str] = &["", "google.com", "twitter.com", "liwan.dev", "example.com", "henrygressmann.de"];
 const PLATFORMS: &[&str] = &["", "Windows", "macOS", "Linux", "Android", "iOS"];
 const BROWSERS: &[&str] = &["", "Chrome", "Firefox", "Safari", "Edge", "Opera"];
@@ -117,7 +131,11 @@ pub fn random_events(
             country: if country.is_empty() { None } else { Some(country.to_string()) },
             created_at: current_time,
             entity_id: entity_id.clone(),
-            event: "pageview".to_string(),
+            event: if generated.is_multiple_of(10) {
+                CUSTOM_EVENTS[rng.random_range(0..CUSTOM_EVENTS.len())].to_string()
+            } else {
+                "pageview".to_string()
+            },
             fqdn: Some(fqdn.clone()),
             mobile: Some(mobile),
             platform: if platform.is_empty() { None } else { Some(platform.to_string()) },
@@ -160,6 +178,10 @@ mod tests {
 
         let events: Vec<_> = random_events((start, end), "entity", "example.com", want).collect();
         let got = events.len();
+
+        let custom_events: std::collections::HashSet<_> =
+            events.iter().filter(|event| event.event != "pageview").map(|event| event.event.as_str()).collect();
+        assert!(custom_events.len() > 6, "seed should populate the events details view");
 
         assert!(
             got >= (want as f64 * 0.7) as usize && got <= (want as f64 * 1.3) as usize,

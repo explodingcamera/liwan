@@ -252,7 +252,8 @@ pub(super) fn process_event(
     };
 
     if is_exit
-        && (!settings.track_sessions
+        && (event.name != "pageview"
+            || !settings.track_sessions
             || settings.visitor_group_mode == VisitorGroupMode::RandomPerRequest
             || event.ip.is_none())
     {
@@ -484,7 +485,7 @@ mod test {
         let event = Event {
             entity_id: "entity".to_string(),
             visitor_group_id: "visitor".to_string(),
-            event: "pageview".to_string(),
+            event: "signup".to_string(),
             created_at: Utc::now(),
             fqdn: Some("example.com".to_string()),
             path: Some("/pricing".to_string()),
@@ -506,6 +507,11 @@ mod test {
 
         let matching_rule = IngestDropRule {
             filters: vec![
+                IngestFilter {
+                    dimension: "event".to_string(),
+                    filter_type: FilterType::Equal,
+                    value: Some("signup".to_string()),
+                },
                 IngestFilter {
                     dimension: "path".to_string(),
                     filter_type: FilterType::Equal,

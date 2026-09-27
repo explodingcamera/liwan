@@ -14,6 +14,7 @@ export const SelectMetrics = ({
 	setMetric,
 	className,
 	isLoading = false,
+	eventName = "pageview",
 }: {
 	data?: StatsResponse;
 	metric: Metric;
@@ -21,6 +22,7 @@ export const SelectMetrics = ({
 	setMetric: (value: Metric) => void;
 	className?: string;
 	isLoading?: boolean;
+	eventName?: string;
 }) => {
 	const visible = (metric: Metric) => metrics.includes(metric);
 
@@ -33,7 +35,7 @@ export const SelectMetrics = ({
 		>
 			{visible("views") && (
 				<SelectMetric
-					title="Total Views"
+					title={eventName === "pageview" ? "Total Views" : "Completions"}
 					value={data?.stats.totalViews}
 					prevValue={data?.statsPrev.totalViews}
 					metric={"views"}
@@ -43,7 +45,7 @@ export const SelectMetrics = ({
 			)}
 			{visible("unique_visitors") && (
 				<SelectMetric
-					title="Unique Visitors"
+					title={eventName === "pageview" ? "Unique Visitors" : "Uniques"}
 					value={data?.stats.uniqueVisitors}
 					prevValue={data?.statsPrev.uniqueVisitors}
 					metric={"unique_visitors"}

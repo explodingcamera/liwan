@@ -6,10 +6,10 @@ import { LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucid
 
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { Dimension, DimensionTableRow } from "@/constants";
-import { dimensionNames, metricNames } from "@/constants";
+import { dimensionNames, eventMetricName } from "@/constants";
 import { useDimension } from "@/hooks/api";
 import { cls, countryCodeToFlag, formatHost, formatMetricVal, formatPath, getHref, tryParseUrl } from "@/utils";
-import type { ProjectQuery } from "..";
+import { getDimensionFilter, type ProjectQuery } from "..";
 import { BrowserIcon, MobileDeviceIcon, OrientationIcon, OSIcon, ReferrerIcon } from "../icons";
 import { DetailsModal } from "./modal";
 
@@ -24,7 +24,7 @@ export const DimensionCard = (props: DimensionProps) => {
 		<article className={styles.card}>
 			<div className={styles.dimensionHeader}>
 				<div>{dimensionNames[props.dimension]}</div>
-				<div>{metricNames[props.query.metric]}</div>
+				<div>{eventMetricName(props.query.metric, props.query.eventName)}</div>
 			</div>
 			<DimensionTable {...props} />
 		</article>
@@ -100,7 +100,7 @@ export const DimensionDropdownCard = ({
 							</option>
 						))}
 					</select>
-					<div>{metricNames[query.metric]}</div>
+					<div>{eventMetricName(query.metric, query.eventName)}</div>
 				</Tabs.List>
 				{dimensions.map((dimension) => (
 					<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
@@ -129,7 +129,7 @@ export const DimensionTabs = ({
 						{dimensionNames[value]}
 					</Tabs.Tab>
 				))}
-				<div>{metricNames[query.metric]}</div>
+				<div>{eventMetricName(query.metric, query.eventName)}</div>
 			</Tabs.List>
 			{dimensions.map((dimension) => (
 				<Tabs.Panel key={dimension} value={dimension} className={styles.tabsContent}>
@@ -161,7 +161,11 @@ export const DimensionTable = (props: DimensionProps) => {
 							style={{ order: order?.indexOf(d.dimensionValue) }}
 							className={styles.dimensionRow}
 						>
-							<DimensionValueBar value={d.value} biggest={biggest}>
+							<DimensionValueBar
+								value={d.value}
+								biggest={biggest}
+								selected={isSelected(props.query, props.dimension, d.dimensionValue)}
+							>
 								<DimensionLabel dimension={props.dimension} value={d} onSelect={props.onSelect} />
 							</DimensionValueBar>
 							<div>{formatMetricVal(d.value, props.query.metric)}</div>
@@ -176,7 +180,7 @@ export const DimensionTable = (props: DimensionProps) => {
 					</div>
 				)}
 			</div>
-			<DetailsModal dimension={props.dimension} query={props.query} />
+			<DetailsModal dimension={props.dimension} query={props.query} onSelect={props.onSelect} />
 		</>
 	);
 };
@@ -390,12 +394,28 @@ export const DimensionValueBar = ({
 	value,
 	biggest,
 	children,
+	selected = false,
 }: {
 	value: number;
 	biggest: number;
 	children?: React.ReactNode;
+	selected?: boolean;
 }) => (
-	<div className={styles.percentage} style={{ "--percentage": `${(value / biggest) * 100}%` } as React.CSSProperties}>
+	<div
+		className={cls(styles.percentage, selected && styles.selected)}
+		style={{ "--percentage": `${(value / biggest) * 100}%` } as React.CSSProperties}
+	>
 		{children}
 	</div>
 );
+
+export const isSelected = (query: ProjectQuery, dimension: Dimension, value: string) => {
+	const selected = getDimensionFilter(dimension, value);
+	return query.filters.some(
+		(filter) =>
+			filter.dimension === selected.dimension &&
+			filter.filterType === selected.filterType &&
+			filter.value === selected.value &&
+			!filter.inversed,
+	);
+};

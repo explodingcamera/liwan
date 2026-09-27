@@ -230,7 +230,7 @@ async fn private_projects() -> Result<()> {
     let res = client
         .get_with_headers("/api/dashboard/projects", vec![("cookie".to_string(), common::cookie_header(&login2))])
         .await;
-    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "public": false, "unlisted": false, "entities": [], "hiddenMetrics": [], "hiddenDimensions": []}]}));
+    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "public": false, "unlisted": false, "entities": [], "hiddenMetrics": [], "hiddenDimensions": [], "customEventsDisplay": "auto"}]}));
 
     Ok(())
 }
@@ -267,6 +267,7 @@ async fn private_project_reports_require_access() -> Result<()> {
             json!({"range":{"start":start,"end":end},"filters":[],"interval":"hour","timezone":"UTC","metric":"views"}),
         ),
         (format!("{prefix}/stats"), json!({"range":{"start":start,"end":end},"filters":[]})),
+        (format!("{prefix}/custom-events"), json!({"range":{"start":start,"end":end},"filters":[]})),
         (
             format!("{prefix}/dimension"),
             json!({"range":{"start":start,"end":end},"filters":[],"metric":"views","dimension":"url"}),

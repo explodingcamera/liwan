@@ -88,6 +88,11 @@ export const metricNames: Record<Metric, string> = {
 	bounce_rate: "Bounce Rate",
 };
 
+export const eventMetricName = (metric: Metric, eventName: string) => {
+	if (eventName === "pageview") return metricNames[metric];
+	return metric === "views" ? "Completions" : metric === "unique_visitors" ? "Uniques" : metricNames[metric];
+};
+
 export const dimensionNames: Record<Dimension, string> = {
 	platform: "Platform",
 	browser: "Browser",

@@ -90,6 +90,10 @@
   }
 }
 
+.percentage.selected::after {
+  opacity: 0.3;
+}
+
 .dimensionHeader {
   display: flex;
   justify-content: space-between;
