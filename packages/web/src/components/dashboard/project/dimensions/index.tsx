@@ -149,11 +149,12 @@ export const DimensionTable = (props: DimensionProps) => {
 
 	return (
 		<>
-			<div
-				className={cls(styles.dimensionTable, isLoading && styles.loading)}
-				style={{ "--count": 6 } as React.CSSProperties}
-			>
-				{isLoading && <LoadingSpinner className={styles.spinner} />}
+			<div className={styles.dimensionTable} style={{ "--count": 6 } as React.CSSProperties}>
+				{isLoading && (
+					<div className={styles.loadingOverlay} data-no-delay={!data}>
+						<LoadingSpinner immediate />
+					</div>
+				)}
 				{dataTruncated?.map((d) => {
 					return (
 						<div

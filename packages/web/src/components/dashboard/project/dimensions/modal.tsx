@@ -54,15 +54,12 @@ export const DetailsModal = ({
 				</button>
 			}
 		>
-			<div
-				className={cls(styles.dimensionTable, isLoading && styles.loading)}
-				style={{ "--count": data?.length } as React.CSSProperties}
-			>
+			<div className={styles.dimensionTable} style={{ "--count": data?.length } as React.CSSProperties}>
 				<div className={styles.dimensionHeader}>
 					<div>{dimensionNames[dimension]}</div>
 					<div>{eventMetricName(query.metric, query.eventName)}</div>
 					<Dialog.Close className={styles.detailsClose} aria-label="Close dialog">
-						<XIcon size={22} />
+						<XIcon size={20} />
 					</Dialog.Close>
 				</div>
 				<input
@@ -90,7 +87,11 @@ export const DetailsModal = ({
 						</div>
 					);
 				})}
-				{isLoading && <LoadingSpinner className={styles.spinner} />}
+				{isLoading && (
+					<div className={styles.loadingOverlay} data-no-delay={!data}>
+						<LoadingSpinner immediate />
+					</div>
+				)}
 				{!isLoading && data?.length === 0 && (
 					<div className={styles.dimensionEmpty}>
 						<div>No data available</div>

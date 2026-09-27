@@ -7,7 +7,7 @@ import { SearchIcon, XIcon } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import type { DimensionFilter, FilterType } from "@/constants";
 import { dimensionNames, filterNames, filterNamesInverted } from "@/constants";
-import { capitalizeAll, cls } from "@/utils";
+import { capitalizeAll } from "@/utils";
 
 export const SelectFilters = ({
 	value,
@@ -49,7 +49,7 @@ export const SelectFilters = ({
 				</article>
 			)}
 			{value.map((filter, i) => (
-				<article className={cls(styles.filter)} key={i}>
+				<article className={styles.filter} key={i}>
 					<div className={styles.filterField}>
 						<span>{dimensionNames[filter.dimension]}</span>
 						<span className={styles.filterType}>

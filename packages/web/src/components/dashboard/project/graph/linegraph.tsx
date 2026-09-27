@@ -1,8 +1,9 @@
+import tooltipStyles from "../hover-tooltip.module.css";
 import styles from "./linegraph.module.css";
 
 import { useEffect, useRef, useState } from "react";
 import { extent } from "d3-array";
-import { easeCubic } from "d3-ease";
+import { easeCubic, easeLinear } from "d3-ease";
 import { scaleLinear, scaleTime } from "d3-scale";
 import { select } from "d3-selection";
 import { area, line } from "d3-shape";
@@ -15,6 +16,7 @@ import type { Metric } from "@/constants";
 import { formatMetricVal, formatMetricValEvenly } from "@/utils";
 import type { DataPoint } from ".";
 import { axisBottom, axisLeft } from "./axis";
+import { getGraphRenderData } from "./render-data";
 
 export type GraphRange = "year" | "month" | "day" | "hour";
 type DateDisplayRange = GraphRange | "day+hour" | "day+hour+year" | "day+year";
@@ -76,17 +78,6 @@ const getTooltipDateRange = (
 	return isSameYear(start, end) ? "day+hour" : "day+hour+year";
 };
 
-const getIncompleteBucketEnd = (data: DataPoint[], range: DateRange) => {
-	if (!range.endsToday() || data.length === 0) return undefined;
-
-	const lastPoint = data[data.length - 1];
-	const now = new Date();
-	const bucketEnd = range.getGraphBucketEnd(lastPoint.x);
-	if (now >= bucketEnd || now <= lastPoint.x) return undefined;
-
-	return bucketEnd;
-};
-
 const pickAxisTicks = (data: DataPoint[], count: number): Date[] => {
 	if (data.length <= count) return data.map((point) => point.x);
 
@@ -97,19 +88,6 @@ const pickAxisTicks = (data: DataPoint[], count: number): Date[] => {
 	}
 
 	return [...ticks].sort((a, b) => a - b).map((index) => data[index].x);
-};
-
-const getGraphRenderData = (data: DataPoint[], range: DateRange) => {
-	const incompleteBucketEnd = getIncompleteBucketEnd(data, range);
-	return {
-		domainMaxX: data[data.length - 1]?.x ?? new Date(),
-		solidLineData: incompleteBucketEnd ? data.slice(0, -1) : data,
-		dottedLineData: incompleteBucketEnd
-			? data.length > 1
-				? [data[data.length - 2], data[data.length - 1]]
-				: [data[data.length - 1]]
-			: [],
-	};
 };
 
 export const LineGraph = ({
@@ -306,8 +284,9 @@ export const LineGraph = ({
 		if (!svgElement || !dimensions || data.length === 0) return;
 
 		const svg = select(svgElement);
-		const tooltip = svg.selectChild("#tooltip");
-		const needle = svg.selectChild("#needle");
+		const cursor = svg.selectChild("#cursor");
+		const tooltip = cursor.selectChild("#tooltip");
+		const needle = cursor.selectChild("#needle");
 		const tooltipElement = tooltip.node() as SVGForeignObjectElement | null;
 		const tooltipHeight = Number(tooltipElement?.getAttribute("height")) || 100;
 		const { domainMaxX } = getGraphRenderData(data, range);
@@ -315,6 +294,10 @@ export const LineGraph = ({
 		const xAxis = scaleTime().domain([minX, domainMaxX]).range([0, dimensions.width]);
 		const dateRange = getTooltipDateRange(minX, domainMaxX, range);
 		let animationFrame: number | undefined;
+		let previousSide: "left" | "right" | undefined;
+		let previousOffset: number | undefined;
+		let previousSnappedX: number | undefined;
+		const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 		const mouseMove = (event: MouseEvent) => {
 			window.cancelAnimationFrame(animationFrame ?? 0);
@@ -324,23 +307,8 @@ export const LineGraph = ({
 				const svgRect = svgElement.getBoundingClientRect();
 				const svgWidth = svgRect.width;
 				const svgHeight = svgRect.height;
-				const tooltipWidth = Math.min(220, Math.max(0, svgWidth - tooltipPadding * 2));
+				const tooltipWidth = Math.min(190, Math.max(0, svgWidth - tooltipPadding * 2));
 				tooltipElement?.setAttribute("width", String(tooltipWidth));
-				const isLeftSide = event.clientX - svgRect.left < svgWidth / 2;
-				const tooltipX = isLeftSide
-					? event.clientX - svgRect.left + tooltipPadding
-					: event.clientX - svgRect.left - tooltipWidth - tooltipPadding;
-				const clampedX = Math.max(tooltipPadding, Math.min(tooltipX, svgWidth - tooltipWidth - tooltipPadding));
-				const tooltipY = Math.max(
-					tooltipPadding,
-					Math.min(
-						event.clientY - svgRect.top + tooltipPadding - tooltipHeight / 3,
-						svgHeight - tooltipHeight - tooltipPadding,
-					),
-				);
-
-				tooltip.attr("x", clampedX).attr("y", tooltipY).attr("opacity", 1);
-
 				const x = event.clientX - svgRect.left - 1;
 				const point = data.reduce((closestPoint, currentPoint) => {
 					const closestDistance = Math.abs(xAxis(closestPoint.x) - x);
@@ -349,7 +317,43 @@ export const LineGraph = ({
 				});
 
 				const snappedX = xAxis(point.x);
-				needle.attr("d", `M ${snappedX} 0 L ${snappedX} ${svgHeight - 40}`).attr("opacity", 1);
+				const side = snappedX < svgWidth / 2 ? "right" : "left";
+				const tooltipX = side === "right" ? snappedX + tooltipPadding : snappedX - tooltipWidth - tooltipPadding;
+				const clampedX = Math.max(tooltipPadding, Math.min(tooltipX, svgWidth - tooltipWidth - tooltipPadding));
+				const offset = clampedX - snappedX;
+				const tooltipY = Math.max(
+					tooltipPadding,
+					Math.min(
+						event.clientY - svgRect.top + tooltipPadding - tooltipHeight / 3,
+						svgHeight - tooltipHeight - tooltipPadding,
+					),
+				);
+				const wasVisible = cursor.attr("opacity") !== "0";
+				tooltip.attr("y", tooltipY);
+				if (wasVisible && previousSide && side !== previousSide && !reducedMotion) {
+					tooltip
+						.interrupt()
+						.transition()
+						.duration(90)
+						.attr("opacity", 0)
+						.on("end", () => {
+							tooltip.attr("x", offset).transition().duration(130).attr("opacity", 1);
+						});
+				} else if (!wasVisible || offset !== previousOffset) {
+					tooltip.interrupt().attr("x", offset).attr("opacity", 1);
+				}
+				previousSide = side;
+				previousOffset = offset;
+				needle.attr("d", `M 0 0 L 0 ${svgHeight - 40}`);
+				if (!wasVisible || snappedX !== previousSnappedX) {
+					cursor.interrupt().attr("opacity", 1);
+					if (wasVisible && !reducedMotion) {
+						cursor.transition().duration(70).ease(easeLinear).attr("transform", `translate(${snappedX}, 0)`);
+					} else {
+						cursor.attr("transform", `translate(${snappedX}, 0)`);
+					}
+				}
+				previousSnappedX = snappedX;
 				tooltip.select(".date").text(formatDate(new Date(point.x), dateRange));
 				tooltip.select(".value").text(formatMetricVal(point.y, metric));
 			});
@@ -357,8 +361,11 @@ export const LineGraph = ({
 
 		const mouseLeave = () => {
 			window.cancelAnimationFrame(animationFrame ?? 0);
-			tooltip.interrupt().attr("opacity", 0);
-			needle.interrupt().attr("opacity", 0);
+			cursor.interrupt().attr("opacity", 0);
+			tooltip.interrupt().attr("opacity", 1);
+			previousSide = undefined;
+			previousOffset = undefined;
+			previousSnappedX = undefined;
 		};
 
 		svgElement.addEventListener("mousemove", mouseMove);
@@ -368,8 +375,10 @@ export const LineGraph = ({
 			window.cancelAnimationFrame(animationFrame ?? 0);
 			svgElement.removeEventListener("mousemove", mouseMove);
 			svgElement.removeEventListener("mouseleave", mouseLeave);
+			cursor.interrupt();
 			tooltip.interrupt();
-			needle.interrupt();
+			cursor.attr("opacity", 0);
+			tooltip.attr("opacity", 1);
 		};
 	}, [data, dimensions, metric, range]);
 
@@ -381,7 +390,6 @@ export const LineGraph = ({
 				role="img"
 				aria-label={`${title} time series`}
 			>
-				<title>{title} graph</title>
 				<defs>
 					<linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
 						<stop offset="0%" stopColor="var(--graph-line-color)" stopOpacity="0.25" />
@@ -392,15 +400,17 @@ export const LineGraph = ({
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
 				<path id="line" fill="none" stroke="var(--graph-line-color)" />
 				<path id="line-dotted" fill="none" stroke="var(--graph-line-color)" strokeDasharray="5, 5" />
-				<path id="needle" opacity="0" fill="none" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
-				<foreignObject id="tooltip" width="220" height="100" opacity="0">
-					<div data-theme="dark" className={styles.tooltip}>
-						<h2>{title}</h2>
-						<h3>
-							<span className="date" /> <span className="value" />
-						</h3>
-					</div>
-				</foreignObject>
+				<g id="cursor" opacity="0">
+					<path id="needle" fill="none" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
+					<foreignObject id="tooltip" width="190" height="100">
+						<div className={tooltipStyles.tooltip}>
+							<h2 className="date">{title}</h2>
+							<h3>
+								<span>{title}</span> <span className="value" />
+							</h3>
+						</div>
+					</foreignObject>
+				</g>
 				<g id="y-axis" />
 				<g id="x-axis" />
 			</svg>

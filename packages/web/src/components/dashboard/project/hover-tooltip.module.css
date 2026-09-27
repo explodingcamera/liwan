@@ -1,0 +1,45 @@
+.tooltip {
+  box-sizing: border-box;
+  min-width: 7rem;
+  max-width: 12rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--field-border);
+  border-radius: var(--control-radius);
+  background: light-dark(var(--surface), var(--metric-button-hover-background));
+
+  h2 {
+    margin: 0 0 0.3rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    color: var(--text-strong);
+    font-size: 1rem;
+    font-weight: 600;
+
+    span {
+      font-weight: 500;
+    }
+
+    span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span:last-child {
+      flex: none;
+    }
+  }
+}

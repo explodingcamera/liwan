@@ -1,3 +1,4 @@
+import tooltipStyles from "../hover-tooltip.module.css";
 import styles from "./map.module.css";
 
 import type { CSSProperties, MouseEvent } from "react";
@@ -142,10 +143,10 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 			{currentLocation && (
 				<FloatingPortal>
 					<div ref={refs.setFloating} className={styles.tooltipContainer} style={floatingStyles}>
-						<div className={styles.tooltip} data-theme="dark">
-							<h2>{metricNames[metric]}</h2>
+						<div className={tooltipStyles.tooltip}>
+							<h2>{currentTooltip?.name}</h2>
 							<h3>
-								{currentTooltip?.name} <span>{currentTooltip?.value}</span>
+								<span>{metricNames[metric]}</span> <span>{currentTooltip?.value}</span>
 							</h3>
 						</div>
 					</div>

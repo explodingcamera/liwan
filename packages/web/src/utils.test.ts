@@ -37,8 +37,8 @@ describe("utils", () => {
 		expect(formatMetricVal(1, "avg_time_on_site")).toBe("00:01");
 		expect(formatMetricVal(60, "avg_time_on_site")).toBe("01:00");
 		expect(formatMetricVal(3600, "avg_time_on_site")).toBe("01:00:00");
-		expect(formatMetricVal(1, "bounce_rate")).toBe("100%");
-		expect(formatMetricVal(0.92, "bounce_rate")).toBe("92%");
+		expect(formatMetricVal(1, "bounce_rate")).toBe("100.0%");
+		expect(formatMetricVal(0.92, "bounce_rate")).toBe("92.0%");
 		expect(formatMetricVal(0.999, "bounce_rate")).toBe("99.9%");
 	});
 

@@ -3,19 +3,19 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngExt;
 
 const PATHS: &[&str] = &["/", "/about", "/contact", "/pricing", "/blog", "/login", "/signup"];
-const CUSTOM_EVENTS: &[&str] = &[
-    "signup",
-    "login",
-    "purchase",
-    "checkout_started",
-    "add_to_cart",
-    "download",
-    "newsletter_subscribed",
-    "trial_started",
-    "contact_form_submitted",
-    "video_played",
-    "search",
-    "share",
+const CUSTOM_EVENTS: &[(&str, &[&str])] = &[
+    ("signup", &["/signup"]),
+    ("login", &["/login"]),
+    ("purchase", &["/pricing"]),
+    ("checkout_started", &["/pricing"]),
+    ("add_to_cart", &["/pricing"]),
+    ("download", &["/blog"]),
+    ("newsletter_subscribed", &["/blog", "/"]),
+    ("trial_started", &["/pricing", "/signup"]),
+    ("contact_form_submitted", &["/contact"]),
+    ("video_played", &["/blog"]),
+    ("search", &["/", "/blog"]),
+    ("share", &["/blog"]),
 ];
 const REFERRERS: &[&str] = &["", "google.com", "twitter.com", "liwan.dev", "example.com", "henrygressmann.de"];
 const PLATFORMS: &[&str] = &["", "Windows", "macOS", "Linux", "Android", "iOS"];
@@ -116,7 +116,13 @@ pub fn random_events(
         current_visitor_idx = Some(visitor_idx);
         generated += 1;
 
-        let path = random_el(PATHS, 0.8);
+        let (event, path) = if rng.random_bool(0.1) {
+            // Favor common events while leaving rare events in the demo data.
+            let (name, paths) = *random_el(CUSTOM_EVENTS, -1.5);
+            (name, paths[rng.random_range(0..paths.len())])
+        } else {
+            ("pageview", *random_el(PATHS, 0.8))
+        };
         let referrer = random_el(REFERRERS, 0.9);
         let platform = random_el(PLATFORMS, -0.3);
         let browser = random_el(BROWSERS, 0.0);
@@ -131,11 +137,7 @@ pub fn random_events(
             country: if country.is_empty() { None } else { Some(country.to_string()) },
             created_at: current_time,
             entity_id: entity_id.clone(),
-            event: if generated.is_multiple_of(10) {
-                CUSTOM_EVENTS[rng.random_range(0..CUSTOM_EVENTS.len())].to_string()
-            } else {
-                "pageview".to_string()
-            },
+            event: event.to_string(),
             fqdn: Some(fqdn.clone()),
             mobile: Some(mobile),
             platform: if platform.is_empty() { None } else { Some(platform.to_string()) },
@@ -182,6 +184,15 @@ mod tests {
         let custom_events: std::collections::HashSet<_> =
             events.iter().filter(|event| event.event != "pageview").map(|event| event.event.as_str()).collect();
         assert!(custom_events.len() > 6, "seed should populate the events details view");
+        let signups = events.iter().filter(|event| event.event == "signup").count();
+        let shares = events.iter().filter(|event| event.event == "share").count();
+        assert!(signups > shares * 3, "seed should have noticeably different event counts");
+        for event in &events {
+            if event.event != "pageview" {
+                let (_, paths) = CUSTOM_EVENTS.iter().find(|(name, _)| *name == event.event).unwrap();
+                assert!(paths.contains(&event.path.as_deref().unwrap()), "{} on unexpected path", event.event);
+            }
+        }
 
         assert!(
             got >= (want as f64 * 0.7) as usize && got <= (want as f64 * 1.3) as usize,

@@ -23,7 +23,6 @@
   --focus: light-dark(#4a5873, #b0b9d0);
   --danger: light-dark(#a83232, #df7772);
   --shadow-card: 0 0 13px light-dark(transparent, #15233609);
-  --shadow-surface: var(--shadow-card), 0 0 0 1px var(--surface-outline);
   --radius: 0.6rem;
   --control-radius: 0.4rem;
   --graph-line-color: light-dark(#2563eb, #a6cee3);

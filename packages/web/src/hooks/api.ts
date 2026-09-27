@@ -67,7 +67,7 @@ export const useCustomEvents = ({
 	filters: DimensionFilter[];
 	enabled?: boolean;
 }) => {
-	const { data, isLoading, error } = useQuery({
+	const { data, isFetching, error } = useQuery({
 		queryKey: ["custom_events", projectId, range.cacheKey(), filters],
 		enabled: projectId !== undefined && enabled,
 		refetchInterval: range.endsToday() ? 60_000 : undefined,
@@ -83,7 +83,7 @@ export const useCustomEvents = ({
 					return result;
 				}),
 	});
-	return { data, isLoading, error };
+	return { data, isLoading: isFetching, error };
 };
 
 export const useEntities = () => {
@@ -131,7 +131,7 @@ export const useDimension = ({
 	isLoading: boolean;
 	error: unknown;
 } => {
-	const { data, isLoading, error } = useQuery({
+	const { data, isFetching, error } = useQuery({
 		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
 		queryKey: ["dimension", project.id, dimension, metric, range.cacheKey(), filters, eventName],
 		queryFn: () =>
@@ -162,8 +162,8 @@ export const useDimension = ({
 			metric === "bounce_rate" ? a.value - b.value : b.value - a.value,
 		);
 		const order = sortedData?.map((d) => d.dimensionValue);
-		return { data: sortedData, biggest, order, isLoading, error };
-	}, [data, isLoading, error, metric]);
+		return { data: sortedData, biggest, order, isLoading: isFetching, error };
+	}, [data, isFetching, error, metric]);
 };
 export const useProjectGraph = ({
 	projectId,

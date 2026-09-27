@@ -24,7 +24,7 @@ export const getUsername = () =>
 	typeof document !== "undefined" ? document.cookie.match(/liwan-username=(.*?)(;|$)/)?.[1] : undefined;
 
 export const formatMetricValEvenly = (value: number, metric: Metric, biggest: number) => {
-	if (metric === "bounce_rate") return formatPercent(Math.floor(value * 1000) / 10);
+	if (metric === "bounce_rate") return `${(Math.floor(value * 1000) / 10).toFixed(1)}%`;
 	if (metric === "avg_time_on_site") return formatDuration(value);
 	if (value === 0) return "0";
 
@@ -40,7 +40,7 @@ export const formatMetricValEvenly = (value: number, metric: Metric, biggest: nu
 };
 
 export const formatMetricVal = (value: number, metric: Metric) => {
-	if (metric === "bounce_rate") return formatPercent(Math.floor(value * 1000) / 10);
+	if (metric === "bounce_rate") return `${(Math.floor(value * 1000) / 10).toFixed(1)}%`;
 	if (metric === "avg_time_on_site") return formatDuration(value);
 
 	if (value > 999999) {

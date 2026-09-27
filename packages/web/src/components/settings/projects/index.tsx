@@ -39,14 +39,13 @@ const displayLabels: Record<DisplayOverride, string> = {
 	hide: "Hidden",
 };
 const displayDimensionGroups = [
-	{ label: "Pages", dimensions: ["url", "url_entry", "url_exit", "fqdn"] },
 	{
 		label: "Campaigns",
 		dimensions: ["referrer", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"],
 	},
-	{ label: "Geography", dimensions: ["country", "city"] },
-	{ label: "Technology", dimensions: ["platform", "browser"] },
-	{ label: "Device", dimensions: ["mobile", "screen_width", "orientation"] },
+	{ label: "Device", dimensions: ["platform", "browser", "mobile", "screen_width", "orientation"] },
+	{ label: "Pages", dimensions: ["url", "url_entry", "url_exit", "fqdn"] },
+	{ label: "Other", dimensions: ["country", "city"] },
 ] as const satisfies readonly {
 	label: string;
 	dimensions: readonly Dimension[];
@@ -338,29 +337,6 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 								</div>
 							</fieldset>
 							<fieldset>
-								<legend>Cards</legend>
-								<div className={styles.displayRow}>
-									<span>Custom events</span>
-									<ToggleGroup
-										aria-label="Custom events display"
-										className={styles.segmented}
-										value={[settings.metricDisplayOverrides.custom_events ?? "auto"]}
-										onValueChange={(values) => {
-											const next = values.at(-1);
-											if ((displayOverrides as readonly string[]).includes(next ?? "")) {
-												setMetricDisplay("custom_events", next as DisplayOverride);
-											}
-										}}
-									>
-										{displayOverrides.map((display) => (
-											<Toggle key={display} value={display}>
-												{displayLabels[display]}
-											</Toggle>
-										))}
-									</ToggleGroup>
-								</div>
-							</fieldset>
-							<fieldset>
 								<legend>Dimensions</legend>
 								<div className={styles.dimensionGroups}>
 									{displayDimensionGroups.map((group) => (
@@ -388,6 +364,28 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 													</ToggleGroup>
 												</div>
 											))}
+											{group.label === "Other" && (
+												<div className={styles.displayRow}>
+													<span>Custom Events</span>
+													<ToggleGroup
+														aria-label="Custom Events display"
+														className={styles.segmented}
+														value={[settings.metricDisplayOverrides.custom_events ?? "auto"]}
+														onValueChange={(values) => {
+															const next = values.at(-1);
+															if ((displayOverrides as readonly string[]).includes(next ?? "")) {
+																setMetricDisplay("custom_events", next as DisplayOverride);
+															}
+														}}
+													>
+														{displayOverrides.map((display) => (
+															<Toggle key={display} value={display}>
+																{displayLabels[display]}
+															</Toggle>
+														))}
+													</ToggleGroup>
+												</div>
+											)}
 										</section>
 									))}
 								</div>

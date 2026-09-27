@@ -73,13 +73,12 @@
   display: flex;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--surface-outline);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  cursor: default;
 
   &:hover {
-    background: var(--surface-hover);
+    background: light-dark(color-mix(in srgb, var(--surface) 65%, var(--page)), var(--surface-hover));
   }
 
   span {

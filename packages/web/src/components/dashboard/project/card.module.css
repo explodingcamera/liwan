@@ -26,16 +26,17 @@ button.card {
   margin: 0;
   padding: 0.55rem 0.6rem 0.25rem;
 
+  border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
 
   &[data-active="true"] {
     background: var(--metric-button-active-background);
-    box-shadow: inset 0 0 0 1px var(--surface-outline);
+    border-color: var(--metric-button-border, var(--surface-outline));
   }
 
   &:hover:not([data-active="true"]) {
     background: var(--metric-button-hover-background);
-    box-shadow: inset 0 0 0 1px var(--surface-outline);
+    border-color: var(--metric-button-border, var(--surface-outline));
   }
 }

@@ -59,11 +59,11 @@
   max-height: min(85vh, calc(100dvh - 2rem));
   margin: 0;
   padding: 1.25rem;
-  border: none;
+  border: 1px solid light-dark(var(--field-border-hover), transparent);
   background: var(--surface-raised);
   color: var(--text);
   border-radius: 0.8rem;
-  box-shadow: 0 1.25rem 4rem rgb(0 0 0 / 35%);
+  box-shadow: 0 1.25rem 4rem light-dark(transparent, rgb(0 0 0 / 35%));
   animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: auto;
 }
