@@ -208,7 +208,7 @@ impl Liwan {
 impl Liwan {
     pub fn seed_database(&self, count_per_entity: usize) -> Result<()> {
         use chrono::{Days, Utc};
-        use models::UserRole;
+        use models::{ApiKeyExpiration, ApiKeyScope, ApiPermission, UserRole};
 
         let entities = vec![
             ("entity-1", "Entity 1", "example.com", vec!["public-project".to_string(), "private-project".to_string()]),
@@ -247,6 +247,15 @@ impl Liwan {
             self.events.append(events)?;
             tracing::info!("Seeded entity {} in {:?}", entity_id, now.elapsed());
         }
+
+        let (key, _) = self.api_keys.create(
+            "Expired example",
+            &ApiKeyScope::Selected(vec!["entity-1".into()]),
+            &ApiKeyScope::Selected(vec![]),
+            &[ApiPermission::EventsBatch],
+            ApiKeyExpiration::SevenDays,
+        )?;
+        self.api_keys.expire_for_seed(&key.id)?;
 
         Ok(())
     }

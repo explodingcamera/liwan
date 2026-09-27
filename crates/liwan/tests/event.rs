@@ -1,6 +1,6 @@
 mod common;
 use anyhow::Result;
-use liwan::app::models::{ApiPermission, DisplayOverride, Entity};
+use liwan::app::models::{ApiKeyScope, ApiPermission, DisplayOverride, Entity, Project};
 use liwan::config::Config;
 use liwan::utils::ip_headers::{ClientIpHeaderSource, TrustedProxy};
 use serde_json::json;
@@ -250,7 +250,13 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
     let (queues, mut receivers) = common::events();
     let client = common::TestClient::new(app.clone(), queues);
     app.entities.create(&Entity { id: "server".into(), display_name: "Server".into() }, &[])?;
-    let (key, plaintext) = app.api_keys.create("test", &["server".into()], &[ApiPermission::EventsBatch])?;
+    let (key, plaintext) = app.api_keys.create(
+        "test",
+        &liwan::app::models::ApiKeyScope::Selected(vec!["server".into()]),
+        &liwan::app::models::ApiKeyScope::Selected(vec![]),
+        &[ApiPermission::EventsBatch],
+        liwan::app::models::ApiKeyExpiration::Never,
+    )?;
     let headers = || vec![("authorization".to_string(), format!("Bearer {plaintext}"))];
     let created_at = "2000-01-01T00:00:00+00:00";
 
@@ -293,7 +299,33 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
         .await
         .assert_status_forbidden();
 
-    app.api_keys.revoke(&key.id)?;
+    app.projects.create(
+        &Project { id: "group".into(), display_name: "Group".into(), public: false, unlisted: false, secret: None },
+        &["server".into()],
+    )?;
+    app.api_keys.update(
+        &key.id,
+        "test",
+        &ApiKeyScope::Selected(vec![]),
+        &ApiKeyScope::Selected(vec!["group".into()]),
+        &[ApiPermission::EventsBatch],
+    )?;
+    let batch = || json!({ "entityId": "server", "events": [{ "name": "pageview", "url": "https://example.com" }] });
+    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status(http::StatusCode::ACCEPTED);
+    receivers.events.recv().await.expect("project-scoped event should be queued");
+    app.projects.update_entities("group", &[])?;
+    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status_forbidden();
+    app.projects.update_entities("group", &["server".into()])?;
+    app.api_keys.update(
+        &key.id,
+        "test",
+        &ApiKeyScope::Selected(vec![]),
+        &ApiKeyScope::Selected(vec!["group".into()]),
+        &[],
+    )?;
+    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status_forbidden();
+
+    app.api_keys.delete(&key.id)?;
     client
         .post_with_headers(
             "/api/v1/events",
@@ -312,7 +344,13 @@ async fn full_queue_rejects_the_complete_batch() -> Result<()> {
     let (exits, _exit_receiver) = tokio::sync::mpsc::channel(1);
     let client = common::TestClient::new(app.clone(), liwan::web::EventQueues { events, exits });
     app.entities.create(&Entity { id: "server".into(), display_name: "Server".into() }, &[])?;
-    let (_, plaintext) = app.api_keys.create("test", &["server".into()], &[ApiPermission::EventsBatch])?;
+    let (_, plaintext) = app.api_keys.create(
+        "test",
+        &liwan::app::models::ApiKeyScope::Selected(vec!["server".into()]),
+        &liwan::app::models::ApiKeyScope::Selected(vec![]),
+        &[ApiPermission::EventsBatch],
+        liwan::app::models::ApiKeyExpiration::Never,
+    )?;
 
     let response = client
         .post_with_headers(

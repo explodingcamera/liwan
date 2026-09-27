@@ -20,7 +20,7 @@ async fn admin_manages_api_keys() -> Result<()> {
     let created = client
         .post_with_headers(
             "/api/dashboard/api-keys",
-            json!({ "displayName": "Production", "entities": ["service"], "permissions": ["events:batch"] }),
+            json!({ "displayName": "Production", "entities": ["service"], "projects": [], "permissions": ["events:batch"], "expiration": "never" }),
             headers(),
         )
         .await;
@@ -36,10 +36,22 @@ async fn admin_manages_api_keys() -> Result<()> {
     assert_eq!(listed["keys"].as_array().unwrap().len(), 1);
     assert!(listed.to_string().find(plaintext).is_none());
 
+    app.users.create("viewer", "testtest", UserRole::User, &[])?;
+    let viewer_cookies = common::login(&client, "viewer", "testtest").await;
+    client
+        .post_with_headers(
+            &format!("/api/dashboard/api-keys/{key_id}/regenerate"),
+            json!({"expiration": "never"}),
+            vec![("cookie".to_string(), common::cookie_header(&viewer_cookies))],
+        )
+        .await
+        .assert_status_forbidden();
+    assert!(app.api_keys.authenticate(plaintext)?.is_some());
+
     client
         .put_with_headers(
             &format!("/api/dashboard/api-keys/{key_id}"),
-            json!({ "displayName": "Production API", "entities": ["other"], "permissions": ["events:batch"] }),
+            json!({ "displayName": "Production API", "entities": ["other"], "projects": [], "permissions": [] }),
             headers(),
         )
         .await
@@ -47,9 +59,25 @@ async fn admin_manages_api_keys() -> Result<()> {
     let access = app.api_keys.authenticate(plaintext)?.expect("valid API key");
     assert!(!access.can_access_entity("service"));
     assert!(access.can_access_entity("other"));
+    assert!(!access.has_permission(liwan::app::models::ApiPermission::EventsBatch));
+    let regenerated = client
+        .post_with_headers(
+            &format!("/api/dashboard/api-keys/{key_id}/regenerate"),
+            json!({"expiration": "7_days"}),
+            headers(),
+        )
+        .await;
+    regenerated.assert_status_success();
+    let regenerated: Value = regenerated.json();
+    assert_eq!(regenerated["key"]["id"], key_id);
+    assert!(regenerated["key"]["expiresAt"].is_string());
+    assert!(app.api_keys.authenticate(plaintext)?.is_none());
+    let replacement = regenerated["plaintext"].as_str().unwrap();
+    assert!(app.api_keys.authenticate(replacement)?.is_some());
 
     client.delete_with_headers(&format!("/api/dashboard/api-keys/{key_id}"), headers()).await.assert_status_success();
     assert!(app.api_keys.authenticate(plaintext)?.is_none());
+    assert!(app.api_keys.authenticate(replacement)?.is_none());
     Ok(())
 }
 

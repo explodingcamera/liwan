@@ -14,8 +14,8 @@ use crate::{
     PASSWORD_MIN_LENGTH,
     app::{
         models::{
-            ApiPermission, CollectionSettings, Entity, EntityCollectionSettings, Project, ProjectDisplaySettings,
-            ResolvedCollectionSettings, UserRole,
+            ApiKeyExpiration, ApiKeyScope, ApiPermission, CollectionSettings, Entity, EntityCollectionSettings,
+            Project, ProjectDisplaySettings, ResolvedCollectionSettings, UserRole,
         },
         reports::{Dimension, Metric},
     },
@@ -49,7 +49,8 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/api-keys", get(api_keys_handler))
         .api_route("/api-keys", post(api_key_create_handler))
         .api_route("/api-keys/{key_id}", put(api_key_update_handler))
-        .api_route("/api-keys/{key_id}", delete(api_key_revoke_handler))
+        .api_route("/api-keys/{key_id}", delete(api_key_delete_handler))
+        .api_route("/api-keys/{key_id}/regenerate", post(api_key_regenerate_handler))
         .api_route("/entity/{entity_id}", delete(entity_delete_handler))
         .api_route("/settings", get(settings_handler))
         .api_route("/settings", put(settings_update_handler))
@@ -212,11 +213,12 @@ struct EntitiesResponse {
 struct ApiKeyResponse {
     id: String,
     display_name: String,
-    entities: Vec<String>,
+    entities: ApiKeyScope,
+    projects: ApiKeyScope,
     permissions: Vec<ApiPermission>,
     created_at: chrono::DateTime<chrono::Utc>,
     last_used_at: Option<chrono::DateTime<chrono::Utc>>,
-    revoked_at: Option<chrono::DateTime<chrono::Utc>>,
+    expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -228,8 +230,10 @@ struct ApiKeysResponse {
 #[serde(rename_all = "camelCase")]
 struct CreateApiKeyRequest {
     display_name: String,
-    entities: Vec<String>,
+    entities: ApiKeyScope,
+    projects: ApiKeyScope,
     permissions: Vec<ApiPermission>,
+    expiration: ApiKeyExpiration,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -243,8 +247,14 @@ struct CreateApiKeyResponse {
 #[serde(rename_all = "camelCase")]
 struct UpdateApiKeyRequest {
     display_name: String,
-    entities: Vec<String>,
+    entities: ApiKeyScope,
+    projects: ApiKeyScope,
     permissions: Vec<ApiPermission>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+struct RegenerateApiKeyRequest {
+    expiration: ApiKeyExpiration,
 }
 
 impl From<crate::app::models::ApiKey> for ApiKeyResponse {
@@ -253,10 +263,11 @@ impl From<crate::app::models::ApiKey> for ApiKeyResponse {
             id: key.id,
             display_name: key.display_name,
             entities: key.entities,
+            projects: key.projects,
             permissions: key.permissions,
             created_at: key.created_at,
             last_used_at: key.last_used_at,
-            revoked_at: key.revoked_at,
+            expires_at: key.expires_at,
         }
     }
 }
@@ -653,7 +664,7 @@ async fn api_key_create_handler(
     }
     let (key, plaintext) = app
         .api_keys
-        .create(&request.display_name, &request.entities, &request.permissions)
+        .create(&request.display_name, &request.entities, &request.projects, &request.permissions, request.expiration)
         .http_err("Failed to create API key", StatusCode::BAD_REQUEST)?;
     tracing::info!(key_id = key.id, actor = user.username, "Created API key");
     Ok((
@@ -675,7 +686,7 @@ async fn api_key_update_handler(
     }
     if !app
         .api_keys
-        .update(&key_id, &request.display_name, &request.entities, &request.permissions)
+        .update(&key_id, &request.display_name, &request.entities, &request.projects, &request.permissions)
         .http_err("Failed to update API key", StatusCode::BAD_REQUEST)?
     {
         http_bail!(StatusCode::NOT_FOUND, "API key not found")
@@ -684,7 +695,7 @@ async fn api_key_update_handler(
     Ok(empty_response())
 }
 
-async fn api_key_revoke_handler(
+async fn api_key_delete_handler(
     app: State<RouterState>,
     Path(key_id): Path<String>,
     Auth(user): Auth,
@@ -692,11 +703,35 @@ async fn api_key_revoke_handler(
     if user.role != UserRole::Admin {
         http_bail!(StatusCode::FORBIDDEN, "Forbidden")
     }
-    if !app.api_keys.revoke(&key_id).http_err("Failed to revoke API key", StatusCode::INTERNAL_SERVER_ERROR)? {
+    if !app.api_keys.delete(&key_id).http_err("Failed to delete API key", StatusCode::INTERNAL_SERVER_ERROR)? {
         http_bail!(StatusCode::NOT_FOUND, "API key not found")
     }
-    tracing::info!(key_id, actor = user.username, "Revoked API key");
+    tracing::info!(key_id, actor = user.username, "Deleted API key");
     Ok(empty_response())
+}
+
+async fn api_key_regenerate_handler(
+    app: State<RouterState>,
+    Path(key_id): Path<String>,
+    Auth(user): Auth,
+    Json(request): Json<RegenerateApiKeyRequest>,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<CreateApiKeyResponse>>> {
+    if user.role != UserRole::Admin {
+        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    }
+    let Some((key, plaintext)) = app
+        .api_keys
+        .regenerate(&key_id, request.expiration)
+        .http_err("Failed to regenerate API key", StatusCode::INTERNAL_SERVER_ERROR)?
+    else {
+        http_bail!(StatusCode::NOT_FOUND, "API key not found")
+    };
+    tracing::info!(key_id, actor = user.username, "Regenerated API key");
+    Ok((
+        [(http::header::CACHE_CONTROL, "private, no-store")],
+        Json(CreateApiKeyResponse { key: key.into(), plaintext }),
+    )
+        .into())
 }
 
 async fn project_delete_handler(

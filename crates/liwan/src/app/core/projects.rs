@@ -142,6 +142,7 @@ impl LiwanProjects {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from project_settings where project_id = ?", rusqlite::params![id])?;
+        tx.execute("delete from api_key_projects where project_id = ?", rusqlite::params![id])?;
         tx.execute("delete from projects where id = ?", rusqlite::params![id])?;
         tx.execute("delete from project_entities where project_id = ?", rusqlite::params![id])?;
         tx.commit()?;

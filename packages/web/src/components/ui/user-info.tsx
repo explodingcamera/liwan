@@ -38,7 +38,7 @@ export const LoginButton = () => {
 							<UserIcon size="16" /> My Account
 						</Menu.LinkItem>
 						<Menu.LinkItem className={menuStyles.item} href="/settings/projects">
-							<SettingsIcon size="16" /> Admin
+							<SettingsIcon size="16" /> Settings
 						</Menu.LinkItem>
 						<Menu.LinkItem className={menuStyles.item} href="https://liwan.dev" target="_blank" rel="noreferrer">
 							<HelpCircle size="16" /> Help

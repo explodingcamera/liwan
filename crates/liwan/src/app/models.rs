@@ -59,17 +59,58 @@ pub struct Entity {
 pub struct ApiKey {
     pub id: String,
     pub display_name: String,
-    pub entities: Vec<String>,
+    pub entities: ApiKeyScope,
+    pub projects: ApiKeyScope,
     pub permissions: Vec<ApiPermission>,
     pub created_at: DateTime<Utc>,
     pub last_used_at: Option<DateTime<Utc>>,
-    pub revoked_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum ApiKeyScope {
+    All(ApiKeyAll),
+    Selected(Vec<String>),
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum ApiKeyAll {
+    All,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
 pub enum ApiPermission {
     #[serde(rename = "events:batch")]
     EventsBatch,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ApiKeyExpiration {
+    Never,
+    #[serde(rename = "7_days")]
+    SevenDays,
+    #[serde(rename = "30_days")]
+    ThirtyDays,
+    #[serde(rename = "60_days")]
+    SixtyDays,
+    #[serde(rename = "90_days")]
+    NinetyDays,
+}
+
+impl ApiKeyExpiration {
+    pub fn expires_at(self) -> Option<DateTime<Utc>> {
+        let days = match self {
+            Self::Never => return None,
+            Self::SevenDays => 7,
+            Self::ThirtyDays => 30,
+            Self::SixtyDays => 60,
+            Self::NinetyDays => 90,
+        };
+        Some(Utc::now() + chrono::Duration::days(days))
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Default)]

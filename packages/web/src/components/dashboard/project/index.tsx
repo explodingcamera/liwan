@@ -165,7 +165,7 @@ export const Project = () => {
 
 	if (!project)
 		return (
-			<div role="status" aria-label="Loading project">
+			<div className={styles.loading} role="status" aria-label="Loading project">
 				<LoadingSpinner />
 			</div>
 		);

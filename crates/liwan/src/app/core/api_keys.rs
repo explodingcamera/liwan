@@ -4,19 +4,21 @@ use anyhow::{Result, bail};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
 use rand::RngExt;
+use rand::distr::{Alphanumeric, SampleString};
 use rusqlite::{OptionalExtension, Transaction};
 
 use crate::app::{
     SqlitePool,
-    models::{ApiKey, ApiPermission},
+    models::{ApiKey, ApiKeyAll, ApiKeyExpiration, ApiKeyScope, ApiPermission},
 };
 
 const KEY_PREFIX: &str = "liw_";
 
-/// The permissions and entities assigned to an authenticated API key.
+/// The permissions and entity access assigned to an authenticated API key.
 pub struct ApiKeyAccess {
     pub id: String,
     entities: HashSet<String>,
+    all_entities: bool,
     permissions: HashSet<ApiPermission>,
 }
 
@@ -26,7 +28,7 @@ impl ApiKeyAccess {
     }
 
     pub fn can_access_entity(&self, entity_id: &str) -> bool {
-        self.entities.contains(entity_id)
+        self.entities.contains(entity_id) || self.all_entities
     }
 }
 
@@ -45,35 +47,39 @@ impl LiwanApiKeys {
     pub fn create(
         &self,
         display_name: &str,
-        entities: &[String],
+        entities: &ApiKeyScope,
+        projects: &ApiKeyScope,
         permissions: &[ApiPermission],
+        expiration: ApiKeyExpiration,
     ) -> Result<(ApiKey, String)> {
         let display_name = display_name.trim();
         validate_display_name(display_name)?;
-
         let secret = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 24]>());
         let plaintext = format!("{KEY_PREFIX}{secret}");
-        let id = blake3::hash(secret.as_bytes()).to_hex().to_string();
+        let id = Alphanumeric.sample_string(&mut rand::rng(), 16);
+        let secret_hash = blake3::hash(secret.as_bytes()).to_hex().to_string();
         let permissions_json = serde_json::to_string(permissions)?;
         let created_at = Utc::now();
+        let expires_at = expiration.expires_at();
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute(
-            "insert into api_keys (id, display_name, permissions_json, created_at) values (?, ?, ?, ?)",
-            rusqlite::params![id, display_name, permissions_json, created_at],
+            "insert into api_keys (id, secret_hash, display_name, permissions_json, created_at, expires_at) values (?, ?, ?, ?, ?, ?)",
+            rusqlite::params![id, secret_hash, display_name, permissions_json, created_at, expires_at],
         )?;
-        set_access(&tx, &id, entities, permissions)?;
+        set_access(&tx, &id, entities, projects, permissions)?;
         tx.commit()?;
 
         Ok((
             ApiKey {
                 id,
                 display_name: display_name.to_string(),
-                entities: entities.to_vec(),
+                entities: entities.clone(),
+                projects: projects.clone(),
                 permissions: permissions.to_vec(),
                 created_at,
                 last_used_at: None,
-                revoked_at: None,
+                expires_at,
             },
             plaintext,
         ))
@@ -83,9 +89,10 @@ impl LiwanApiKeys {
     pub fn all(&self) -> Result<Vec<ApiKey>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
-            "select id, display_name, created_at, revoked_at, last_used_at,
+            "select id, display_name, created_at, expires_at, last_used_at,
                 (select json_group_array(entity_id) from api_key_entities where key_id = api_keys.id),
-                permissions_json
+                permissions_json, all_entities,
+                (select json_group_array(project_id) from api_key_projects where key_id = api_keys.id), all_projects
              from api_keys order by created_at desc",
         )?;
         let rows = stmt.query_map([], |row| {
@@ -97,52 +104,143 @@ impl LiwanApiKeys {
                 row.get(4)?,
                 row.get::<_, String>(5)?,
                 row.get::<_, String>(6)?,
+                row.get::<_, bool>(7)?,
+                row.get::<_, String>(8)?,
+                row.get::<_, bool>(9)?,
             ))
         })?;
         let mut keys = Vec::new();
         for row in rows {
-            let (id, display_name, created_at, revoked_at, last_used_at, entities, permissions) = row?;
+            let (
+                id,
+                display_name,
+                created_at,
+                expires_at,
+                last_used_at,
+                entities,
+                permissions,
+                all_entities,
+                projects,
+                all_projects,
+            ) = row?;
             keys.push(ApiKey {
                 id,
                 display_name,
-                entities: serde_json::from_str(&entities)?,
+                entities: if all_entities {
+                    ApiKeyScope::All(ApiKeyAll::All)
+                } else {
+                    ApiKeyScope::Selected(serde_json::from_str(&entities)?)
+                },
+                projects: if all_projects {
+                    ApiKeyScope::All(ApiKeyAll::All)
+                } else {
+                    ApiKeyScope::Selected(serde_json::from_str(&projects)?)
+                },
                 permissions: serde_json::from_str(&permissions)?,
                 created_at,
                 last_used_at,
-                revoked_at,
+                expires_at,
             });
         }
         Ok(keys)
     }
 
-    /// Updates a key's display name, entities, and permissions.
+    /// Updates a key's display name, access, and permissions.
     pub fn update(
         &self,
         key_id: &str,
         display_name: &str,
-        entities: &[String],
+        entities: &ApiKeyScope,
+        projects: &ApiKeyScope,
         permissions: &[ApiPermission],
     ) -> Result<bool> {
         let display_name = display_name.trim();
         validate_display_name(display_name)?;
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
-        if !tx.prepare_cached("select 1 from api_keys where id = ? and revoked_at is null limit 1")?.exists([key_id])? {
+        if !tx.prepare_cached("select 1 from api_keys where id = ? limit 1")?.exists([key_id])? {
             return Ok(false);
         }
         tx.execute("update api_keys set display_name = ? where id = ?", [display_name, key_id])?;
-        set_access(&tx, key_id, entities, permissions)?;
+        set_access(&tx, key_id, entities, projects, permissions)?;
         tx.commit()?;
         Ok(true)
     }
 
-    /// Revokes a key. Returns false when the ID is unknown.
-    pub fn revoke(&self, key_id: &str) -> Result<bool> {
-        let conn = self.pool.get()?;
-        Ok(conn.execute(
-            "update api_keys set revoked_at = coalesce(revoked_at, ?) where id = ?",
-            rusqlite::params![Utc::now(), key_id],
-        )? > 0)
+    /// Deletes a key and its access assignments.
+    pub fn delete(&self, key_id: &str) -> Result<bool> {
+        let mut conn = self.pool.get()?;
+        let tx = conn.transaction()?;
+        tx.execute("delete from api_key_entities where key_id = ?", [key_id])?;
+        tx.execute("delete from api_key_projects where key_id = ?", [key_id])?;
+        let deleted = tx.execute("delete from api_keys where id = ?", [key_id])? > 0;
+        tx.commit()?;
+        Ok(deleted)
+    }
+
+    /// Replaces a key's secret and sets a new expiration, without changing its access.
+    pub fn regenerate(&self, key_id: &str, expiration: ApiKeyExpiration) -> Result<Option<(ApiKey, String)>> {
+        let secret = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 24]>());
+        let hash = blake3::hash(secret.as_bytes()).to_hex().to_string();
+        let expires_at = expiration.expires_at();
+        let mut conn = self.pool.get()?;
+        let tx = conn.transaction()?;
+        let changed = tx.execute(
+            "update api_keys set secret_hash = ?, expires_at = ?, last_used_at = null where id = ?",
+            rusqlite::params![hash, expires_at, key_id],
+        )?;
+        if changed == 0 {
+            return Ok(None);
+        }
+        let (display_name, created_at, entities, all_entities, projects, all_projects, permissions) = tx.query_row(
+            "select display_name, created_at,
+                (select json_group_array(entity_id) from api_key_entities where key_id = api_keys.id), all_entities,
+                (select json_group_array(project_id) from api_key_projects where key_id = api_keys.id), all_projects,
+                permissions_json from api_keys where id = ?",
+            [key_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, bool>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, bool>(5)?,
+                    row.get::<_, String>(6)?,
+                ))
+            },
+        )?;
+        let key = ApiKey {
+            id: key_id.to_string(),
+            display_name,
+            entities: if all_entities {
+                ApiKeyScope::All(ApiKeyAll::All)
+            } else {
+                ApiKeyScope::Selected(serde_json::from_str(&entities)?)
+            },
+            projects: if all_projects {
+                ApiKeyScope::All(ApiKeyAll::All)
+            } else {
+                ApiKeyScope::Selected(serde_json::from_str(&projects)?)
+            },
+            permissions: serde_json::from_str(&permissions)?,
+            created_at,
+            last_used_at: None,
+            expires_at,
+        };
+        tx.commit()?;
+        Ok(Some((key, format!("{KEY_PREFIX}{secret}"))))
+    }
+
+    /// Moves a key's creation and expiration dates into the past for seed data.
+    #[cfg(any(debug_assertions, test))]
+    pub(crate) fn expire_for_seed(&self, key_id: &str) -> Result<()> {
+        let now = Utc::now();
+        self.pool.get()?.execute(
+            "update api_keys set created_at = ?, expires_at = ? where id = ?",
+            rusqlite::params![now - chrono::Duration::days(8), now - chrono::Duration::days(1), key_id],
+        )?;
+        Ok(())
     }
 
     /// Verifies a plaintext key and returns its current access.
@@ -160,17 +258,42 @@ impl LiwanApiKeys {
             .query_row(
                 "select id,
                     (select json_group_array(entity_id) from api_key_entities where key_id = api_keys.id),
-                    permissions_json
-                 from api_keys where id = ? and revoked_at is null",
-                [id.as_str()],
-                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?)),
+                    permissions_json, all_entities, all_projects
+                 from api_keys where secret_hash = ? and (expires_at is null or expires_at > ?)",
+                rusqlite::params![id.as_str(), Utc::now()],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, bool>(3)?,
+                        row.get::<_, bool>(4)?,
+                    ))
+                },
             )
             .optional()?;
-        let Some((id, entities, permissions)) = access else { return Ok(None) };
+        let Some((id, entities, permissions, all_entities, all_projects)) = access else { return Ok(None) };
+        let mut permitted_entities: HashSet<String> = serde_json::from_str(&entities)?;
+        if !all_entities && all_projects {
+            let mut stmt = conn.prepare_cached("select distinct entity_id from project_entities")?;
+            let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+            for row in rows {
+                permitted_entities.insert(row?);
+            }
+        } else if !all_entities {
+            let mut stmt = conn.prepare_cached(
+                "select distinct entity_id from project_entities where project_id in (select project_id from api_key_projects where key_id = ?)",
+            )?;
+            let rows = stmt.query_map([&id], |row| row.get::<_, String>(0))?;
+            for row in rows {
+                permitted_entities.insert(row?);
+            }
+        }
         conn.execute("update api_keys set last_used_at = ? where id = ?", rusqlite::params![Utc::now(), id])?;
         Ok(Some(ApiKeyAccess {
             id,
-            entities: serde_json::from_str(&entities)?,
+            entities: permitted_entities,
+            all_entities,
             permissions: serde_json::from_str(&permissions)?,
         }))
     }
@@ -183,18 +306,47 @@ fn validate_display_name(display_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn set_access(tx: &Transaction<'_>, key_id: &str, entities: &[String], permissions: &[ApiPermission]) -> Result<()> {
+fn set_access(
+    tx: &Transaction<'_>,
+    key_id: &str,
+    entities: &ApiKeyScope,
+    projects: &ApiKeyScope,
+    permissions: &[ApiPermission],
+) -> Result<()> {
     tx.execute("delete from api_key_entities where key_id = ?", [key_id])?;
+    tx.execute("delete from api_key_projects where key_id = ?", [key_id])?;
     let mut entity_exists = tx.prepare_cached("select 1 from entities where id = ? limit 1")?;
-    for entity_id in entities {
-        if !entity_exists.exists([entity_id])? {
-            bail!("entity not found: {entity_id}");
+    if let ApiKeyScope::Selected(ids) = entities {
+        for entity_id in ids {
+            if !entity_exists.exists([entity_id])? {
+                bail!("entity not found: {entity_id}");
+            }
+            tx.execute(
+                "insert or ignore into api_key_entities (key_id, entity_id) values (?, ?)",
+                [key_id, entity_id],
+            )?;
         }
-        tx.execute("insert or ignore into api_key_entities (key_id, entity_id) values (?, ?)", [key_id, entity_id])?;
+    }
+    let mut project_exists = tx.prepare_cached("select 1 from projects where id = ? limit 1")?;
+    if let ApiKeyScope::Selected(ids) = projects {
+        for project_id in ids {
+            if !project_exists.exists([project_id])? {
+                bail!("project not found: {project_id}");
+            }
+            tx.execute(
+                "insert or ignore into api_key_projects (key_id, project_id) values (?, ?)",
+                [key_id, project_id],
+            )?;
+        }
     }
     tx.execute(
-        "update api_keys set permissions_json = ? where id = ?",
-        rusqlite::params![serde_json::to_string(permissions)?, key_id],
+        "update api_keys set permissions_json = ?, all_entities = ?, all_projects = ? where id = ?",
+        rusqlite::params![
+            serde_json::to_string(permissions)?,
+            matches!(entities, ApiKeyScope::All(_)),
+            matches!(projects, ApiKeyScope::All(_)),
+            key_id
+        ],
     )?;
     Ok(())
 }
@@ -204,33 +356,133 @@ mod tests {
     use crate::{
         app::{
             Liwan,
-            models::{ApiPermission, Entity},
+            models::{ApiKeyAll, ApiKeyExpiration, ApiKeyScope, ApiPermission, Entity, Project},
         },
         config::Config,
     };
 
     #[test]
-    fn key_access_and_revocation_apply_immediately() {
+    fn key_access_rotation_and_deletion_apply_immediately() {
         let app = Liwan::new_memory(Config::default()).unwrap();
         app.entities.create(&Entity { id: "docs".into(), display_name: "Docs".into() }, &[]).unwrap();
         app.entities.create(&Entity { id: "shop".into(), display_name: "Shop".into() }, &[]).unwrap();
-        let (key, plaintext) =
-            app.api_keys.create("production", &["docs".into()], &[ApiPermission::EventsBatch]).unwrap();
+        let (key, plaintext) = app
+            .api_keys
+            .create(
+                "production",
+                &ApiKeyScope::Selected(vec!["docs".into()]),
+                &ApiKeyScope::Selected(vec![]),
+                &[ApiPermission::EventsBatch],
+                ApiKeyExpiration::Never,
+            )
+            .unwrap();
 
         let access = app.api_keys.authenticate(&plaintext).unwrap().unwrap();
         assert_eq!(access.id, key.id);
+        assert_eq!(key.id.len(), 16);
         assert!(app.api_keys.all().unwrap()[0].last_used_at.is_some());
         assert!(access.has_permission(ApiPermission::EventsBatch));
         assert!(access.can_access_entity("docs"));
         assert!(!access.can_access_entity("shop"));
         app.entities.delete("docs").unwrap();
         assert!(!app.api_keys.authenticate(&plaintext).unwrap().unwrap().can_access_entity("docs"));
-        app.api_keys.update(&key.id, "Production", &["shop".into()], &[ApiPermission::EventsBatch]).unwrap();
+        app.api_keys
+            .update(
+                &key.id,
+                "Production",
+                &ApiKeyScope::Selected(vec!["shop".into()]),
+                &ApiKeyScope::Selected(vec![]),
+                &[ApiPermission::EventsBatch],
+            )
+            .unwrap();
         assert_eq!(app.api_keys.all().unwrap()[0].display_name, "Production");
         assert!(app.api_keys.authenticate(&plaintext).unwrap().unwrap().can_access_entity("shop"));
-        app.api_keys.update(&key.id, "Production", &["shop".into()], &[]).unwrap();
+        app.api_keys
+            .update(
+                &key.id,
+                "Production",
+                &ApiKeyScope::Selected(vec!["shop".into()]),
+                &ApiKeyScope::Selected(vec![]),
+                &[],
+            )
+            .unwrap();
         assert!(!app.api_keys.authenticate(&plaintext).unwrap().unwrap().has_permission(ApiPermission::EventsBatch));
-        assert!(app.api_keys.revoke(&key.id).unwrap());
+        let (rotated, replacement) = app.api_keys.regenerate(&key.id, ApiKeyExpiration::SevenDays).unwrap().unwrap();
+        assert_eq!(rotated.id, key.id);
+        assert!(rotated.expires_at.is_some());
+        assert!(rotated.last_used_at.is_none());
         assert!(app.api_keys.authenticate(&plaintext).unwrap().is_none());
+        assert!(app.api_keys.authenticate(&replacement).unwrap().is_some());
+        app.api_keys
+            .update(&key.id, "Production", &ApiKeyScope::All(ApiKeyAll::All), &ApiKeyScope::Selected(vec![]), &[])
+            .unwrap();
+        assert!(app.api_keys.authenticate(&replacement).unwrap().unwrap().can_access_entity("shop"));
+        assert!(app.api_keys.delete(&key.id).unwrap());
+        assert!(app.api_keys.authenticate(&plaintext).unwrap().is_none());
+    }
+
+    #[test]
+    fn project_scope_and_expiration() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        for id in ["shop", "docs", "standalone"] {
+            app.entities.create(&Entity { id: id.into(), display_name: id.into() }, &[]).unwrap();
+        }
+        for id in ["store", "site"] {
+            app.projects
+                .create(
+                    &Project { id: id.into(), display_name: id.into(), public: false, unlisted: false, secret: None },
+                    &[],
+                )
+                .unwrap();
+        }
+        app.projects.update_entities("store", &["shop".into()]).unwrap();
+        app.projects.update_entities("site", &["docs".into()]).unwrap();
+        let (key, plaintext) = app
+            .api_keys
+            .create(
+                "project key",
+                &ApiKeyScope::Selected(vec![]),
+                &ApiKeyScope::Selected(vec!["store".into()]),
+                &[ApiPermission::EventsBatch],
+                ApiKeyExpiration::ThirtyDays,
+            )
+            .unwrap();
+        let access = app.api_keys.authenticate(&plaintext).unwrap().unwrap();
+        assert!(access.can_access_entity("shop"));
+        assert!(!access.can_access_entity("docs"));
+        app.projects.update_entities("store", &["docs".into()]).unwrap();
+        let access = app.api_keys.authenticate(&plaintext).unwrap().unwrap();
+        assert!(!access.can_access_entity("shop"));
+        assert!(access.can_access_entity("docs"));
+
+        app.api_keys
+            .update(
+                &key.id,
+                "all projects",
+                &ApiKeyScope::Selected(vec![]),
+                &ApiKeyScope::All(ApiKeyAll::All),
+                &[ApiPermission::EventsBatch],
+            )
+            .unwrap();
+        let access = app.api_keys.authenticate(&plaintext).unwrap().unwrap();
+        assert!(!access.can_access_entity("shop"));
+        assert!(access.can_access_entity("docs"));
+        assert!(!access.can_access_entity("standalone"));
+        app.api_keys.expire_for_seed(&key.id).unwrap();
+        assert!(app.api_keys.authenticate(&plaintext).unwrap().is_none());
+        let (_, replacement) = app.api_keys.regenerate(&key.id, ApiKeyExpiration::Never).unwrap().unwrap();
+        assert!(app.api_keys.authenticate(&replacement).unwrap().is_some());
+        assert!(app.api_keys.all().unwrap()[0].expires_at.is_none());
+        app.api_keys
+            .update(
+                &key.id,
+                "selected project",
+                &ApiKeyScope::Selected(vec![]),
+                &ApiKeyScope::Selected(vec!["site".into()]),
+                &[ApiPermission::EventsBatch],
+            )
+            .unwrap();
+        app.projects.delete("site").unwrap();
+        assert!(!app.api_keys.authenticate(&replacement).unwrap().unwrap().can_access_entity("docs"));
     }
 }

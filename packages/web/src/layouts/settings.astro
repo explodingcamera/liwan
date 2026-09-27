@@ -41,7 +41,7 @@ const { title } = Astro.props;
             value="/settings/entities">Entities</option
           >
         </optgroup>
-        <optgroup label="Admin">
+        <optgroup label="Admin" data-admin-nav>
           <option
             selected={path.startsWith("/settings/collection")
               ? true
@@ -106,8 +106,8 @@ const { title } = Astro.props;
           >
         </li>
       </ul>
-      <h3>Admin</h3>
-      <ul class="sidebar">
+      <h3 data-admin-nav>Admin</h3>
+      <ul class="sidebar" data-admin-nav>
         <li>
           <a
             data-active={path.startsWith("/settings/collection")
@@ -169,18 +169,51 @@ const { title } = Astro.props;
 <script>
   import { navigate } from "astro:transitions/client";
 
+  const adminPaths = ["/settings/collection", "/settings/users", "/settings/authentication", "/settings/api-keys"];
+
   function handleSelectChange(event: Event) {
     navigate((event.currentTarget as HTMLSelectElement).value);
   }
 
-  document.addEventListener("astro:page-load", () => {
-    document
-      .getElementById("select-settings-page")
-      ?.addEventListener("change", handleSelectChange);
+  document.addEventListener("astro:page-load", async () => {
+    const settings = document.querySelector<HTMLElement>(".settings");
+    if (!settings) return;
+    document.getElementById("select-settings-page")?.addEventListener("change", handleSelectChange);
+
+    try {
+      const response = await fetch("/api/dashboard/auth/me");
+      if (response.status === 401) {
+        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.replace(`/login?${new URLSearchParams({ returnTo })}`);
+        return;
+      }
+      if (!response.ok) throw new Error("Failed to load account");
+
+      const { role } = await response.json();
+      if (role !== "admin") {
+        if (adminPaths.some((path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`))) {
+          window.location.replace("/settings/me");
+          return;
+        }
+        settings.querySelector("optgroup[data-admin-nav]")?.remove();
+      }
+      settings.dataset.role = role;
+    } catch {
+      settings.querySelector<HTMLElement>(".content")!.textContent = "Failed to load account. Refresh to try again.";
+      settings.dataset.role = "user";
+    }
   });
 </script>
 
 <style>
+  .settings:not([data-role]) {
+    visibility: hidden;
+  }
+
+  .settings:not([data-role="admin"]) [data-admin-nav] {
+    display: none;
+  }
+
   .settings :global(nav) {
     display: flex;
     justify-content: space-between;

@@ -4,6 +4,12 @@
   gap: 0.8rem;
 }
 
+.loading {
+  min-height: calc(100dvh - 8rem);
+  display: grid;
+  place-items: center;
+}
+
 .projectReport {
   display: flex;
   flex-direction: column;

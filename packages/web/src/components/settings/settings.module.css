@@ -273,48 +273,110 @@ details.edit summary + ul {
   box-shadow: none;
 }
 
-.apiKeyStatusActive,
-.apiKeyStatusRevoked {
-  display: inline-block;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
+.apiKeyDialog {
+  width: min(34rem, 100%);
+}
+
+.apiKeyExpired {
+  color: var(--danger);
   font-weight: 500;
 }
 
-.apiKeyStatusActive {
-  background: color-mix(in srgb, #22c55e 14%, transparent);
-  color: color-mix(in srgb, #22c55e 78%, var(--text));
+.apiKeyAccessSection {
+  margin: 0 0 1rem;
 }
 
-.apiKeyStatusRevoked {
-  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
+.apiKeyAccessGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.apiKeyAccessRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.apiKeyAccessRow label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.apiKeyAccessHelp {
   color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
 
-.apiKeyPermissions {
-  margin-top: 1rem;
+.apiKeySelect {
+  position: relative;
+}
+
+.apiKeySelect select {
+  appearance: none;
+  width: 100%;
+  margin: 0;
+  padding-right: 2.25rem;
+}
+
+.apiKeySelect > svg {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.apiKeyExpirationSelect {
+  margin-top: 0.35rem;
+}
+
+.apiKeyExpirationSelect select {
+  padding-right: 4.25rem;
+}
+
+.apiKeyExpirationSelect > svg:first-child {
+  right: 2.25rem;
+}
+
+@media (max-width: 520px) {
+  .apiKeyAccessGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.apiKeyPermissionOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+}
+
+.apiKeyDialog fieldset {
+  margin-bottom: 1rem;
+}
+
+.apiKeyAccessSection > fieldset {
+  margin-bottom: 0;
 }
 
 .apiKeyPermissionOption {
-  box-sizing: border-box;
-  display: flex;
+  display: inline-flex;
   align-items: flex-start;
-  gap: 0.55rem;
-  width: 100%;
+  gap: 0.5rem;
+  width: auto;
   margin: 0;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--field-border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--field) 55%, transparent);
+  font-size: 0.875rem;
+  line-height: 1.25;
 }
 
-.apiKeyPermissionOption:has(input:disabled) {
-  cursor: not-allowed;
-}
-
-.apiKeyPermissionOption input {
-  margin: 0.1rem 0 0;
+.apiKeyPermissionOptions .apiKeyPermissionOption > input {
+  width: auto;
+  margin: 0.15rem 0 0;
 }
 
 .apiKeyPermissionOption span {
@@ -323,20 +385,9 @@ details.edit summary + ul {
   gap: 0.1rem;
 }
 
-.apiKeyPermissionOption strong {
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
 .apiKeyPermissionOption small {
   color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.apiKeyDetailTitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  font-size: 0.75rem;
 }
 
 @media (max-width: 520px) {

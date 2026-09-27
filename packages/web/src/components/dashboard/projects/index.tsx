@@ -72,6 +72,13 @@ export const Projects = () => {
 			</div>
 		);
 
+	if (isLoading && !data)
+		return (
+			<div className={styles.loading}>
+				<LoadingSpinner />
+			</div>
+		);
+
 	if (data?.projects.length === 0 && signedIn) return <NoProjects />;
 	if (data?.projects.length === 0 && !signedIn)
 		return (

@@ -5,6 +5,12 @@
   align-items: center;
 }
 
+.loading {
+  min-height: calc(100dvh - 8rem);
+  display: grid;
+  place-items: center;
+}
+
 .projectList {
   display: grid;
   gap: 1rem;
