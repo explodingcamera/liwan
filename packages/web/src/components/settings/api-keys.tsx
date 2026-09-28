@@ -113,7 +113,7 @@ export const ApiKeys = () => {
 		{
 			id: "name",
 			header: "Name",
-			render: (key) => <strong>{key.displayName}</strong>,
+			render: (key) => <a href={appPath(`/settings/api-keys/${key.id}`)}>{key.displayName}</a>,
 			nowrap: true,
 			full: true,
 		},
@@ -226,7 +226,6 @@ export const ApiKeys = () => {
 										onDelete={(index) =>
 											setForm({ ...form, selectedEntities: selectedEntities.filter((_, i) => i !== index) })
 										}
-										noOptionsText="No more entities"
 									/>
 								)}
 							</div>
@@ -254,7 +253,6 @@ export const ApiKeys = () => {
 										onDelete={(index) =>
 											setForm({ ...form, selectedProjects: selectedProjects.filter((_, i) => i !== index) })
 										}
-										noOptionsText="No more projects"
 									/>
 								)}
 							</div>
@@ -429,7 +427,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 		<>
 			<SettingsForm>
 				<SettingsHeader title={key.displayName} backHref={appPath("/settings/api-keys")} backLabel="Back to API Keys" />
-				<fieldset disabled={saving || regenerating} className={`${styles.detailPanel} ${styles.userDetailPanel}`}>
+				<fieldset disabled={saving || regenerating} className={`${styles.detailPanel} ${styles.apiKeyDetailPanel}`}>
 					<SettingsField label="Name" description="Identifies this key in the dashboard." name="displayName">
 						<input
 							required
@@ -484,7 +482,6 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 											setForm({ ...form, selectedEntities: next });
 											save({ ...key, entities: next.map((tag) => tag.value) });
 										}}
-										noOptionsText="No more entities"
 									/>
 								)}
 							</div>
@@ -528,7 +525,6 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 											setForm({ ...form, selectedProjects: next });
 											save({ ...key, projects: next.map((tag) => tag.value) });
 										}}
-										noOptionsText="No more projects"
 									/>
 								)}
 							</div>

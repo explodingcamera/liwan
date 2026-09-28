@@ -277,7 +277,6 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 							setForm({ ...form, selectedEntities: next });
 							saveProject(displayName, visibility, next);
 						}}
-						noOptionsText="No matching entities"
 					/>
 					<div className={styles.dangerZone}>
 						<div>

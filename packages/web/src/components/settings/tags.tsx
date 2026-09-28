@@ -17,14 +17,12 @@ export const Tags = ({
 	labelText,
 	labelDescription,
 	placeholderText,
-	noOptionsText,
 	disabled,
 }: {
 	onAdd: (tag: Tag) => void;
 	onDelete: (i: number) => void;
 	selected: Tag[];
 	suggestions: Tag[];
-	noOptionsText: string;
 	disabled?: boolean;
 	placeholderText?: string;
 	labelText?: string | React.ReactNode;
@@ -88,11 +86,8 @@ export const Tags = ({
 			</div>
 
 			<Combobox.Portal>
-				<Combobox.Positioner className={styles.positioner} sideOffset={4}>
+				<Combobox.Positioner className={styles.positioner} sideOffset={0}>
 					<Combobox.Popup className={styles.popup}>
-						<Combobox.Empty>
-							<div className={styles.empty}>{noOptionsText ?? "No matching options..."}</div>
-						</Combobox.Empty>
 						<Combobox.List className={styles.list}>
 							{(tag: Tag) => (
 								<Combobox.Item key={tag.value} value={tag} className={styles.item}>

@@ -6,6 +6,13 @@
   padding-top: 1rem;
 }
 
+.apiKeyDetailPanel {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem 0 0;
+  border: 0;
+}
+
 .projectAccess {
   margin-bottom: 0.75rem;
 }

@@ -270,7 +270,6 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							setForm({ ...form, selectedProjects: next });
 							saveEntity(displayName, next);
 						}}
-						noOptionsText="No matching projects"
 					/>
 					<div className={styles.dangerZone}>
 						<div>
@@ -417,7 +416,12 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 						<SettingsPanel value="filters">
 							<SettingsField
 								label="Allowed hostnames"
-								description="Only accept events from matching hostnames. Leave empty to allow all hostnames."
+								description={
+									<>
+										Only accept events from matching hostnames. Leave empty to allow all hostnames. Type a hostname and
+										press Enter. Supports exact hostnames and <code>*.</code> wildcards in the subdomain position.
+									</>
+								}
 								name="allowedHostnames"
 							>
 								<AllowedHostnamesEditor

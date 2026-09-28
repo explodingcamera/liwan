@@ -27,46 +27,32 @@
   line-height: 1.3;
 }
 
-.empty {
-  margin: 0.5rem 0 0;
-  padding: 0.75rem;
-  border: 1px dashed var(--field-border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--field) 55%, transparent);
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  text-align: center;
-}
-
 .ruleFooter {
   display: flex;
-  margin-top: 0.5rem;
-  justify-content: flex-start;
+  justify-content: center;
+  padding: 0.2rem 0.65rem;
+  border-top: 1px solid var(--border);
 }
 
-.ruleFooter button,
-.ruleFooter button:hover {
+.ruleFooter button {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0.4rem;
   width: fit-content;
+  min-height: 1.75rem;
   margin: 0;
-  padding: 0.25rem 0;
+  padding: 0.2rem 0.5rem;
   border: 0;
+  border-radius: var(--control-radius);
   background: transparent;
-  color: var(--settings-icon-color);
-  font-size: 0.875rem;
-  font-weight: 500;
-  opacity: 0.78;
+  color: var(--text);
   box-shadow: none;
-  white-space: nowrap;
-}
-
-.ruleFooter button::before {
-  margin-right: 0.35rem;
-  content: "+";
 }
 
 .ruleFooter button:hover {
-  color: var(--settings-icon-color);
-  opacity: 1;
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 .addRuleAction {
@@ -99,10 +85,15 @@
   opacity: 1;
 }
 
-.ruleFooter button:focus-visible,
 .addRuleAction button:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+.ruleFooter button:focus-visible {
+  outline: none;
+  background: var(--surface-hover);
+  text-decoration: underline;
 }
 
 .hostnameEditor {
@@ -114,9 +105,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   min-height: 2.15rem;
-  padding: 0.15rem 0.25rem;
+  padding: 0.15rem 0.2rem;
   border: 1px solid var(--field-border);
   border-radius: var(--control-radius);
   background-color: var(--field);
@@ -124,7 +115,7 @@
 }
 
 .hostnameBox:focus-within {
-  border-color: var(--accent-hover);
+  border-color: var(--focus);
 }
 
 .hostnameBox input {
@@ -132,6 +123,7 @@
   min-width: 6rem;
   height: 1.5rem;
   min-height: 1.5rem;
+  font-size: 0.9rem;
   margin: 0;
   padding: 0 0.25rem;
   border: 0;
@@ -140,6 +132,10 @@
   box-shadow: none;
   outline: none;
   appearance: none;
+}
+
+.hostnameBox:has(.hostnameChip) input {
+  padding-left: 0;
 }
 
 .hostnameBox input:focus,
@@ -158,12 +154,12 @@
   align-items: center;
   max-width: 100%;
   gap: 0.25rem;
-  padding: 0.18rem 0.28rem 0.18rem 0.55rem;
-  border-radius: 0.4rem;
-  background: var(--accent-fill);
+  padding: 0.25rem 0.28rem 0.25rem 0.55rem;
+  border-radius: 0.25rem;
+  background: var(--tag-background);
   color: var(--accent-contrast);
-  font-size: 0.875rem;
-  line-height: 1.4;
+  font-size: 0.9rem;
+  line-height: 1.25;
 }
 
 .hostnameChipRemove {
@@ -174,7 +170,7 @@
   width: 1.15rem;
   height: 1.15rem;
   cursor: pointer;
-  border-radius: 0.4rem;
+  border-radius: 0.25rem;
   color: inherit;
 }
 
@@ -186,18 +182,8 @@
   outline: none;
 }
 
-.hostnameHelp {
-  color: var(--text-muted);
-}
-
-.hostnameHelp code {
-  padding: 0;
-  background: transparent;
-}
-
 .filterList {
   display: grid;
-  gap: 0.45rem;
 }
 
 .ruleList {
@@ -208,59 +194,55 @@
 
 .ruleCard {
   margin: 0;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid var(--field-border);
+  border: 1px solid var(--surface-outline);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--field) 45%, transparent);
-  box-shadow: none;
+  background: var(--inset-surface);
+  overflow: hidden;
+  animation: ruleEnter 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.ruleCard:has(> small) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.5rem 1rem;
+@keyframes ruleEnter {
+  from {
+    opacity: 0;
+  }
 }
 
-.ruleCard:has(> small) .ruleHeader {
-  grid-column: 1 / -1;
+.ruleCard[data-removing] {
+  pointer-events: none;
+  animation: ruleExit 0.14s ease-in forwards;
+}
+
+@keyframes ruleExit {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ruleCard {
+    animation: none;
+  }
 }
 
 .ruleCard:has(> small) > small {
+  display: block;
+  padding: 0.5rem 0.65rem;
   color: var(--text-muted);
-}
-
-.ruleCard:has(> small) > .ruleFooter {
-  margin: 0;
 }
 
 .ruleHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.6rem;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid var(--border);
 }
 
-.ruleTitle {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem;
-}
-
-.ruleTitle small {
+.ruleHeader strong {
   color: var(--text-muted);
-}
-
-.ruleTitle small::before {
-  margin-right: 0.25rem;
-  content: "·";
-}
-
-.ruleTitle strong {
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .ruleActions {
@@ -302,8 +284,10 @@
 
 .ruleActions .iconButton,
 .ruleActions .iconButton:hover {
-  margin-top: -0.2rem;
-  margin-right: -0.3rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  min-height: 1.25rem;
+  flex-basis: 1.25rem;
 }
 
 .ruleActions .iconButton:focus-visible,
@@ -318,10 +302,11 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--field);
+  padding: 0.5rem 0.65rem;
+}
+
+.filterRow + .filterRow {
+  border-top: 1px solid var(--border);
 }
 
 .filterText {
@@ -338,28 +323,17 @@
   font-weight: 600;
 }
 
-.filterText code {
+.filterValue {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0.12rem 0.3rem;
-  background: var(--surface-hover);
   color: var(--text);
+  font-weight: 500;
 }
 
 .filterRow button {
   width: fit-content;
   margin: 0;
   padding: 0.32rem 0.55rem;
-}
-
-@media (max-width: 700px) {
-  .ruleCard:has(> small) {
-    grid-template-columns: 1fr;
-  }
-
-  .ruleCard:has(> small) > .ruleFooter {
-    justify-content: flex-start;
-  }
 }

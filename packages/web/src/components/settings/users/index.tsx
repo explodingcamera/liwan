@@ -143,7 +143,6 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 								isAdmin,
 							)
 						}
-						noOptionsText="No matching projects"
 					/>
 				</div>
 				<SettingsSwitch
