@@ -10,7 +10,10 @@ use chrono::Utc;
 
 use crate::web::RouterState;
 use crate::{
-    app::{Liwan, models::User},
+    app::{
+        Liwan,
+        models::{User, UserRole},
+    },
     utils::hash::session_token,
 };
 
@@ -49,9 +52,12 @@ pub(crate) fn clear_session(app: &Liwan) -> CookieJar {
 }
 
 /// Creates a Liwan session and adds its browser cookies.
-pub(crate) fn issue_session(app: &Liwan, cookies: CookieJar, username: &str) -> anyhow::Result<CookieJar> {
+pub(crate) async fn issue_session(app: &Liwan, cookies: CookieJar, username: &str) -> anyhow::Result<CookieJar> {
     let session_id = session_token();
-    app.sessions.create(&session_id, username, Utc::now() + MAX_SESSION_AGE)?;
+    let sessions = app.sessions.clone();
+    let id = session_id.clone();
+    let name = username.to_string();
+    tokio::task::spawn_blocking(move || sessions.create(&id, &name, Utc::now() + MAX_SESSION_AGE)).await??;
 
     let mut public_cookie = public_cookie(app);
     let mut session_cookie = session_cookie(app);
@@ -67,10 +73,14 @@ pub struct MaybeSessionId(pub Option<String>);
 #[derive(Debug, Clone)]
 pub struct Auth(pub User);
 
+/// An authenticated administrator.
+pub struct Admin(pub User);
+
 #[derive(Debug, Clone)]
 pub struct MaybeAuth(pub Option<User>);
 
 impl OperationInput for Auth {}
+impl OperationInput for Admin {}
 impl OperationInput for MaybeAuth {}
 impl OperationInput for MaybeSessionId {}
 
@@ -98,9 +108,10 @@ impl axum::extract::FromRequestParts<RouterState> for MaybeSessionId {
         if let Some(session_cookie) = session_cookie
             && username_cookie.is_none()
         {
-            let session_id = session_cookie.value();
-            tracing::info!(session_id, "user has session cookie but no username cookie, logging out");
-            let _ = state.app.sessions.delete(session_cookie.value());
+            let session_id = session_cookie.value().to_string();
+            let sessions = state.sessions.clone();
+            tracing::info!("user has session cookie but no username cookie, logging out");
+            let _ = tokio::task::spawn_blocking(move || sessions.delete(&session_id)).await;
             return Err(logout_response(&state.app));
         }
 
@@ -112,15 +123,21 @@ impl axum::extract::FromRequestParts<RouterState> for Auth {
     type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
-        let session_id =
-            MaybeSessionId::from_request_parts(parts, state).await?.0.ok_or_else(|| logout_response(&state.app))?;
-        let user = state
-            .app
-            .sessions
-            .get(&session_id)
-            .map_err(|_| logout_response(&state.app))?
-            .ok_or_else(|| logout_response(&state.app))?;
+        let MaybeAuth(user) = MaybeAuth::from_request_parts(parts, state).await?;
+        let user = user.ok_or_else(|| logout_response(&state.app))?;
         Ok(Auth(user))
+    }
+}
+
+impl axum::extract::FromRequestParts<RouterState> for Admin {
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &RouterState) -> Result<Self, Self::Rejection> {
+        let Auth(user) = Auth::from_request_parts(parts, state).await?;
+        if user.role != UserRole::Admin {
+            return Err(super::webext::ApiError::from(StatusCode::FORBIDDEN).into_response());
+        }
+        Ok(Self(user))
     }
 }
 
@@ -131,10 +148,10 @@ impl axum::extract::FromRequestParts<RouterState> for MaybeAuth {
         let MaybeSessionId(Some(session_id)) = MaybeSessionId::from_request_parts(parts, state).await? else {
             return Ok(MaybeAuth(None));
         };
-        let user = state
-            .app
-            .sessions
-            .get(&session_id)
+        let sessions = state.sessions.clone();
+        let user = tokio::task::spawn_blocking(move || sessions.get(&session_id))
+            .await
+            .map_err(|_| logout_response(&state.app))?
             .map_err(|_| logout_response(&state.app))?
             .ok_or_else(|| logout_response(&state.app))?;
         Ok(MaybeAuth(Some(user)))

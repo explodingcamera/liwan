@@ -197,6 +197,44 @@ async fn authentication_cookie_boundaries() -> Result<()> {
 }
 
 #[tokio::test]
+async fn password_change_preserves_only_current_session() -> Result<()> {
+    let app = common::app();
+    let (queues, _receivers) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    for (username, role) in [("admin", UserRole::Admin), ("viewer", UserRole::User)] {
+        app.users.create(username, "old-password", role, &[])?;
+        let cookies = common::login(&client, username, "old-password").await;
+        let headers = || vec![("cookie".into(), common::cookie_header(&cookies))];
+        let other_session = format!("other-{username}");
+        app.sessions.create(&other_session, &username.to_uppercase(), Utc::now() + Duration::days(1))?;
+        let path = "/api/dashboard/auth/me/password";
+
+        client
+            .put_with_headers(
+                path,
+                json!({ "password": "new-password", "currentPassword": "wrong-password" }),
+                headers(),
+            )
+            .await
+            .assert_status_bad_request();
+        assert!(app.sessions.get(&other_session)?.is_some());
+        assert!(app.users.check_login(username, "old-password")?);
+        client
+            .put_with_headers(path, json!({ "password": "new-password", "currentPassword": "old-password" }), headers())
+            .await
+            .assert_status_success();
+        assert!(app.sessions.get(&other_session)?.is_none());
+        assert!(!app.users.check_login(username, "old-password")?);
+        assert!(app.users.check_login(username, "new-password")?);
+        client.get_with_headers("/api/dashboard/auth/me", headers()).await.assert_status_success();
+
+        assert!(app.users.update_password(username, "reset-password", None, None)?);
+        client.get_with_headers("/api/dashboard/auth/me", headers()).await.assert_status_unauthorized();
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn private_projects() -> Result<()> {
     let app = common::app();
     let (tx, _rx) = common::events();

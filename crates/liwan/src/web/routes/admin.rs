@@ -22,7 +22,7 @@ use crate::{
     utils::validate::{can_enumerate_project, can_view_project},
     web::{
         RouterState,
-        session::{Auth, MaybeAuth},
+        session::{Admin, MaybeAuth},
         webext::{ApiResult, AxumErrExt, empty_response, http_bail},
     },
 };
@@ -32,6 +32,7 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/users", get(get_users))
         .api_route("/user/{username}", put(update_user))
         .api_route("/user/{username}/password", put(update_user_password))
+        .api_route("/user/{username}/sessions", delete(revoke_user_sessions))
         .api_route("/user/{username}", delete(remove_user))
         .api_route("/user", post(create_user))
         .api_route("/project/{project_id}", post(project_create_handler))
@@ -102,6 +103,7 @@ struct UpdateProjectInfo {
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 struct UpdatePasswordRequest {
     password: String,
 }
@@ -146,6 +148,8 @@ impl ProjectResponse {
     fn new(app: &crate::app::Liwan, project: Project) -> anyhow::Result<Self> {
         let entities = app.projects.entities(&project.id)?;
         let entity_ids: Vec<String> = entities.iter().map(|entity| entity.id.clone()).collect();
+        let collection = app.settings.resolved_for_entities(&entity_ids);
+        let display = app.project_settings.get(&project.id)?;
 
         Ok(Self {
             id: project.id.clone(),
@@ -156,16 +160,16 @@ impl ProjectResponse {
                 .collect(),
             public: project.public,
             unlisted: project.unlisted,
-            custom_events_display: app.custom_events_display(&project.id),
+            custom_events_display: display.custom_events_display(),
             hidden_metrics: Metric::all()
                 .iter()
                 .copied()
-                .filter(|metric| app.is_metric_hidden(&project.id, &entity_ids, *metric))
+                .filter(|metric| display.is_metric_hidden(&collection, *metric))
                 .collect(),
             hidden_dimensions: Dimension::all()
                 .iter()
                 .copied()
-                .filter(|dimension| app.is_dimension_hidden(&project.id, &entity_ids, *dimension))
+                .filter(|dimension| display.is_dimension_hidden(&collection, *dimension))
                 .collect(),
         })
     }
@@ -306,15 +310,11 @@ struct PruneResponse {
 
 async fn get_users(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<UsersResponse>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
-    let users = app
-        .users
-        .all()
+    let users = tokio::task::spawn_blocking(move || app.users.all())
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to get users", StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
         .map(|u| UserResponse { username: u.username.clone(), role: u.role, projects: u.projects.clone() })
@@ -326,19 +326,16 @@ async fn get_users(
 async fn update_user(
     app: State<RouterState>,
     Path(username): Path<String>,
-    Auth(session_user): Auth,
+    Admin(session_user): Admin,
     user: Json<UpdateUserRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if session_user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     if username == session_user.username && user.role != session_user.role {
         http_bail!(StatusCode::FORBIDDEN, "Cannot change own role")
     }
 
-    app.users
-        .update(&username, user.role, user.projects.as_slice())
+    tokio::task::spawn_blocking(move || app.users.update(&username, user.role, user.projects.as_slice()))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to update user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
@@ -347,51 +344,65 @@ async fn update_user(
 async fn update_user_password(
     app: State<RouterState>,
     Path(username): Path<String>,
-    Auth(session_user): Auth,
+    Admin(session_user): Admin,
     params: Json<UpdatePasswordRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if session_user.role != UserRole::Admin || username != session_user.username {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
+    let username = username.to_lowercase();
+    if username == session_user.username {
+        http_bail!(StatusCode::BAD_REQUEST, "Use your account settings to change your own password")
     }
 
     if params.password.len() < PASSWORD_MIN_LENGTH {
         http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
     }
 
-    app.users
-        .update_password(&username, &params.password)
+    let users = app.users.clone();
+    let changed = tokio::task::spawn_blocking(move || users.update_password(&username, &params.password, None, None))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
+    if !changed {
+        http_bail!(StatusCode::BAD_REQUEST, "Failed to reset password");
+    }
 
+    Ok(empty_response())
+}
+
+async fn revoke_user_sessions(
+    app: State<RouterState>,
+    Path(username): Path<String>,
+    Admin(_): Admin,
+) -> ApiResult<impl IntoApiResponse> {
+    let sessions = app.sessions.clone();
+    tokio::task::spawn_blocking(move || sessions.revoke_user(&username))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+        .http_err("Failed to revoke sessions", StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(empty_response())
 }
 
 async fn remove_user(
     app: State<RouterState>,
     Path(username): Path<String>,
-    Auth(session_user): Auth,
+    Admin(session_user): Admin,
 ) -> ApiResult<impl IntoApiResponse> {
-    if session_user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     if username.eq_ignore_ascii_case(&session_user.username) {
         http_bail!(StatusCode::FORBIDDEN, "Cannot delete own user")
     }
 
-    app.users.delete(&username).http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
+    tokio::task::spawn_blocking(move || app.users.delete(&username))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+        .http_err("Failed to delete user", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(empty_response())
 }
 
 async fn create_user(
     app: State<RouterState>,
-    Auth(session_user): Auth,
+    Admin(_): Admin,
     params: Json<CreateUserRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if session_user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     if params.password.len() < PASSWORD_MIN_LENGTH {
         http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
     }
@@ -408,13 +419,9 @@ async fn create_user(
 async fn project_create_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(project): Json<CreateProjectRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     app.projects
         .create(
             &Project {
@@ -434,13 +441,9 @@ async fn project_create_handler(
 async fn project_update_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(req): Json<UpdateProjectRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     if let Some(project) = req.project {
         app.projects
             .update(&Project {
@@ -466,17 +469,19 @@ async fn projects_handler(
     app: State<RouterState>,
     MaybeAuth(user): MaybeAuth,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectsResponse>>> {
-    let projects = app.projects.all().http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
-    let projects: Vec<Project> = projects.into_iter().filter(|p| can_enumerate_project(p, user.as_ref())).collect();
+    let projects = tokio::task::spawn_blocking(move || {
+        app.projects
+            .all()?
+            .into_iter()
+            .filter(|project| can_enumerate_project(project, user.as_ref()))
+            .map(|project| ProjectResponse::new(&app, project))
+            .collect::<anyhow::Result<Vec<_>>>()
+    })
+    .await
+    .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+    .http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let mut resp = Vec::new();
-    for project in projects {
-        resp.push(
-            ProjectResponse::new(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?,
-        );
-    }
-
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(ProjectsResponse { projects: resp })).into())
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(ProjectsResponse { projects })).into())
 }
 
 async fn project_handler(
@@ -484,37 +489,31 @@ async fn project_handler(
     MaybeAuth(user): MaybeAuth,
     Path(project_id): Path<String>,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectResponse>>> {
-    let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
-    if !can_view_project(&project, user.as_ref()) {
-        return Err(StatusCode::NOT_FOUND.into());
-    }
+    let resp = tokio::task::spawn_blocking(move || {
+        let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
+        if !can_view_project(&project, user.as_ref()) {
+            http_bail!(StatusCode::NOT_FOUND, "Project not found")
+        }
+        ProjectResponse::new(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)
+    })
+    .await
+    .http_status(StatusCode::INTERNAL_SERVER_ERROR)??;
 
-    let resp =
-        Json(ProjectResponse::new(&app, project).http_err("Failed to get project", StatusCode::INTERNAL_SERVER_ERROR)?);
-
-    Ok(([(http::header::CACHE_CONTROL, "private")], resp).into())
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(resp)).into())
 }
 
 async fn settings_handler(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<CollectionSettings>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     Ok(([(http::header::CACHE_CONTROL, "private")], Json(app.settings.global())).into())
 }
 
 async fn settings_update_handler(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(settings): Json<CollectionSettings>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     app.settings.update_global(&settings).http_err("Failed to update collection settings", StatusCode::BAD_REQUEST)?;
 
     Ok(empty_response())
@@ -522,13 +521,9 @@ async fn settings_update_handler(
 
 async fn prune_handler(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(req): Json<PruneRequest>,
 ) -> ApiResult<Json<PruneResponse>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     let app = app.app.clone();
     let response = tokio::task::spawn_blocking(move || {
         let mut response = PruneResponse { dry_run: req.dry_run, ..Default::default() };
@@ -562,12 +557,8 @@ async fn prune_handler(
 async fn project_settings_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectDisplaySettings>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
     let settings = app
         .project_settings
@@ -580,13 +571,9 @@ async fn project_settings_handler(
 async fn project_settings_update_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(mut settings): Json<ProjectDisplaySettings>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
     settings.project_id = project_id;
     app.project_settings
@@ -599,12 +586,8 @@ async fn project_settings_update_handler(
 async fn entity_settings_handler(
     app: State<RouterState>,
     Path(entity_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<EntityCollectionSettingsResponse>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     if !app.entities.exists(&entity_id).http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
         http_bail!(StatusCode::NOT_FOUND, "Entity not found")
     }
@@ -618,13 +601,9 @@ async fn entity_settings_handler(
 async fn entity_settings_update_handler(
     app: State<RouterState>,
     Path(entity_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(mut settings): Json<EntityCollectionSettings>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     if !app.entities.exists(&entity_id).http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
         http_bail!(StatusCode::NOT_FOUND, "Entity not found")
     }
@@ -639,11 +618,8 @@ async fn entity_settings_update_handler(
 
 async fn api_keys_handler(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ApiKeysResponse>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
     let keys = app
         .api_keys
         .all()
@@ -656,12 +632,9 @@ async fn api_keys_handler(
 
 async fn api_key_create_handler(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(user): Admin,
     Json(request): Json<CreateApiKeyRequest>,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<CreateApiKeyResponse>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
     let (key, plaintext) = app
         .api_keys
         .create(&request.display_name, &request.entities, &request.projects, &request.permissions, request.expiration)
@@ -678,12 +651,9 @@ async fn api_key_create_handler(
 async fn api_key_update_handler(
     app: State<RouterState>,
     Path(key_id): Path<String>,
-    Auth(user): Auth,
+    Admin(user): Admin,
     Json(request): Json<UpdateApiKeyRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
     if !app
         .api_keys
         .update(&key_id, &request.display_name, &request.entities, &request.projects, &request.permissions)
@@ -698,11 +668,8 @@ async fn api_key_update_handler(
 async fn api_key_delete_handler(
     app: State<RouterState>,
     Path(key_id): Path<String>,
-    Auth(user): Auth,
+    Admin(user): Admin,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
     if !app.api_keys.delete(&key_id).http_err("Failed to delete API key", StatusCode::INTERNAL_SERVER_ERROR)? {
         http_bail!(StatusCode::NOT_FOUND, "API key not found")
     }
@@ -713,12 +680,9 @@ async fn api_key_delete_handler(
 async fn api_key_regenerate_handler(
     app: State<RouterState>,
     Path(key_id): Path<String>,
-    Auth(user): Auth,
+    Admin(user): Admin,
     Json(request): Json<RegenerateApiKeyRequest>,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<CreateApiKeyResponse>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
     let Some((key, plaintext)) = app
         .api_keys
         .regenerate(&key_id, request.expiration)
@@ -737,12 +701,9 @@ async fn api_key_regenerate_handler(
 async fn project_delete_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<impl IntoApiResponse> {
     let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
 
     app.projects.delete(&project.id).http_err("Failed to delete project", StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(empty_response())
@@ -750,12 +711,8 @@ async fn project_delete_handler(
 
 async fn entities_handler(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<EntitiesResponse>>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     let entities = app.entities.all().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut resp = Vec::new();
@@ -783,13 +740,9 @@ async fn entities_handler(
 
 async fn entity_create_handler(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(entity): Json<CreateEntityRequest>,
 ) -> ApiResult<Json<EntityResponse>> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     app.entities
         .create(
             &Entity { id: entity.id.clone(), display_name: entity.display_name.clone() },
@@ -803,13 +756,9 @@ async fn entity_create_handler(
 async fn entity_update_handler(
     app: State<RouterState>,
     Path(entity_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(entity): Json<UpdateEntityRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     if let Some(display_name) = entity.display_name {
         app.entities
             .update(&Entity { id: entity_id.clone(), display_name })
@@ -828,12 +777,8 @@ async fn entity_update_handler(
 async fn entity_delete_handler(
     app: State<RouterState>,
     Path(entity_id): Path<String>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<impl IntoApiResponse> {
-    if user.role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden")
-    }
-
     app.entities.delete(&entity_id).http_err("Failed to delete entity", StatusCode::INTERNAL_SERVER_ERROR)?;
     app.settings.reload().http_err("Failed to reload collection settings", StatusCode::INTERNAL_SERVER_ERROR)?;
 

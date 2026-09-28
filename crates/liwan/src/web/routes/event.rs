@@ -90,40 +90,13 @@ struct Utm {
     term: Option<String>,
 }
 
-fn extract_query(url: &mut Url, keys: &[&str]) -> Option<String> {
-    let value = keys
-        .iter()
-        .find_map(|key| url.query_pairs().find(|(name, _)| name == *key).map(|(_, value)| value.into_owned()));
-
-    if let Some(value) = &value {
-        let filtered = url
-            .query_pairs()
-            .filter(|(name, _)| !keys.contains(&name.as_ref()))
-            .map(|(name, value)| (name.into_owned(), value.into_owned()))
-            .collect::<Vec<_>>();
-
-        let mut pairs = url.query_pairs_mut();
-        pairs.clear();
-        drop(pairs);
-
-        if !filtered.is_empty() {
-            let mut pairs = url.query_pairs_mut();
-            pairs.extend_pairs(filtered.iter().map(|(name, value)| (name.as_str(), value.as_str())));
-        }
-
-        if value.trim().is_empty() {
-            return None;
-        }
-
-        if value.len() > 255 {
-            return None;
-        }
-    }
-
-    value
+fn extract_query(url: &Url, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .find_map(|key| url.query_pairs().find(|(name, _)| name == *key).map(|(_, value)| value.into_owned()))
+        .filter(|value| !value.trim().is_empty() && value.len() <= 255)
 }
 
-fn extract_utm(url: &mut Url) -> Utm {
+fn extract_utm(url: &Url) -> Utm {
     Utm {
         campaign: extract_query(url, &["utm_campaign", "campaign"]),
         content: extract_query(url, &["utm_content", "content"]),
@@ -165,15 +138,12 @@ async fn event_handler(
     // blocking a bit to give some slight backpressure to the caller
     let res = tokio::task::spawn_blocking(move || process_event(app, request, geo_headers, None))
         .await
-        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+        .http_err("Failed to process event", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     match res {
-        Ok(Some((event, false))) => {
-            if enqueue_events(&state, std::iter::once(event)).await.is_err() {
-                tracing::warn!("Failed to send event, channel full");
-            }
-        }
-        Ok(Some((event, true))) => {
+        Some((event, false)) => enqueue_events(&state, std::iter::once(event)).await?,
+        Some((event, true)) => {
             let exit = EventExit {
                 entity_id: event.entity_id,
                 visitor_group_id: event.visitor_group_id,
@@ -182,13 +152,14 @@ async fn event_handler(
                 fqdn: event.fqdn,
                 path: event.path,
             };
-            if state.exits.send_timeout(exit, std::time::Duration::from_secs(2)).await.is_err() {
-                tracing::warn!("Failed to send event exit, channel full");
-            }
+            state
+                .exits
+                .send_timeout(exit, QUEUE_TIMEOUT)
+                .await
+                .http_err("Event ingestion is unavailable", StatusCode::SERVICE_UNAVAILABLE)?;
         }
         // event was filtered out, do nothing
-        Ok(None) => {}
-        Err(e) => tracing::warn!("Failed to process event: {:?}", e),
+        None => {}
     };
 
     Ok(empty_response())
@@ -196,7 +167,7 @@ async fn event_handler(
 
 pub(super) async fn enqueue_events(state: &RouterState, events: impl ExactSizeIterator<Item = Event>) -> ApiResult<()> {
     let unavailable = || crate::web::webext::ApiError {
-        message: "Event queue is full".to_string(),
+        message: "Event ingestion is unavailable".to_string(),
         status: StatusCode::SERVICE_UNAVAILABLE,
         retry_after: Some(1),
     };
@@ -216,7 +187,7 @@ pub(super) fn process_event(
     geo_headers: GeoLocationHeaders,
     settings: Option<&ResolvedCollectionSettings>,
 ) -> Result<Option<(Event, bool)>> {
-    let mut url = event.url;
+    let url = event.url;
     let is_exit = event.exit;
     let referrer = match process_referer(event.referrer.as_deref()) {
         Referrer::Fqdn(fqdn) => Some(fqdn),
@@ -227,7 +198,7 @@ pub(super) fn process_event(
     let referrer = referrer.map(|r| r.trim_start_matches("www.").to_string()); // remove www. prefix
     let referrer = referrer.filter(|r| r.trim().len() > 3); // ignore empty or short referrers
 
-    if settings.is_none() && !app.entities.exists(&event.entity_id).unwrap_or(false) {
+    if settings.is_none() && !app.entities.exists(&event.entity_id)? {
         return Ok(None);
     }
 
@@ -295,8 +266,7 @@ pub(super) fn process_event(
         }
     };
 
-    let utm = if settings.track_utm_params { extract_utm(&mut url) } else { Utm::default() };
-    url.set_query(None);
+    let utm = if settings.track_utm_params { extract_utm(&url) } else { Utm::default() };
     let path = url.path().to_string();
     let path = if path.len() > 1 && path.ends_with('/') { path.trim_end_matches('/').to_string() } else { path };
 
@@ -432,21 +402,19 @@ mod test {
     use super::*;
 
     #[test]
-    fn extract_utm_clears_all_query_params() {
-        let mut url = Url::parse(
+    fn utm_alias_priority() {
+        let url = Url::parse(
             "https://example.com/path/?utm_source=newsletter&source=ignored&campaign=spring&utm_medium=email&foo=bar&ref=backup",
         )
         .expect("valid url");
 
-        let utm = extract_utm(&mut url);
-        url.set_query(None);
+        let utm = extract_utm(&url);
 
         assert_eq!(utm.source.as_deref(), Some("newsletter"));
         assert_eq!(utm.medium.as_deref(), Some("email"));
         assert_eq!(utm.campaign.as_deref(), Some("spring"));
         assert_eq!(utm.content, None);
         assert_eq!(utm.term, None);
-        assert_eq!(url.as_str(), "https://example.com/path/");
     }
 
     #[test]

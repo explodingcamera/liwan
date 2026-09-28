@@ -5,6 +5,8 @@ use std::sync::{Arc, RwLock};
 use anyhow::{Result, bail};
 use rusqlite::OptionalExtension;
 
+use crate::app::models::{DisplayOverride, GeoDetail, ProjectDisplaySettings, ResolvedCollectionSettings};
+use crate::app::reports::{Dimension, Metric};
 use crate::app::{SqlitePool, models};
 
 #[derive(Clone)]
@@ -55,6 +57,15 @@ impl LiwanSettings {
     pub fn resolved_for_entity(&self, entity_id: &str) -> models::ResolvedCollectionSettings {
         let cache = self.cache.read().expect("collection settings cache poisoned");
         models::ResolvedCollectionSettings::resolve(cache.global.clone(), cache.entities.get(entity_id).cloned())
+    }
+
+    /// Resolve collection settings for a project's entities from one cache snapshot.
+    pub fn resolved_for_entities(&self, entity_ids: &[String]) -> Vec<ResolvedCollectionSettings> {
+        let cache = self.cache.read().expect("collection settings cache poisoned");
+        entity_ids
+            .iter()
+            .map(|id| ResolvedCollectionSettings::resolve(cache.global.clone(), cache.entities.get(id).cloned()))
+            .collect()
     }
 
     /// Update global collection settings and refresh the cache
@@ -202,6 +213,44 @@ impl LiwanProjectSettings {
             },
         )?;
         Ok(())
+    }
+}
+
+impl ProjectDisplaySettings {
+    /// Return whether a metric is hidden by project or collection settings.
+    pub fn is_metric_hidden(&self, entities: &[ResolvedCollectionSettings], metric: Metric) -> bool {
+        match self.metric_display_overrides.get(&metric.to_string()).copied().unwrap_or(DisplayOverride::Auto) {
+            DisplayOverride::Show => false,
+            DisplayOverride::Hide => true,
+            DisplayOverride::Auto => match metric {
+                Metric::Views | Metric::UniqueVisitors => false,
+                Metric::BounceRate | Metric::AvgTimeOnSite => entities.iter().any(|settings| !settings.track_sessions),
+            },
+        }
+    }
+
+    /// Return the custom-events card visibility preference.
+    pub fn custom_events_display(&self) -> DisplayOverride {
+        self.metric_display_overrides.get("custom_events").copied().unwrap_or(DisplayOverride::Auto)
+    }
+
+    /// Return whether a dimension is hidden by project or collection settings.
+    pub fn is_dimension_hidden(&self, entities: &[ResolvedCollectionSettings], dimension: Dimension) -> bool {
+        match self.dimension_display_overrides.get(&dimension.to_string()).copied().unwrap_or(DisplayOverride::Auto) {
+            DisplayOverride::Show => false,
+            DisplayOverride::Hide => true,
+            DisplayOverride::Auto => match dimension {
+                Dimension::UrlEntry | Dimension::UrlExit => entities.iter().any(|settings| !settings.track_sessions),
+                Dimension::Country => entities.iter().any(|settings| settings.track_geo == GeoDetail::None),
+                Dimension::City => entities.iter().any(|settings| settings.track_geo != GeoDetail::City),
+                Dimension::UtmSource
+                | Dimension::UtmMedium
+                | Dimension::UtmCampaign
+                | Dimension::UtmContent
+                | Dimension::UtmTerm => entities.iter().any(|settings| !settings.track_utm_params),
+                _ => false,
+            },
+        }
     }
 }
 

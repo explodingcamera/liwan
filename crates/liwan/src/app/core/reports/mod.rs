@@ -9,7 +9,7 @@ pub use dimension::dimension_report;
 pub use graph::{build_graph_buckets, overall_report};
 pub use stats::{earliest_timestamp, online_users, overall_stats};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -51,9 +51,10 @@ pub struct DateRange {
 
 impl DateRange {
     /// Return the immediately preceding range with the same duration
-    pub fn prev(&self) -> Self {
+    pub fn prev(&self) -> Result<Self> {
         let duration = self.end - self.start;
-        Self { start: self.start - duration, end: self.start }
+        let start = self.start.checked_sub_signed(duration).context("Previous report range is out of bounds")?;
+        Ok(Self { start, end: self.start })
     }
 
     /// Return whether the range ends after the current time

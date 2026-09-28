@@ -2,6 +2,7 @@ use crate::app::{SqlitePool, models};
 use crate::utils::hash::{hash_password, verify_password};
 use crate::utils::validate;
 use anyhow::{Result, bail};
+use rusqlite::OptionalExtension;
 
 #[derive(Clone)]
 pub struct LiwanUsers {
@@ -94,14 +95,46 @@ impl LiwanUsers {
         Ok(())
     }
 
-    /// Update a user's password
-    pub fn update_password(&self, username: &str, password: &str) -> Result<()> {
-        let conn = self.pool.get()?;
+    /// Update a password and revoke other sessions. CLI resets may omit the current password and session.
+    pub fn update_password(
+        &self,
+        username: &str,
+        password: &str,
+        current_password: Option<&str>,
+        session_id: Option<&str>,
+    ) -> Result<bool> {
+        let username = username.to_lowercase();
+        let Some(previous_hash) = self
+            .pool
+            .get()?
+            .query_row("select password_hash from users where username = ?", [&username], |row| {
+                row.get::<_, Option<String>>(0)
+            })
+            .optional()?
+        else {
+            return Ok(false);
+        };
+        if let Some(current_password) = current_password
+            && previous_hash.as_deref().is_none_or(|hash| verify_password(current_password, hash).is_err())
+        {
+            return Ok(false);
+        }
         let password_hash = hash_password(password)?;
-        let mut stmt =
-            conn.prepare_cached("update users set password_hash = :password_hash where username = :username")?;
-        stmt.execute(rusqlite::named_params! { ":password_hash": password_hash, ":username": username })?;
-        Ok(())
+        let mut conn = self.pool.get()?;
+        let tx = conn.transaction()?;
+        if tx.execute(
+            "update users set password_hash = ? where username = ? and password_hash is ?",
+            rusqlite::params![password_hash, username, previous_hash],
+        )? == 0
+        {
+            return Ok(false);
+        }
+        tx.execute(
+            "delete from sessions where lower(username) = ? and id != ?",
+            [&username, session_id.unwrap_or_default()],
+        )?;
+        tx.commit()?;
+        Ok(true)
     }
 
     /// Delete a user

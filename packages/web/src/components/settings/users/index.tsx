@@ -3,13 +3,13 @@ import styles from "../settings.module.css";
 import { useEffect, useMemo, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 
-import { api } from "@/api";
+import { api, useMutation } from "@/api";
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
 import { appPath, basePath } from "@/config";
-import { invalidateUsers, useMe, useProjects, useUsers } from "@/hooks/api";
+import { invalidateUsers, useProjects, useUsers } from "@/hooks/api";
 import { getUsername } from "@/utils";
 import { DeleteDialog } from "../dialogs";
 import { SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
@@ -24,8 +24,6 @@ const getSettingsPathId = (prefix: string) => {
 };
 
 const SettingsLink = ({ href, label }: { href: string; label: string }) => {
-	const { role } = useMe();
-	if (role === "user") return null;
 	return (
 		<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
 			<SettingsIcon size={18} />
@@ -79,31 +77,36 @@ export const UserSettingsPage = ({ username: usernameProp }: { username: string 
 const UserSettingsContent = ({ username }: { username: string }) => {
 	const { users, isLoading, authError } = useUsers();
 	const { projects } = useProjects();
-	const me = useMe();
 	const user = users.find((u) => u.username === username);
-	const [selectedProjects, setSelectedProjects] = useState<Tag[]>([]);
-	const [isAdmin, setIsAdmin] = useState(false);
-	const [error, setError] = useState<string>();
+	const [form, setForm] = useState({ selectedProjects: [] as Tag[], isAdmin: false });
+	const { selectedProjects, isAdmin } = form;
 
 	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
 
 	const isSelf = getUsername() === username;
+	const { mutate: revokeSessions, isPending: revoking } = useMutation({
+		mutationFn: api["/api/dashboard/user/{username}/sessions"].delete,
+		onSuccess: () => {
+			createToast("Sessions revoked", "success");
+			if (isSelf) window.location.href = appPath("/login");
+		},
+		onError: () => createToast("Failed to revoke sessions", "error"),
+	});
 
 	useEffect(() => {
 		if (!user) return;
-		setIsAdmin(user.role === "admin");
-		setSelectedProjects(
-			user.projects.map((projectId) => {
+		setForm({
+			isAdmin: user.role === "admin",
+			selectedProjects: user.projects.map((projectId) => {
 				const p = projects.find((p) => p.id === projectId);
 				return { value: projectId, label: p ? p.displayName : projectId };
 			}),
-		);
+		});
 	}, [user, projects]);
 
 	const saveUser = (nextProjects: Tag[], nextIsAdmin: boolean) => {
 		if (!user) return;
-		setSelectedProjects(nextProjects);
-		setIsAdmin(nextIsAdmin);
+		setForm({ selectedProjects: nextProjects, isAdmin: nextIsAdmin });
 		api["/api/dashboard/user/{username}"]
 			.put({
 				params: { username: user.username },
@@ -116,10 +119,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 				invalidateUsers();
 				createToast("User updated", "success");
 			})
-			.catch((err) => {
-				setError(err instanceof Error ? err.message : "Failed to update user");
-				createToast("Failed to update user", "error");
-			});
+			.catch(() => createToast("Failed to update user", "error"));
 	};
 
 	if (authError) return <p>You don't have permission to view this page.</p>;
@@ -146,57 +146,62 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 						noOptionsText="No matching projects"
 					/>
 				</div>
-				{me.role === "admin" && (
-					<SettingsSwitch
-						label="Administrator access"
-						description={
-							<>
-								Allow this user to manage projects, entities, and users.
-								{isSelf && " You cannot change your own role."}
-							</>
-						}
-						checked={isAdmin}
-						disabled={isSelf}
-						onCheckedChange={(checked) => saveUser(selectedProjects, checked)}
-					/>
-				)}
-				{me.role === "admin" && (
-					<div className={styles.dangerZone}>
-						<div>
-							<strong>Delete user</strong>
-							<p>The user will immediately lose access to the dashboard.</p>
-						</div>
-						{isSelf ? (
-							<button
-								type="button"
-								className={`${styles.deleteButton} button-danger`}
-								onClick={() => createToast("You cannot delete your own account", "error")}
-							>
-								Delete user
-							</button>
-						) : (
-							<DeleteDialog
-								id={user.username}
-								displayName={user.username}
-								type="user"
-								onDeleted={() => {
-									window.location.href = appPath("/settings/users");
-								}}
-								trigger={
-									<button type="button" className={`${styles.deleteButton} button-danger`}>
-										Delete user
-									</button>
-								}
-							/>
-						)}
+				<SettingsSwitch
+					label="Administrator access"
+					description={
+						<>
+							Allow this user to manage projects, entities, and users.
+							{isSelf && " You cannot change your own role."}
+						</>
+					}
+					checked={isAdmin}
+					disabled={isSelf}
+					onCheckedChange={(checked) => saveUser(selectedProjects, checked)}
+				/>
+				<div className={styles.dangerZone}>
+					<div>
+						<strong>Revoke sessions</strong>
+						<p>Sign this user out on all devices without changing their password.</p>
 					</div>
-				)}
+					<button
+						type="button"
+						className="button-secondary"
+						disabled={revoking}
+						onClick={() => revokeSessions({ params: { username: user.username } })}
+					>
+						Revoke sessions
+					</button>
+				</div>
+				<div className={styles.dangerZone}>
+					<div>
+						<strong>Delete user</strong>
+						<p>The user will immediately lose access to the dashboard.</p>
+					</div>
+					{isSelf ? (
+						<button
+							type="button"
+							className={`${styles.deleteButton} button-danger`}
+							onClick={() => createToast("You cannot delete your own account", "error")}
+						>
+							Delete user
+						</button>
+					) : (
+						<DeleteDialog
+							id={user.username}
+							displayName={user.username}
+							type="user"
+							onDeleted={() => {
+								window.location.href = appPath("/settings/users");
+							}}
+							trigger={
+								<button type="button" className={`${styles.deleteButton} button-danger`}>
+									Delete user
+								</button>
+							}
+						/>
+					)}
+				</div>
 			</div>
-			{error && (
-				<article role="alert" className={styles.error}>
-					{error}
-				</article>
-			)}
 		</SettingsForm>
 	);
 };

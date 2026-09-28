@@ -1,6 +1,7 @@
 use crate::app::{SqlitePool, models};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use rusqlite::OptionalExtension;
 
 #[derive(Clone)]
 pub struct LiwanSessions {
@@ -55,11 +56,13 @@ impl LiwanSessions {
             })
         });
 
-        user.map(Some).or_else(
-            |err| {
-                if err == rusqlite::Error::QueryReturnedNoRows { Ok(None) } else { Err(err.into()) }
-            },
-        )
+        Ok(user.optional()?)
+    }
+
+    /// Revoke all sessions belonging to a user.
+    pub fn revoke_user(&self, username: &str) -> Result<()> {
+        self.pool.get()?.execute("delete from sessions where lower(username) = ?", [username.to_lowercase()])?;
+        Ok(())
     }
 
     /// Expire a session

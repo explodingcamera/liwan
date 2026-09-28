@@ -1,7 +1,7 @@
 use crate::app::DuckDBConn;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
 use anyhow::{Context, Result};
-use chrono::{DateTime, Days, Duration, LocalResult, NaiveDate, TimeZone, Timelike, Utc};
+use chrono::{DateTime, Days, Duration, LocalResult, NaiveDate, Offset, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 
 use super::shared::{build_filter_clause, metric_aggregate_sql};
@@ -26,7 +26,8 @@ fn resolve_local_day_start(timezone: Tz, date: NaiveDate) -> Result<DateTime<Utc
             let mut resolved = None;
 
             for _ in 0..180 {
-                candidate += Duration::minutes(1);
+                candidate =
+                    candidate.checked_add_signed(Duration::minutes(1)).context("Local date is out of bounds")?;
                 match timezone.from_local_datetime(&candidate) {
                     LocalResult::Single(dt) => {
                         resolved = Some(dt);
@@ -47,6 +48,14 @@ fn resolve_local_day_start(timezone: Tz, date: NaiveDate) -> Result<DateTime<Utc
     Ok(resolved.with_timezone(&Utc))
 }
 
+fn local_date(timezone: Tz, datetime: DateTime<Utc>) -> Result<NaiveDate> {
+    datetime
+        .naive_utc()
+        .checked_add_offset(datetime.with_timezone(&timezone).offset().fix())
+        .map(|datetime| datetime.date())
+        .context("Local date is out of bounds")
+}
+
 /// Split a date range into graph buckets aligned to the selected timezone
 pub fn build_graph_buckets(
     range: &DateRange,
@@ -64,46 +73,31 @@ pub fn build_graph_buckets(
     let aligned_start = match interval {
         GraphInterval::Hour => {
             let start_local = range.start.with_timezone(&timezone);
-            range.start
-                - Duration::minutes(i64::from(start_local.minute()))
-                - Duration::seconds(i64::from(start_local.second()))
-                - Duration::nanoseconds(i64::from(start_local.nanosecond()))
+            range
+                .start
+                .checked_sub_signed(
+                    Duration::minutes(i64::from(start_local.minute()))
+                        + Duration::seconds(i64::from(start_local.second()))
+                        + Duration::nanoseconds(i64::from(start_local.nanosecond())),
+                )
+                .context("Graph start is out of bounds")?
         }
-        GraphInterval::Day => resolve_local_day_start(timezone, range.start.with_timezone(&timezone).date_naive())?,
+        GraphInterval::Day => resolve_local_day_start(timezone, local_date(timezone, range.start)?)?,
     };
 
-    let mut bucket_count = 0;
+    let mut buckets = Vec::new();
     let mut bucket_start = aligned_start;
 
     while bucket_start < range.end {
-        let next_bucket_start = match interval {
-            GraphInterval::Hour => bucket_start + Duration::hours(1),
-            GraphInterval::Day => {
-                let next_date = bucket_start
-                    .with_timezone(&timezone)
-                    .date_naive()
-                    .checked_add_days(Days::new(1))
-                    .context("Failed to advance bucket date")?;
-                resolve_local_day_start(timezone, next_date)?
-            }
-        };
-
-        bucket_count += 1;
-        if bucket_count > max_datapoints {
+        if buckets.len() >= max_datapoints {
             anyhow::bail!("Too many data points");
         }
-        bucket_start = next_bucket_start;
-    }
-
-    let mut buckets = Vec::with_capacity(bucket_count);
-    bucket_start = aligned_start;
-    while bucket_start < range.end {
         let next_bucket_start = match interval {
-            GraphInterval::Hour => bucket_start + Duration::hours(1),
+            GraphInterval::Hour => {
+                bucket_start.checked_add_signed(Duration::hours(1)).context("Graph end is out of bounds")?
+            }
             GraphInterval::Day => {
-                let next_date = bucket_start
-                    .with_timezone(&timezone)
-                    .date_naive()
+                let next_date = local_date(timezone, bucket_start)?
                     .checked_add_days(Days::new(1))
                     .context("Failed to advance bucket date")?;
                 resolve_local_day_start(timezone, next_date)?

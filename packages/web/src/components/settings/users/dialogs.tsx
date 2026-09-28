@@ -7,20 +7,19 @@ import { PlusIcon } from "lucide-react";
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
-import { invalidateUsers, useMe } from "@/hooks/api";
+import { invalidateUsers } from "@/hooks/api";
 
 export const CreateUser = () => {
-	const { role } = useMe();
 	const closeRef = useRef<HTMLButtonElement>(null);
 
-	const { mutate, error, reset } = useMutation({
+	const { mutate } = useMutation({
 		mutationFn: api["/api/dashboard/user"].post,
 		onSuccess: () => {
 			closeRef?.current?.click();
 			createToast("User created", "success");
 			invalidateUsers();
 		},
-		onError: console.error,
+		onError: (error) => createToast(error.message, "error"),
 	});
 
 	const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
@@ -37,15 +36,12 @@ export const CreateUser = () => {
 
 	return (
 		<Dialog
-			onOpenChange={() => reset()}
 			title="Create a new user"
 			description="Users can access assigned projects unless administrator access is enabled."
 			trigger={
-				role === "admin" && (
-					<button type="button" className={styles.new} aria-label="Create user" title="Create user">
-						<PlusIcon size={24} strokeWidth={2.25} />
-					</button>
-				)
+				<button type="button" className={styles.new} aria-label="Create user" title="Create user">
+					<PlusIcon size={24} strokeWidth={2.25} />
+				</button>
 			}
 		>
 			<form onSubmit={handleSubmit}>
@@ -82,13 +78,6 @@ export const CreateUser = () => {
 						Create user
 					</button>
 				</div>
-				{error && (
-					<article role="alert" className={styles.error}>
-						{"An error occurred while creating the user:"}
-						<br />
-						{error?.message ?? "Unknown error"}
-					</article>
-				)}
 			</form>
 		</Dialog>
 	);

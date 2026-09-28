@@ -8,22 +8,20 @@ import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { appPath } from "@/config";
-import { invalidateProjects, useMe } from "@/hooks/api";
+import { invalidateProjects } from "@/hooks/api";
 
 type ProjectVisibility = "private" | "unlisted" | "public";
 const visibilityPublic = (visibility: ProjectVisibility) => visibility === "public" || visibility === "unlisted";
 
 export const CreateProject = () => {
-	const { role } = useMe();
-
-	const { mutate, error, reset } = useMutation({
+	const { mutate } = useMutation({
 		mutationFn: api["/api/dashboard/project/{project_id}"].post,
 		onSuccess: (_res, variables) => {
 			createToast("Project created", "success");
 			invalidateProjects();
 			navigate(appPath(`/settings/projects/${variables.params.project_id}`));
 		},
-		onError: console.error,
+		onError: (error) => createToast(error.message, "error"),
 	});
 
 	const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
@@ -48,15 +46,12 @@ export const CreateProject = () => {
 
 	return (
 		<Dialog
-			onOpenChange={() => reset()}
 			title="Create a new project"
 			description="Projects group one or more entities for reporting and access control."
 			trigger={
-				role === "admin" && (
-					<button type="button" className={styles.new} aria-label="Create project" title="Create project">
-						<PlusIcon size={24} strokeWidth={2.25} />
-					</button>
-				)
+				<button type="button" className={styles.new} aria-label="Create project" title="Create project">
+					<PlusIcon size={24} strokeWidth={2.25} />
+				</button>
 			}
 		>
 			<form onSubmit={handleSubmit}>
@@ -93,13 +88,6 @@ export const CreateProject = () => {
 						Create project
 					</button>
 				</div>
-				{error && (
-					<article role="alert" className={styles.error}>
-						{"An error occurred while creating the project:"}
-						<br />
-						{error?.message ?? "Unknown error"}
-					</article>
-				)}
 			</form>
 		</Dialog>
 	);

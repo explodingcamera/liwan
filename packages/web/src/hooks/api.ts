@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/api/client";
 import { queryClient, useQuery } from "@/api/query";
 import type { DateRange } from "@/api/ranges";
+import { createToast } from "@/components/ui/toast";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
 import { toDataPoints } from "../components/dashboard/project/graph";
 
@@ -108,6 +109,17 @@ export const useUsers = () => {
 
 	const authError = getStatusCode(error) === 401;
 	return { users: data?.users ?? [], isLoading, error, authError };
+};
+
+export const useApiKeys = () => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["api_keys"],
+		queryFn: () => api["/api/dashboard/api-keys"].get().json(),
+	});
+	useEffect(() => {
+		if (error) createToast("Failed to load API keys", "error");
+	}, [error]);
+	return { keys: data?.keys ?? [], isLoading, error };
 };
 
 export const useDimension = ({
@@ -281,3 +293,4 @@ export const useProjectStats = ({
 export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });
 export const invalidateEntities = () => queryClient.invalidateQueries({ queryKey: ["entities"] });
 export const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ["users"] });
+export const invalidateApiKeys = () => queryClient.invalidateQueries({ queryKey: ["api_keys"] });

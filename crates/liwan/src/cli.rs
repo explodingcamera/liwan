@@ -131,7 +131,9 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
     match cmd {
         Command::UpdatePassword(update) => {
             let app = Liwan::try_new(config)?;
-            app.users.update_password(&update.username, &update.password)?;
+            if !app.users.update_password(&update.username, &update.password, None, None)? {
+                anyhow::bail!("Failed to update password");
+            }
             println!("Password updated for user {}", update.username);
         }
         Command::Users(_) => {

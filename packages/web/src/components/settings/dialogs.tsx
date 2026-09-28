@@ -6,7 +6,7 @@ import { useRef } from "react";
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
-import { invalidateEntities, invalidateProjects, invalidateUsers, useMe } from "@/hooks/api";
+import { invalidateEntities, invalidateProjects, invalidateUsers } from "@/hooks/api";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 
@@ -24,7 +24,6 @@ export const DeleteDialog = ({
 	onDeleted?: () => void;
 }) => {
 	const closeRef = useRef<HTMLButtonElement>(null);
-	const { role } = useMe();
 
 	const endpoints = {
 		project: (id: string) =>
@@ -41,7 +40,7 @@ export const DeleteDialog = ({
 			}),
 	} as const;
 
-	const { mutate, error, reset } = useMutation({
+	const { mutate } = useMutation({
 		mutationFn: () => endpoints[type](id),
 		onSuccess: () => {
 			closeRef?.current?.click();
@@ -59,23 +58,22 @@ export const DeleteDialog = ({
 			createToast(`${toTitleCase(type)} deleted`, "success");
 			onDeleted?.();
 		},
-		onError: console.error,
+		onError: (error) => createToast(error.message, "error"),
 	});
 
 	const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		event.stopPropagation();
-		mutate({ params: { [`${type}_id`]: id } });
+		mutate();
 	};
 
 	return (
 		<Dialog
-			onOpenChange={() => reset()}
 			title={`Delete ${toTitleCase(type)}: ${displayName}`}
 			description={`Are you sure you want to delete this ${type}?\n ${
 				type === "entity" ? "This will not delete the data associated with it." : "This action cannot be undone."
 			}`}
-			trigger={role === "admin" && trigger}
+			trigger={trigger}
 		>
 			<form onSubmit={handleSubmit}>
 				<div className="action-row">
@@ -86,15 +84,6 @@ export const DeleteDialog = ({
 						Delete {type}
 					</button>
 				</div>
-				{error && (
-					<article role="alert" className={styles.error}>
-						{"An error occurred while deleting this "}
-						{type}
-						{":"}
-						<br />
-						{error?.message ?? "Unknown error"}
-					</article>
-				)}
 			</form>
 		</Dialog>
 	);

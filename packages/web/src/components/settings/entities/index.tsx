@@ -11,7 +11,7 @@ import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
 import { appPath, basePath } from "@/config";
 import type { EntityCollectionSettings } from "@/constants";
-import { invalidateEntities, useEntities, useMe, useProjects } from "@/hooks/api";
+import { invalidateEntities, useEntities, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
 import { AllowedHostnamesEditor, DocsLink, FiltersEditor, GeoSelect, VisitorModeSelect } from "../filters";
 import { SettingsField, SettingsFieldset, SettingsForm, SettingsHeader, SettingsPanel, SettingsTabs } from "../form";
@@ -53,9 +53,6 @@ const entityTabs = [
 ] as const satisfies readonly { value: EntityTab; label: string }[];
 
 const SettingsLink = ({ href, label }: { href: string; label: string }) => {
-	const { role } = useMe();
-	if (role === "user") return null;
-
 	return (
 		<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
 			<SettingsIcon size={18} />
@@ -160,10 +157,9 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 	const { projects } = useProjects();
 	const entity = entities.find((entity) => entity.id === entityId);
 	const [tab, setTab] = useState<EntityTab>("general");
-	const [displayName, setDisplayName] = useState("");
-	const [selectedProjects, setSelectedProjects] = useState<Tag[]>([]);
+	const [form, setForm] = useState({ displayName: "", selectedProjects: [] as Tag[] });
+	const { displayName, selectedProjects } = form;
 	const [settings, setSettings] = useState<EntityCollectionSettings>();
-	const [error, setError] = useState<string>();
 
 	const projectTags = useMemo(
 		() =>
@@ -176,18 +172,18 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 
 	useEffect(() => {
 		if (!entity) return;
-		setDisplayName(entity.displayName);
-		setSelectedProjects(
-			entity.projects.map((project) => ({
+		setForm({
+			displayName: entity.displayName,
+			selectedProjects: entity.projects.map((project) => ({
 				value: project.id,
 				label: project.displayName,
 			})),
-		);
+		});
 		api["/api/dashboard/entity/{entity_id}/settings"]
 			.get({ params: { entity_id: entity.id } })
 			.json()
 			.then((res) => setSettings(res.settings))
-			.catch((err) => setError(err instanceof Error ? err.message : "Failed to load entity settings"));
+			.catch(() => createToast("Failed to load entity settings", "error"));
 	}, [entity]);
 
 	const saveEntity = (nextDisplayName: string, nextProjects: Tag[]) => {
@@ -204,10 +200,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 				invalidateEntities();
 				createToast("Entity updated", "success");
 			})
-			.catch((err) => {
-				setError(err instanceof Error ? err.message : "Failed to update entity");
-				createToast("Failed to update entity", "error");
-			});
+			.catch(() => createToast("Failed to update entity", "error"));
 	};
 
 	const saveEntitySettings = (next: EntityCollectionSettings, section: EntitySettingsSection = "collection") => {
@@ -220,10 +213,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 				json: next,
 			})
 			.then(() => createToast(`Entity ${label} updated`, "success"))
-			.catch((err) => {
-				setError(err instanceof Error ? err.message : `Failed to update entity ${label} settings`);
-				createToast(`Failed to update entity ${label}`, "error");
-			});
+			.catch(() => createToast(`Failed to update entity ${label}`, "error"));
 	};
 
 	const saveCollectionSettings = (
@@ -253,7 +243,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 							name="displayName"
 							type="text"
 							value={displayName}
-							onChange={(event) => setDisplayName(event.currentTarget.value)}
+							onChange={(event) => setForm({ ...form, displayName: event.currentTarget.value })}
 							onBlur={(event) => {
 								if (event.currentTarget.value !== entity.displayName) {
 									saveEntity(event.currentTarget.value, selectedProjects);
@@ -272,12 +262,12 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 						suggestions={projectTags}
 						onAdd={(tag) => {
 							const next = [...selectedProjects, tag];
-							setSelectedProjects(next);
+							setForm({ ...form, selectedProjects: next });
 							saveEntity(displayName, next);
 						}}
 						onDelete={(i) => {
 							const next = selectedProjects.filter((_, index) => index !== i);
-							setSelectedProjects(next);
+							setForm({ ...form, selectedProjects: next });
 							saveEntity(displayName, next);
 						}}
 						noOptionsText="No matching projects"
@@ -444,11 +434,6 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 					</>
 				)}
 			</SettingsTabs>
-			{error && (
-				<article role="alert" className={styles.error}>
-					{error}
-				</article>
-			)}
 		</SettingsForm>
 	);
 };

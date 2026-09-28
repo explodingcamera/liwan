@@ -15,8 +15,6 @@ use core::{
     LiwanSettings, LiwanUsers,
 };
 use duckdb::DuckdbConnectionManager;
-use models::{DisplayOverride, GeoDetail};
-use reports::{Dimension, Metric};
 
 pub type DuckDBConn = r2d2::PooledConnection<DuckdbConnectionManager>;
 pub type DuckDBPool = r2d2::Pool<DuckdbConnectionManager>;
@@ -24,7 +22,7 @@ pub type SqlitePool = r2d2::Pool<SqliteConnectionManager>;
 pub use core::{ApiKeyAccess, PruneStats};
 
 pub struct Liwan {
-    events_pool: r2d2::Pool<DuckdbConnectionManager>,
+    pub(crate) events_pool: DuckDBPool,
 
     pub events: LiwanEvents,
     pub api_keys: LiwanApiKeys,
@@ -68,28 +66,7 @@ impl Liwan {
             embedded::events::migrations::runner(),
         )?;
 
-        Ok(Self {
-            #[cfg(feature = "geoip")]
-            geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
-
-            events: LiwanEvents::try_new(conn_events.clone(), conn_app.clone(), config.visitor_group_rotation_hour)?,
-            api_keys: LiwanApiKeys::new(conn_app.clone()),
-            onboarding: LiwanOnboarding::try_new(&conn_app)?,
-            sessions: LiwanSessions::new(conn_app.clone()),
-            external_auth: LiwanExternalAuth::try_new(
-                conn_app.clone(),
-                config.public_url("/api/dashboard/auth/external/callback")?,
-            )?,
-            entities: LiwanEntities::new(conn_app.clone()),
-            projects: LiwanProjects::new(conn_app.clone()),
-            settings: LiwanSettings::try_new(conn_app.clone())?,
-            project_settings: LiwanProjectSettings::new(conn_app.clone()),
-            users: LiwanUsers::new(conn_app),
-
-            events_pool: conn_events,
-            config,
-        }
-        .into())
+        Self::from_pools(config, conn_app, conn_events)
     }
 
     pub fn new_memory(config: Config) -> Result<Arc<Self>> {
@@ -97,6 +74,10 @@ impl Liwan {
         let conn_app = db::init_sqlite_mem(embedded::app::migrations::runner())?;
         let conn_events = db::init_duckdb_mem(embedded::events::migrations::runner())?;
 
+        Self::from_pools(config, conn_app, conn_events)
+    }
+
+    fn from_pools(config: Config, conn_app: SqlitePool, conn_events: DuckDBPool) -> Result<Arc<Self>> {
         Ok(Self {
             #[cfg(feature = "geoip")]
             geoip: core::LiwanGeoIP::try_new(config.clone())?.into(),
@@ -147,66 +128,6 @@ impl Liwan {
         self.events_pool.get()?.execute("FORCE CHECKPOINT", [])?; // normal checkpoints don't seem to work consistently on shutdown
         tracing::info!("Shutting down");
         Ok(())
-    }
-
-    pub fn is_metric_hidden(&self, project_id: &str, entities: &[String], metric: Metric) -> bool {
-        match self
-            .project_settings
-            .get(project_id)
-            .ok()
-            .and_then(|settings| settings.metric_display_overrides.get(&metric.to_string()).copied())
-            .unwrap_or(DisplayOverride::Auto)
-        {
-            DisplayOverride::Show => false,
-            DisplayOverride::Hide => true,
-            DisplayOverride::Auto => match metric {
-                Metric::Views | Metric::UniqueVisitors => false,
-                Metric::BounceRate | Metric::AvgTimeOnSite => {
-                    entities.iter().any(|entity_id| !self.settings.resolved_for_entity(entity_id).track_sessions)
-                }
-            },
-        }
-    }
-
-    /// Return the custom-events card visibility preference for a project.
-    pub fn custom_events_display(&self, project_id: &str) -> DisplayOverride {
-        self.project_settings
-            .get(project_id)
-            .ok()
-            .and_then(|settings| settings.metric_display_overrides.get("custom_events").copied())
-            .unwrap_or(DisplayOverride::Auto)
-    }
-
-    pub fn is_dimension_hidden(&self, project_id: &str, entities: &[String], dimension: Dimension) -> bool {
-        match self
-            .project_settings
-            .get(project_id)
-            .ok()
-            .and_then(|settings| settings.dimension_display_overrides.get(&dimension.to_string()).copied())
-            .unwrap_or(DisplayOverride::Auto)
-        {
-            DisplayOverride::Show => false,
-            DisplayOverride::Hide => true,
-            DisplayOverride::Auto => match dimension {
-                Dimension::UrlEntry | Dimension::UrlExit => {
-                    entities.iter().any(|entity_id| !self.settings.resolved_for_entity(entity_id).track_sessions)
-                }
-                Dimension::Country => entities
-                    .iter()
-                    .any(|entity_id| self.settings.resolved_for_entity(entity_id).track_geo == GeoDetail::None),
-                Dimension::City => entities
-                    .iter()
-                    .any(|entity_id| self.settings.resolved_for_entity(entity_id).track_geo != GeoDetail::City),
-                Dimension::UtmSource
-                | Dimension::UtmMedium
-                | Dimension::UtmCampaign
-                | Dimension::UtmContent
-                | Dimension::UtmTerm => {
-                    entities.iter().any(|entity_id| !self.settings.resolved_for_entity(entity_id).track_utm_params)
-                }
-                _ => false,
-            },
-        }
     }
 }
 

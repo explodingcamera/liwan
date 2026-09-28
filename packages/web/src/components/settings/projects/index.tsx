@@ -13,7 +13,7 @@ import { createToast } from "@/components/ui/toast";
 import { appPath, basePath } from "@/config";
 import type { Dimension, DisplayOverride, ProjectDisplaySettings, ProjectResponse } from "@/constants";
 import { dimensionNames, displayOverrides, metricNames, metrics } from "@/constants";
-import { invalidateProjects, useEntities, useMe, useProjects } from "@/hooks/api";
+import { invalidateProjects, useEntities, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
 import { SettingsField, SettingsForm, SettingsHeader, SettingsPanel, SettingsTabs } from "../form";
 import type { Tag } from "../tags";
@@ -57,9 +57,6 @@ const projectTabs = [
 ] as const satisfies readonly { value: ProjectTab; label: string }[];
 
 const SettingsLink = ({ href, label }: { href: string; label: string }) => {
-	const { role } = useMe();
-	if (role === "user") return null;
-
 	return (
 		<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
 			<SettingsIcon size={18} />
@@ -124,11 +121,13 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 	const { entities } = useEntities();
 	const project = projects.find((project) => project.id === projectId);
 	const [tab, setTab] = useState<ProjectTab>("general");
-	const [displayName, setDisplayName] = useState("");
-	const [visibility, setVisibility] = useState<ProjectVisibility>("private");
-	const [selectedEntities, setSelectedEntities] = useState<Tag[]>([]);
+	const [form, setForm] = useState({
+		displayName: "",
+		visibility: "private" as ProjectVisibility,
+		selectedEntities: [] as Tag[],
+	});
+	const { displayName, visibility, selectedEntities } = form;
 	const [settings, setSettings] = useState<ProjectDisplaySettings>();
-	const [error, setError] = useState<string>();
 
 	const entityTags = useMemo(
 		() =>
@@ -141,19 +140,19 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 
 	useEffect(() => {
 		if (!project) return;
-		setDisplayName(project.displayName);
-		setVisibility(projectVisibility(project));
-		setSelectedEntities(
-			project.entities.map((entity) => ({
+		setForm({
+			displayName: project.displayName,
+			visibility: projectVisibility(project),
+			selectedEntities: project.entities.map((entity) => ({
 				value: entity.id,
 				label: entity.displayName,
 			})),
-		);
+		});
 		api["/api/dashboard/project/{project_id}/settings"]
 			.get({ params: { project_id: project.id } })
 			.json()
 			.then(setSettings)
-			.catch((err) => setError(err instanceof Error ? err.message : "Failed to load project settings"));
+			.catch(() => createToast("Failed to load project settings", "error"));
 	}, [project]);
 
 	const saveProject = (nextDisplayName: string, nextVisibility: ProjectVisibility, nextEntities: Tag[]) => {
@@ -174,10 +173,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 				invalidateProjects();
 				createToast("Project updated", "success");
 			})
-			.catch((err) => {
-				setError(err instanceof Error ? err.message : "Failed to update project");
-				createToast("Failed to update project", "error");
-			});
+			.catch(() => createToast("Failed to update project", "error"));
 	};
 
 	const saveProjectSettings = (next: ProjectDisplaySettings) => {
@@ -189,10 +185,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 				json: next,
 			})
 			.then(() => createToast("Project display updated", "success"))
-			.catch((err) => {
-				setError(err instanceof Error ? err.message : "Failed to update project display settings");
-				createToast("Failed to update project display", "error");
-			});
+			.catch(() => createToast("Failed to update project display", "error"));
 	};
 
 	const setMetricDisplay = (metric: string, display: DisplayOverride) => {
@@ -241,7 +234,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 							name="displayName"
 							type="text"
 							value={displayName}
-							onChange={(event) => setDisplayName(event.currentTarget.value)}
+							onChange={(event) => setForm({ ...form, displayName: event.currentTarget.value })}
 							onBlur={(event) => {
 								if (event.currentTarget.value !== project.displayName) {
 									saveProject(event.currentTarget.value, visibility, selectedEntities);
@@ -260,7 +253,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 							value={visibility}
 							onChange={(event) => {
 								const next = event.currentTarget.value as ProjectVisibility;
-								setVisibility(next);
+								setForm({ ...form, visibility: next });
 								saveProject(displayName, next, selectedEntities);
 							}}
 						>
@@ -276,12 +269,12 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 						suggestions={entityTags}
 						onAdd={(tag) => {
 							const next = [...selectedEntities, tag];
-							setSelectedEntities(next);
+							setForm({ ...form, selectedEntities: next });
 							saveProject(displayName, visibility, next);
 						}}
 						onDelete={(i) => {
 							const next = selectedEntities.filter((_, index) => index !== i);
-							setSelectedEntities(next);
+							setForm({ ...form, selectedEntities: next });
 							saveProject(displayName, visibility, next);
 						}}
 						noOptionsText="No matching entities"
@@ -395,11 +388,6 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 					</SettingsPanel>
 				)}
 			</SettingsTabs>
-			{error && (
-				<article role="alert" className={styles.error}>
-					{error}
-				</article>
-			)}
 		</SettingsForm>
 	);
 };

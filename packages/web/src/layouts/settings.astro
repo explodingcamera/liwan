@@ -32,6 +32,8 @@ const { title } = Astro.props;
             selected={path.startsWith("/settings/me") ? true : undefined}
             value="/settings/me">My Account</option
           >
+        </optgroup>
+        <optgroup label="Admin" data-admin-nav>
           <option
             selected={path.startsWith("/settings/projects") ? true : undefined}
             value="/settings/projects">Projects</option
@@ -40,8 +42,6 @@ const { title } = Astro.props;
             selected={path.startsWith("/settings/entities") ? true : undefined}
             value="/settings/entities">Entities</option
           >
-        </optgroup>
-        <optgroup label="Admin" data-admin-nav>
           <option
             selected={path.startsWith("/settings/collection")
               ? true
@@ -77,6 +77,9 @@ const { title } = Astro.props;
           >
         </li>
 
+      </ul>
+      <h3 data-admin-nav>Admin</h3>
+      <ul class="sidebar" data-admin-nav>
         <li>
           <a
             data-active={path.startsWith("/settings/projects")
@@ -105,9 +108,6 @@ const { title } = Astro.props;
             Entities</a
           >
         </li>
-      </ul>
-      <h3 data-admin-nav>Admin</h3>
-      <ul class="sidebar" data-admin-nav>
         <li>
           <a
             data-active={path.startsWith("/settings/collection")
@@ -170,7 +170,7 @@ const { title } = Astro.props;
   import { navigate } from "astro:transitions/client";
   import { appPath } from "@/config";
 
-  const adminPaths = ["/settings/collection", "/settings/users", "/settings/authentication", "/settings/api-keys"];
+  const adminPaths = ["/settings/projects", "/settings/entities", "/settings/collection", "/settings/users", "/settings/authentication", "/settings/api-keys"];
 
   function handleSelectChange(event: Event) {
     navigate(appPath((event.currentTarget as HTMLSelectElement).value));

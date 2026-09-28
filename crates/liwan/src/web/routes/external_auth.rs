@@ -19,11 +19,11 @@ use serde::{Deserialize, Serialize};
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 use crate::{
-    app::{ExternalAuthProvider, ExternalAuthSettings, models::UserRole},
+    app::{ExternalAuthProvider, ExternalAuthSettings},
     config::Config,
     web::{
         RouterState,
-        session::{Auth, issue_session},
+        session::{Admin, issue_session},
         webext::{ApiResult, AxumErrExt, ClientIpKeyExtractor, http_bail},
     },
 };
@@ -150,19 +150,17 @@ async fn metadata(app: State<RouterState>) -> ApiResult<UseApi<impl IntoApiRespo
 
 async fn get_settings(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ExternalAuthSettingsResponse>>> {
-    require_admin(user.role)?;
     let settings = app.external_auth.settings().http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(settings_response(&app, settings)).into())
 }
 
 async fn update_settings(
     app: State<RouterState>,
-    Auth(user): Auth,
+    Admin(_): Admin,
     Json(request): Json<UpdateExternalAuthSettings>,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<ExternalAuthSettingsResponse>>> {
-    require_admin(user.role)?;
     if request.clear_client_secret && request.client_secret.is_some() {
         http_bail!(StatusCode::BAD_REQUEST, "clientSecret and clearClientSecret cannot both be set");
     }
@@ -274,7 +272,7 @@ async fn callback(
     };
 
     let response = match app.external_auth.finish(&cookie_state, code).await {
-        Ok(login) => match issue_session(&app, cookies.clone(), &login.username) {
+        Ok(login) => match issue_session(&app, cookies.clone(), &login.username).await {
             Ok(cookies) => (cookies, Redirect::to(&login.return_to)).into_response(),
             Err(error) => {
                 tracing::error!(%error, "failed to create external authentication session");
@@ -287,13 +285,6 @@ async fn callback(
         }
     };
     response.into()
-}
-
-fn require_admin(role: UserRole) -> ApiResult<()> {
-    if role != UserRole::Admin {
-        http_bail!(StatusCode::FORBIDDEN, "Forbidden");
-    }
-    Ok(())
 }
 
 fn settings_response(app: &RouterState, settings: ExternalAuthSettings) -> ExternalAuthSettingsResponse {

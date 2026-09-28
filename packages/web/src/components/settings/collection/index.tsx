@@ -1,6 +1,6 @@
 import styles from "./collection.module.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { api, queryClient, useQuery } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
@@ -43,27 +43,25 @@ export const CollectionSettingsPage = () => {
 		staleTime: 30_000,
 		queryFn: () => api["/api/dashboard/settings"].get().json(),
 	});
-	const [saveError, setSaveError] = useState<string>();
 	const [tab, setTab] = useState<CollectionTab>("tracking");
 	const [pruneResult, setPruneResult] = useState<string>();
 	const [pruneResultOpen, setPruneResultOpen] = useState(false);
-	const [pruneError, setPruneError] = useState<string>();
+	useEffect(() => {
+		if (loadError) createToast("Failed to load collection settings", "error");
+	}, [loadError]);
 
 	const saveSettings = (next: CollectionSettings) => {
-		setSaveError(undefined);
 		queryClient.setQueryData(["collection-settings"], next);
 		api["/api/dashboard/settings"]
 			.put({ json: next })
 			.then(() => createToast("Collection settings updated", "success"))
-			.catch((err) => {
-				setSaveError(err instanceof Error ? err.message : "Failed to update collection settings");
+			.catch(() => {
 				queryClient.invalidateQueries({ queryKey: ["collection-settings"] });
 				createToast("Failed to update collection settings", "error");
 			});
 	};
 
 	const prune = (dryRun: boolean) => {
-		setPruneError(undefined);
 		api["/api/dashboard/settings/prune"]
 			.post({ json: { dryRun } })
 			.json()
@@ -77,17 +75,11 @@ export const CollectionSettingsPage = () => {
 				setPruneResult(message);
 				setPruneResultOpen(true);
 			})
-			.catch((err) => {
-				setPruneError(err instanceof Error ? err.message : "Failed to prune data");
-			});
+			.catch(() => createToast("Failed to prune data", "error"));
 	};
-
-	const error =
-		saveError ?? (loadError ? (loadError instanceof Error ? loadError.message : "Failed to load settings") : undefined);
 
 	return (
 		<div className={styles.page}>
-			{error && <article role="alert">{error}</article>}
 			{!settings && !loadError && <LoadingSpinner />}
 			{settings && (
 				<SettingsForm id="collection-settings-form">
@@ -226,7 +218,6 @@ export const CollectionSettingsPage = () => {
 										</div>
 									</Dialog>
 								</div>
-								{pruneError && <article role="alert">{pruneError}</article>}
 							</SettingsFieldset>
 							<Dialog title="Prune result" open={pruneResultOpen} onOpenChange={setPruneResultOpen} trigger={false}>
 								<p>{pruneResult}</p>

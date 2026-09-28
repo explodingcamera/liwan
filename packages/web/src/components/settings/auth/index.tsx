@@ -214,10 +214,10 @@ const ProviderSettings = ({
 );
 
 export const AuthenticationSettingsPage = () => {
-	const [settings, setSettings] = useState<ExternalAuthSettings>();
+	const [form, setForm] = useState<{ settings?: ExternalAuthSettings; clientSecret: string }>({ clientSecret: "" });
+	const { settings, clientSecret } = form;
 	const [savedSettings, setSavedSettings] = useState<ExternalAuthSettings>();
 	const [error, setError] = useState<string>();
-	const [clientSecret, setClientSecret] = useState("");
 	const providerDrafts = useRef<
 		Partial<Record<ExternalAuthProvider, { settings: ExternalAuthSettings; clientSecret: string }>>
 	>({});
@@ -227,47 +227,51 @@ export const AuthenticationSettingsPage = () => {
 			.get()
 			.json()
 			.then((settings) => {
-				setSettings(settings);
+				setForm({ settings, clientSecret: "" });
 				setSavedSettings(settings);
 				providerDrafts.current[settings.provider] = { settings, clientSecret: "" };
 			})
-			.catch((error) => setError(errorMessage(error)));
+			.catch((error) => {
+				setError(errorMessage(error));
+				createToast(errorMessage(error), "error");
+			});
 	}, []);
 
-	if (error && !settings) return <article role="alert">{error}</article>;
+	if (error && !settings) return null;
 	if (!settings) return <LoadingSpinner />;
 
 	const update = <K extends keyof ExternalAuthSettings>(key: K, value: ExternalAuthSettings[K]) =>
-		setSettings({ ...settings, [key]: value });
+		setForm({ ...form, settings: { ...settings, [key]: value } });
 	const selectProvider = (provider: ExternalAuthProvider | "internal") => {
 		providerDrafts.current[settings.provider] = { settings, clientSecret };
 		if (provider === "internal") {
-			setSettings({ ...settings, enabled: false });
+			setForm({ ...form, settings: { ...settings, enabled: false } });
 			return;
 		}
 		if (provider === settings.provider) {
-			setSettings({ ...settings, enabled: true });
+			setForm({ ...form, settings: { ...settings, enabled: true } });
 			return;
 		}
 
 		const draft = providerDrafts.current[provider];
 		if (draft) {
-			setSettings({ ...draft.settings, enabled: true });
-			setClientSecret(draft.clientSecret);
+			setForm({ settings: { ...draft.settings, enabled: true }, clientSecret: draft.clientSecret });
 			return;
 		}
 
-		setSettings({
-			...settings,
-			enabled: true,
-			provider,
-			displayName: providers.find((item) => item.value === provider)?.label ?? settings.displayName,
-			clientId: "",
-			issuerUrl: null,
-			allowedDomain: null,
-			tenantId: null,
+		setForm({
+			clientSecret: "",
+			settings: {
+				...settings,
+				enabled: true,
+				provider,
+				displayName: providers.find((item) => item.value === provider)?.label ?? settings.displayName,
+				clientId: "",
+				issuerUrl: null,
+				allowedDomain: null,
+				tenantId: null,
+			},
 		});
-		setClientSecret("");
 	};
 
 	const save = () => {
@@ -295,16 +299,12 @@ export const AuthenticationSettingsPage = () => {
 			.json()
 			.then((next) => {
 				if (typeof next === "string") throw new Error(next);
-				setSettings(next);
+				setForm({ settings: next, clientSecret: "" });
 				setSavedSettings(next);
-				setClientSecret("");
 				providerDrafts.current[next.provider] = { settings: next, clientSecret: "" };
 				createToast("Authentication settings updated", "success");
 			})
-			.catch((error) => {
-				setError(errorMessage(error));
-				createToast("Failed to update authentication settings", "error");
-			});
+			.catch((error) => createToast(errorMessage(error), "error"));
 	};
 
 	const canKeepClientSecret = Boolean(
@@ -332,7 +332,7 @@ export const AuthenticationSettingsPage = () => {
 					secretConfigured={secretConfigured}
 					update={update}
 					selectProvider={selectProvider}
-					setClientSecret={setClientSecret}
+					setClientSecret={(clientSecret) => setForm({ ...form, clientSecret })}
 				/>
 				{settings.enabled && (
 					<div className={styles.callbackSection}>
@@ -345,7 +345,6 @@ export const AuthenticationSettingsPage = () => {
 						<CopyableValue value={settings.callbackUrl} label="Callback URL" />
 					</div>
 				)}
-				{error && <article role="alert">{error}</article>}
 			</SettingsForm>
 		</div>
 	);

@@ -40,6 +40,7 @@ pub fn router(config: &Config) -> ApiRouter<RouterState> {
 
     ApiRouter::new()
         .api_route("/auth/me", get(me))
+        .api_route("/auth/me/password", put(update_password))
         .api_route("/auth/setup", post(setup))
         .api_route("/auth/logout", post(logout))
         .merge(ApiRouter::new().api_route("/auth/login", post(login)).layer(GovernorLayer::new(limiter)))
@@ -58,6 +59,13 @@ pub struct SetupRequest {
     pub password: String,
 }
 
+#[derive(Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct ChangePasswordRequest {
+    password: String,
+    current_password: String,
+}
+
 #[derive(Serialize, JsonSchema)]
 pub struct MeResponse {
     pub username: String,
@@ -73,10 +81,14 @@ async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> Api
         http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
     }
 
-    let completed = app
-        .onboarding
-        .complete_setup(&params.token, || app.users.create(&params.username, &params.password, UserRole::Admin, &[]))
-        .http_err("failed to complete setup", StatusCode::INTERNAL_SERVER_ERROR)?;
+    let completed = spawn_blocking(move || {
+        app.onboarding.complete_setup(&params.token, || {
+            app.users.create(&params.username, &params.password, UserRole::Admin, &[])
+        })
+    })
+    .await
+    .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+    .http_err("failed to complete setup", StatusCode::INTERNAL_SERVER_ERROR)?;
     if !completed {
         http_bail!(StatusCode::UNAUTHORIZED, "invalid setup token");
     }
@@ -101,8 +113,30 @@ async fn login(
         http_bail!(StatusCode::UNAUTHORIZED, "invalid username or password");
     }
 
-    let cookies = issue_session(&app, cookies, &username).http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let cookies = issue_session(&app, cookies, &username).await.http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((cookies, empty_response()))
+}
+
+async fn update_password(
+    app: State<RouterState>,
+    Auth(user): Auth,
+    MaybeSessionId(session_id): MaybeSessionId,
+    Json(params): Json<ChangePasswordRequest>,
+) -> ApiResult<impl IntoApiResponse> {
+    if params.password.len() < PASSWORD_MIN_LENGTH {
+        http_bail!(StatusCode::BAD_REQUEST, "password must be at least 8 characters long");
+    }
+    let users = app.users.clone();
+    let changed = spawn_blocking(move || {
+        users.update_password(&user.username, &params.password, Some(&params.current_password), session_id.as_deref())
+    })
+    .await
+    .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+    .http_err("Failed to update password", StatusCode::INTERNAL_SERVER_ERROR)?;
+    if !changed {
+        http_bail!(StatusCode::BAD_REQUEST, "Current password is incorrect");
+    }
+    Ok(empty_response())
 }
 
 async fn logout(
@@ -110,7 +144,8 @@ async fn logout(
     MaybeSessionId(session_id): MaybeSessionId,
 ) -> ApiResult<impl IntoApiResponse> {
     if let Some(session_id) = session_id {
-        let _ = app.sessions.delete(&session_id);
+        let sessions = app.sessions.clone();
+        let _ = spawn_blocking(move || sessions.delete(&session_id)).await;
     }
     Ok((clear_session(&app), empty_response()))
 }
