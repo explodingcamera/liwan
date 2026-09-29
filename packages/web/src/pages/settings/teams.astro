@@ -1,0 +1,13 @@
+---
+import { CreateTeam, TeamsTable } from "@/components/settings/teams";
+import Settings from "@/layouts/settings.astro";
+---
+
+<Settings title="Teams">
+  <nav class="list-header">
+    <h1>Teams</h1>
+    <CreateTeam client:only="react" />
+  </nav>
+  <p class="description">Give a group of users read access to selected projects.</p>
+  <TeamsTable client:load />
+</Settings>

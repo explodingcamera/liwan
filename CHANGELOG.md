@@ -27,6 +27,11 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
 - Added authenticated batch event ingestion endpoint
 - Added API key management UI
+- Added teams for assigning project read access to groups of users and internal projects visible to signed-in users
+
+### ⚠️ Breaking Changes
+
+- Direct per-user project assignments no longer grant access. Reassign users to teams to restore private-project access.
 
 ## [v1.7.0] - 2026-09-13
 

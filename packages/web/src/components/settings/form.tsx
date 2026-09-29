@@ -1,6 +1,6 @@
 import styles from "./form.module.css";
 
-import type { ReactNode, SubmitEvent } from "react";
+import { cloneElement, isValidElement, type ReactNode, type SubmitEvent, useId } from "react";
 import { Field } from "@base-ui/react/field";
 import { Fieldset } from "@base-ui/react/fieldset";
 import { Form as BaseForm } from "@base-ui/react/form";
@@ -100,19 +100,38 @@ export const SettingsField = ({
 	label,
 	description,
 	name,
+	htmlFor,
+	className,
+	disabled,
 	children,
 }: {
-	label: ReactNode;
+	label?: ReactNode;
 	description?: ReactNode;
 	name?: string;
+	htmlFor?: string;
+	className?: string;
+	disabled?: boolean;
 	children: ReactNode;
-}) => (
-	<Field.Root name={name} className={styles.field}>
-		<Field.Label className={styles.label}>{label}</Field.Label>
-		{description && <Field.Description className={styles.fieldDescription}>{description}</Field.Description>}
-		{children}
-	</Field.Root>
-);
+}) => {
+	const id = useId();
+	let control = children;
+	let labelFor = htmlFor;
+	if (isValidElement<{ id?: string }>(children) && ["input", "select", "textarea"].includes(String(children.type))) {
+		labelFor ??= children.props.id ?? id;
+		control = cloneElement(children, { id: children.props.id ?? labelFor });
+	}
+	return (
+		<Field.Root name={name} className={cls(styles.field, className)} data-disabled={disabled ? true : undefined}>
+			{label && (
+				<Field.Label htmlFor={labelFor} className={styles.label}>
+					{label}
+				</Field.Label>
+			)}
+			{description && <Field.Description className={styles.fieldDescription}>{description}</Field.Description>}
+			{control}
+		</Field.Root>
+	);
+};
 
 export const SettingsFieldset = ({
 	legend,

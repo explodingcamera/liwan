@@ -336,20 +336,28 @@ async fn send_batch<T: Transport>(config: &Builder<T>, entity_id: &str, events: 
 /// A client error.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
+    /// The event queue has reached its capacity.
     #[error("event queue is full")]
     QueueFull,
+    /// The client is no longer accepting events.
     #[error("client is closed")]
     Closed,
+    /// Liwan rejected the API key.
     #[error("Liwan rejected the API key")]
     Authentication,
+    /// Liwan rejected the event batch.
     #[error("Liwan rejected the event batch")]
     InvalidRequest,
+    /// Delivery failed after all retries.
     #[error("event delivery retries were exhausted")]
     RetriesExhausted,
+    /// The background worker stopped before completing the operation.
     #[error("event delivery worker stopped")]
     WorkerStopped,
+    /// Liwan returned an unexpected HTTP status.
     #[error("Liwan returned HTTP status {0}")]
     Response(StatusCode),
+    /// A client setting is invalid.
     #[error("{0}")]
     InvalidConfiguration(&'static str),
 }

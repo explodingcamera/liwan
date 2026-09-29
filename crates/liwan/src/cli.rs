@@ -152,12 +152,7 @@ pub fn handle_command(mut config: Config, cmd: Command) -> Result<()> {
         }
         Command::AddUser(add) => {
             let app = Liwan::try_new(config)?;
-            app.users.create(
-                &add.username,
-                &add.password,
-                if add.admin { UserRole::Admin } else { UserRole::User },
-                &[],
-            )?;
+            app.users.create(&add.username, &add.password, if add.admin { UserRole::Admin } else { UserRole::User })?;
 
             println!("User {} created", add.username);
         }

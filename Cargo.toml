@@ -11,6 +11,12 @@ homepage = "https://liwan.dev"
 repository = "https://github.com/explodingcamera/liwan"
 license = "Apache-2.0"
 
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+too_many_arguments = "allow"
+
 [profile.dev]
 opt-level = 1
 

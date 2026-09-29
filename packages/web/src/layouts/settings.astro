@@ -52,6 +52,7 @@ const { title } = Astro.props;
             selected={path.startsWith("/settings/users") ? true : undefined}
             value="/settings/users">Users</option
           >
+          <option selected={path.startsWith("/settings/teams") ? true : undefined} value="/settings/teams">Teams</option>
           <option
             selected={path.startsWith("/settings/authentication") ? true : undefined}
             value="/settings/authentication">Authentication</option
@@ -135,6 +136,12 @@ const { title } = Astro.props;
           >
         </li>
         <li>
+          <a data-active={path.startsWith("/settings/teams") ? "true" : "false"} aria-current={path.startsWith("/settings/teams") ? "page" : undefined} href="/settings/teams">
+            <UsersIcon size="20" />
+            Teams</a
+          >
+        </li>
+        <li>
           <a
             data-active={path.startsWith("/settings/authentication")
               ? "true"
@@ -170,7 +177,7 @@ const { title } = Astro.props;
   import { navigate } from "astro:transitions/client";
   import { appPath } from "@/config";
 
-  const adminPaths = ["/settings/projects", "/settings/entities", "/settings/collection", "/settings/users", "/settings/authentication", "/settings/api-keys"];
+  const adminPaths = ["/settings/projects", "/settings/entities", "/settings/collection", "/settings/users", "/settings/teams", "/settings/authentication", "/settings/api-keys"];
 
   function handleSelectChange(event: Event) {
     navigate(appPath((event.currentTarget as HTMLSelectElement).value));

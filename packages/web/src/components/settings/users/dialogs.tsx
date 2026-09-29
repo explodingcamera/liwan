@@ -8,6 +8,7 @@ import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { invalidateUsers } from "@/hooks/api";
+import { SettingsField } from "../form";
 
 export const CreateUser = () => {
 	const closeRef = useRef<HTMLButtonElement>(null);
@@ -37,7 +38,7 @@ export const CreateUser = () => {
 	return (
 		<Dialog
 			title="Create a new user"
-			description="Users can access assigned projects unless administrator access is enabled."
+			description="Add users to teams to give them project access. Administrators can manage all projects."
 			trigger={
 				<button type="button" className={styles.new} aria-label="Create user" title="Create user">
 					<PlusIcon size={24} strokeWidth={2.25} />
@@ -45,9 +46,7 @@ export const CreateUser = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<label>
-					Username
-					<small>Cannot be changed later.</small>
+				<SettingsField label="Username" description="Cannot be changed later.">
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-]{2,20}$"
@@ -56,12 +55,10 @@ export const CreateUser = () => {
 						placeholder="MyUsername"
 						autoComplete="username"
 					/>
-				</label>
-				<label>
-					Password
-					<small>Must be at least 8 characters.</small>
+				</SettingsField>
+				<SettingsField label="Password" description="Must be at least 8 characters.">
 					<input required name="password" type="password" autoComplete="new-password" minLength={8} />
-				</label>
+				</SettingsField>
 				<label className={styles.switchLabel}>
 					{/* biome-ignore lint/a11y/useAriaPropsForRole: this is an uncontrolled component */}
 					<input name="admin" type="checkbox" role="switch" />

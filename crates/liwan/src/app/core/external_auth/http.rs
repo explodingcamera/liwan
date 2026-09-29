@@ -1,4 +1,4 @@
-use futures_lite::StreamExt;
+use futures_util::StreamExt;
 use oauth2::{HttpRequest, HttpResponse};
 
 const MAX_RESPONSE_SIZE: usize = 1024 * 1024;

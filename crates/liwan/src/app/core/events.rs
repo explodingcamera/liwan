@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
 use duckdb::{Connection, Result as DuckResult, params};
-use futures_lite::{StreamExt, future};
+use futures_util::{FutureExt, StreamExt};
 use rand::distr::{SampleString, StandardUniform};
 use tokio::sync::mpsc::Receiver;
 use tokio_util::time::DelayQueue;
@@ -121,7 +121,7 @@ impl LiwanEvents {
                 },
                 Some(expired) = pending.next(), if !pending.is_empty() => {
                     let mut exits = vec![expired.into_inner()];
-                    while let Some(Some(expired)) = future::poll_once(pending.next()).await {
+                    while let Some(Some(expired)) = pending.next().now_or_never() {
                         exits.push(expired.into_inner());
                     }
 

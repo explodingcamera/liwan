@@ -17,7 +17,7 @@ async fn test_login() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User)?;
 
     // login
     let login = json!({ "username": "test", "password": "testtesttesttest" });
@@ -95,7 +95,7 @@ async fn expired_session() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User)?;
 
     // login
     let login = json!({ "username": "test", "password": "testtesttesttest" });
@@ -131,7 +131,7 @@ async fn session_past_its_expiration_is_rejected() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
+    app.users.create("test", "testtesttesttest", UserRole::User)?;
     app.sessions.create("expired-session", "test", Utc::now() - Duration::minutes(1))?;
 
     let res = client
@@ -156,7 +156,7 @@ async fn authentication_cookie_boundaries() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("test", "testtest", UserRole::User, &[])?;
+    app.users.create("test", "testtest", UserRole::User)?;
     let cookies = common::login(&client, "test", "testtest").await;
     let session = cookies.iter().find(|cookie| cookie.name() == "liwan-session").expect("session cookie");
     let username = cookies.iter().find(|cookie| cookie.name() == "liwan-username").expect("username cookie");
@@ -164,11 +164,11 @@ async fn authentication_cookie_boundaries() -> Result<()> {
     assert_eq!(session.path(), Some("/api/dashboard"));
     assert_eq!(session.http_only(), Some(true));
     assert_eq!(session.secure(), Some(true));
-    assert_eq!(session.same_site(), Some(cookie::SameSite::Strict));
+    assert_eq!(session.same_site(), Some(axum_extra::extract::cookie::SameSite::Strict));
     assert_eq!(username.path(), Some("/"));
     assert!(!username.http_only().unwrap_or(false));
     assert_eq!(username.secure(), Some(true));
-    assert_eq!(username.same_site(), Some(cookie::SameSite::Strict));
+    assert_eq!(username.same_site(), Some(axum_extra::extract::cookie::SameSite::Strict));
 
     let res = client
         .get_with_headers("/api/dashboard/auth/me", vec![("cookie".to_string(), "liwan-username=test".to_string())])
@@ -202,7 +202,7 @@ async fn password_change_preserves_only_current_session() -> Result<()> {
     let (queues, _receivers) = common::events();
     let client = common::TestClient::new(app.clone(), queues);
     for (username, role) in [("admin", UserRole::Admin), ("viewer", UserRole::User)] {
-        app.users.create(username, "old-password", role, &[])?;
+        app.users.create(username, "old-password", role)?;
         let cookies = common::login(&client, username, "old-password").await;
         let headers = || vec![("cookie".into(), common::cookie_header(&cookies))];
         let other_session = format!("other-{username}");
@@ -244,8 +244,7 @@ async fn private_projects() -> Result<()> {
         &models::Project {
             display_name: "Private Project".to_string(),
             id: "private-project".to_string(),
-            public: false,
-            unlisted: false,
+            visibility: models::ProjectVisibility::Private,
             secret: None,
         },
         &[],
@@ -254,8 +253,16 @@ async fn private_projects() -> Result<()> {
     let res = client.get("/api/dashboard/projects").await;
     res.assert_json(&json!({"projects": []}));
 
-    app.users.create("test", "testtesttesttest", UserRole::User, &[])?;
-    app.users.create("test2", "test", UserRole::User, &["private-project"])?;
+    app.users.create("test", "testtesttesttest", UserRole::User)?;
+    app.users.create("test2", "test", UserRole::User)?;
+    let team_id = app.teams.create("Viewers")?;
+    app.teams.update(
+        &team_id,
+        "Viewers",
+        &["test2".into()],
+        &models::AccessScope::Selected(vec!["private-project".into()]),
+        None,
+    )?;
 
     let login1 = common::login(&client, "test", "testtesttesttest").await;
     let login2 = common::login(&client, "test2", "test").await;
@@ -268,7 +275,7 @@ async fn private_projects() -> Result<()> {
     let res = client
         .get_with_headers("/api/dashboard/projects", vec![("cookie".to_string(), common::cookie_header(&login2))])
         .await;
-    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "public": false, "unlisted": false, "entities": [], "hiddenMetrics": [], "hiddenDimensions": [], "customEventsDisplay": "auto"}]}));
+    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "visibility": "private", "entities": [], "hiddenMetrics": [], "hiddenDimensions": [], "customEventsDisplay": "auto"}]}));
 
     Ok(())
 }
@@ -283,14 +290,21 @@ async fn private_project_reports_require_access() -> Result<()> {
         &models::Project {
             display_name: "Private Project".to_string(),
             id: "private-project".to_string(),
-            public: false,
-            unlisted: false,
+            visibility: models::ProjectVisibility::Private,
             secret: None,
         },
         &[],
     )?;
-    app.users.create("unassigned", "testtest", UserRole::User, &[])?;
-    app.users.create("assigned", "testtest", UserRole::User, &["private-project"])?;
+    app.users.create("unassigned", "testtest", UserRole::User)?;
+    app.users.create("assigned", "testtest", UserRole::User)?;
+    let team_id = app.teams.create("Viewers")?;
+    app.teams.update(
+        &team_id,
+        "Viewers",
+        &["assigned".into()],
+        &models::AccessScope::Selected(vec!["private-project".into()]),
+        None,
+    )?;
 
     let unassigned = common::login(&client, "unassigned", "testtest").await;
     let assigned = common::login(&client, "assigned", "testtest").await;

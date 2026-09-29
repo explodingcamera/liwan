@@ -167,6 +167,12 @@ pub(super) async fn serve(
         path = parts.join("/");
     }
 
+    if path.starts_with("settings/teams/") {
+        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
+        parts[2] = "team";
+        path = parts.join("/");
+    }
+
     let file = if let Some(content) = Files::get(&path) {
         Some(content)
     } else {
@@ -214,7 +220,7 @@ pub(super) async fn serve(
         let hash = blake3::hash(body.as_bytes()).to_hex().to_string();
         (Body::from(body), hash)
     } else {
-        let hash = hex::encode(content.metadata.sha256_hash());
+        let hash = crate::utils::encode_hex(&content.metadata.sha256_hash());
         (Body::from(content.data), hash)
     };
 

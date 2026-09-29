@@ -1,0 +1,16 @@
+---
+import type { GetStaticPaths } from "astro";
+
+import { TeamSettingsPage } from "@/components/settings/teams";
+import Settings from "@/layouts/settings.astro";
+
+export const getStaticPaths = (() => {
+	return [{ params: { teamId: "team" } }];
+}) satisfies GetStaticPaths;
+
+const { teamId } = Astro.params;
+---
+
+<Settings title="Team settings">
+  <TeamSettingsPage teamId={teamId ?? ""} client:load />
+</Settings>

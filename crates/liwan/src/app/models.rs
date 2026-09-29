@@ -1,4 +1,4 @@
-use std::{fmt::Display, num::NonZeroU32, str::FromStr};
+use std::{borrow::Cow, collections::HashSet, fmt::Display, num::NonZeroU32, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
@@ -44,9 +44,50 @@ pub struct EventExit {
 pub struct Project {
     pub id: String,
     pub display_name: String,
-    pub public: bool,
-    pub unlisted: bool,
+    pub visibility: ProjectVisibility,
     pub secret: Option<String>, // currently unused
+}
+
+/// Whether and where a project is visible.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectVisibility {
+    Private,
+    Public,
+    Unlisted,
+    Internal,
+}
+
+impl rusqlite::types::FromSql for ProjectVisibility {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        match value.as_str()? {
+            "private" => Ok(Self::Private),
+            "public" => Ok(Self::Public),
+            "unlisted" => Ok(Self::Unlisted),
+            "internal" => Ok(Self::Internal),
+            _ => Err(rusqlite::types::FromSqlError::InvalidType),
+        }
+    }
+}
+
+impl rusqlite::types::ToSql for ProjectVisibility {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(match self {
+            Self::Private => "private",
+            Self::Public => "public",
+            Self::Unlisted => "unlisted",
+            Self::Internal => "internal",
+        }
+        .into())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Team {
+    pub id: String,
+    pub display_name: String,
+    pub users: Vec<String>,
+    pub access: Access,
 }
 
 #[derive(Debug, Clone)]
@@ -59,31 +100,102 @@ pub struct Entity {
 pub struct ApiKey {
     pub id: String,
     pub display_name: String,
-    pub entities: ApiKeyScope,
-    pub projects: ApiKeyScope,
-    pub permissions: Vec<ApiPermission>,
+    pub entities: AccessScope,
+    pub projects: AccessScope,
+    pub permissions: Vec<AccessPermission>,
     pub created_at: DateTime<Utc>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
-pub enum ApiKeyScope {
-    All(ApiKeyAll),
+/// A scope covering every resource or a selected set of IDs.
+#[derive(Debug, Clone)]
+pub enum AccessScope {
+    All,
     Selected(Vec<String>),
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum ApiKeyAll {
-    All,
+impl Default for AccessScope {
+    fn default() -> Self {
+        Self::Selected(Vec::new())
+    }
 }
 
+impl AccessScope {
+    /// Check whether an ID falls within this scope.
+    pub fn contains(&self, id: &str) -> bool {
+        match self {
+            Self::All => true,
+            Self::Selected(ids) => ids.iter().any(|selected| selected == id),
+        }
+    }
+}
+
+impl Serialize for AccessScope {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::All => serializer.serialize_str("all"),
+            Self::Selected(ids) => ids.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AccessScope {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        if value == "all" {
+            Ok(Self::All)
+        } else {
+            serde_json::from_value::<Vec<String>>(value).map(Self::Selected).map_err(serde::de::Error::custom)
+        }
+    }
+}
+
+impl JsonSchema for AccessScope {
+    fn schema_name() -> Cow<'static, str> {
+        "AccessScope".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        serde_json::json!({"anyOf": [{"const": "all", "type": "string"}, {"type": "array", "items": {"type": "string"}}]})
+            .try_into()
+            .expect("valid access scope schema")
+    }
+}
+
+/// An action that may be granted within a resource scope.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
-pub enum ApiPermission {
+pub enum AccessPermission {
     #[serde(rename = "events:batch")]
     EventsBatch,
+    #[serde(rename = "project:read")]
+    ProjectRead,
+    #[serde(rename = "entity:read")]
+    EntityRead,
+}
+
+/// Resolved scopes and permissions for a user session or API key.
+#[derive(Debug, Clone, Default)]
+pub struct Access {
+    pub entities: AccessScope,
+    pub projects: AccessScope,
+    pub permissions: HashSet<AccessPermission>,
+}
+
+impl Access {
+    /// Check whether a permission covers a project.
+    pub fn can_access_project(&self, id: &str, permission: AccessPermission) -> bool {
+        permission == AccessPermission::ProjectRead
+            && self.permissions.contains(&permission)
+            && self.projects.contains(id)
+    }
+
+    /// Check whether a permission covers an entity.
+    pub fn can_access_entity(&self, id: &str, permission: AccessPermission) -> bool {
+        matches!(permission, AccessPermission::EventsBatch | AccessPermission::EntityRead)
+            && self.permissions.contains(&permission)
+            && self.entities.contains(id)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
@@ -416,12 +528,52 @@ pub struct ProjectDisplaySettings {
 pub struct User {
     pub username: String,
     pub role: UserRole,
-    pub projects: Vec<String>,
+    /// Team scopes and permissions resolved when loading a session.
+    pub access: Access,
+}
+
+impl User {
+    /// Check whether this user can read a project through their role or teams.
+    pub fn can_read_project(&self, id: &str) -> bool {
+        self.role == UserRole::Admin || self.access.can_access_project(id, AccessPermission::ProjectRead)
+    }
+
+    /// Check whether this user can read an entity through their role or teams.
+    pub fn can_read_entity(&self, id: &str) -> bool {
+        self.role == UserRole::Admin || self.access.can_access_entity(id, AccessPermission::EntityRead)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn access_scopes_use_all_or_selected_ids() {
+        assert_eq!(serde_json::to_value(AccessScope::All).unwrap(), serde_json::json!("all"));
+        assert_eq!(
+            serde_json::to_value(AccessScope::Selected(vec!["site".into()])).unwrap(),
+            serde_json::json!(["site"])
+        );
+        assert!(matches!(serde_json::from_value::<AccessScope>(serde_json::json!("all")).unwrap(), AccessScope::All));
+        assert!(serde_json::from_value::<AccessScope>(serde_json::json!("other")).is_err());
+    }
+
+    #[test]
+    fn access_requires_a_matching_permission_and_scope() {
+        let access = Access {
+            entities: AccessScope::All,
+            projects: AccessScope::Selected(vec!["site".into()]),
+            permissions: HashSet::from([AccessPermission::ProjectRead]),
+        };
+        assert!(access.can_access_project("site", AccessPermission::ProjectRead));
+        assert!(!access.can_access_project("other", AccessPermission::ProjectRead));
+        assert!(!access.can_access_project("site", AccessPermission::EventsBatch));
+        assert!(!access.can_access_entity("site", AccessPermission::ProjectRead));
+        assert!(!access.can_access_entity("site", AccessPermission::EventsBatch));
+        let access = Access { permissions: HashSet::from([AccessPermission::EntityRead]), ..access };
+        assert!(access.can_access_entity("site", AccessPermission::EntityRead));
+    }
 
     #[test]
     fn entity_retention_overrides_global_retention() {

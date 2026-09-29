@@ -7,6 +7,7 @@ mod projects;
 pub mod reports;
 mod sessions;
 mod settings;
+mod teams;
 mod users;
 
 pub use api_keys::{ApiKeyAccess, LiwanApiKeys};
@@ -19,6 +20,7 @@ pub use onboarding::LiwanOnboarding;
 pub use projects::LiwanProjects;
 pub use sessions::LiwanSessions;
 pub use settings::{LiwanProjectSettings, LiwanSettings};
+pub use teams::LiwanTeams;
 pub use users::LiwanUsers;
 
 #[cfg(feature = "geoip")]

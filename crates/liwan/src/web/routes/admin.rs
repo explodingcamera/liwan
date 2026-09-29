@@ -14,8 +14,8 @@ use crate::{
     PASSWORD_MIN_LENGTH,
     app::{
         models::{
-            ApiKeyExpiration, ApiKeyScope, ApiPermission, CollectionSettings, Entity, EntityCollectionSettings,
-            Project, ProjectDisplaySettings, ResolvedCollectionSettings, UserRole,
+            AccessPermission, AccessScope, ApiKeyExpiration, CollectionSettings, Entity, EntityCollectionSettings,
+            Project, ProjectDisplaySettings, ProjectVisibility, ResolvedCollectionSettings, UserRole,
         },
         reports::{Dimension, Metric},
     },
@@ -35,6 +35,10 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/user/{username}/sessions", delete(revoke_user_sessions))
         .api_route("/user/{username}", delete(remove_user))
         .api_route("/user", post(create_user))
+        .api_route("/teams", get(teams_handler))
+        .api_route("/teams", post(team_create_handler))
+        .api_route("/team/{team_id}", put(team_update_handler))
+        .api_route("/team/{team_id}", delete(team_delete_handler))
         .api_route("/project/{project_id}", post(project_create_handler))
         .api_route("/project/{project_id}", put(project_update_handler))
         .api_route("/project/{project_id}/settings", get(project_settings_handler))
@@ -70,19 +74,53 @@ struct CreateUserRequest {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 struct UpdateUserRequest {
     role: UserRole,
-    projects: Vec<String>,
+    teams: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 struct UserResponse {
     username: String,
     role: UserRole,
-    projects: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 struct UsersResponse {
     users: Vec<UserResponse>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct TeamResponse {
+    id: String,
+    display_name: String,
+    users: Vec<String>,
+    entities: AccessScope,
+    projects: AccessScope,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct TeamsResponse {
+    teams: Vec<TeamResponse>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct CreateTeamRequest {
+    display_name: String,
+}
+
+#[derive(Serialize, JsonSchema)]
+struct CreateTeamResponse {
+    id: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct UpdateTeamRequest {
+    display_name: String,
+    users: Vec<String>,
+    projects: AccessScope,
+    entities: Option<AccessScope>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -96,9 +134,7 @@ struct UpdateProjectRequest {
 #[serde(rename_all = "camelCase")]
 struct UpdateProjectInfo {
     display_name: String,
-    public: bool,
-    #[serde(default)]
-    unlisted: bool,
+    visibility: ProjectVisibility,
     secret: Option<String>,
 }
 
@@ -112,9 +148,7 @@ struct UpdatePasswordRequest {
 #[serde(rename_all = "camelCase")]
 struct CreateProjectRequest {
     display_name: String,
-    public: bool,
-    #[serde(default)]
-    unlisted: bool,
+    visibility: ProjectVisibility,
     secret: Option<String>,
     entities: Vec<String>,
 }
@@ -125,8 +159,7 @@ pub struct ProjectResponse {
     pub id: String,
     pub display_name: String,
     pub entities: Vec<ProjectEntity>,
-    pub public: bool,
-    pub unlisted: bool,
+    pub visibility: ProjectVisibility,
     pub hidden_metrics: Vec<Metric>,
     pub hidden_dimensions: Vec<Dimension>,
     pub custom_events_display: crate::app::models::DisplayOverride,
@@ -158,8 +191,7 @@ impl ProjectResponse {
                 .into_iter()
                 .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
                 .collect(),
-            public: project.public,
-            unlisted: project.unlisted,
+            visibility: project.visibility,
             custom_events_display: display.custom_events_display(),
             hidden_metrics: Metric::all()
                 .iter()
@@ -188,8 +220,7 @@ struct EntityResponse {
 struct EntityProject {
     id: String,
     display_name: String,
-    public: bool,
-    unlisted: bool,
+    visibility: ProjectVisibility,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -217,9 +248,9 @@ struct EntitiesResponse {
 struct ApiKeyResponse {
     id: String,
     display_name: String,
-    entities: ApiKeyScope,
-    projects: ApiKeyScope,
-    permissions: Vec<ApiPermission>,
+    entities: AccessScope,
+    projects: AccessScope,
+    permissions: Vec<AccessPermission>,
     created_at: chrono::DateTime<chrono::Utc>,
     last_used_at: Option<chrono::DateTime<chrono::Utc>>,
     expires_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -234,9 +265,9 @@ struct ApiKeysResponse {
 #[serde(rename_all = "camelCase")]
 struct CreateApiKeyRequest {
     display_name: String,
-    entities: ApiKeyScope,
-    projects: ApiKeyScope,
-    permissions: Vec<ApiPermission>,
+    entities: AccessScope,
+    projects: AccessScope,
+    permissions: Vec<AccessPermission>,
     expiration: ApiKeyExpiration,
 }
 
@@ -251,9 +282,9 @@ struct CreateApiKeyResponse {
 #[serde(rename_all = "camelCase")]
 struct UpdateApiKeyRequest {
     display_name: String,
-    entities: ApiKeyScope,
-    projects: ApiKeyScope,
-    permissions: Vec<ApiPermission>,
+    entities: AccessScope,
+    projects: AccessScope,
+    permissions: Vec<AccessPermission>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -317,10 +348,72 @@ async fn get_users(
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to get users", StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
-        .map(|u| UserResponse { username: u.username.clone(), role: u.role, projects: u.projects.clone() })
+        .map(|u| UserResponse { username: u.username, role: u.role })
         .collect();
 
     Ok(([(http::header::CACHE_CONTROL, "private")], Json(UsersResponse { users })).into())
+}
+
+async fn teams_handler(
+    app: State<RouterState>,
+    Admin(_): Admin,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<TeamsResponse>>> {
+    let teams = tokio::task::spawn_blocking(move || app.teams.all())
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+        .http_err("Failed to get teams", StatusCode::INTERNAL_SERVER_ERROR)?
+        .into_iter()
+        .map(|team| TeamResponse {
+            id: team.id,
+            display_name: team.display_name,
+            users: team.users,
+            entities: team.access.entities,
+            projects: team.access.projects,
+        })
+        .collect();
+    Ok(([(http::header::CACHE_CONTROL, "private")], Json(TeamsResponse { teams })).into())
+}
+
+async fn team_create_handler(
+    app: State<RouterState>,
+    Admin(_): Admin,
+    Json(req): Json<CreateTeamRequest>,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<CreateTeamResponse>>> {
+    let id = tokio::task::spawn_blocking(move || app.teams.create(&req.display_name))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+        .http_err("Failed to create team", StatusCode::BAD_REQUEST)?;
+    Ok(Json(CreateTeamResponse { id }).into())
+}
+
+async fn team_update_handler(
+    app: State<RouterState>,
+    Path(team_id): Path<String>,
+    Admin(_): Admin,
+    Json(req): Json<UpdateTeamRequest>,
+) -> ApiResult<impl IntoApiResponse> {
+    let updated = tokio::task::spawn_blocking(move || {
+        app.teams.update(&team_id, &req.display_name, &req.users, &req.projects, req.entities.as_ref())
+    })
+    .await
+    .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+    .http_err("Failed to update team", StatusCode::BAD_REQUEST)?;
+    if !updated {
+        http_bail!(StatusCode::NOT_FOUND, "Team not found");
+    }
+    Ok(empty_response())
+}
+
+async fn team_delete_handler(
+    app: State<RouterState>,
+    Path(team_id): Path<String>,
+    Admin(_): Admin,
+) -> ApiResult<impl IntoApiResponse> {
+    tokio::task::spawn_blocking(move || app.teams.delete(&team_id))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+        .http_err("Failed to delete team", StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(empty_response())
 }
 
 async fn update_user(
@@ -329,14 +422,17 @@ async fn update_user(
     Admin(session_user): Admin,
     user: Json<UpdateUserRequest>,
 ) -> ApiResult<impl IntoApiResponse> {
-    if username == session_user.username && user.role != session_user.role {
+    if username.eq_ignore_ascii_case(&session_user.username) && user.role != session_user.role {
         http_bail!(StatusCode::FORBIDDEN, "Cannot change own role")
     }
 
-    tokio::task::spawn_blocking(move || app.users.update(&username, user.role, user.projects.as_slice()))
+    let updated = tokio::task::spawn_blocking(move || app.users.update(&username, user.role, &user.teams))
         .await
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
-        .http_err("Failed to update user", StatusCode::INTERNAL_SERVER_ERROR)?;
+        .http_err("Failed to update user", StatusCode::BAD_REQUEST)?;
+    if !updated {
+        http_bail!(StatusCode::NOT_FOUND, "User not found")
+    }
 
     Ok(empty_response())
 }
@@ -408,7 +504,7 @@ async fn create_user(
     }
 
     let app = app.app.clone();
-    tokio::task::spawn_blocking(move || app.users.create(&params.username, &params.password, params.role, &[]))
+    tokio::task::spawn_blocking(move || app.users.create(&params.username, &params.password, params.role))
         .await
         .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to create user", StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -427,8 +523,7 @@ async fn project_create_handler(
             &Project {
                 id: project_id,
                 display_name: project.display_name,
-                public: project.public,
-                unlisted: project.unlisted,
+                visibility: project.visibility,
                 secret: project.secret,
             },
             project.entities.as_slice(),
@@ -449,8 +544,7 @@ async fn project_update_handler(
             .update(&Project {
                 id: project_id.clone(),
                 display_name: project.display_name,
-                public: project.public,
-                unlisted: project.unlisted,
+                visibility: project.visibility,
                 secret: project.secret,
             })
             .http_err("Failed to update project", StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -728,8 +822,7 @@ async fn entities_handler(
                 .map(|project| EntityProject {
                     id: project.id,
                     display_name: project.display_name,
-                    public: project.public,
-                    unlisted: project.unlisted,
+                    visibility: project.visibility,
                 })
                 .collect(),
         });

@@ -8,10 +8,9 @@ import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { appPath } from "@/config";
+import type { ProjectVisibility } from "@/constants";
 import { invalidateProjects } from "@/hooks/api";
-
-type ProjectVisibility = "private" | "unlisted" | "public";
-const visibilityPublic = (visibility: ProjectVisibility) => visibility === "public" || visibility === "unlisted";
+import { SettingsField } from "../form";
 
 export const CreateProject = () => {
 	const { mutate } = useMutation({
@@ -37,8 +36,7 @@ export const CreateProject = () => {
 			params: { project_id: id },
 			json: {
 				displayName,
-				public: visibilityPublic(visibility),
-				unlisted: visibility === "unlisted",
+				visibility,
 				entities: [],
 			},
 		});
@@ -55,9 +53,7 @@ export const CreateProject = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<label>
-					Project ID
-					<small>Used in dashboard URLs and cannot be changed later.</small>
+				<SettingsField label="Project ID" description="Used in dashboard URLs and cannot be changed later.">
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -66,21 +62,21 @@ export const CreateProject = () => {
 						placeholder="my-project"
 						autoComplete="off"
 					/>
-				</label>
-				<label>
-					Project name
-					<small>Identifies this project in the dashboard.</small>
+				</SettingsField>
+				<SettingsField label="Project name" description="Identifies this project in the dashboard.">
 					<input required name="displayName" type="text" placeholder="My Project" autoComplete="off" />
-				</label>
-				<label>
-					Visibility
-					<small>Unlisted projects are public by direct link, but hidden from public project lists.</small>
+				</SettingsField>
+				<SettingsField
+					label="Visibility"
+					description="Unlisted projects are public by direct link, but hidden from public project lists."
+				>
 					<select name="visibility" defaultValue="private">
 						<option value="private">Private</option>
 						<option value="unlisted">Unlisted</option>
+						<option value="internal">Internal</option>
 						<option value="public">Public</option>
 					</select>
-				</label>
+				</SettingsField>
 
 				<div className="action-row">
 					<Dialog.Close className="button-secondary">Cancel</Dialog.Close>

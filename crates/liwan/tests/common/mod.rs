@@ -1,7 +1,7 @@
 #![allow(unused)]
 
+use axum_extra::extract::cookie::Cookie;
 use axum_test::TestServer;
-use cookie::Cookie;
 use liwan::{
     app::{
         Liwan,
@@ -135,7 +135,7 @@ impl TestClient {
     }
 }
 
-pub fn cookies(res: &axum_test::TestResponse) -> Vec<cookie::Cookie<'static>> {
+pub fn cookies(res: &axum_test::TestResponse) -> Vec<Cookie<'static>> {
     res.headers()
         .get_all("set-cookie")
         .iter()
@@ -147,7 +147,7 @@ pub fn cookie_header(cookies: &[Cookie]) -> String {
     cookies.iter().map(|c| format!("{}={}", c.name(), c.value())).collect::<Vec<_>>().join("; ")
 }
 
-pub async fn login(client: &TestClient, username: &str, password: &str) -> Vec<cookie::Cookie<'static>> {
+pub async fn login(client: &TestClient, username: &str, password: &str) -> Vec<Cookie<'static>> {
     let login = json!({ "username": username, "password": password });
     let res = client.post("/api/dashboard/auth/login", login).await;
     res.assert_status_success();

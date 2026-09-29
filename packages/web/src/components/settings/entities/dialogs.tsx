@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { appPath } from "@/config";
 import { invalidateEntities } from "@/hooks/api";
+import { SettingsField } from "../form";
 
 export const CreateEntity = () => {
 	const { mutate } = useMutation({
@@ -42,9 +43,7 @@ export const CreateEntity = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<label>
-					Entity ID
-					<small>Used in the tracking snippet and cannot be changed.</small>
+				<SettingsField label="Entity ID" description="Used in the tracking snippet and cannot be changed.">
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -53,12 +52,10 @@ export const CreateEntity = () => {
 						placeholder="my-website"
 						autoComplete="off"
 					/>
-				</label>
-				<label>
-					Entity name
-					<small>Identifies this entity in the dashboard.</small>
+				</SettingsField>
+				<SettingsField label="Entity name" description="Identifies this entity in the dashboard.">
 					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
-				</label>
+				</SettingsField>
 				<div className="action-row">
 					<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
 					<button type="submit" className="button-primary">

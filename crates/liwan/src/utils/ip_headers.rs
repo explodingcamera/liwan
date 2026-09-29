@@ -4,14 +4,18 @@ use std::convert::Infallible;
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 
+/// A provider preset or custom header used to resolve a client IP.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
 #[serde(untagged)]
 pub enum ClientIpHeaderSource {
+    /// A known proxy provider header.
     Provider(ClientIpProvider),
+    /// A custom header name.
     Header(String),
 }
 
 impl ClientIpHeaderSource {
+    /// Returns the HTTP header name for this source.
     pub fn as_header_name(&self) -> &str {
         match self {
             Self::Provider(ClientIpProvider::Cloudflare) => "cf-connecting-ip",
@@ -48,20 +52,30 @@ impl<'de> Deserialize<'de> for ClientIpHeaderSource {
     }
 }
 
+/// A supported proxy provider and its client IP header.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum ClientIpProvider {
+    /// Akamai's `True-Client-IP` header.
     Akamai,
+    /// Cloudflare's `CF-Connecting-IP` header.
     Cloudflare,
+    /// CloudFront's `CloudFront-Viewer-Address` header.
     Cloudfront,
+    /// Fastly's `Fastly-Client-IP` header.
     Fastly,
+    /// Fly.io's `Fly-Client-IP` header.
     Fly,
 }
 
+/// An address or network whose proxy headers may be trusted.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TrustedProxy {
+    /// Trust any peer address.
     All,
+    /// Trust one peer IP address.
     Ip(IpAddr),
+    /// Trust peer IP addresses within this network.
     Cidr(IpNet),
 }
 
@@ -78,6 +92,7 @@ impl From<IpNet> for TrustedProxy {
 }
 
 impl TrustedProxy {
+    /// Returns whether the given IP matches this trusted proxy.
     pub fn contains(&self, ip: IpAddr) -> bool {
         match self {
             TrustedProxy::All => true,

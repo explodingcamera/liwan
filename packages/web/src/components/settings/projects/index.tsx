@@ -11,7 +11,7 @@ import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
 import { appPath, basePath } from "@/config";
-import type { Dimension, DisplayOverride, ProjectDisplaySettings, ProjectResponse } from "@/constants";
+import type { Dimension, DisplayOverride, ProjectDisplaySettings, ProjectVisibility } from "@/constants";
 import { dimensionNames, displayOverrides, metricNames, metrics } from "@/constants";
 import { invalidateProjects, useEntities, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
@@ -22,17 +22,17 @@ import { Tags } from "../tags";
 export { CreateProject } from "./dialogs";
 
 type ProjectTab = "general" | "display";
-type ProjectVisibility = "private" | "unlisted" | "public";
 
 const getSettingsPathId = (prefix: string) => {
 	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
 	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
 };
-const projectVisibility = (project: ProjectResponse): ProjectVisibility => {
-	if (!project.public) return "private";
-	return project.unlisted ? "unlisted" : "public";
+const visibilityLabels: Record<ProjectVisibility, string> = {
+	private: "Private",
+	public: "Public",
+	unlisted: "Unlisted",
+	internal: "Internal",
 };
-const visibilityPublic = (visibility: ProjectVisibility) => visibility === "public" || visibility === "unlisted";
 
 const displayLabels: Record<DisplayOverride, string> = {
 	auto: "Auto",
@@ -75,9 +75,9 @@ export const ProjectsTable = () => {
 			nowrap: true,
 		},
 		{
-			id: "public",
+			id: "visibility",
 			header: "Visibility",
-			render: (row) => <>{row.public ? (row.unlisted ? "Unlisted" : "Public") : "Private"}</>,
+			render: (row) => visibilityLabels[row.visibility],
 		},
 		{
 			id: "entities",
@@ -142,7 +142,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 		if (!project) return;
 		setForm({
 			displayName: project.displayName,
-			visibility: projectVisibility(project),
+			visibility: project.visibility,
 			selectedEntities: project.entities.map((entity) => ({
 				value: entity.id,
 				label: entity.displayName,
@@ -163,8 +163,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 				json: {
 					project: {
 						displayName: nextDisplayName,
-						public: visibilityPublic(nextVisibility),
-						unlisted: nextVisibility === "unlisted",
+						visibility: nextVisibility,
 					},
 					entities: nextEntities.map((tag) => String(tag.value)),
 				},
@@ -259,6 +258,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 						>
 							<option value="private">Private</option>
 							<option value="unlisted">Unlisted</option>
+							<option value="internal">Internal</option>
 							<option value="public">Public</option>
 						</select>
 					</SettingsField>

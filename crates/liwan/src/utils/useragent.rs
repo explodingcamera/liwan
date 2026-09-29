@@ -47,13 +47,6 @@ pub fn is_crawler_header(header: &str) -> bool {
 }
 
 impl UserAgent {
-    pub fn from_header(header: &str) -> Self {
-        if let Some(client) = UAP_CACHE.get(header) {
-            return client.clone();
-        }
-        parse(header)
-    }
-
     pub fn is_bot(&self) -> bool {
         self.device_family == Some("Spider".into()) || self.ua_family == Some("HeadlessChrome".into())
     }

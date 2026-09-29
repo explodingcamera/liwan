@@ -13,7 +13,7 @@ use schemars::JsonSchema;
 use url::Url;
 
 use super::event::{ProcessEventRequest, enqueue_events, process_event, validate_process_request};
-use crate::app::models::ApiPermission;
+use crate::app::models::AccessPermission;
 use crate::web::{
     RouterState,
     webext::{ApiResult, AuthenticatedApiKey, AxumErrExt, GeoLocationHeaders, http_bail},
@@ -58,12 +58,12 @@ async fn batch_event_handler(
     authentication: AuthenticatedApiKey,
     Json(request): Json<BatchRequest>,
 ) -> ApiResult<UseApi<impl IntoApiResponse, Json<BatchResponse>>> {
-    let AuthenticatedApiKey { access } = authentication;
+    let AuthenticatedApiKey { access: key } = authentication;
 
     if request.entity_id.trim().is_empty() || request.entity_id.len() > 255 {
         http_bail!(StatusCode::BAD_REQUEST, "invalid entityId")
     }
-    if !access.has_permission(ApiPermission::EventsBatch) || !access.can_access_entity(&request.entity_id) {
+    if !key.access.can_access_entity(&request.entity_id, AccessPermission::EventsBatch) {
         http_bail!(StatusCode::FORBIDDEN, "API key cannot access this entity")
     }
     if request.events.is_empty() {
@@ -111,7 +111,7 @@ async fn batch_event_handler(
         enqueue_events(&state, events.into_iter()).await?;
     }
     tracing::debug!(
-        key_id = access.id,
+        key_id = key.id,
         entity_id,
         batch_size = accepted + filtered,
         accepted,

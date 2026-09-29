@@ -2,6 +2,7 @@ use crate::app::{SqlitePool, models};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use rusqlite::OptionalExtension;
+use std::collections::HashSet;
 
 #[derive(Clone)]
 pub struct LiwanSessions {
@@ -31,32 +32,69 @@ impl LiwanSessions {
     pub fn get(&self, session_id: &str) -> Result<Option<models::User>> {
         let conn = self.pool.get()?;
 
-        let mut stmt = conn.prepare_cached(
-            r#"--sql
-            select u.username, u.role, u.projects
-            from sessions s
-            join users u
-            on lower(u.username) = lower(s.username)
-            where
-                s.id = :session_id
-                and s.expires_at > :now
-        "#,
+        let user = conn
+            .query_row(
+                "select u.username, u.role from sessions s join users u on lower(u.username) = lower(s.username) where s.id = ? and s.expires_at > ?",
+                rusqlite::params![session_id, Utc::now()],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
+            .optional()?;
+        let Some((username, role)) = user else { return Ok(None) };
+
+        let mut teams = conn.prepare_cached(
+            "select t.all_projects, t.all_entities, t.permissions_json,
+                (select json_group_array(project_id) from team_projects where team_id = t.id),
+                (select json_group_array(entity_id) from team_entities where team_id = t.id)
+             from teams t join team_users tu on tu.team_id = t.id where tu.username = ?",
         )?;
+        let rows = teams.query_map([&username], |row| {
+            Ok((
+                row.get::<_, bool>(0)?,
+                row.get::<_, bool>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        })?;
+        let mut projects = HashSet::new();
+        let mut entities = HashSet::new();
+        let mut all_projects = false;
+        let mut all_entities = false;
+        let mut permissions = HashSet::new();
+        for row in rows {
+            let (team_all_projects, team_all_entities, granted, project_ids, entity_ids) = row?;
+            if serde_json::from_str::<HashSet<models::AccessPermission>>(&granted)?
+                .contains(&models::AccessPermission::ProjectRead)
+            {
+                permissions.insert(models::AccessPermission::ProjectRead);
+                all_projects |= team_all_projects;
+                if !team_all_projects {
+                    projects.extend(serde_json::from_str::<Vec<String>>(&project_ids)?);
+                }
+            }
+            all_entities |= team_all_entities;
+            if !team_all_entities {
+                entities.extend(serde_json::from_str::<Vec<String>>(&entity_ids)?);
+            }
+        }
 
-        let user = stmt.query_row(rusqlite::named_params! { ":session_id": session_id, ":now": Utc::now() }, |row| {
-            Ok(models::User {
-                username: row.get("username")?,
-                role: row.get::<_, String>("role")?.try_into().unwrap_or_default(),
-                projects: row
-                    .get::<_, String>("projects")?
-                    .split(',')
-                    .filter(|s| !s.is_empty())
-                    .map(str::to_string)
-                    .collect(),
-            })
-        });
-
-        Ok(user.optional()?)
+        Ok(Some(models::User {
+            username,
+            role: role.try_into().unwrap_or_default(),
+            access: models::Access {
+                projects: if all_projects {
+                    models::AccessScope::All
+                } else {
+                    models::AccessScope::Selected(projects.into_iter().collect())
+                },
+                entities: if all_entities {
+                    models::AccessScope::All
+                } else {
+                    models::AccessScope::Selected(entities.into_iter().collect())
+                },
+                permissions,
+            },
+        }))
     }
 
     /// Revoke all sessions belonging to a user.

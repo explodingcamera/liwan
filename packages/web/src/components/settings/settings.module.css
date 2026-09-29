@@ -301,22 +301,11 @@ details.edit summary + ul {
 }
 
 .apiKeyAccessRow {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
   min-width: 0;
 }
 
-.apiKeyAccessRow label {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.apiKeyAccessHelp {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.3;
+.apiKeyAccessRow > :last-child {
+  margin-bottom: 0;
 }
 
 .apiKeySelect {

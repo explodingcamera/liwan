@@ -21,13 +21,12 @@ name = "reports"
 [dependencies]
 # async/concurrency
 arc-swap = "1.9"
-futures-lite = { version = "2.6", default-features = false, features = ["alloc"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 quick_cache = { version = "0.7" }
-tokio = { version = "1.53", default-features = false, features = ["macros", "rt-multi-thread", "signal", "sync"] }
+tokio = { version = "1.53", default-features = false, features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tokio-util = { version = "0.7", features = ["io", "time"] }
 
 # encoding
-hex = { version = "0.4" }
 md-5 = { version = "0.11.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
@@ -67,12 +66,13 @@ axum = { version = "0.8", default-features = false, features = [
   "tokio",
 ] }
 axum-extra = { version = "0.12", default-features = false, features = ["cookie", "typed-header"] }
+base64 = "0.23"
 headers = "0.4"
 http = "1.5"
 ipnet = "2.12"
 oauth2 = { git = "https://github.com/explodingcamera-contrib/oauth2-rs", default-features = false }
 openidconnect = { git = "https://github.com/explodingcamera-contrib/openidconnect-rs", default-features = false }
-reqwest = { version = "0.13", default-features = false, features = ["charset", "json", "rustls", "stream"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream"] }
 rust-embed = { version = "8.12", features = ["mime-guess"] }
 schemars = { version = "1.2", features = ["chrono04", "derive"] }
 tower = { version = "0.5", default-features = false }
@@ -96,11 +96,9 @@ refinery = { version = "0.9", default-features = false }
 refinery-core = { version = "0.9", default-features = false }
 rsntp = { version = "4.1.2", default-features = false, features = ["async"] }
 rusqlite = { version = "0.40", features = ["bundled", "chrono", "modern_sqlite"] }
-base64 = "0.23"
 
 [dev-dependencies]
 axum-test = { version = "21" }
-cookie = { version = "*", default-features = false }
 criterion = { version = "0.8", default-features = false }
 tempfile = { version = "3" }
 tower = { version = "*", features = ["util"] }
@@ -109,5 +107,5 @@ tower = { version = "*", features = ["util"] }
 default = ["geoip"]
 geoip = ["dep:maxminddb"]
 
-[lints.clippy]
-too_many_arguments = "allow"
+[lints]
+workspace = true

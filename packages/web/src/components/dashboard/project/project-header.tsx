@@ -11,7 +11,11 @@ export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; proje
 	return (
 		<h1 className={styles.statsHeader}>
 			<CardLink href={appPath(`/p/${project.id}`)}>
-				{project.public ? project.unlisted && <LockOpenIcon size={16} /> : <LockIcon size={16} />}
+				{project.visibility === "unlisted" ? (
+					<LockOpenIcon size={16} />
+				) : (
+					project.visibility !== "public" && <LockIcon size={16} />
+				)}
 				{project.displayName}
 			</CardLink>
 			{stats && <LiveVisitorCount count={stats.currentVisitors} />}

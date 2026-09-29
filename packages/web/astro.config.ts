@@ -29,6 +29,7 @@ function setPrerender(): AstroIntegration {
 						route.component.endsWith("/pages/settings/projects/[projectId].astro") ||
 						route.component.endsWith("/pages/settings/entities/[entityId].astro") ||
 						route.component.endsWith("/pages/settings/api-keys/[keyId].astro") ||
+						route.component.endsWith("/pages/settings/teams/[teamId].astro") ||
 						route.component.endsWith("/pages/settings/users/[username].astro"))
 				) {
 					route.prerender = false;

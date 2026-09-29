@@ -418,7 +418,7 @@ impl LiwanExternalAuth {
         };
 
         transaction.execute(
-            "insert into users (username, password_hash, role, projects) values (?, null, ?, '')",
+            "insert into users (username, password_hash, role) values (?, null, ?)",
             rusqlite::params![username, UserRole::User.to_string()],
         )?;
         transaction.execute(
@@ -562,7 +562,7 @@ mod tests {
     #[test]
     fn reuses_identity_and_resolves_username_collisions() {
         let app = Liwan::new_memory(Config::default()).unwrap();
-        app.users.create("person", "password", UserRole::User, &[]).unwrap();
+        app.users.create("person", "password", UserRole::User).unwrap();
         let identity = ExternalIdentity {
             provider_key: "https://issuer.example".to_string(),
             subject: "42".to_string(),

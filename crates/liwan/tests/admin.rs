@@ -1,21 +1,136 @@
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use liwan::app::models::{DataRetention, Entity, EntityCollectionSettings, Event, GeoDetail, Project, UserRole};
+use liwan::app::models::{
+    AccessPermission, DataRetention, Entity, EntityCollectionSettings, Event, GeoDetail, Project, ProjectVisibility,
+    UserRole,
+};
 use serde_json::{Value, json};
 use std::num::NonZeroU32;
 
 mod common;
 
 #[tokio::test]
+async fn teams_grant_project_read_access() -> Result<()> {
+    let app = common::app();
+    let (queues, _receivers) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    app.users.create("admin", "testtest", UserRole::Admin)?;
+    app.users.create("viewer", "testtest", UserRole::User)?;
+    app.projects.create(
+        &Project {
+            id: "private".into(),
+            display_name: "Private".into(),
+            visibility: ProjectVisibility::Private,
+            secret: None,
+        },
+        &[],
+    )?;
+    let admin = common::login(&client, "admin", "testtest").await;
+    let viewer = common::login(&client, "viewer", "testtest").await;
+    let admin_headers = || vec![("cookie".into(), common::cookie_header(&admin))];
+    let viewer_headers = || vec![("cookie".into(), common::cookie_header(&viewer))];
+
+    client.get_with_headers("/api/dashboard/teams", viewer_headers()).await.assert_status_forbidden();
+    client
+        .get_with_headers("/api/dashboard/project/private", viewer_headers())
+        .await
+        .assert_status(http::StatusCode::NOT_FOUND);
+    let created: Value = client
+        .post_with_headers("/api/dashboard/teams", json!({"displayName": "Engineering"}), admin_headers())
+        .await
+        .json();
+    let team_id = created["id"].as_str().unwrap();
+    assert_eq!(team_id.len(), 16);
+    client
+        .put_with_headers(
+            &format!("/api/dashboard/team/{team_id}"),
+            json!({"displayName": "Engineering", "users": ["viewer"], "projects": ["private"]}),
+            admin_headers(),
+        )
+        .await
+        .assert_status_success();
+    let teams: Value = client.get_with_headers("/api/dashboard/teams", admin_headers()).await.json();
+    assert_eq!(teams["teams"][0]["id"], team_id);
+    assert_eq!(teams["teams"][0]["entities"], json!([]));
+    assert_eq!(teams["teams"][0]["projects"], json!(["private"]));
+    client.get_with_headers("/api/dashboard/project/private", viewer_headers()).await.assert_status_success();
+    client
+        .put_with_headers("/api/dashboard/user/viewer", json!({"role": "admin", "teams": ["missing"]}), admin_headers())
+        .await
+        .assert_status(http::StatusCode::BAD_REQUEST);
+    assert_eq!(app.users.get("viewer")?.role, UserRole::User);
+    client
+        .put_with_headers("/api/dashboard/user/viewer", json!({"role": "user", "teams": []}), admin_headers())
+        .await
+        .assert_status_success();
+    client
+        .get_with_headers("/api/dashboard/project/private", viewer_headers())
+        .await
+        .assert_status(http::StatusCode::NOT_FOUND);
+    client
+        .put_with_headers("/api/dashboard/user/viewer", json!({"role": "user", "teams": [team_id]}), admin_headers())
+        .await
+        .assert_status_success();
+    client.get_with_headers("/api/dashboard/project/private", viewer_headers()).await.assert_status_success();
+    let listed: Value = client.get_with_headers("/api/dashboard/projects", viewer_headers()).await.json();
+    assert_eq!(listed["projects"][0]["id"], "private");
+    client
+        .delete_with_headers(&format!("/api/dashboard/team/{team_id}"), admin_headers())
+        .await
+        .assert_status_success();
+    client
+        .get_with_headers("/api/dashboard/project/private", viewer_headers())
+        .await
+        .assert_status(http::StatusCode::NOT_FOUND);
+    Ok(())
+}
+
+#[tokio::test]
+async fn internal_projects_require_a_session() -> Result<()> {
+    let app = common::app();
+    let (queues, _receivers) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    app.users.create("viewer", "testtest", UserRole::User)?;
+    app.projects.create(
+        &Project {
+            id: "staff".into(),
+            display_name: "Staff".into(),
+            visibility: ProjectVisibility::Internal,
+            secret: None,
+        },
+        &[],
+    )?;
+    client.get("/api/dashboard/project/staff").await.assert_status(http::StatusCode::NOT_FOUND);
+    let listed: Value = client.get("/api/dashboard/projects").await.json();
+    assert_eq!(listed["projects"], json!([]));
+    let cookies = common::login(&client, "viewer", "testtest").await;
+    let headers = || vec![("cookie".into(), common::cookie_header(&cookies))];
+    client.get_with_headers("/api/dashboard/project/staff", headers()).await.assert_status_success();
+    let listed: Value = client.get_with_headers("/api/dashboard/projects", headers()).await.json();
+    assert_eq!(listed["projects"][0]["id"], "staff");
+    assert_eq!(listed["projects"][0]["visibility"], "internal");
+    Ok(())
+}
+
+#[tokio::test]
 async fn admin_manages_api_keys() -> Result<()> {
     let app = common::app();
     let (queues, _receivers) = common::events();
     let client = common::TestClient::new(app.clone(), queues);
-    app.users.create("admin", "testtest", UserRole::Admin, &[])?;
+    app.users.create("admin", "testtest", UserRole::Admin)?;
     app.entities.create(&Entity { id: "service".into(), display_name: "Service".into() }, &[])?;
     app.entities.create(&Entity { id: "other".into(), display_name: "Other".into() }, &[])?;
     let cookies = common::login(&client, "admin", "testtest").await;
     let headers = || vec![("cookie".to_string(), common::cookie_header(&cookies))];
+
+    client
+        .post_with_headers(
+            "/api/dashboard/api-keys",
+            json!({ "displayName": "Unsupported", "entities": [], "projects": [], "permissions": ["project:read"], "expiration": "never" }),
+            headers(),
+        )
+        .await
+        .assert_status_bad_request();
 
     let created = client
         .post_with_headers(
@@ -36,7 +151,7 @@ async fn admin_manages_api_keys() -> Result<()> {
     assert_eq!(listed["keys"].as_array().unwrap().len(), 1);
     assert!(listed.to_string().find(plaintext).is_none());
 
-    app.users.create("viewer", "testtest", UserRole::User, &[])?;
+    app.users.create("viewer", "testtest", UserRole::User)?;
     let viewer_cookies = common::login(&client, "viewer", "testtest").await;
     client
         .post_with_headers(
@@ -57,9 +172,9 @@ async fn admin_manages_api_keys() -> Result<()> {
         .await
         .assert_status_success();
     let access = app.api_keys.authenticate(plaintext)?.expect("valid API key");
-    assert!(!access.can_access_entity("service"));
-    assert!(access.can_access_entity("other"));
-    assert!(!access.has_permission(liwan::app::models::ApiPermission::EventsBatch));
+    assert!(!access.access.can_access_entity("service", AccessPermission::EventsBatch));
+    assert!(access.access.entities.contains("other"));
+    assert!(!access.access.can_access_entity("other", AccessPermission::EventsBatch));
     let regenerated = client
         .post_with_headers(
             &format!("/api/dashboard/api-keys/{key_id}/regenerate"),
@@ -87,7 +202,7 @@ async fn admin_cannot_delete_self_using_different_casing() -> Result<()> {
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
 
-    app.users.create("admin", "testtest", UserRole::Admin, &[])?;
+    app.users.create("admin", "testtest", UserRole::Admin)?;
     let cookies = common::login(&client, "admin", "testtest").await;
     let headers = vec![("cookie".to_string(), common::cookie_header(&cookies))];
 
@@ -103,7 +218,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
     let app = common::app();
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
-    app.users.create("admin", "testtest", UserRole::Admin, &[])?;
+    app.users.create("admin", "testtest", UserRole::Admin)?;
     let cookies = common::login(&client, "admin", "testtest").await;
     let headers = || vec![("cookie".to_string(), common::cookie_header(&cookies))];
 
@@ -113,7 +228,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
             "/api/dashboard/project/failed-project",
             json!({
                 "displayName": "Failed project",
-                "public": false,
+                "visibility": "private",
                 "secret": null,
                 "entities": ["existing-entity", "missing-entity"]
             }),
@@ -127,8 +242,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
         &Project {
             id: "existing-project".into(),
             display_name: "Existing project".into(),
-            public: false,
-            unlisted: false,
+            visibility: ProjectVisibility::Private,
             secret: None,
         },
         &[],
@@ -152,8 +266,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
         &Project {
             id: "updated-project".into(),
             display_name: "Updated project".into(),
-            public: false,
-            unlisted: false,
+            visibility: ProjectVisibility::Private,
             secret: None,
         },
         &["existing-entity".to_string()],
@@ -172,8 +285,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
         &Project {
             id: "new-project".into(),
             display_name: "New project".into(),
-            public: false,
-            unlisted: false,
+            visibility: ProjectVisibility::Private,
             secret: None,
         },
         &[],
@@ -202,7 +314,7 @@ async fn pruning_supports_dry_run_and_is_idempotent() -> Result<()> {
     let app = common::app();
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
-    app.users.create("admin", "testtest", UserRole::Admin, &[])?;
+    app.users.create("admin", "testtest", UserRole::Admin)?;
     let cookies = common::login(&client, "admin", "testtest").await;
     let headers = || vec![("cookie".to_string(), common::cookie_header(&cookies))];
 

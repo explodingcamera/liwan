@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
 use arc_swap::ArcSwapOption;
-use futures_lite::StreamExt;
+use futures_util::StreamExt;
 use md5::Digest;
 use tokio_tar::Archive;
 use tokio_util::io::StreamReader;
@@ -235,7 +235,7 @@ fn file_md5(path: &Path) -> Result<String> {
         hasher.update(&buffer[..n]);
     }
 
-    Ok(hex::encode(hasher.finalize()))
+    Ok(crate::utils::encode_hex(&hasher.finalize()))
 }
 
 async fn download_maxmind_db(edition: &str, account_id: &str, license_key: &str) -> Result<PathBuf> {

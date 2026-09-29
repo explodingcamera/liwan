@@ -189,8 +189,7 @@ export const ApiKeys = () => {
 				title="Create API key"
 			>
 				<form onSubmit={create}>
-					<label>
-						Key name
+					<SettingsField label="Key name">
 						<input
 							required
 							type="text"
@@ -199,24 +198,24 @@ export const ApiKeys = () => {
 							onChange={(event) => setForm({ ...form, displayName: event.currentTarget.value })}
 							placeholder="Production server"
 						/>
-					</label>
+					</SettingsField>
 					<div className={styles.apiKeyAccessSection}>
 						<div className={styles.apiKeyAccessGrid}>
 							<div className={styles.apiKeyAccessRow}>
-								<label htmlFor="create-entity-access">Entities</label>
-								<small className={styles.apiKeyAccessHelp}>Direct access to entities.</small>
-								<div className={styles.apiKeySelect}>
-									<select
-										id="create-entity-access"
-										value={entityAccess}
-										onChange={(event) => setForm({ ...form, entityAccess: event.currentTarget.value as AccessScope })}
-									>
-										<option value="none">No entities</option>
-										<option value="selected">Selected entities</option>
-										<option value="all">All entities</option>
-									</select>
-									<ChevronDownIcon size={16} aria-hidden="true" />
-								</div>
+								<SettingsField label="Entities" description="Direct access to entities." htmlFor="create-entity-access">
+									<div className={styles.apiKeySelect}>
+										<select
+											id="create-entity-access"
+											value={entityAccess}
+											onChange={(event) => setForm({ ...form, entityAccess: event.currentTarget.value as AccessScope })}
+										>
+											<option value="none">No entities</option>
+											<option value="selected">Selected entities</option>
+											<option value="all">All entities</option>
+										</select>
+										<ChevronDownIcon size={16} aria-hidden="true" />
+									</div>
+								</SettingsField>
 								{entityAccess === "selected" && (
 									<Tags
 										labelText="Choose entities"
@@ -230,20 +229,26 @@ export const ApiKeys = () => {
 								)}
 							</div>
 							<div className={styles.apiKeyAccessRow}>
-								<label htmlFor="create-project-access">Projects</label>
-								<small className={styles.apiKeyAccessHelp}>Follows project membership.</small>
-								<div className={styles.apiKeySelect}>
-									<select
-										id="create-project-access"
-										value={projectAccess}
-										onChange={(event) => setForm({ ...form, projectAccess: event.currentTarget.value as AccessScope })}
-									>
-										<option value="none">No projects</option>
-										<option value="selected">Selected projects</option>
-										<option value="all">All projects</option>
-									</select>
-									<ChevronDownIcon size={16} aria-hidden="true" />
-								</div>
+								<SettingsField
+									label="Projects"
+									description="Follows project membership."
+									htmlFor="create-project-access"
+								>
+									<div className={styles.apiKeySelect}>
+										<select
+											id="create-project-access"
+											value={projectAccess}
+											onChange={(event) =>
+												setForm({ ...form, projectAccess: event.currentTarget.value as AccessScope })
+											}
+										>
+											<option value="none">No projects</option>
+											<option value="selected">Selected projects</option>
+											<option value="all">All projects</option>
+										</select>
+										<ChevronDownIcon size={16} aria-hidden="true" />
+									</div>
+								</SettingsField>
 								{projectAccess === "selected" && (
 									<Tags
 										labelText="Choose projects"
@@ -283,11 +288,11 @@ export const ApiKeys = () => {
 							</div>
 						</SettingsFieldset>
 					</div>
-					<label>
-						Expiration
+					<SettingsField label="Expiration" htmlFor="create-key-expiration">
 						<div className={`${styles.apiKeySelect} ${styles.apiKeyExpirationSelect}`}>
 							<CalendarDaysIcon size={16} aria-hidden="true" />
 							<select
+								id="create-key-expiration"
 								value={expiration}
 								onChange={(event) => setForm({ ...form, expiration: event.currentTarget.value as Expiration })}
 							>
@@ -299,7 +304,7 @@ export const ApiKeys = () => {
 							</select>
 							<ChevronDownIcon size={16} aria-hidden="true" />
 						</div>
-					</label>
+					</SettingsField>
 					<div className="action-row">
 						<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
 						<button type="submit" className="button-primary" disabled={!displayName.trim() || creating}>
@@ -443,28 +448,32 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 					<div className={styles.apiKeyAccessSection}>
 						<div className={styles.apiKeyAccessGrid}>
 							<div className={styles.apiKeyAccessRow}>
-								<label htmlFor="edit-entity-access">Entities</label>
-								<small className={styles.apiKeyAccessHelp}>Direct access to entities.</small>
-								<div className={styles.apiKeySelect}>
-									<select
-										id="edit-entity-access"
-										value={entityAccess}
-										onChange={(event) => {
-											const next = event.currentTarget.value as AccessScope;
-											setForm({ ...form, entityAccess: next });
-											save({
-												...key,
-												entities:
-													next === "all" ? "all" : next === "selected" ? selectedEntities.map((tag) => tag.value) : [],
-											});
-										}}
-									>
-										<option value="none">No entities</option>
-										<option value="selected">Selected entities</option>
-										<option value="all">All entities</option>
-									</select>
-									<ChevronDownIcon size={16} aria-hidden="true" />
-								</div>
+								<SettingsField label="Entities" description="Direct access to entities." htmlFor="edit-entity-access">
+									<div className={styles.apiKeySelect}>
+										<select
+											id="edit-entity-access"
+											value={entityAccess}
+											onChange={(event) => {
+												const next = event.currentTarget.value as AccessScope;
+												setForm({ ...form, entityAccess: next });
+												save({
+													...key,
+													entities:
+														next === "all"
+															? "all"
+															: next === "selected"
+																? selectedEntities.map((tag) => tag.value)
+																: [],
+												});
+											}}
+										>
+											<option value="none">No entities</option>
+											<option value="selected">Selected entities</option>
+											<option value="all">All entities</option>
+										</select>
+										<ChevronDownIcon size={16} aria-hidden="true" />
+									</div>
+								</SettingsField>
 								{entityAccess === "selected" && (
 									<Tags
 										labelText="Choose entities"
@@ -486,28 +495,32 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 								)}
 							</div>
 							<div className={styles.apiKeyAccessRow}>
-								<label htmlFor="edit-project-access">Projects</label>
-								<small className={styles.apiKeyAccessHelp}>Follows project membership.</small>
-								<div className={styles.apiKeySelect}>
-									<select
-										id="edit-project-access"
-										value={projectAccess}
-										onChange={(event) => {
-											const next = event.currentTarget.value as AccessScope;
-											setForm({ ...form, projectAccess: next });
-											save({
-												...key,
-												projects:
-													next === "all" ? "all" : next === "selected" ? selectedProjects.map((tag) => tag.value) : [],
-											});
-										}}
-									>
-										<option value="none">No projects</option>
-										<option value="selected">Selected projects</option>
-										<option value="all">All projects</option>
-									</select>
-									<ChevronDownIcon size={16} aria-hidden="true" />
-								</div>
+								<SettingsField label="Projects" description="Follows project membership." htmlFor="edit-project-access">
+									<div className={styles.apiKeySelect}>
+										<select
+											id="edit-project-access"
+											value={projectAccess}
+											onChange={(event) => {
+												const next = event.currentTarget.value as AccessScope;
+												setForm({ ...form, projectAccess: next });
+												save({
+													...key,
+													projects:
+														next === "all"
+															? "all"
+															: next === "selected"
+																? selectedProjects.map((tag) => tag.value)
+																: [],
+												});
+											}}
+										>
+											<option value="none">No projects</option>
+											<option value="selected">Selected projects</option>
+											<option value="all">All projects</option>
+										</select>
+										<ChevronDownIcon size={16} aria-hidden="true" />
+									</div>
+								</SettingsField>
 								{projectAccess === "selected" && (
 									<Tags
 										labelText="Choose projects"
@@ -623,11 +636,11 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 				description="The current secret will stop working immediately. Choose an expiration for the new secret."
 			>
 				<form onSubmit={regenerate}>
-					<label>
-						Expiration
+					<SettingsField label="Expiration" htmlFor="regenerate-key-expiration">
 						<div className={`${styles.apiKeySelect} ${styles.apiKeyExpirationSelect}`}>
 							<CalendarDaysIcon size={16} aria-hidden="true" />
 							<select
+								id="regenerate-key-expiration"
 								value={expiration}
 								onChange={(event) => setForm({ ...form, expiration: event.currentTarget.value as Expiration })}
 							>
@@ -639,7 +652,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 							</select>
 							<ChevronDownIcon size={16} aria-hidden="true" />
 						</div>
-					</label>
+					</SettingsField>
 					<div className="action-row">
 						<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
 						<button type="submit" className="button-primary" disabled={regenerating}>

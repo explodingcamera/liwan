@@ -82,9 +82,8 @@ async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> Api
     }
 
     let completed = spawn_blocking(move || {
-        app.onboarding.complete_setup(&params.token, || {
-            app.users.create(&params.username, &params.password, UserRole::Admin, &[])
-        })
+        app.onboarding
+            .complete_setup(&params.token, || app.users.create(&params.username, &params.password, UserRole::Admin))
     })
     .await
     .http_status(StatusCode::INTERNAL_SERVER_ERROR)?

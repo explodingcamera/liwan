@@ -7,9 +7,13 @@ use serde::Serialize;
 /// Metadata captured from an HTTP request.
 #[derive(Debug, Clone, Default)]
 pub struct RequestMetadata {
+    /// The full URL of the request.
     pub url: String,
+    /// The referrer, if supplied.
     pub referrer: Option<String>,
+    /// The resolved client IP, if available.
     pub ip: Option<IpAddr>,
+    /// The user-agent header, if supplied.
     pub user_agent: Option<String>,
 }
 
@@ -105,6 +109,7 @@ impl Event {
 
 /// Converts supported timestamp types to RFC 3339.
 pub trait IntoTimestamp {
+    /// Formats this timestamp as an RFC 3339 string.
     fn into_timestamp(self) -> String;
 }
 

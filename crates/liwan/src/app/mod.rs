@@ -12,7 +12,7 @@ use crate::utils::r2d2_sqlite::SqliteConnectionManager;
 use anyhow::{Context, Result};
 use core::{
     LiwanApiKeys, LiwanEntities, LiwanEvents, LiwanOnboarding, LiwanProjectSettings, LiwanProjects, LiwanSessions,
-    LiwanSettings, LiwanUsers,
+    LiwanSettings, LiwanTeams, LiwanUsers,
 };
 use duckdb::DuckdbConnectionManager;
 
@@ -32,6 +32,7 @@ pub struct Liwan {
     pub onboarding: LiwanOnboarding,
     pub entities: LiwanEntities,
     pub projects: LiwanProjects,
+    pub teams: LiwanTeams,
     pub settings: LiwanSettings,
     pub project_settings: LiwanProjectSettings,
 
@@ -92,6 +93,7 @@ impl Liwan {
             )?,
             entities: LiwanEntities::new(conn_app.clone()),
             projects: LiwanProjects::new(conn_app.clone()),
+            teams: LiwanTeams::new(conn_app.clone()),
             settings: LiwanSettings::try_new(conn_app.clone())?,
             project_settings: LiwanProjectSettings::new(conn_app.clone()),
             users: LiwanUsers::new(conn_app),
@@ -135,7 +137,7 @@ impl Liwan {
 impl Liwan {
     pub fn seed_database(&self, count_per_entity: usize) -> Result<()> {
         use chrono::{Days, Utc};
-        use models::{ApiKeyExpiration, ApiKeyScope, ApiPermission, UserRole};
+        use models::{AccessPermission, AccessScope, ApiKeyExpiration, UserRole};
 
         let entities = vec![
             ("entity-1", "Entity 1", "example.com", vec!["public-project".to_string(), "private-project".to_string()]),
@@ -146,7 +148,7 @@ impl Liwan {
         let users = [("admin", "admin", UserRole::Admin), ("user", "user", UserRole::User)];
 
         for (username, password, role) in users {
-            self.users.create(username, password, role, &[])?;
+            self.users.create(username, password, role)?;
         }
 
         for (project_id, display_name, public) in projects {
@@ -154,8 +156,11 @@ impl Liwan {
                 &models::Project {
                     id: project_id.to_string(),
                     display_name: display_name.to_string(),
-                    public,
-                    unlisted: false,
+                    visibility: if public {
+                        models::ProjectVisibility::Public
+                    } else {
+                        models::ProjectVisibility::Private
+                    },
                     secret: None,
                 },
                 &[],
@@ -177,9 +182,9 @@ impl Liwan {
 
         let (key, _) = self.api_keys.create(
             "Expired example",
-            &ApiKeyScope::Selected(vec!["entity-1".into()]),
-            &ApiKeyScope::Selected(vec![]),
-            &[ApiPermission::EventsBatch],
+            &AccessScope::Selected(vec!["entity-1".into()]),
+            &AccessScope::Selected(vec![]),
+            &[AccessPermission::EventsBatch],
             ApiKeyExpiration::SevenDays,
         )?;
         self.api_keys.expire_for_seed(&key.id)?;

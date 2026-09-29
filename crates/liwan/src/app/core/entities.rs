@@ -88,6 +88,7 @@ impl LiwanEntities {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute("delete from api_key_entities where entity_id = ?", rusqlite::params![id])?;
+        tx.execute("delete from team_entities where entity_id = ?", [id])?;
         tx.execute("delete from entity_settings where entity_id = ?", rusqlite::params![id])?;
         tx.execute("delete from entities where id = ?", rusqlite::params![id])?;
         tx.execute("delete from project_entities where entity_id = ?", rusqlite::params![id])?;
@@ -100,14 +101,13 @@ impl LiwanEntities {
     pub fn projects(&self, entity_id: &str) -> Result<Vec<models::Project>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
-            "select p.id, p.display_name, p.public, p.unlisted, p.secret from projects p join project_entities pe on p.id = pe.project_id where pe.entity_id = ?",
+            "select p.id, p.display_name, p.visibility, p.secret from projects p join project_entities pe on p.id = pe.project_id where pe.entity_id = ?",
         )?;
         let projects = stmt.query_map(rusqlite::params![entity_id], |row| {
             Ok(models::Project {
                 id: row.get("id")?,
                 display_name: row.get("display_name")?,
-                public: row.get("public")?,
-                unlisted: row.get("unlisted")?,
+                visibility: row.get("visibility")?,
                 secret: row.get("secret")?,
             })
         })?;

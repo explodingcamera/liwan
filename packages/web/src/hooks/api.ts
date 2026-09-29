@@ -111,6 +111,14 @@ export const useUsers = () => {
 	return { users: data?.users ?? [], isLoading, error, authError };
 };
 
+export const useTeams = () => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ["teams"],
+		queryFn: () => api["/api/dashboard/teams"].get().json(),
+	});
+	return { teams: data?.teams ?? [], isLoading, error };
+};
+
 export const useApiKeys = () => {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["api_keys"],
@@ -293,4 +301,5 @@ export const useProjectStats = ({
 export const invalidateProjects = () => queryClient.invalidateQueries({ queryKey: ["projects"] });
 export const invalidateEntities = () => queryClient.invalidateQueries({ queryKey: ["entities"] });
 export const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ["users"] });
+export const invalidateTeams = () => queryClient.invalidateQueries({ queryKey: ["teams"] });
 export const invalidateApiKeys = () => queryClient.invalidateQueries({ queryKey: ["api_keys"] });

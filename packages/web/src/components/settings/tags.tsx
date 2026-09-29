@@ -4,6 +4,8 @@ import { Fragment, useId } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { CheckIcon, XIcon } from "lucide-react";
 
+import { SettingsField } from "./form";
+
 export type Tag = {
 	value: string;
 	label: string;
@@ -53,13 +55,13 @@ export const Tags = ({
 			isItemEqualToValue={(item, value) => item.value === value.value}
 			multiple
 		>
-			<div className={styles.container} data-disabled={disabled ? true : undefined}>
-				{labelText && (
-					<label htmlFor={id} className={styles.label}>
-						{labelText}
-					</label>
-				)}
-				{labelDescription && <small className={styles.labelDescription}>{labelDescription}</small>}
+			<SettingsField
+				label={labelText}
+				description={labelDescription}
+				htmlFor={id}
+				className={styles.container}
+				disabled={disabled}
+			>
 				<Combobox.InputGroup className={styles.inputGroup}>
 					<Combobox.Chips className={styles.chips}>
 						<Combobox.Value>
@@ -83,7 +85,7 @@ export const Tags = ({
 						</Combobox.Value>
 					</Combobox.Chips>
 				</Combobox.InputGroup>
-			</div>
+			</SettingsField>
 
 			<Combobox.Portal>
 				<Combobox.Positioner className={styles.positioner} sideOffset={0}>

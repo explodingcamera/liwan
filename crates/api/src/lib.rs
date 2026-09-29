@@ -1,6 +1,6 @@
 //! A framework-neutral client for the Liwan API.
 
-#![forbid(unsafe_code)]
+#![deny(missing_docs)]
 
 mod client;
 mod client_ip;

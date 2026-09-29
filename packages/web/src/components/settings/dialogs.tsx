@@ -6,7 +6,7 @@ import { useRef } from "react";
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
-import { invalidateEntities, invalidateProjects, invalidateUsers } from "@/hooks/api";
+import { invalidateEntities, invalidateProjects, invalidateTeams, invalidateUsers } from "@/hooks/api";
 
 const toTitleCase = (str: string) => str[0].toUpperCase() + str.slice(1);
 
@@ -19,7 +19,7 @@ export const DeleteDialog = ({
 }: {
 	id: string;
 	displayName: string;
-	type: "project" | "entity" | "user";
+	type: "project" | "entity" | "user" | "team";
 	trigger: ReactElement;
 	onDeleted?: () => void;
 }) => {
@@ -38,6 +38,7 @@ export const DeleteDialog = ({
 			api["/api/dashboard/user/{username}"].delete({
 				params: { username: id },
 			}),
+		team: (id: string) => api["/api/dashboard/team/{team_id}"].delete({ params: { team_id: id } }),
 	} as const;
 
 	const { mutate } = useMutation({
@@ -53,6 +54,9 @@ export const DeleteDialog = ({
 					break;
 				case "user":
 					invalidateUsers();
+					break;
+				case "team":
+					invalidateTeams();
 					break;
 			}
 			createToast(`${toTitleCase(type)} deleted`, "success");

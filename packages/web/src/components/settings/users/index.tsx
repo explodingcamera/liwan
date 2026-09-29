@@ -1,6 +1,6 @@
 import styles from "../settings.module.css";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { SettingsIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
@@ -9,7 +9,7 @@ import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
 import { appPath, basePath } from "@/config";
-import { invalidateUsers, useProjects, useUsers } from "@/hooks/api";
+import { invalidateTeams, invalidateUsers, useTeams, useUsers } from "@/hooks/api";
 import { getUsername } from "@/utils";
 import { DeleteDialog } from "../dialogs";
 import { SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
@@ -71,17 +71,27 @@ export const UserSettingsPage = ({ username: usernameProp }: { username: string 
 	}, [usernameProp]);
 
 	if (!username) return <LoadingSpinner />;
-	return <UserSettingsContent username={username} />;
+	return <UserSettingsContent key={username} username={username} />;
 };
 
 const UserSettingsContent = ({ username }: { username: string }) => {
 	const { users, isLoading, authError } = useUsers();
-	const { projects } = useProjects();
+	const { teams, isLoading: teamsLoading, error: teamsError } = useTeams();
 	const user = users.find((u) => u.username === username);
-	const [form, setForm] = useState({ selectedProjects: [] as Tag[], isAdmin: false });
-	const { selectedProjects, isAdmin } = form;
-
-	const projectTags = useMemo(() => projects.map((p) => ({ value: p.id, label: p.displayName })), [projects]);
+	const [isAdmin, setIsAdmin] = useState(false);
+	const [selectedTeams, setSelectedTeams] = useState<Tag[]>([]);
+	const [initialized, setInitialized] = useState(false);
+	const teamTags = teams.map((team) => ({ value: team.id, label: team.displayName }));
+	const { mutate: saveUser } = useMutation({
+		scope: { id: `user:${username}` },
+		mutationFn: api["/api/dashboard/user/{username}"].put,
+		onSuccess: () => {
+			invalidateUsers();
+			invalidateTeams();
+			createToast("User updated", "success");
+		},
+		onError: (error) => createToast(error.message, "error"),
+	});
 
 	const isSelf = getUsername() === username;
 	const { mutate: revokeSessions, isPending: revoking } = useMutation({
@@ -94,68 +104,67 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 	});
 
 	useEffect(() => {
-		if (!user) return;
-		setForm({
-			isAdmin: user.role === "admin",
-			selectedProjects: user.projects.map((projectId) => {
-				const p = projects.find((p) => p.id === projectId);
-				return { value: projectId, label: p ? p.displayName : projectId };
-			}),
-		});
-	}, [user, projects]);
+		if (!user || isLoading || teamsLoading || initialized) return;
+		setIsAdmin(user.role === "admin");
+		setSelectedTeams(
+			teams
+				.filter((team) => team.users.includes(username))
+				.map((team) => ({ value: team.id, label: team.displayName })),
+		);
+		setInitialized(true);
+	}, [user, teams, username, isLoading, teamsLoading, initialized]);
 
-	const saveUser = (nextProjects: Tag[], nextIsAdmin: boolean) => {
+	const updateUser = (nextIsAdmin: boolean, nextTeams: Tag[]) => {
 		if (!user) return;
-		setForm({ selectedProjects: nextProjects, isAdmin: nextIsAdmin });
-		api["/api/dashboard/user/{username}"]
-			.put({
-				params: { username: user.username },
-				json: {
-					role: nextIsAdmin ? "admin" : "user",
-					projects: nextProjects.map((tag) => tag.value as string),
-				},
-			})
-			.then(() => {
-				invalidateUsers();
-				createToast("User updated", "success");
-			})
-			.catch(() => createToast("Failed to update user", "error"));
+		saveUser({
+			params: { username: user.username },
+			json: { role: nextIsAdmin ? "admin" : "user", teams: nextTeams.map((tag) => tag.value) },
+		});
 	};
 
 	if (authError) return <p>You don't have permission to view this page.</p>;
-	if (isLoading) return <LoadingSpinner />;
+	if (teamsError) return <p>Could not load teams.</p>;
+	if (isLoading || teamsLoading) return <LoadingSpinner />;
 	if (!user) return <p>User not found.</p>;
+	if (!initialized) return <LoadingSpinner />;
 
 	return (
 		<SettingsForm>
 			<SettingsHeader title={user.username} backHref={appPath("/settings/users")} backLabel="Back to users" />
 			<div className={`${styles.detailPanel} ${styles.userDetailPanel}`}>
-				<div className={styles.projectAccess}>
-					<Tags
-						labelText="Project access"
-						labelDescription="Choose which projects this user can view."
-						selected={selectedProjects}
-						suggestions={projectTags}
-						onAdd={(tag) => saveUser([...selectedProjects, tag], isAdmin)}
-						onDelete={(i) =>
-							saveUser(
-								selectedProjects.filter((_, index) => i !== index),
-								isAdmin,
-							)
-						}
-					/>
-				</div>
 				<SettingsSwitch
 					label="Administrator access"
 					description={
 						<>
-							Allow this user to manage projects, entities, and users.
+							Allow this user to manage projects, entities, teams, and users.
 							{isSelf && " You cannot change your own role."}
 						</>
 					}
 					checked={isAdmin}
 					disabled={isSelf}
-					onCheckedChange={(checked) => saveUser(selectedProjects, checked)}
+					onCheckedChange={(checked) => {
+						setIsAdmin(checked);
+						updateUser(checked, selectedTeams);
+					}}
+				/>
+				<Tags
+					labelText="Teams"
+					labelDescription="Team membership grants access to the team's projects."
+					selected={selectedTeams.map((tag) => ({
+						...tag,
+						label: teams.find((team) => team.id === tag.value)?.displayName ?? tag.label,
+					}))}
+					suggestions={teamTags}
+					onAdd={(tag) => {
+						const next = [...selectedTeams, tag];
+						setSelectedTeams(next);
+						updateUser(isAdmin, next);
+					}}
+					onDelete={(index) => {
+						const next = selectedTeams.filter((_, i) => i !== index);
+						setSelectedTeams(next);
+						updateUser(isAdmin, next);
+					}}
 				/>
 				<div className={styles.dangerZone}>
 					<div>

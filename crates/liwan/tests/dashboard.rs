@@ -1,6 +1,7 @@
 mod common;
 use anyhow::Result;
 use chrono::{Duration, Utc};
+use liwan::app::models::ProjectVisibility;
 use serde_json::json;
 
 #[tokio::test]
@@ -12,8 +13,7 @@ async fn report_date_overflow_is_rejected() -> Result<()> {
         &liwan::app::models::Project {
             id: "public".into(),
             display_name: "Public".into(),
-            public: true,
-            unlisted: false,
+            visibility: ProjectVisibility::Public,
             secret: None,
         },
         &[],

@@ -12,6 +12,7 @@ export type FilterType = OASModel<DashboardSpec, "FilterType">;
 export type GraphResponse = OASModel<DashboardSpec, "GraphResponse">;
 export type ReportGraphPoint = OASModel<DashboardSpec, "ReportGraphPoint">;
 export type ProjectResponse = OASModel<DashboardSpec, "ProjectResponse">;
+export type ProjectVisibility = OASModel<DashboardSpec, "ProjectVisibility">;
 export type EntityResponse = OASModel<DashboardSpec, "EntityResponse">;
 export type UserResponse = OASModel<DashboardSpec, "UserResponse">;
 export type ApiKey = OASModel<DashboardSpec, "ApiKeyResponse">;
