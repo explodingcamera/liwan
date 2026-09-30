@@ -12,118 +12,112 @@ use std::str::FromStr;
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Config {
-    #[serde(default = "default_base")]
     pub base_url: String,
-
-    #[serde(default)]
     listen: Option<ListenAddr>,
-
-    #[serde(default)]
     port: Option<ListenAddr>,
-
-    #[serde(default)]
     // don't load favicons from the duckduckgo api
     pub disable_favicons: bool,
-
-    #[serde(default)]
     pub disable_ntp_check: bool,
-
-    #[serde(default = "default_data_dir")]
     pub data_dir: String,
-
-    #[serde(default)]
     pub geoip: GeoIpConfig,
-
-    #[serde(default)]
     pub duckdb: DuckdbConfig,
-
-    #[serde(default)]
     pub limits: LimitsConfig,
 
     /// Client IP header names or provider presets.
     /// Presets: `cloudflare`, `fastly`, `fly`, `cloudfront`, and `akamai`.
-    #[serde(default = "default_trusted_headers")]
     pub trusted_headers: OneOrMany<ClientIpHeaderSource>,
-
-    #[serde(default = "default_trusted_proxies")]
     pub trusted_proxies: OneOrMany<TrustedProxy>,
-
-    #[serde(default = "default_visitor_group_rotation_hour")]
     pub visitor_group_rotation_hour: u8,
 }
 
 impl Default for Config {
     fn default() -> Self {
+        let data_dir = if cfg!(target_family = "unix") {
+            let home = std::env::var("HOME").ok().unwrap_or_else(|| "/root".to_string());
+            std::env::var("XDG_DATA_HOME").map_or_else(
+                |_| format!("{home}/.local/share/liwan/data"),
+                |data_home| format!("{data_home}/liwan/data"),
+            )
+        } else {
+            "./liwan-data".to_string()
+        };
+
         Self {
-            base_url: default_base(),
-            data_dir: default_data_dir(),
+            base_url: "http://localhost:9042".to_string(),
+            listen: None,
+            port: None,
+            disable_favicons: false,
+            disable_ntp_check: false,
+            data_dir,
             geoip: Default::default(),
             duckdb: Default::default(),
             limits: Default::default(),
-            disable_favicons: false,
-            disable_ntp_check: false,
-            listen: None,
-            port: None,
-            trusted_headers: default_trusted_headers(),
-            trusted_proxies: default_trusted_proxies(),
-            visitor_group_rotation_hour: default_visitor_group_rotation_hour(),
+            trusted_headers: vec![ClientIpHeaderSource::Header("x-forwarded-for".to_string())].into(),
+            trusted_proxies: vec![
+                TrustedProxy::Cidr("127.0.0.1/8".parse().expect("valid default trusted proxy")),
+                TrustedProxy::Cidr("::1/128".parse().expect("valid default trusted proxy")),
+            ]
+            .into(),
+            visitor_group_rotation_hour: 4,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GeoIpConfig {
+    /// GeoIP header mappings or provider presets.
+    /// Presets: `akamai`, `cloudflare`, `cloudfront`, `netlify`, and `vercel`.
+    pub headers: OneOrMany<GeoIpHeaderSource>,
+    pub maxmind_db_path: Option<String>,
+    pub maxmind_account_id: Option<MaxMindAccountId>,
+    pub maxmind_license_key: Option<String>,
+    pub maxmind_edition: String,
+}
+
+impl Default for GeoIpConfig {
+    fn default() -> Self {
+        Self {
+            headers: Default::default(),
+            maxmind_db_path: None,
+            maxmind_account_id: None,
+            maxmind_license_key: None,
+            maxmind_edition: "GeoLite2-City".to_string(),
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct GeoIpConfig {
-    /// GeoIP header mappings or provider presets.
-    /// Presets: `akamai`, `cloudflare`, `cloudfront`, `netlify`, and `vercel`.
-    #[serde(default)]
-    pub headers: OneOrMany<GeoIpHeaderSource>,
-    #[serde(default)]
-    pub maxmind_db_path: Option<String>,
-    #[serde(default)]
-    pub maxmind_account_id: Option<MaxMindAccountId>,
-    #[serde(default)]
-    pub maxmind_license_key: Option<String>,
-    #[serde(default = "default_maxmind_edition")]
-    pub maxmind_edition: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct DuckdbConfig {
-    #[serde(default)]
     pub memory_limit: Option<String>,
-    #[serde(default)]
     pub threads: Option<NonZeroU16>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct LimitsConfig {
-    #[serde(default = "default_report_max_concurrency")]
     pub report_max_concurrency: usize,
-    #[serde(default = "default_report_timeout_seconds")]
     pub report_timeout_seconds: u64,
-    #[serde(default = "default_report_max_range_days")]
     pub report_max_range_days: i64,
-    #[serde(default = "default_report_max_dimension_results")]
     pub report_max_dimension_results: usize,
-    #[serde(default = "default_report_max_datapoints")]
     pub report_max_datapoints: usize,
-    #[serde(default = "default_report_max_filters")]
     pub report_max_filters: usize,
-    #[serde(default = "default_report_max_filter_value_bytes")]
     pub report_max_filter_value_bytes: usize,
 }
 
 impl Default for LimitsConfig {
     fn default() -> Self {
         Self {
-            report_max_concurrency: default_report_max_concurrency(),
-            report_timeout_seconds: default_report_timeout_seconds(),
-            report_max_range_days: default_report_max_range_days(),
-            report_max_dimension_results: default_report_max_dimension_results(),
-            report_max_datapoints: default_report_max_datapoints(),
-            report_max_filters: default_report_max_filters(),
-            report_max_filter_value_bytes: default_report_max_filter_value_bytes(),
+            report_max_concurrency: 8,
+            report_timeout_seconds: 30,
+            report_max_range_days: 3660,
+            report_max_dimension_results: 1000,
+            report_max_datapoints: 2000,
+            report_max_filters: 20,
+            report_max_filter_value_bytes: 2048,
         }
     }
 }
@@ -142,76 +136,6 @@ impl std::fmt::Display for MaxMindAccountId {
             Self::Number(value) => value.fmt(formatter),
         }
     }
-}
-
-fn default_base() -> String {
-    "http://localhost:9042".to_string()
-}
-
-fn default_port() -> u16 {
-    9042
-}
-
-fn default_listen() -> ListenAddr {
-    ListenAddr::Port(default_port())
-}
-
-fn default_maxmind_edition() -> String {
-    "GeoLite2-City".to_string()
-}
-
-fn default_data_dir() -> String {
-    if cfg!(target_family = "unix") {
-        let home = std::env::var("HOME").ok().unwrap_or_else(|| "/root".to_string());
-        std::env::var("XDG_DATA_HOME")
-            .map_or_else(|_| format!("{home}/.local/share/liwan/data"), |data_home| format!("{data_home}/liwan/data"))
-    } else {
-        "./liwan-data".to_string()
-    }
-}
-
-fn default_visitor_group_rotation_hour() -> u8 {
-    4
-}
-
-fn default_trusted_headers() -> OneOrMany<ClientIpHeaderSource> {
-    vec![ClientIpHeaderSource::Header("x-forwarded-for".to_string())].into()
-}
-
-fn default_trusted_proxies() -> OneOrMany<TrustedProxy> {
-    vec![
-        TrustedProxy::Cidr("127.0.0.1/8".parse().expect("valid default trusted proxy")),
-        TrustedProxy::Cidr("::1/128".parse().expect("valid default trusted proxy")),
-    ]
-    .into()
-}
-
-fn default_report_max_concurrency() -> usize {
-    8
-}
-
-fn default_report_timeout_seconds() -> u64 {
-    30
-}
-
-fn default_report_max_range_days() -> i64 {
-    3660
-}
-
-fn default_report_max_dimension_results() -> usize {
-    1000
-}
-
-fn default_report_max_datapoints() -> usize {
-    2000
-}
-
-fn default_report_max_filters() -> usize {
-    20
-}
-
-fn default_report_max_filter_value_bytes() -> usize {
-    2048
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -314,7 +238,7 @@ impl Config {
     }
 
     pub fn listen_addr(&self) -> String {
-        self.listen.as_ref().or(self.port.as_ref()).unwrap_or(&default_listen()).addr()
+        self.listen.as_ref().or(self.port.as_ref()).unwrap_or(&ListenAddr::Port(9042)).addr()
     }
 
     pub fn secure(&self) -> bool {
@@ -425,30 +349,6 @@ mod test {
     }
 
     #[test]
-    fn test_no_geoip() {
-        let (_temp_dir, config_path) = temp_config(
-            "liwan3.config.toml",
-            r#"
-                base_url = "http://localhost:8081"
-                data_dir = "./liwan-test-data"
-            "#,
-        );
-
-        let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
-
-        assert!(config.geoip.maxmind_db_path.is_none());
-        assert!(config.geoip.maxmind_account_id.is_none());
-        assert!(config.geoip.maxmind_license_key.is_none());
-        assert_eq!(config.base_url, "http://localhost:8081");
-        assert_eq!(config.data_dir, "./liwan-test-data");
-        assert_eq!(config.listen_addr(), "0.0.0.0:9042");
-        assert_eq!(config.trusted_headers, default_trusted_headers());
-        assert_eq!(Config::default().trusted_headers, default_trusted_headers());
-        assert_eq!(config.trusted_proxies, default_trusted_proxies());
-        assert_eq!(Config::default().trusted_proxies, default_trusted_proxies());
-    }
-
-    #[test]
     fn test_empty_proxy_config_overrides_defaults() {
         let (_temp_dir, config_path) = temp_config(
             "empty-proxies.config.toml",
@@ -462,25 +362,6 @@ mod test {
 
         assert!(config.trusted_headers.is_empty());
         assert!(config.trusted_proxies.is_empty());
-    }
-
-    #[test]
-    fn test_default_geoip() {
-        let (_temp_dir, config_path) = temp_config(
-            "liwan3.config.toml",
-            r#"
-                base_url = "http://localhost:8081"
-                data_dir = "./liwan-test-data"
-                [geoip]
-                maxmind_db_path = "test2"
-            "#,
-        );
-
-        let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
-        assert_eq!(config.geoip.maxmind_edition, default_maxmind_edition());
-        assert_eq!(config.geoip.maxmind_db_path, Some("test2".to_string()));
-        assert_eq!(config.base_url, "http://localhost:8081");
-        assert_eq!(config.data_dir, "./liwan-test-data");
     }
 
     #[test]
@@ -576,14 +457,25 @@ mod test {
     }
 
     #[test]
-    fn test_no_config() {
+    fn test_defaults() {
         let config = Config::load(None, Vec::<(String, String)>::new()).expect("failed to load config");
+        let default = Config::default();
+        assert_eq!(config.base_url, "http://localhost:9042");
+        assert_eq!(config.listen_addr(), "0.0.0.0:9042");
+        assert_eq!(config.data_dir, default.data_dir);
+        assert_eq!(config.visitor_group_rotation_hour, 4);
         assert!(config.geoip.maxmind_db_path.is_none());
         assert!(config.geoip.maxmind_account_id.is_none());
         assert!(config.geoip.maxmind_license_key.is_none());
-        assert_eq!(config.base_url, "http://localhost:9042");
-        assert_eq!(config.listen_addr(), "0.0.0.0:9042");
-        assert_eq!(config.trusted_headers, default_trusted_headers());
+        assert_eq!(config.geoip.maxmind_edition, "GeoLite2-City");
+        assert_eq!(default.geoip.maxmind_edition, "GeoLite2-City");
+        assert_eq!(config.trusted_headers.as_ref(), &[ClientIpHeaderSource::Header("x-forwarded-for".to_string())]);
+        assert_eq!(config.trusted_headers, default.trusted_headers);
+        assert_eq!(
+            config.trusted_proxies.as_ref(),
+            &[TrustedProxy::Cidr("127.0.0.1/8".parse().unwrap()), TrustedProxy::Cidr("::1/128".parse().unwrap())]
+        );
+        assert_eq!(config.trusted_proxies, default.trusted_proxies);
         assert_eq!(config.limits.report_max_concurrency, 8);
         assert_eq!(config.limits.report_timeout_seconds, 30);
         assert_eq!(config.limits.report_max_range_days, 3660);
@@ -591,6 +483,23 @@ mod test {
         assert_eq!(config.limits.report_max_datapoints, 2000);
         assert_eq!(config.limits.report_max_filters, 20);
         assert_eq!(config.limits.report_max_filter_value_bytes, 2048);
+
+        // a partial geoip section keeps the remaining defaults
+        let (_temp_dir, config_path) = temp_config(
+            "liwan3.config.toml",
+            r#"
+                base_url = "http://localhost:8081"
+                data_dir = "./liwan-test-data"
+                [geoip]
+                maxmind_db_path = "test2"
+            "#,
+        );
+        let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).expect("failed to load config");
+        assert_eq!(config.geoip.maxmind_edition, "GeoLite2-City");
+        assert_eq!(config.geoip.maxmind_db_path, Some("test2".to_string()));
+        assert_eq!(config.base_url, "http://localhost:8081");
+        assert_eq!(config.data_dir, "./liwan-test-data");
+        assert_eq!(config.listen_addr(), "0.0.0.0:9042");
     }
 
     #[test]

@@ -9,7 +9,7 @@ import { select } from "d3-selection";
 import { area, line } from "d3-shape";
 import "d3-transition";
 
-import { addMonths, differenceInHours, isSameYear } from "date-fns";
+import { differenceInHours, isSameYear } from "date-fns";
 
 import type { DateRange } from "@/api/ranges";
 import type { Metric } from "@/constants";
@@ -18,8 +18,7 @@ import type { DataPoint } from ".";
 import { axisBottom, axisLeft } from "./axis";
 import { getGraphRenderData } from "./render-data";
 
-export type GraphRange = "year" | "month" | "day" | "hour";
-type DateDisplayRange = GraphRange | "day+hour" | "day+hour+year" | "day+year";
+type DateDisplayRange = "day" | "hour" | "day+hour" | "day+hour+year" | "day+year";
 
 const keepMeridiemTogether = (value: string) => value.replace(/(\d)\s([AP]M)\b/g, "$1\u00A0$2");
 const formatShortYear = (date: Date) => `'${String(date.getFullYear()).slice(-2)}`;
@@ -27,10 +26,6 @@ const formatDate = (date: Date, range: DateDisplayRange = "day") => {
 	switch (range) {
 		case "day+year":
 			return `${Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date)} ${formatShortYear(date)}`;
-		case "year":
-			return Intl.DateTimeFormat("en-US", { year: "numeric" }).format(date);
-		case "month":
-			return Intl.DateTimeFormat("en-US", { month: "short" }).format(addMonths(date, 1));
 		case "day":
 			return Intl.DateTimeFormat("en-US", {
 				month: "short",

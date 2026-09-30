@@ -11,10 +11,8 @@ use std::{
 
 use async_channel::{Receiver, Sender};
 use futures_lite::future;
-use http::{HeaderValue, Request, StatusCode, header};
-use rand::RngExt;
+use http::{HeaderValue, Request, StatusCode, Uri, header};
 use serde::Serialize;
-use url::Url;
 
 use crate::{Event, Transport};
 
@@ -73,7 +71,7 @@ impl Client {
 
 /// Configures a buffered client.
 pub struct Builder<T: Transport> {
-    endpoint: Url,
+    endpoint: Uri,
     api_key: String,
     transport: T,
     batch_size: usize,
@@ -85,13 +83,18 @@ pub struct Builder<T: Transport> {
 
 impl<T: Transport> Builder<T> {
     fn new(base_url: impl AsRef<str>, api_key: impl Into<String>, transport: T) -> Result<Self, Error> {
-        let mut endpoint =
-            Url::parse(base_url.as_ref()).map_err(|_| Error::InvalidConfiguration("invalid base URL"))?;
-        let path = endpoint.path().trim_end_matches('/');
+        let base: Uri = base_url.as_ref().parse().map_err(|_| Error::InvalidConfiguration("invalid base URL"))?;
+        let (Some(scheme), Some(authority)) = (base.scheme(), base.authority()) else {
+            return Err(Error::InvalidConfiguration("invalid base URL"));
+        };
+        let path = base.path().trim_end_matches('/');
         let path = if path.ends_with("/api/v1/events") { path.to_owned() } else { format!("{path}/api/v1/events") };
-        endpoint.set_path(&path);
-        endpoint.set_query(None);
-        endpoint.set_fragment(None);
+        let endpoint = Uri::builder()
+            .scheme(scheme.clone())
+            .authority(authority.clone())
+            .path_and_query(path)
+            .build()
+            .map_err(|_| Error::InvalidConfiguration("invalid base URL"))?;
         Ok(Self {
             endpoint,
             api_key: api_key.into(),
@@ -289,7 +292,7 @@ async fn send_batch<T: Transport>(config: &Builder<T>, entity_id: &str, events: 
         let mut authorization = HeaderValue::from_str(&format!("Bearer {}", config.api_key))
             .map_err(|_| Error::InvalidConfiguration("invalid API key"))?;
         authorization.set_sensitive(true);
-        let request = Request::post(config.endpoint.as_str())
+        let request = Request::post(config.endpoint.clone())
             .header(header::AUTHORIZATION, authorization)
             .header(header::CONTENT_TYPE, "application/json")
             .body(body.clone())
@@ -325,9 +328,8 @@ async fn send_batch<T: Transport>(config: &Builder<T>, entity_id: &str, events: 
             Attempt::Response(Err(_)) | Attempt::Timeout => None,
         };
         if attempt < config.max_retries {
-            let base = 100_u64.saturating_mul(2_u64.saturating_pow(attempt));
-            let jitter = rand::rng().random_range(0..=(base / 4));
-            let delay = retry_after.unwrap_or_else(|| Duration::from_millis(base + jitter));
+            let backoff = Duration::from_millis(100_u64.saturating_mul(2_u64.saturating_pow(attempt)));
+            let delay = retry_after.unwrap_or(backoff);
             futures_timer::Delay::new(delay).await;
         }
     }

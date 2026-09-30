@@ -19,15 +19,6 @@ import type { Metric } from "./constants";
 
 type ClassName = string | undefined | null | false;
 
-// biome-ignore lint/suspicious/noExplicitAny: required
-export const debounce = <T extends (...args: any[]) => any>(func: T, wait: number) => {
-	let timeout: number;
-	return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
-		clearTimeout(timeout);
-		timeout = window.setTimeout(() => func.apply(this, args), wait);
-	};
-};
-
 export const capitalizeAll = (str: string) => str.replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
 
 export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | ClassName[])[]) =>
@@ -106,11 +97,6 @@ export const tryParseUrl = (url: string) => {
 export const formatHost = (url: string | URL) => {
 	if (typeof url === "string") return url;
 	return url.hostname;
-};
-
-export const formatFullUrl = (url: string | URL) => {
-	if (typeof url === "string") return url;
-	return `${url.hostname}${url.pathname}${url.search}`;
 };
 
 export const formatPath = (url: string | URL) => {

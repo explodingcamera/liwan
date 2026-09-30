@@ -1,11 +1,9 @@
 use std::collections::HashSet;
 
 use anyhow::{Result, bail};
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
-use rand::RngExt;
 use rand::distr::{Alphanumeric, SampleString};
-use rusqlite::{OptionalExtension, Transaction};
+use rusqlite::{Connection, OptionalExtension, Transaction};
 
 use crate::app::{
     SqlitePool,
@@ -42,7 +40,7 @@ impl LiwanApiKeys {
     ) -> Result<(ApiKey, String)> {
         let display_name = display_name.trim();
         validate_display_name(display_name)?;
-        let secret = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 24]>());
+        let secret = Alphanumeric.sample_string(&mut rand::rng(), 32);
         let plaintext = format!("{KEY_PREFIX}{secret}");
         let id = Alphanumeric.sample_string(&mut rand::rng(), 16);
         let secret_hash = blake3::hash(secret.as_bytes()).to_hex().to_string();
@@ -76,61 +74,7 @@ impl LiwanApiKeys {
     /// Lists all key metadata without exposing hashes.
     pub fn all(&self) -> Result<Vec<ApiKey>> {
         let conn = self.pool.get()?;
-        let mut stmt = conn.prepare_cached(
-            "select id, display_name, created_at, expires_at, last_used_at,
-                (select json_group_array(entity_id) from api_key_entities where key_id = api_keys.id),
-                permissions_json, all_entities,
-                (select json_group_array(project_id) from api_key_projects where key_id = api_keys.id), all_projects
-             from api_keys order by created_at desc",
-        )?;
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get(2)?,
-                row.get(3)?,
-                row.get(4)?,
-                row.get::<_, String>(5)?,
-                row.get::<_, String>(6)?,
-                row.get::<_, bool>(7)?,
-                row.get::<_, String>(8)?,
-                row.get::<_, bool>(9)?,
-            ))
-        })?;
-        let mut keys = Vec::new();
-        for row in rows {
-            let (
-                id,
-                display_name,
-                created_at,
-                expires_at,
-                last_used_at,
-                entities,
-                permissions,
-                all_entities,
-                projects,
-                all_projects,
-            ) = row?;
-            keys.push(ApiKey {
-                id,
-                display_name,
-                entities: if all_entities {
-                    AccessScope::All
-                } else {
-                    AccessScope::Selected(serde_json::from_str(&entities)?)
-                },
-                projects: if all_projects {
-                    AccessScope::All
-                } else {
-                    AccessScope::Selected(serde_json::from_str(&projects)?)
-                },
-                permissions: serde_json::from_str(&permissions)?,
-                created_at,
-                last_used_at,
-                expires_at,
-            });
-        }
-        Ok(keys)
+        query_keys(&conn, "", [])
     }
 
     /// Updates a key's display name, access, and permissions.
@@ -168,54 +112,16 @@ impl LiwanApiKeys {
 
     /// Replaces a key's secret and sets a new expiration, without changing its access.
     pub fn regenerate(&self, key_id: &str, expiration: ApiKeyExpiration) -> Result<Option<(ApiKey, String)>> {
-        let secret = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 24]>());
+        let secret = Alphanumeric.sample_string(&mut rand::rng(), 32);
         let hash = blake3::hash(secret.as_bytes()).to_hex().to_string();
         let expires_at = expiration.expires_at();
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
-        let changed = tx.execute(
+        tx.execute(
             "update api_keys set secret_hash = ?, expires_at = ?, last_used_at = null where id = ?",
             rusqlite::params![hash, expires_at, key_id],
         )?;
-        if changed == 0 {
-            return Ok(None);
-        }
-        let (display_name, created_at, entities, all_entities, projects, all_projects, permissions) = tx.query_row(
-            "select display_name, created_at,
-                (select json_group_array(entity_id) from api_key_entities where key_id = api_keys.id), all_entities,
-                (select json_group_array(project_id) from api_key_projects where key_id = api_keys.id), all_projects,
-                permissions_json from api_keys where id = ?",
-            [key_id],
-            |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, bool>(3)?,
-                    row.get::<_, String>(4)?,
-                    row.get::<_, bool>(5)?,
-                    row.get::<_, String>(6)?,
-                ))
-            },
-        )?;
-        let key = ApiKey {
-            id: key_id.to_string(),
-            display_name,
-            entities: if all_entities {
-                AccessScope::All
-            } else {
-                AccessScope::Selected(serde_json::from_str(&entities)?)
-            },
-            projects: if all_projects {
-                AccessScope::All
-            } else {
-                AccessScope::Selected(serde_json::from_str(&projects)?)
-            },
-            permissions: serde_json::from_str(&permissions)?,
-            created_at,
-            last_used_at: None,
-            expires_at,
-        };
+        let Some(key) = query_keys(&tx, "where id = ?", [key_id])?.pop() else { return Ok(None) };
         tx.commit()?;
         Ok(Some((key, format!("{KEY_PREFIX}{secret}"))))
     }
@@ -288,15 +194,35 @@ impl LiwanApiKeys {
                 } else {
                     AccessScope::Selected(permitted_entities.into_iter().collect())
                 },
-                projects: if all_projects {
-                    AccessScope::All
-                } else {
-                    AccessScope::Selected(serde_json::from_str(&projects)?)
-                },
+                projects: AccessScope::from_db(all_projects, &projects)?,
                 permissions: serde_json::from_str(&permissions)?,
             },
         }))
     }
+}
+
+fn query_keys(conn: &Connection, filter: &str, params: impl rusqlite::Params) -> Result<Vec<ApiKey>> {
+    let mut stmt = conn.prepare_cached(&format!(
+        "select id, display_name, created_at, expires_at, last_used_at, permissions_json, all_entities,
+            (select json_group_array(entity_id) from api_key_entities where key_id = api_keys.id), all_projects,
+            (select json_group_array(project_id) from api_key_projects where key_id = api_keys.id)
+         from api_keys {filter} order by created_at desc"
+    ))?;
+    let mut rows = stmt.query(params)?;
+    let mut keys = Vec::new();
+    while let Some(row) = rows.next()? {
+        keys.push(ApiKey {
+            id: row.get(0)?,
+            display_name: row.get(1)?,
+            created_at: row.get(2)?,
+            expires_at: row.get(3)?,
+            last_used_at: row.get(4)?,
+            permissions: serde_json::from_str(&row.get::<_, String>(5)?)?,
+            entities: AccessScope::from_db(row.get(6)?, &row.get::<_, String>(7)?)?,
+            projects: AccessScope::from_db(row.get(8)?, &row.get::<_, String>(9)?)?,
+        });
+    }
+    Ok(keys)
 }
 
 fn validate_display_name(display_name: &str) -> Result<()> {

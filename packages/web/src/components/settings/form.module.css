@@ -53,17 +53,9 @@
   padding: 0.45rem 0.75rem;
 }
 
-.description,
 .fieldsetDescription,
 .fieldDescription {
   color: var(--text-muted);
-}
-
-.description {
-  max-width: 46rem;
-  margin-bottom: 1rem;
-  font-size: var(--font-size-md);
-  line-height: 1.35;
 }
 
 .tabs {
@@ -201,4 +193,22 @@
 
 .switchThumb[data-checked] {
   translate: 1.08rem 0;
+}
+
+.settingsLink {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+}
+
+.settingsLink:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-surface);
+  text-decoration: none;
 }

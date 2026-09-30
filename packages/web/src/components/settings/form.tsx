@@ -6,8 +6,9 @@ import { Fieldset } from "@base-ui/react/fieldset";
 import { Form as BaseForm } from "@base-ui/react/form";
 import { Switch } from "@base-ui/react/switch";
 import { Tabs } from "@base-ui/react/tabs";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, SettingsIcon } from "lucide-react";
 
+import { basePath } from "@/config";
 import { cls } from "@/utils";
 
 type TabItem<T extends string> = { value: T; label: ReactNode };
@@ -28,36 +29,44 @@ export const SettingsForm = ({
 
 export const SettingsHeader = ({
 	title,
-	description,
 	backHref,
 	backLabel,
 	saveForm,
 }: {
 	title: ReactNode;
-	description?: ReactNode;
 	backHref?: string;
 	backLabel?: string;
 	saveForm?: string;
 }) => (
-	<>
-		<nav className={styles.header} data-has-back={backHref ? true : undefined}>
-			<div className={styles.titleGroup}>
-				{backHref && (
-					<a href={backHref} className={styles.backButton} aria-label={backLabel ?? "Back"}>
-						<ArrowLeftIcon size={20} />
-					</a>
-				)}
-				<h1>{title}</h1>
-			</div>
-			{saveForm && (
-				<button type="submit" form={saveForm} className={`${styles.saveButton} button-primary`}>
-					Save
-				</button>
+	<nav className={styles.header} data-has-back={backHref ? true : undefined}>
+		<div className={styles.titleGroup}>
+			{backHref && (
+				<a href={backHref} className={styles.backButton} aria-label={backLabel ?? "Back"}>
+					<ArrowLeftIcon size={20} />
+				</a>
 			)}
-		</nav>
-		{description && <p className={styles.description}>{description}</p>}
-	</>
+			<h1>{title}</h1>
+		</div>
+		{saveForm && (
+			<button type="submit" form={saveForm} className={`${styles.saveButton} button-primary`}>
+				Save
+			</button>
+		)}
+	</nav>
 );
+
+/** Icon link to a settings detail page, used in settings tables. */
+export const SettingsLink = ({ href, label }: { href: string; label: string }) => (
+	<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
+		<SettingsIcon size={18} />
+	</a>
+);
+
+/** Returns the part of the current path after `prefix`, or an empty string if the path doesn't match. */
+export const getSettingsPathId = (prefix: string) => {
+	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
+	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
+};
 
 export const SettingsTabs = <T extends string>({
 	value,

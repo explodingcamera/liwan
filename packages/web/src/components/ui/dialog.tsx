@@ -2,7 +2,6 @@ import styles from "./dialog.module.css";
 
 import type { ReactElement } from "react";
 import { Dialog as Dia } from "@base-ui/react";
-import { XIcon } from "lucide-react";
 
 import { cls } from "@/utils";
 
@@ -15,7 +14,6 @@ export type DialogProps = {
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	className?: string;
-	showClose?: boolean;
 	hideTitle?: boolean;
 	autoOverflow?: boolean;
 };
@@ -29,7 +27,6 @@ export const Dialog = ({
 	open,
 	onOpenChange,
 	className,
-	showClose,
 	hideTitle,
 	autoOverflow,
 }: DialogProps) => {
@@ -40,19 +37,7 @@ export const Dialog = ({
 				<Dia.Backdrop className={styles.overlay} />
 
 				<Dia.Viewport className={styles.viewport}>
-					<Dia.Popup
-						className={cls(
-							styles.content,
-							showClose && styles.withClose,
-							autoOverflow && styles.autoOverflow,
-							className,
-						)}
-					>
-						{showClose && (
-							<Dia.Close className={styles.close} aria-label="Close dialog">
-								<XIcon size="24" />
-							</Dia.Close>
-						)}
+					<Dia.Popup className={cls(styles.content, autoOverflow && styles.autoOverflow, className)}>
 						<Dia.Title className={styles.title} hidden={hideTitle}>
 							{title}
 						</Dia.Title>

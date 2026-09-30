@@ -58,11 +58,3 @@
     animation: none;
   }
 }
-
-.danger {
-  color: var(--danger);
-
-  &:hover {
-    color: var(--danger);
-  }
-}

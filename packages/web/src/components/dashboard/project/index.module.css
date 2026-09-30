@@ -22,10 +22,6 @@
   align-items: center;
   gap: 1rem;
 
-  details {
-    margin: 0;
-  }
-
   > h1 {
     font-size: var(--font-size-xl);
     margin: 0;

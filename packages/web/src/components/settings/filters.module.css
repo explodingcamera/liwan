@@ -15,10 +15,6 @@
   margin-bottom: 0.25rem;
 }
 
-.section p {
-  margin-bottom: 0.6rem;
-}
-
 .description {
   display: block;
   margin: 0;
@@ -96,93 +92,6 @@
   text-decoration: underline;
 }
 
-.hostnameEditor {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.hostnameBox {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  min-height: var(--field-height);
-  padding: 0.15rem 0.23rem;
-  border: 1px solid var(--field-border);
-  border-radius: var(--radius-control);
-  background-color: var(--field);
-  color: var(--text);
-}
-
-.hostnameBox:hover {
-  border-color: var(--field-border-hover);
-}
-
-.hostnameBox:focus-within {
-  border-color: var(--focus);
-  box-shadow: var(--field-focus-ring);
-}
-
-.hostnameBox input {
-  flex: 1;
-  min-width: 6rem;
-  height: 1.5rem;
-  min-height: 1.5rem;
-  font-size: var(--field-font-size);
-  margin: 0;
-  padding: 0 0.25rem;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  box-shadow: none;
-  outline: none;
-  appearance: none;
-}
-
-.hostnameBox input:focus,
-.hostnameBox input:focus-visible {
-  box-shadow: none;
-  outline: none;
-}
-
-.hostnameBox input::placeholder {
-  color: var(--text-muted);
-  opacity: 1;
-}
-
-.hostnameChip {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  gap: 0.25rem;
-  padding: 0.25rem 0.28rem 0.25rem 0.55rem;
-  border-radius: var(--radius-sm);
-  background: var(--surface-chip);
-  color: var(--accent-contrast);
-  font-size: var(--font-size-md);
-  line-height: 1.25;
-}
-
-.hostnameChipRemove {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.15rem;
-  height: 1.15rem;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  color: inherit;
-}
-
-.hostnameChipRemove:hover {
-  background: color-mix(in srgb, currentColor 18%, transparent);
-}
-
-.hostnameChipRemove:focus-visible {
-  outline: none;
-}
-
 .filterList {
   display: grid;
 }
@@ -251,12 +160,6 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-}
-
-.ruleActions button {
-  width: fit-content;
-  margin: 0;
-  padding: 0.32rem 0.55rem;
 }
 
 .ruleActions .iconButton,
@@ -331,10 +234,4 @@
   white-space: nowrap;
   color: var(--text);
   font-weight: 500;
-}
-
-.filterRow button {
-  width: fit-content;
-  margin: 0;
-  padding: 0.32rem 0.55rem;
 }

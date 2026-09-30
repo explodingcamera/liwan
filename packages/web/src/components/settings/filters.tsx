@@ -1,11 +1,12 @@
 import styles from "./filters.module.css";
+import tagStyles from "./tags.module.css";
 
 import { useState } from "react";
 import { PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import type { FilterOption, GenericFilter } from "@/components/dashboard/project/filter";
 import { FilterDialog, filterOptions } from "@/components/dashboard/project/filter";
-import type { GeoDetail, IngestDropRule, IngestFilter, VisitorGroupMode } from "@/constants";
+import type { DataRetention, GeoDetail, IngestDropRule, IngestFilter, VisitorGroupMode } from "@/constants";
 import { filterNames, geoDetails, ingestDimensions, visitorGroupModes } from "@/constants";
 
 const docsUrl = (hash: string) => `https://liwan.dev/collected-data/#${hash}`;
@@ -97,6 +98,52 @@ export const GeoSelect = ({
 	</select>
 );
 
+const retentionOptions = [
+	{ value: "keep_all", label: "Keep all history" },
+	{ value: "30", label: "1 month" },
+	{ value: "90", label: "3 months" },
+	{ value: "180", label: "6 months" },
+	{ value: "365", label: "1 year" },
+	{ value: "730", label: "2 years" },
+];
+
+export const RetentionSelect = ({
+	value,
+	onChange,
+	allowInherit = false,
+}: {
+	value: DataRetention;
+	onChange: (value: DataRetention) => void;
+	allowInherit?: boolean;
+}) => {
+	const selected = () => {
+		if (value.mode === "inherit" && allowInherit) return "inherit";
+		if (value.mode !== "days") return "keep_all";
+		const days = String(value.days);
+		return retentionOptions.some((option) => option.value === days) ? days : "365";
+	};
+
+	return (
+		<select
+			name="historyRetention"
+			value={selected()}
+			onChange={(event) => {
+				const next = event.currentTarget.value;
+				if (next === "inherit") onChange({ mode: "inherit" });
+				else if (next === "keep_all") onChange({ mode: "all" });
+				else onChange({ mode: "days", days: Number(next) });
+			}}
+		>
+			{allowInherit && <option value="inherit">Inherit global</option>}
+			{retentionOptions.map((option) => (
+				<option key={option.value} value={option.value}>
+					{option.label}
+				</option>
+			))}
+		</select>
+	);
+};
+
 export const AllowedHostnamesEditor = ({
 	value,
 	onChange,
@@ -113,34 +160,33 @@ export const AllowedHostnamesEditor = ({
 	};
 
 	return (
-		<div className={styles.hostnameEditor}>
-			<div className={styles.hostnameBox}>
-				{value.map((hostname, index) => (
-					<span className={styles.hostnameChip} key={`${hostname}-${index}`}>
-						{hostname}
-						<button
-							type="button"
-							className={styles.hostnameChipRemove}
-							aria-label={`Remove ${hostname}`}
-							onClick={() => onChange(value.filter((_, i) => i !== index))}
-						>
-							<XIcon size={14} />
-						</button>
-					</span>
-				))}
-				<input
-					value={hostname}
-					onChange={(event) => setHostname(event.currentTarget.value)}
-					onKeyDown={(event) => {
-						if (event.key !== "Enter" && event.key !== ",") return;
-						event.preventDefault();
-						addHostname();
-					}}
-					onBlur={addHostname}
-					placeholder={value.length === 0 ? "example.com or *.example.com" : "Add hostname"}
-					autoComplete="off"
-				/>
-			</div>
+		<div className={`${tagStyles.inputGroup} ${tagStyles.chips}`}>
+			{value.map((hostname, index) => (
+				<span className={tagStyles.chip} key={`${hostname}-${index}`}>
+					{hostname}
+					<button
+						type="button"
+						className={tagStyles.chipRemove}
+						aria-label={`Remove ${hostname}`}
+						onClick={() => onChange(value.filter((_, i) => i !== index))}
+					>
+						<XIcon size={14} />
+					</button>
+				</span>
+			))}
+			<input
+				className={tagStyles.input}
+				value={hostname}
+				onChange={(event) => setHostname(event.currentTarget.value)}
+				onKeyDown={(event) => {
+					if (event.key !== "Enter" && event.key !== ",") return;
+					event.preventDefault();
+					addHostname();
+				}}
+				onBlur={addHostname}
+				placeholder={value.length === 0 ? "example.com or *.example.com" : "Add hostname"}
+				autoComplete="off"
+			/>
 		</div>
 	);
 };

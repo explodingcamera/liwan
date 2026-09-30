@@ -3,30 +3,34 @@ import styles from "../settings.module.css";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
-import { SettingsIcon } from "lucide-react";
 
 import { api } from "@/api";
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
-import { appPath, basePath } from "@/config";
+import { appPath } from "@/config";
 import type { Dimension, DisplayOverride, ProjectDisplaySettings, ProjectVisibility } from "@/constants";
 import { dimensionNames, displayOverrides, metricNames, metrics } from "@/constants";
 import { invalidateProjects, useEntities, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
-import { SettingsField, SettingsForm, SettingsHeader, SettingsPanel, SettingsTabs } from "../form";
+import {
+	getSettingsPathId,
+	SettingsField,
+	SettingsForm,
+	SettingsHeader,
+	SettingsLink,
+	SettingsPanel,
+	SettingsTabs,
+} from "../form";
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
 
 export { CreateProject } from "./dialogs";
 
 type ProjectTab = "general" | "display";
+type DisplayKey = "metricDisplayOverrides" | "dimensionDisplayOverrides";
 
-const getSettingsPathId = (prefix: string) => {
-	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
-	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
-};
 const visibilityLabels: Record<ProjectVisibility, string> = {
 	private: "Private",
 	public: "Public",
@@ -55,14 +59,6 @@ const projectTabs = [
 	{ value: "general", label: "General" },
 	{ value: "display", label: "Display" },
 ] as const satisfies readonly { value: ProjectTab; label: string }[];
-
-const SettingsLink = ({ href, label }: { href: string; label: string }) => {
-	return (
-		<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
-			<SettingsIcon size={18} />
-		</a>
-	);
-};
 
 export const ProjectsTable = () => {
 	const { projects, isLoading } = useProjects();
@@ -187,29 +183,36 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 			.catch(() => createToast("Failed to update project display", "error"));
 	};
 
-	const setMetricDisplay = (metric: string, display: DisplayOverride) => {
+	const setDisplay = (key: DisplayKey, name: string, display: DisplayOverride) => {
 		if (!project || !settings) return;
-		const metricDisplayOverrides = { ...settings.metricDisplayOverrides };
-		if (display === "auto") delete metricDisplayOverrides[metric];
-		else metricDisplayOverrides[metric] = display;
-		saveProjectSettings({
-			...settings,
-			projectId: project.id,
-			metricDisplayOverrides,
-		});
+		const overrides = { ...settings[key] };
+		if (display === "auto") delete overrides[name];
+		else overrides[name] = display;
+		saveProjectSettings({ ...settings, projectId: project.id, [key]: overrides });
 	};
 
-	const setDimensionDisplay = (dimension: string, display: DisplayOverride) => {
-		if (!project || !settings) return;
-		const dimensionDisplayOverrides = { ...settings.dimensionDisplayOverrides };
-		if (display === "auto") delete dimensionDisplayOverrides[dimension];
-		else dimensionDisplayOverrides[dimension] = display;
-		saveProjectSettings({
-			...settings,
-			projectId: project.id,
-			dimensionDisplayOverrides,
-		});
-	};
+	const displayRow = (key: DisplayKey, name: string, label: string) => (
+		<div className={styles.displayRow} key={name}>
+			<span>{label}</span>
+			<ToggleGroup
+				aria-label={`${label} display`}
+				className={styles.segmented}
+				value={[settings?.[key][name] ?? "auto"]}
+				onValueChange={(values) => {
+					const next = values.at(-1);
+					if ((displayOverrides as readonly string[]).includes(next ?? "")) {
+						setDisplay(key, name, next as DisplayOverride);
+					}
+				}}
+			>
+				{displayOverrides.map((display) => (
+					<Toggle key={display} value={display}>
+						{displayLabels[display]}
+					</Toggle>
+				))}
+			</ToggleGroup>
+		</div>
+	);
 
 	if (isLoading) return <LoadingSpinner />;
 	if (!project) return <p>Project not found.</p>;
@@ -291,7 +294,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 								window.location.href = appPath("/settings/projects");
 							}}
 							trigger={
-								<button type="button" className={`${styles.deleteButton} button-danger`}>
+								<button type="button" className="button-danger">
 									Delete project
 								</button>
 							}
@@ -305,28 +308,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 							<fieldset>
 								<legend>Metrics</legend>
 								<div className={styles.displayGrid}>
-									{metrics.map((metric) => (
-										<div className={styles.displayRow} key={metric}>
-											<span>{metricNames[metric]}</span>
-											<ToggleGroup
-												aria-label={`${metricNames[metric]} display`}
-												className={styles.segmented}
-												value={[settings.metricDisplayOverrides[metric] ?? "auto"]}
-												onValueChange={(values) => {
-													const next = values.at(-1);
-													if ((displayOverrides as readonly string[]).includes(next ?? "")) {
-														setMetricDisplay(metric, next as DisplayOverride);
-													}
-												}}
-											>
-												{displayOverrides.map((display) => (
-													<Toggle key={display} value={display}>
-														{displayLabels[display]}
-													</Toggle>
-												))}
-											</ToggleGroup>
-										</div>
-									))}
+									{metrics.map((metric) => displayRow("metricDisplayOverrides", metric, metricNames[metric]))}
 								</div>
 							</fieldset>
 							<fieldset>
@@ -335,50 +317,11 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 									{displayDimensionGroups.map((group) => (
 										<section className={styles.dimensionGroup} key={group.label}>
 											<h3>{group.label}</h3>
-											{group.dimensions.map((dimension) => (
-												<div className={styles.displayRow} key={dimension}>
-													<span>{dimensionNames[dimension]}</span>
-													<ToggleGroup
-														aria-label={`${dimensionNames[dimension]} display`}
-														className={styles.segmented}
-														value={[settings.dimensionDisplayOverrides[dimension] ?? "auto"]}
-														onValueChange={(values) => {
-															const next = values.at(-1);
-															if ((displayOverrides as readonly string[]).includes(next ?? "")) {
-																setDimensionDisplay(dimension, next as DisplayOverride);
-															}
-														}}
-													>
-														{displayOverrides.map((display) => (
-															<Toggle key={display} value={display}>
-																{displayLabels[display]}
-															</Toggle>
-														))}
-													</ToggleGroup>
-												</div>
-											))}
-											{group.label === "Other" && (
-												<div className={styles.displayRow}>
-													<span>Custom Events</span>
-													<ToggleGroup
-														aria-label="Custom Events display"
-														className={styles.segmented}
-														value={[settings.metricDisplayOverrides.custom_events ?? "auto"]}
-														onValueChange={(values) => {
-															const next = values.at(-1);
-															if ((displayOverrides as readonly string[]).includes(next ?? "")) {
-																setMetricDisplay("custom_events", next as DisplayOverride);
-															}
-														}}
-													>
-														{displayOverrides.map((display) => (
-															<Toggle key={display} value={display}>
-																{displayLabels[display]}
-															</Toggle>
-														))}
-													</ToggleGroup>
-												</div>
+											{group.dimensions.map((dimension) =>
+												displayRow("dimensionDisplayOverrides", dimension, dimensionNames[dimension]),
 											)}
+											{group.label === "Other" &&
+												displayRow("metricDisplayOverrides", "custom_events", "Custom Events")}
 										</section>
 									))}
 								</div>

@@ -2400,7 +2400,6 @@ dependencies = [
  "axum",
  "axum-extra",
  "axum-test",
- "base64 0.23.1",
  "blake3",
  "chrono",
  "chrono-tz",
@@ -2454,14 +2453,12 @@ dependencies = [
  "http",
  "ipnet",
  "jiff",
- "rand 0.10.3",
  "reqwest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "tokio",
  "tower",
- "url",
 ]
 
 [[package]]

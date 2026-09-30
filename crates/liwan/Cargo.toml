@@ -7,6 +7,9 @@ repository.workspace = true
 license.workspace = true
 publish = false
 
+[package.metadata.cargo-machete]
+ignored = ["md-5"]
+
 [lib]
 path = "src/lib.rs"
 
@@ -66,7 +69,6 @@ axum = { version = "0.8", default-features = false, features = [
   "tokio",
 ] }
 axum-extra = { version = "0.12", default-features = false, features = ["cookie", "typed-header"] }
-base64 = "0.23"
 headers = "0.4"
 http = "1.5"
 ipnet = "2.12"

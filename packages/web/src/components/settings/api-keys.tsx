@@ -2,7 +2,7 @@ import dialogStyles from "./dialogs.module.css";
 import styles from "./settings.module.css";
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDaysIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { CalendarDaysIcon, PlusIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
@@ -10,10 +10,10 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { CopyableValue } from "@/components/ui/snippet";
 import { type Column, Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
-import { appPath, basePath } from "@/config";
+import { appPath } from "@/config";
 import type { ApiKey, ApiKeyExpiration } from "@/constants";
 import { invalidateApiKeys, useApiKeys, useEntities, useProjects } from "@/hooks/api";
-import { SettingsField, SettingsFieldset, SettingsForm, SettingsHeader } from "./form";
+import { getSettingsPathId, SettingsField, SettingsFieldset, SettingsForm, SettingsHeader, SettingsLink } from "./form";
 import { type Tag, Tags } from "./tags";
 
 type Permission = ApiKey["permissions"][number];
@@ -47,22 +47,18 @@ const expirationOptions: { value: Expiration; label: string }[] = [
 	{ value: "90_days", label: "90 days" },
 ];
 
-export const ApiKeys = () => {
+type KeyForm = typeof defaultForm;
+type FieldProps = { id: string; form: KeyForm; onChange: (form: KeyForm) => void };
+
+const accessValue = (scope: AccessScope, tags: Tag[]) => {
+	if (scope === "all") return "all";
+	if (scope === "selected") return tags.map((tag) => tag.value);
+	return [];
+};
+
+const AccessFields = ({ id, form, onChange }: FieldProps) => {
 	const { entities } = useEntities();
 	const { projects } = useProjects();
-	const { keys, isLoading: loading } = useApiKeys();
-	const [createOpen, setCreateOpen] = useState(false);
-	const [form, setForm] = useState(defaultForm);
-	const {
-		displayName,
-		selectedEntities,
-		selectedProjects,
-		entityAccess,
-		projectAccess,
-		selectedPermissions,
-		expiration,
-	} = form;
-	const [plaintext, setPlaintext] = useState<string>();
 	const entityTags = useMemo(
 		() => entities.map((entity) => ({ value: entity.id, label: entity.displayName })),
 		[entities],
@@ -71,6 +67,115 @@ export const ApiKeys = () => {
 		() => projects.map((project) => ({ value: project.id, label: project.displayName })),
 		[projects],
 	);
+	return (
+		<div className={styles.apiKeyAccessSection}>
+			<div className={styles.apiKeyAccessGrid}>
+				<div className={styles.apiKeyAccessRow}>
+					<SettingsField label="Entities" description="Direct access to entities." htmlFor={`${id}-entities-access`}>
+						<select
+							id={`${id}-entities-access`}
+							value={form.entityAccess}
+							onChange={(event) => onChange({ ...form, entityAccess: event.currentTarget.value as AccessScope })}
+						>
+							<option value="none">No entities</option>
+							<option value="selected">Selected entities</option>
+							<option value="all">All entities</option>
+						</select>
+					</SettingsField>
+					{form.entityAccess === "selected" && (
+						<Tags
+							labelText="Choose entities"
+							selected={form.selectedEntities.map(
+								(tag) => entityTags.find((option) => option.value === tag.value) ?? tag,
+							)}
+							suggestions={entityTags}
+							onAdd={(tag) => onChange({ ...form, selectedEntities: [...form.selectedEntities, tag] })}
+							onDelete={(index) =>
+								onChange({ ...form, selectedEntities: form.selectedEntities.filter((_, i) => i !== index) })
+							}
+						/>
+					)}
+				</div>
+				<div className={styles.apiKeyAccessRow}>
+					<SettingsField label="Projects" description="Follows project membership." htmlFor={`${id}-projects-access`}>
+						<select
+							id={`${id}-projects-access`}
+							value={form.projectAccess}
+							onChange={(event) => onChange({ ...form, projectAccess: event.currentTarget.value as AccessScope })}
+						>
+							<option value="none">No projects</option>
+							<option value="selected">Selected projects</option>
+							<option value="all">All projects</option>
+						</select>
+					</SettingsField>
+					{form.projectAccess === "selected" && (
+						<Tags
+							labelText="Choose projects"
+							selected={form.selectedProjects.map(
+								(tag) => projectTags.find((option) => option.value === tag.value) ?? tag,
+							)}
+							suggestions={projectTags}
+							onAdd={(tag) => onChange({ ...form, selectedProjects: [...form.selectedProjects, tag] })}
+							onDelete={(index) =>
+								onChange({ ...form, selectedProjects: form.selectedProjects.filter((_, i) => i !== index) })
+							}
+						/>
+					)}
+				</div>
+			</div>
+			<SettingsFieldset legend="Permissions">
+				<div className={styles.apiKeyPermissionOptions}>
+					{permissions.map((permission) => (
+						<label key={permission} className={styles.apiKeyPermissionOption}>
+							<input
+								type="checkbox"
+								checked={form.selectedPermissions.includes(permission)}
+								onChange={(event) =>
+									onChange({
+										...form,
+										selectedPermissions: event.currentTarget.checked
+											? [...form.selectedPermissions, permission]
+											: form.selectedPermissions.filter((value) => value !== permission),
+									})
+								}
+							/>
+							<span>
+								{permission}
+								<small>Send event batches.</small>
+							</span>
+						</label>
+					))}
+				</div>
+			</SettingsFieldset>
+		</div>
+	);
+};
+
+const ExpirationField = ({ id, form, onChange }: FieldProps) => (
+	<SettingsField label="Expiration" htmlFor={id}>
+		<div className={styles.apiKeyExpirationSelect}>
+			<CalendarDaysIcon size={16} aria-hidden="true" />
+			<select
+				id={id}
+				value={form.expiration}
+				onChange={(event) => onChange({ ...form, expiration: event.currentTarget.value as Expiration })}
+			>
+				{expirationOptions.map((option) => (
+					<option key={option.value} value={option.value}>
+						{option.label}
+					</option>
+				))}
+			</select>
+		</div>
+	</SettingsField>
+);
+
+export const ApiKeys = () => {
+	const { keys, isLoading: loading } = useApiKeys();
+	const [createOpen, setCreateOpen] = useState(false);
+	const [form, setForm] = useState(defaultForm);
+	const { displayName } = form;
+	const [plaintext, setPlaintext] = useState<string>();
 
 	const { mutate: createKey, isPending: creating } = useMutation({
 		mutationFn: api["/api/dashboard/api-keys"].post,
@@ -91,20 +196,10 @@ export const ApiKeys = () => {
 		createKey({
 			json: {
 				displayName,
-				entities:
-					entityAccess === "all"
-						? "all"
-						: entityAccess === "selected"
-							? selectedEntities.map((entity) => entity.value)
-							: [],
-				projects:
-					projectAccess === "all"
-						? "all"
-						: projectAccess === "selected"
-							? selectedProjects.map((project) => project.value)
-							: [],
-				permissions: selectedPermissions,
-				expiration,
+				entities: accessValue(form.entityAccess, form.selectedEntities),
+				projects: accessValue(form.projectAccess, form.selectedProjects),
+				permissions: form.selectedPermissions,
+				expiration: form.expiration,
 			},
 		});
 	};
@@ -150,14 +245,7 @@ export const ApiKeys = () => {
 		{
 			id: "edit",
 			render: (key) => (
-				<a
-					href={appPath(`/settings/api-keys/${key.id}`)}
-					className={styles.settingsLink}
-					aria-label={`Open ${key.displayName} settings`}
-					title={`Open ${key.displayName} settings`}
-				>
-					<SettingsIcon size={18} />
-				</a>
+				<SettingsLink href={appPath(`/settings/api-keys/${key.id}`)} label={`Open ${key.displayName} settings`} />
 			),
 		},
 	];
@@ -199,103 +287,8 @@ export const ApiKeys = () => {
 							placeholder="Production server"
 						/>
 					</SettingsField>
-					<div className={styles.apiKeyAccessSection}>
-						<div className={styles.apiKeyAccessGrid}>
-							<div className={styles.apiKeyAccessRow}>
-								<SettingsField label="Entities" description="Direct access to entities." htmlFor="create-entity-access">
-									<select
-										id="create-entity-access"
-										value={entityAccess}
-										onChange={(event) => setForm({ ...form, entityAccess: event.currentTarget.value as AccessScope })}
-									>
-										<option value="none">No entities</option>
-										<option value="selected">Selected entities</option>
-										<option value="all">All entities</option>
-									</select>
-								</SettingsField>
-								{entityAccess === "selected" && (
-									<Tags
-										labelText="Choose entities"
-										selected={selectedEntities}
-										suggestions={entityTags}
-										onAdd={(entity) => setForm({ ...form, selectedEntities: [...selectedEntities, entity] })}
-										onDelete={(index) =>
-											setForm({ ...form, selectedEntities: selectedEntities.filter((_, i) => i !== index) })
-										}
-									/>
-								)}
-							</div>
-							<div className={styles.apiKeyAccessRow}>
-								<SettingsField
-									label="Projects"
-									description="Follows project membership."
-									htmlFor="create-project-access"
-								>
-									<select
-										id="create-project-access"
-										value={projectAccess}
-										onChange={(event) => setForm({ ...form, projectAccess: event.currentTarget.value as AccessScope })}
-									>
-										<option value="none">No projects</option>
-										<option value="selected">Selected projects</option>
-										<option value="all">All projects</option>
-									</select>
-								</SettingsField>
-								{projectAccess === "selected" && (
-									<Tags
-										labelText="Choose projects"
-										selected={selectedProjects}
-										suggestions={projectTags}
-										onAdd={(project) => setForm({ ...form, selectedProjects: [...selectedProjects, project] })}
-										onDelete={(index) =>
-											setForm({ ...form, selectedProjects: selectedProjects.filter((_, i) => i !== index) })
-										}
-									/>
-								)}
-							</div>
-						</div>
-						<SettingsFieldset legend="Permissions">
-							<div className={styles.apiKeyPermissionOptions}>
-								{permissions.map((permission) => (
-									<label key={permission} className={styles.apiKeyPermissionOption}>
-										<input
-											type="checkbox"
-											checked={selectedPermissions.includes(permission)}
-											onChange={(event) => {
-												const checked = event.currentTarget.checked;
-												setForm({
-													...form,
-													selectedPermissions: checked
-														? [...selectedPermissions, permission]
-														: selectedPermissions.filter((value) => value !== permission),
-												});
-											}}
-										/>
-										<span>
-											{permission}
-											<small>Send event batches.</small>
-										</span>
-									</label>
-								))}
-							</div>
-						</SettingsFieldset>
-					</div>
-					<SettingsField label="Expiration" htmlFor="create-key-expiration">
-						<div className={styles.apiKeyExpirationSelect}>
-							<CalendarDaysIcon size={16} aria-hidden="true" />
-							<select
-								id="create-key-expiration"
-								value={expiration}
-								onChange={(event) => setForm({ ...form, expiration: event.currentTarget.value as Expiration })}
-							>
-								{expirationOptions.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
-						</div>
-					</SettingsField>
+					<AccessFields id="create" form={form} onChange={setForm} />
+					<ExpirationField id="create-key-expiration" form={form} onChange={setForm} />
 					<div className="action-row">
 						<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
 						<button type="submit" className="button-primary" disabled={!displayName.trim() || creating}>
@@ -328,8 +321,7 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 	const key = keys.find((key) => key.id === keyId);
 
 	useEffect(() => {
-		const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
-		setKeyId(path.startsWith("/settings/api-keys/") ? path.slice("/settings/api-keys/".length) : keyIdProp);
+		setKeyId(getSettingsPathId("/settings/api-keys/") || keyIdProp);
 	}, [keyIdProp]);
 	useEffect(() => {
 		if (!loading && !error && keyId && !key) createToast("API key not found", "error");
@@ -340,30 +332,11 @@ export const ApiKeySettingsPage = ({ keyId: keyIdProp }: { keyId: string }) => {
 };
 
 const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
-	const { entities } = useEntities();
-	const { projects } = useProjects();
 	const [key, setKey] = useState(initialKey);
 	const [form, setForm] = useState(() => keyForm(initialKey));
-	const {
-		displayName,
-		selectedEntities,
-		selectedProjects,
-		entityAccess,
-		projectAccess,
-		selectedPermissions,
-		expiration,
-	} = form;
 	const [plaintext, setPlaintext] = useState<string>();
 	const [regenerateOpen, setRegenerateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const entityTags = useMemo(
-		() => entities.map((entity) => ({ value: entity.id, label: entity.displayName })),
-		[entities],
-	);
-	const projectTags = useMemo(
-		() => projects.map((project) => ({ value: project.id, label: project.displayName })),
-		[projects],
-	);
 
 	const { mutate: updateKey, isPending: saving } = useMutation({
 		mutationFn: api["/api/dashboard/api-keys/{key_id}"].put,
@@ -416,7 +389,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 	const regenerate = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (regenerating) return;
-		regenerateKey({ params: { key_id: key.id }, json: { expiration } });
+		regenerateKey({ params: { key_id: key.id }, json: { expiration: form.expiration } });
 	};
 
 	return (
@@ -428,7 +401,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 						<input
 							required
 							maxLength={100}
-							value={displayName}
+							value={form.displayName}
 							onChange={(event) => setForm({ ...form, displayName: event.currentTarget.value })}
 							onBlur={(event) => {
 								const name = event.currentTarget.value.trim();
@@ -436,121 +409,19 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 							}}
 						/>
 					</SettingsField>
-					<div className={styles.apiKeyAccessSection}>
-						<div className={styles.apiKeyAccessGrid}>
-							<div className={styles.apiKeyAccessRow}>
-								<SettingsField label="Entities" description="Direct access to entities." htmlFor="edit-entity-access">
-									<select
-										id="edit-entity-access"
-										value={entityAccess}
-										onChange={(event) => {
-											const next = event.currentTarget.value as AccessScope;
-											setForm({ ...form, entityAccess: next });
-											save({
-												...key,
-												entities:
-													next === "all" ? "all" : next === "selected" ? selectedEntities.map((tag) => tag.value) : [],
-											});
-										}}
-									>
-										<option value="none">No entities</option>
-										<option value="selected">Selected entities</option>
-										<option value="all">All entities</option>
-									</select>
-								</SettingsField>
-								{entityAccess === "selected" && (
-									<Tags
-										labelText="Choose entities"
-										selected={selectedEntities.map(
-											(tag) => entityTags.find((option) => option.value === tag.value) ?? tag,
-										)}
-										suggestions={entityTags}
-										onAdd={(entity) => {
-											const next = [...selectedEntities, entity];
-											setForm({ ...form, selectedEntities: next });
-											save({ ...key, entities: next.map((tag) => tag.value) });
-										}}
-										onDelete={(index) => {
-											const next = selectedEntities.filter((_, i) => i !== index);
-											setForm({ ...form, selectedEntities: next });
-											save({ ...key, entities: next.map((tag) => tag.value) });
-										}}
-									/>
-								)}
-							</div>
-							<div className={styles.apiKeyAccessRow}>
-								<SettingsField label="Projects" description="Follows project membership." htmlFor="edit-project-access">
-									<select
-										id="edit-project-access"
-										value={projectAccess}
-										onChange={(event) => {
-											const next = event.currentTarget.value as AccessScope;
-											setForm({ ...form, projectAccess: next });
-											save({
-												...key,
-												projects:
-													next === "all" ? "all" : next === "selected" ? selectedProjects.map((tag) => tag.value) : [],
-											});
-										}}
-									>
-										<option value="none">No projects</option>
-										<option value="selected">Selected projects</option>
-										<option value="all">All projects</option>
-									</select>
-								</SettingsField>
-								{projectAccess === "selected" && (
-									<Tags
-										labelText="Choose projects"
-										selected={selectedProjects.map(
-											(tag) => projectTags.find((option) => option.value === tag.value) ?? tag,
-										)}
-										suggestions={projectTags}
-										onAdd={(project) => {
-											const next = [...selectedProjects, project];
-											setForm({ ...form, selectedProjects: next });
-											save({ ...key, projects: next.map((tag) => tag.value) });
-										}}
-										onDelete={(index) => {
-											const next = selectedProjects.filter((_, i) => i !== index);
-											setForm({ ...form, selectedProjects: next });
-											save({ ...key, projects: next.map((tag) => tag.value) });
-										}}
-									/>
-								)}
-							</div>
-						</div>
-						<SettingsFieldset legend="Permissions">
-							<div className={styles.apiKeyPermissionOptions}>
-								{permissions.map((permission) => (
-									<label key={permission} className={styles.apiKeyPermissionOption}>
-										<input
-											type="checkbox"
-											checked={selectedPermissions.includes(permission)}
-											onChange={(event) => {
-												const checked = event.currentTarget.checked;
-												setForm({
-													...form,
-													selectedPermissions: checked
-														? [...selectedPermissions, permission]
-														: selectedPermissions.filter((value) => value !== permission),
-												});
-												save({
-													...key,
-													permissions: checked
-														? [...selectedPermissions, permission]
-														: selectedPermissions.filter((value) => value !== permission),
-												});
-											}}
-										/>
-										<span>
-											{permission}
-											<small>Send event batches.</small>
-										</span>
-									</label>
-								))}
-							</div>
-						</SettingsFieldset>
-					</div>
+					<AccessFields
+						id="edit"
+						form={form}
+						onChange={(next) => {
+							setForm(next);
+							save({
+								...key,
+								entities: accessValue(next.entityAccess, next.selectedEntities),
+								projects: accessValue(next.projectAccess, next.selectedProjects),
+								permissions: next.selectedPermissions,
+							});
+						}}
+					/>
 					<div className={styles.dangerZone}>
 						<div>
 							<strong>Regenerate API key</strong>
@@ -576,11 +447,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 							<strong>Delete API key</strong>
 							<p>This key will immediately stop working.</p>
 						</div>
-						<button
-							type="button"
-							className={`${styles.deleteButton} button-danger`}
-							onClick={() => setDeleteOpen(true)}
-						>
+						<button type="button" className="button-danger" onClick={() => setDeleteOpen(true)}>
 							Delete
 						</button>
 					</div>
@@ -600,7 +467,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 				>
 					<div className="action-row">
 						<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
-						<button type="submit" className={`${styles.deleteButton} button-danger`}>
+						<button type="submit" className="button-danger">
 							Delete API key
 						</button>
 					</div>
@@ -613,22 +480,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 				description="The current secret will stop working immediately. Choose an expiration for the new secret."
 			>
 				<form onSubmit={regenerate}>
-					<SettingsField label="Expiration" htmlFor="regenerate-key-expiration">
-						<div className={styles.apiKeyExpirationSelect}>
-							<CalendarDaysIcon size={16} aria-hidden="true" />
-							<select
-								id="regenerate-key-expiration"
-								value={expiration}
-								onChange={(event) => setForm({ ...form, expiration: event.currentTarget.value as Expiration })}
-							>
-								{expirationOptions.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
-						</div>
-					</SettingsField>
+					<ExpirationField id="regenerate-key-expiration" form={form} onChange={setForm} />
 					<div className="action-row">
 						<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
 						<button type="submit" className="button-primary" disabled={regenerating}>

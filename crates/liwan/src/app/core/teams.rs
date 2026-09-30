@@ -48,16 +48,8 @@ impl LiwanTeams {
                 display_name,
                 users: serde_json::from_str(&users)?,
                 access: Access {
-                    entities: if all_entities {
-                        AccessScope::All
-                    } else {
-                        AccessScope::Selected(serde_json::from_str(&entities)?)
-                    },
-                    projects: if all_projects {
-                        AccessScope::All
-                    } else {
-                        AccessScope::Selected(serde_json::from_str(&projects)?)
-                    },
+                    entities: AccessScope::from_db(all_entities, &entities)?,
+                    projects: AccessScope::from_db(all_projects, &projects)?,
                     permissions: serde_json::from_str::<HashSet<AccessPermission>>(&permissions)?,
                 },
             });

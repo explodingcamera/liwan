@@ -8,7 +8,6 @@ import { LoadingSpinner } from "./loading";
 export type Column<T> = {
 	id: string;
 	header?: string | ReactElement;
-	icon?: ReactElement;
 	render?: (row: T) => ReactElement | string;
 	full?: boolean;
 	nowrap?: boolean;
@@ -44,14 +43,7 @@ export const Table = <T extends { id: string }>({
 									[col.full && styles.full, col.nowrap && styles.nowrap].filter(Boolean).join(" ") || undefined
 								}
 							>
-								{col.icon ? (
-									<div className={styles.icon}>
-										{col.icon}
-										{col.header ?? null}
-									</div>
-								) : (
-									(col.header ?? null)
-								)}
+								{col.header ?? null}
 							</th>
 						))}
 					</tr>

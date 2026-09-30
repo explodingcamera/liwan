@@ -113,7 +113,7 @@ async fn expired_session() -> Result<()> {
     let json: serde_json::Value = res.json();
     assert_eq!(json, json!({ "username": "test", "role": "user" }));
 
-    // expire the session
+    // delete the session
     app.sessions.delete(&session_id)?;
 
     // test that the user is logged out
@@ -122,18 +122,8 @@ async fn expired_session() -> Result<()> {
         .await;
     res.assert_status_unauthorized();
 
-    Ok(())
-}
-
-#[tokio::test]
-async fn session_past_its_expiration_is_rejected() -> Result<()> {
-    let app = common::app();
-    let (tx, _rx) = common::events();
-    let client = common::TestClient::new(app.clone(), tx);
-
-    app.users.create("test", "testtesttesttest", UserRole::User)?;
+    // a session past its expiration is rejected and its cookies are cleared
     app.sessions.create("expired-session", "test", Utc::now() - Duration::minutes(1))?;
-
     let res = client
         .get_with_headers(
             "/api/dashboard/auth/me",
@@ -253,48 +243,6 @@ async fn private_projects() -> Result<()> {
     let res = client.get("/api/dashboard/projects").await;
     res.assert_json(&json!({"projects": []}));
 
-    app.users.create("test", "testtesttesttest", UserRole::User)?;
-    app.users.create("test2", "test", UserRole::User)?;
-    let team_id = app.teams.create("Viewers")?;
-    app.teams.update(
-        &team_id,
-        "Viewers",
-        &["test2".into()],
-        &models::AccessScope::Selected(vec!["private-project".into()]),
-        None,
-    )?;
-
-    let login1 = common::login(&client, "test", "testtesttesttest").await;
-    let login2 = common::login(&client, "test2", "test").await;
-
-    let res = client
-        .get_with_headers("/api/dashboard/projects", vec![("cookie".to_string(), common::cookie_header(&login1))])
-        .await;
-    res.assert_json(&json!({"projects": []}));
-
-    let res = client
-        .get_with_headers("/api/dashboard/projects", vec![("cookie".to_string(), common::cookie_header(&login2))])
-        .await;
-    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "visibility": "private", "entities": [], "hiddenMetrics": [], "hiddenDimensions": ["property"], "customEventsHidden": true}]}));
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn private_project_reports_require_access() -> Result<()> {
-    let app = common::app();
-    let (tx, _rx) = common::events();
-    let client = common::TestClient::new(app.clone(), tx);
-
-    app.projects.create(
-        &models::Project {
-            display_name: "Private Project".to_string(),
-            id: "private-project".to_string(),
-            visibility: models::ProjectVisibility::Private,
-            secret: None,
-        },
-        &[],
-    )?;
     app.users.create("unassigned", "testtest", UserRole::User)?;
     app.users.create("assigned", "testtest", UserRole::User)?;
     let team_id = app.teams.create("Viewers")?;
@@ -310,6 +258,14 @@ async fn private_project_reports_require_access() -> Result<()> {
     let assigned = common::login(&client, "assigned", "testtest").await;
     let unassigned_header = vec![("cookie".to_string(), common::cookie_header(&unassigned))];
     let assigned_header = vec![("cookie".to_string(), common::cookie_header(&assigned))];
+
+    let res = client.get_with_headers("/api/dashboard/projects", unassigned_header.clone()).await;
+    res.assert_json(&json!({"projects": []}));
+
+    let res = client.get_with_headers("/api/dashboard/projects", assigned_header.clone()).await;
+    assert_eq!(res.header("cache-control"), "private");
+    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "visibility": "private", "entities": [], "hiddenMetrics": [], "hiddenDimensions": ["property"], "customEventsHidden": true}]}));
+
     let prefix = "/api/dashboard/project/private-project";
     let start = (Utc::now() - Duration::hours(1)).to_rfc3339();
     let end = Utc::now().to_rfc3339();

@@ -1,35 +1,21 @@
 import styles from "../settings.module.css";
 
 import { useEffect, useState } from "react";
-import { SettingsIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
-import { appPath, basePath } from "@/config";
+import { appPath } from "@/config";
 import { invalidateTeams, invalidateUsers, useTeams, useUsers } from "@/hooks/api";
 import { getUsername } from "@/utils";
 import { DeleteDialog } from "../dialogs";
-import { SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
+import { getSettingsPathId, SettingsForm, SettingsHeader, SettingsLink, SettingsSwitch } from "../form";
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
 
 export { CreateUser } from "./dialogs";
-
-const getSettingsPathId = (prefix: string) => {
-	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
-	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
-};
-
-const SettingsLink = ({ href, label }: { href: string; label: string }) => {
-	return (
-		<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
-			<SettingsIcon size={18} />
-		</a>
-	);
-};
 
 export const UsersTable = () => {
 	const { users, isLoading, authError } = useUsers();
@@ -188,7 +174,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 					{isSelf ? (
 						<button
 							type="button"
-							className={`${styles.deleteButton} button-danger`}
+							className="button-danger"
 							onClick={() => createToast("You cannot delete your own account", "error")}
 						>
 							Delete user
@@ -202,7 +188,7 @@ const UserSettingsContent = ({ username }: { username: string }) => {
 								window.location.href = appPath("/settings/users");
 							}}
 							trigger={
-								<button type="button" className={`${styles.deleteButton} button-danger`}>
+								<button type="button" className="button-danger">
 									Delete user
 								</button>
 							}

@@ -1,9 +1,6 @@
 use std::convert::Infallible;
 use std::fmt::Display;
-use std::marker::PhantomData;
 use std::net::{IpAddr, SocketAddr};
-use std::pin::Pin;
-use std::task::{Context, Poll};
 
 use crate::config::Config;
 use crate::utils::geoip_headers::parse_geoip_headers;
@@ -17,11 +14,9 @@ use axum::extract::{ConnectInfo, FromRequestParts, Request};
 use axum::response::IntoResponse;
 use axum::{Json, extract};
 use http::{Response, StatusCode, header};
-use rust_embed::RustEmbed;
 use schemars::JsonSchema;
 use serde::Serialize;
 use serde_json::json;
-use tower::Service;
 use tower_governor::{GovernorError, key_extractor::KeyExtractor};
 
 pub type ApiResult<T, E = ApiError> = Result<T, E>;
@@ -116,6 +111,16 @@ struct HtmlConfig {
     disable_favicons: bool,
 }
 
+/// Dynamic routes are exported with a placeholder segment, e.g. `p/{id}` is served from `p/project`.
+const ROUTE_PLACEHOLDERS: [(&str, &str); 6] = [
+    ("p/", "project"),
+    ("settings/projects/", "project"),
+    ("settings/entities/", "entity"),
+    ("settings/api-keys/", "key"),
+    ("settings/users/", "user"),
+    ("settings/teams/", "team"),
+];
+
 pub(super) async fn serve(
     extract::State(state): extract::State<RouterState>,
     orig_uri: extract::OriginalUri,
@@ -137,40 +142,13 @@ pub(super) async fn serve(
         return Err(StatusCode::METHOD_NOT_ALLOWED);
     }
 
-    if path.starts_with("p/") {
-        let mut parts = path.splitn(3, '/').collect::<Vec<&str>>();
-        parts[1] = "project";
-        path = parts.join("/");
-    }
-
-    if path.starts_with("settings/projects/") {
-        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
-        parts[2] = "project";
-        path = parts.join("/");
-    }
-
-    if path.starts_with("settings/entities/") {
-        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
-        parts[2] = "entity";
-        path = parts.join("/");
-    }
-
-    if path.starts_with("settings/api-keys/") {
-        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
-        parts[2] = "key";
-        path = parts.join("/");
-    }
-
-    if path.starts_with("settings/users/") {
-        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
-        parts[2] = "user";
-        path = parts.join("/");
-    }
-
-    if path.starts_with("settings/teams/") {
-        let mut parts = path.splitn(4, '/').collect::<Vec<&str>>();
-        parts[2] = "team";
-        path = parts.join("/");
+    for (prefix, placeholder) in ROUTE_PLACEHOLDERS {
+        if let Some(rest) = path.strip_prefix(prefix) {
+            path = match rest.split_once('/') {
+                Some((_, rest)) => format!("{prefix}{placeholder}/{rest}"),
+                None => format!("{prefix}{placeholder}"),
+            };
+        }
     }
 
     let file = if let Some(content) = Files::get(&path) {
@@ -237,49 +215,6 @@ pub(super) async fn serve(
     }
 
     Ok(builder.body(body).unwrap())
-}
-
-#[derive(Clone)]
-pub struct StaticFile<T>(&'static str, PhantomData<T>);
-
-impl<T> StaticFile<T> {
-    pub const fn new(file_path: &'static str) -> Self {
-        StaticFile(file_path, PhantomData)
-    }
-}
-
-impl<T: RustEmbed + Send + Sync> IntoResponse for StaticFile<T> {
-    fn into_response(self) -> http::Response<Body> {
-        match T::get(self.0) {
-            Some(content) => ([(header::CONTENT_TYPE, content.metadata.mimetype())], content.data).into_response(),
-            None => StatusCode::NOT_FOUND.into_response(),
-        }
-    }
-}
-
-impl<T: RustEmbed + Send + Sync> Service<Request<Body>> for StaticFile<T> {
-    type Response = Response<Body>;
-    type Error = Infallible;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + Sync>>;
-
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn call(&mut self, _req: Request<Body>) -> Self::Future {
-        Box::pin(async {
-            Ok(match T::get(self.0) {
-                Some(content) => Response::builder()
-                    .header(header::CONTENT_TYPE, content.metadata.mimetype())
-                    .body(Body::from(content.data))
-                    .expect("failed to build response"),
-                None => Response::builder()
-                    .status(StatusCode::NOT_FOUND)
-                    .body(Body::empty())
-                    .expect("failed to build response"),
-            })
-        })
-    }
 }
 
 pub(crate) fn empty_response() -> impl IntoApiResponse {

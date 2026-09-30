@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Event {
     pub entity_id: String,
     pub visitor_group_id: String,
@@ -163,6 +163,11 @@ impl Default for AccessScope {
 }
 
 impl AccessScope {
+    /// Build a scope from a stored "all" flag and a JSON array of selected IDs.
+    pub fn from_db(all: bool, ids: &str) -> serde_json::Result<Self> {
+        if all { Ok(Self::All) } else { serde_json::from_str(ids).map(Self::Selected) }
+    }
+
     /// Check whether an ID falls within this scope.
     pub fn contains(&self, id: &str) -> bool {
         match self {

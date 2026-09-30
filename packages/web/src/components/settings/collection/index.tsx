@@ -7,8 +7,8 @@ import { api, queryClient, useQuery } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { createToast } from "@/components/ui/toast";
-import type { CollectionSettings, DataRetention } from "@/constants";
-import { DocsLink, FiltersEditor, GeoSelect, VisitorModeSelect } from "../filters";
+import type { CollectionSettings } from "@/constants";
+import { DocsLink, FiltersEditor, GeoSelect, RetentionSelect, VisitorModeSelect } from "../filters";
 import { SettingsField, SettingsForm, SettingsPanel, SettingsSwitch, SettingsTabs } from "../form";
 
 type CollectionTab = (typeof collectionTabs)[number];
@@ -21,22 +21,6 @@ const collectionTabItems = collectionTabs.map((value) => ({
 	value,
 	label: title(value),
 }));
-
-const retentionOptions = [
-	{ value: "keep_all", label: "Keep all history" },
-	{ value: "30", label: "1 month" },
-	{ value: "90", label: "3 months" },
-	{ value: "180", label: "6 months" },
-	{ value: "365", label: "1 year" },
-	{ value: "730", label: "2 years" },
-] as const;
-const retentionValues = retentionOptions.map((option) => option.value);
-
-const retentionValue = (retention: DataRetention) => {
-	if (retention.mode === "all" || retention.mode === "inherit") return "keep_all";
-	const value = String(retention.days);
-	return (retentionValues as readonly string[]).includes(value) ? value : "365";
-};
 
 export const CollectionSettingsPage = () => {
 	const { data: settings, error: loadError } = useQuery({
@@ -166,30 +150,10 @@ export const CollectionSettingsPage = () => {
 								}
 								name="historyRetention"
 							>
-								<select
-									name="historyRetention"
-									value={retentionValue(settings.dataRetention)}
-									onChange={(event) => {
-										const next = event.currentTarget.value;
-										if (!(retentionValues as readonly string[]).includes(next)) return;
-										if (next === "keep_all") {
-											const dataRetention = { mode: "all" } as const;
-											saveSettings({ ...settings, dataRetention });
-										} else {
-											const dataRetention = {
-												mode: "days",
-												days: Number(next),
-											} as const;
-											saveSettings({ ...settings, dataRetention });
-										}
-									}}
-								>
-									{retentionOptions.map((option) => (
-										<option key={option.value} value={option.value}>
-											{option.label}
-										</option>
-									))}
-								</select>
+								<RetentionSelect
+									value={settings.dataRetention}
+									onChange={(dataRetention) => saveSettings({ ...settings, dataRetention })}
+								/>
 							</SettingsField>
 							<div className={settingsStyles.dangerZone}>
 								<div>
@@ -207,7 +171,7 @@ export const CollectionSettingsPage = () => {
 										title="Prune data?"
 										description="This permanently applies the current collection settings to historical data. Run a dry run first to preview the changes."
 										trigger={
-											<button type="button" className={`${settingsStyles.deleteButton} button-danger`}>
+											<button type="button" className="button-danger">
 												Prune now
 											</button>
 										}

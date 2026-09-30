@@ -6,8 +6,6 @@ import type { DateRange } from "@/api/ranges.ts";
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { GraphResponse, Metric } from "@/constants.ts";
 
-export type { GraphRange } from "./linegraph.tsx";
-
 const LineGraphInner = lazy(() => import("./linegraph.tsx").then(({ LineGraph }) => ({ default: LineGraph })));
 
 export const LineGraph = ({

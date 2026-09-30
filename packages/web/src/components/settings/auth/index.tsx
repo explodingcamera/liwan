@@ -1,10 +1,10 @@
 import styles from "./authentication.module.css";
 
 import { useEffect, useRef, useState } from "react";
-import { SiGoogle, SiOpenid } from "@icons-pack/react-simple-icons";
 import { KeyRoundIcon } from "lucide-react";
 
 import { api } from "@/api";
+import { ProviderLogo } from "@/components/login";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { CopyableValue } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
@@ -16,21 +16,6 @@ const providers: { value: ExternalAuthProvider; label: string; description: stri
 	{ value: "google", label: "Google", description: "Google Workspace" },
 	{ value: "microsoft", label: "Microsoft Entra ID", description: "Work or school accounts" },
 ];
-
-const MicrosoftLogo = () => (
-	<svg viewBox="0 0 24 24" aria-hidden="true">
-		<path fill="#f25022" d="M1 1h10v10H1z" />
-		<path fill="#7fba00" d="M13 1h10v10H13z" />
-		<path fill="#00a4ef" d="M1 13h10v10H1z" />
-		<path fill="#ffb900" d="M13 13h10v10H13z" />
-	</svg>
-);
-
-const ProviderLogo = ({ provider }: { provider: ExternalAuthProvider }) => {
-	if (provider === "google") return <SiGoogle color="#4285f4" aria-hidden="true" />;
-	if (provider === "microsoft") return <MicrosoftLogo />;
-	return <SiOpenid color="#f78c40" aria-hidden="true" />;
-};
 
 const errorMessage = (error: unknown) =>
 	typeof error === "object" && error && "message" in error && typeof error.message === "string"

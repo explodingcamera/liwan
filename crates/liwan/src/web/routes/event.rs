@@ -457,128 +457,39 @@ mod test {
     }
 
     #[test]
-    fn unknown_ingest_filter_dimension_does_not_match_null() {
-        let event = Event {
-            entity_id: "entity".to_string(),
-            visitor_group_id: "visitor".to_string(),
-            event: "pageview".to_string(),
-            created_at: Utc::now(),
-            fqdn: None,
-            path: None,
-            referrer: None,
-            platform: None,
-            browser: None,
-            mobile: None,
-            country: None,
-            city: None,
-            utm_source: None,
-            utm_medium: None,
-            utm_campaign: None,
-            utm_content: None,
-            utm_term: None,
-            screen_width: None,
-            orientation: None,
-            properties: Default::default(),
-            track_sessions: true,
-        };
-
-        assert!(!ingest_filter_matches(
-            &event,
-            &IngestFilter { dimension: "unknown".to_string(), filter_type: FilterType::IsNull, value: None },
-        ));
-    }
-
-    #[test]
     fn ingest_drop_rule_requires_all_filters_to_match() {
         let event = Event {
-            entity_id: "entity".to_string(),
-            visitor_group_id: "visitor".to_string(),
             event: "signup".to_string(),
-            created_at: Utc::now(),
             fqdn: Some("example.com".to_string()),
             path: Some("/pricing".to_string()),
-            referrer: None,
-            platform: None,
-            browser: None,
-            mobile: None,
-            country: None,
-            city: None,
             utm_source: Some("newsletter".to_string()),
-            utm_medium: None,
-            utm_campaign: None,
-            utm_content: None,
-            utm_term: None,
-            screen_width: None,
-            orientation: None,
-            properties: Default::default(),
-            track_sessions: true,
+            ..Default::default()
+        };
+        let filter = |dimension: &str, filter_type, value: Option<&str>| IngestFilter {
+            dimension: dimension.to_string(),
+            filter_type,
+            value: value.map(str::to_string),
         };
 
         let matching_rule = IngestDropRule {
             filters: vec![
-                IngestFilter {
-                    dimension: "event".to_string(),
-                    filter_type: FilterType::Equal,
-                    value: Some("signup".to_string()),
-                },
-                IngestFilter {
-                    dimension: "path".to_string(),
-                    filter_type: FilterType::Equal,
-                    value: Some("/pricing".to_string()),
-                },
-                IngestFilter {
-                    dimension: "utm_source".to_string(),
-                    filter_type: FilterType::Equal,
-                    value: Some("newsletter".to_string()),
-                },
+                filter("event", FilterType::Equal, Some("signup")),
+                filter("path", FilterType::Equal, Some("/pricing")),
+                filter("utm_source", FilterType::Equal, Some("newsletter")),
             ],
         };
         let non_matching_rule = IngestDropRule {
             filters: vec![
-                IngestFilter {
-                    dimension: "path".to_string(),
-                    filter_type: FilterType::Equal,
-                    value: Some("/pricing".to_string()),
-                },
-                IngestFilter {
-                    dimension: "utm_source".to_string(),
-                    filter_type: FilterType::Equal,
-                    value: Some("ads".to_string()),
-                },
+                filter("path", FilterType::Equal, Some("/pricing")),
+                filter("utm_source", FilterType::Equal, Some("ads")),
             ],
         };
 
         assert!(ingest_drop_rule_matches(&event, &matching_rule));
         assert!(!ingest_drop_rule_matches(&event, &non_matching_rule));
-    }
-
-    #[test]
-    fn empty_ingest_drop_rule_does_not_match() {
-        let event = Event {
-            entity_id: "entity".to_string(),
-            visitor_group_id: "visitor".to_string(),
-            event: "pageview".to_string(),
-            created_at: Utc::now(),
-            fqdn: None,
-            path: None,
-            referrer: None,
-            platform: None,
-            browser: None,
-            mobile: None,
-            country: None,
-            city: None,
-            utm_source: None,
-            utm_medium: None,
-            utm_campaign: None,
-            utm_content: None,
-            utm_term: None,
-            screen_width: None,
-            orientation: None,
-            properties: Default::default(),
-            track_sessions: true,
-        };
-
         assert!(!ingest_drop_rule_matches(&event, &IngestDropRule { filters: Vec::new() }));
+        // unknown dimensions never match, not even as null
+        assert!(!ingest_filter_matches(&event, &filter("unknown", FilterType::IsNull, None)));
     }
 
     #[test]

@@ -147,6 +147,7 @@ async fn admin_manages_api_keys() -> Result<()> {
 
     let listed = client.get_with_headers("/api/dashboard/api-keys", headers()).await;
     listed.assert_status_success();
+    assert_eq!(listed.header("cache-control"), "private, no-store");
     let listed: Value = listed.json();
     assert_eq!(listed["keys"].as_array().unwrap().len(), 1);
     assert!(listed.to_string().find(plaintext).is_none());

@@ -5,28 +5,13 @@ import { XIcon, ZoomInIcon } from "lucide-react";
 
 import { Dialog } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
-import type { Dimension, DimensionTableRow } from "@/constants";
 import { dimensionNames, eventMetricName } from "@/constants";
 import { useDimension } from "@/hooks/api";
-import { cls, formatMetricVal, fuzzyFilter } from "@/utils";
-import type { ProjectQuery } from "..";
-import { Breadcrumb, DimensionLabel, DimensionValueBar, isSelected } from ".";
+import { cls, fuzzyFilter } from "@/utils";
+import { Breadcrumb, type DimensionProps, DimensionRow } from ".";
 
-export const DetailsModal = ({
-	dimension,
-	propertyKey,
-	query,
-	onSelect,
-	onOpen,
-	onBack,
-}: {
-	dimension: Dimension;
-	propertyKey?: string;
-	query: ProjectQuery;
-	onSelect?: (value: DimensionTableRow) => void;
-	onOpen?: (value: DimensionTableRow) => void;
-	onBack?: () => void;
-}) => {
+export const DetailsModal = (props: DimensionProps) => {
+	const { dimension, propertyKey, query, onBack } = props;
 	const { data, biggest, order, isLoading } = useDimension({
 		dimension,
 		propertyKey,
@@ -76,24 +61,9 @@ export const DetailsModal = ({
 					onChange={(e) => setFilter(e.target.value)}
 					className={styles.search}
 				/>
-				{results?.map((d) => {
-					return (
-						<div
-							key={d.dimensionValue}
-							style={{ order: order?.indexOf(d.dimensionValue) }}
-							className={styles.dimensionRow}
-						>
-							<DimensionValueBar
-								value={d.value}
-								biggest={biggest}
-								selected={isSelected(query, dimension, d.dimensionValue, propertyKey)}
-							>
-								<DimensionLabel dimension={dimension} value={d} onSelect={onSelect} onOpen={onOpen} />
-							</DimensionValueBar>
-							<div>{formatMetricVal(d.value, query.metric)}</div>
-						</div>
-					);
-				})}
+				{results?.map((d) => (
+					<DimensionRow key={d.dimensionValue} {...props} row={d} order={order} biggest={biggest} />
+				))}
 				{isLoading && (
 					<div className={styles.loadingOverlay} data-no-delay={!data}>
 						<LoadingSpinner immediate />

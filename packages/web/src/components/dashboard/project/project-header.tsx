@@ -1,3 +1,4 @@
+import cardStyles from "./card.module.css";
 import styles from "./project-header.module.css";
 
 import { CircleIcon, LockIcon, LockOpenIcon } from "lucide-react";
@@ -5,19 +6,18 @@ import { CircleIcon, LockIcon, LockOpenIcon } from "lucide-react";
 import { appPath } from "@/config";
 import type { ProjectResponse, StatsResponse } from "@/constants";
 import { formatMetricVal } from "@/utils";
-import { CardLink } from "./card";
 
 export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; project: ProjectResponse }) => {
 	return (
 		<h1 className={styles.statsHeader}>
-			<CardLink href={appPath(`/p/${project.id}`)}>
+			<a href={appPath(`/p/${project.id}`)} className={cardStyles.card}>
 				{project.visibility === "unlisted" ? (
 					<LockOpenIcon size={16} />
 				) : (
 					project.visibility !== "public" && <LockIcon size={16} />
 				)}
 				{project.displayName}
-			</CardLink>
+			</a>
 			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
 		</h1>
 	);

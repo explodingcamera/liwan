@@ -1,5 +1,3 @@
-import styles from "./dialogs.module.css";
-
 import type { ReactElement, SubmitEvent } from "react";
 import { useRef } from "react";
 
@@ -84,7 +82,7 @@ export const DeleteDialog = ({
 					<Dialog.Close className="button-secondary" ref={closeRef}>
 						Cancel
 					</Dialog.Close>
-					<button type="submit" className={`${styles.danger} button-danger`}>
+					<button type="submit" className="button-danger">
 						Delete {type}
 					</button>
 				</div>

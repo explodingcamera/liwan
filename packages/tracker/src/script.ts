@@ -89,18 +89,22 @@ const ignore = (reason: string) => log(`Ignoring event: ${reason}`);
 const reject = (message: string) => {
 	throw new Error(`Failed to send event: ${message}`);
 };
+const logError = (error: unknown) => log(error instanceof Error ? error.message : String(error));
+
+// text/plain avoids preflight requests, keepalive lets the request finish while the page unloads
+const post = (url: string, payload: unknown) =>
+	fetch(url, {
+		method: "POST",
+		headers: { "Content-Type": "text/plain;charset=UTF-8" },
+		keepalive: true,
+		body: JSON.stringify(payload),
+	});
 
 const sendCurrentExit = () => {
 	if (noWindow || document.visibilityState !== "hidden" || !currentExit || exitSentWhileHidden) return;
 	exitSentWhileHidden = true;
 
-	const body = JSON.stringify({ ...currentExit.payload, properties: undefined, exit: true });
-	void fetch(currentExit.endpoint, {
-		method: "POST",
-		headers: { "Content-Type": "text/plain;charset=UTF-8" },
-		keepalive: true,
-		body,
-	}).catch((error) => log(error instanceof Error ? error.message : String(error)));
+	void post(currentExit.endpoint, { ...currentExit.payload, properties: undefined, exit: true }).catch(logError);
 };
 
 const installExitListener = () => {
@@ -203,14 +207,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 				? "portrait"
 				: "landscape",
 	};
-	const request = fetch(endpoint_url, {
-		method: "POST",
-		headers: { "Content-Type": "text/plain;charset=UTF-8" }, // we use text/plain to avoid preflight requests
-		keepalive: true, // allow the request to be sent even if the page is being unloaded
-		body: JSON.stringify(payload),
-	});
-
-	const response = await request;
+	const response = await post(endpoint_url, payload);
 
 	if (!response.ok) {
 		reject(`${response.status} ${response.statusText}`.trim());
@@ -254,7 +251,7 @@ export const trackPageviews = (options?: EventOptions) => {
 		if (lastPage === location.pathname) return;
 		lastPage = location.pathname;
 
-		void event("pageview", options).catch((error) => log(error instanceof Error ? error.message : String(error)));
+		void event("pageview", options).catch(logError);
 	};
 
 	if (window.navigation) {

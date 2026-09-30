@@ -17,155 +17,52 @@ type Props = {
 
 const path = Astro.url.pathname;
 const { title } = Astro.props;
+
+const groups = [
+	{ label: "General", pages: [{ href: "/settings/me", label: "My Account", icon: UserIcon }] },
+	{
+		label: "Admin",
+		admin: true,
+		pages: [
+			{ href: "/settings/projects", label: "Projects", icon: TablePropertiesIcon },
+			{ href: "/settings/entities", label: "Entities", icon: CodeIcon },
+			{ href: "/settings/collection", label: "Collection", icon: DatabaseIcon },
+			{ href: "/settings/users", label: "Users", icon: UsersIcon },
+			{ href: "/settings/teams", label: "Teams", icon: UsersIcon },
+			{ href: "/settings/authentication", label: "Authentication", icon: ShieldCheckIcon },
+			{ href: "/settings/api-keys", label: "API Keys", icon: KeyRoundIcon },
+		],
+	},
+];
 ---
 
 <Layout {title}>
   <div class="settings">
     <aside class="mobile">
-      <select
-        name="select"
-        aria-label="Select a page"
-        id="select-settings-page"
-      >
-        <optgroup label="General">
-          <option
-            selected={path.startsWith("/settings/me") ? true : undefined}
-            value="/settings/me">My Account</option
-          >
-        </optgroup>
-        <optgroup label="Admin" data-admin-nav>
-          <option
-            selected={path.startsWith("/settings/projects") ? true : undefined}
-            value="/settings/projects">Projects</option
-          >
-          <option
-            selected={path.startsWith("/settings/entities") ? true : undefined}
-            value="/settings/entities">Entities</option
-          >
-          <option
-            selected={path.startsWith("/settings/collection")
-              ? true
-              : undefined}
-            value="/settings/collection">Collection</option
-          >
-          <option
-            selected={path.startsWith("/settings/users") ? true : undefined}
-            value="/settings/users">Users</option
-          >
-          <option selected={path.startsWith("/settings/teams") ? true : undefined} value="/settings/teams">Teams</option>
-          <option
-            selected={path.startsWith("/settings/authentication") ? true : undefined}
-            value="/settings/authentication">Authentication</option
-          >
-          <option
-            selected={path.startsWith("/settings/api-keys") ? true : undefined}
-            value="/settings/api-keys">API Keys</option
-          >
-        </optgroup>
+      <select name="select" aria-label="Select a page" id="select-settings-page">
+        {groups.map((group) => (
+          <optgroup label={group.label} data-admin-nav={group.admin || undefined}>
+            {group.pages.map((page) => (
+              <option selected={path.startsWith(page.href) || undefined} value={page.href}>{page.label}</option>
+            ))}
+          </optgroup>
+        ))}
       </select>
     </aside>
     <aside class="desktop">
-      <h3>General</h3>
-      <ul class="sidebar">
-        <li>
-          <a
-            data-active={path.startsWith("/settings/me") ? "true" : "false"}
-            aria-current={path.startsWith("/settings/me") ? "page" : undefined}
-            href="/settings/me"
-          >
-            <UserIcon size="20" />
-            My Account</a
-          >
-        </li>
-
-      </ul>
-      <h3 data-admin-nav>Admin</h3>
-      <ul class="sidebar" data-admin-nav>
-        <li>
-          <a
-            data-active={path.startsWith("/settings/projects")
-              ? "true"
-              : "false"}
-            aria-current={path.startsWith("/settings/projects")
-              ? "page"
-              : undefined}
-            href="/settings/projects"
-          >
-            <TablePropertiesIcon size="20" />
-            Projects</a
-          >
-        </li>
-        <li>
-          <a
-            data-active={path.startsWith("/settings/entities")
-              ? "true"
-              : "false"}
-            aria-current={path.startsWith("/settings/entities")
-              ? "page"
-              : undefined}
-            href="/settings/entities"
-          >
-            <CodeIcon size="20" />
-            Entities</a
-          >
-        </li>
-        <li>
-          <a
-            data-active={path.startsWith("/settings/collection")
-              ? "true"
-              : "false"}
-            aria-current={path.startsWith("/settings/collection")
-              ? "page"
-              : undefined}
-            href="/settings/collection"
-          >
-            <DatabaseIcon size="20" />
-            Collection</a
-          >
-        </li>
-        <li>
-          <a
-            data-active={path.startsWith("/settings/users") ? "true" : "false"}
-            aria-current={path.startsWith("/settings/users")
-              ? "page"
-              : undefined}
-            href="/settings/users"
-          >
-            <UsersIcon size="20" />
-            Users</a
-          >
-        </li>
-        <li>
-          <a data-active={path.startsWith("/settings/teams") ? "true" : "false"} aria-current={path.startsWith("/settings/teams") ? "page" : undefined} href="/settings/teams">
-            <UsersIcon size="20" />
-            Teams</a
-          >
-        </li>
-        <li>
-          <a
-            data-active={path.startsWith("/settings/authentication")
-              ? "true"
-              : "false"}
-            aria-current={path.startsWith("/settings/authentication")
-              ? "page"
-              : undefined}
-            href="/settings/authentication"
-          >
-            <ShieldCheckIcon size="20" />
-            Authentication</a
-          >
-        </li>
-        <li>
-          <a
-            data-active={path.startsWith("/settings/api-keys") ? "true" : "false"}
-            aria-current={path.startsWith("/settings/api-keys") ? "page" : undefined}
-            href="/settings/api-keys"
-          >
-            <KeyRoundIcon size="20" />
-            API Keys</a
-          >
-        </li>
-      </ul>
+      {groups.map((group) => (
+        <h3 data-admin-nav={group.admin || undefined}>{group.label}</h3>
+        <ul class="sidebar" data-admin-nav={group.admin || undefined}>
+          {group.pages.map(({ href, label, icon: Icon }) => (
+            <li>
+              <a aria-current={path.startsWith(href) ? "page" : undefined} href={href}>
+                <Icon size="20" />
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ))}
     </aside>
     <article class="content">
       <slot />
@@ -176,8 +73,6 @@ const { title } = Astro.props;
 <script>
   import { navigate } from "astro:transitions/client";
   import { appPath } from "@/config";
-
-  const adminPaths = ["/settings/projects", "/settings/entities", "/settings/collection", "/settings/users", "/settings/teams", "/settings/authentication", "/settings/api-keys"];
 
   function handleSelectChange(event: Event) {
     navigate(appPath((event.currentTarget as HTMLSelectElement).value));
@@ -199,7 +94,7 @@ const { title } = Astro.props;
 
       const { role } = await response.json();
       if (role !== "admin") {
-        if (adminPaths.some((path) => window.location.pathname === appPath(path) || window.location.pathname.startsWith(`${appPath(path)}/`))) {
+        if (settings.querySelector("[data-admin-nav] a[aria-current]")) {
           window.location.replace(appPath("/settings/me"));
           return;
         }
@@ -230,10 +125,6 @@ const { title } = Astro.props;
     min-height: 2.15rem;
   }
 
-  .settings :global(nav.list-header) {
-    min-height: 2.15rem;
-  }
-
   .settings :global(nav.list-header button),
   .settings :global(nav > button[type="submit"]) {
     translate: 7px -2px;
@@ -256,8 +147,7 @@ const { title } = Astro.props;
     margin-top: 1rem;
   }
 
-  .settings :global(.content),
-  .content {
+  .settings :global(.content) {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -316,7 +206,7 @@ const { title } = Astro.props;
       }
     }
 
-    a[data-active="true"] {
+    a[aria-current="page"] {
       color: var(--text-strong);
       background: var(--surface);
     }
@@ -325,10 +215,6 @@ const { title } = Astro.props;
       color: var(--text-strong);
       background: var(--surface);
     }
-  }
-
-  main {
-    padding: 20px;
   }
 
   .mobile {
@@ -346,6 +232,5 @@ const { title } = Astro.props;
     .settings {
       flex-direction: column;
     }
-    .content { padding: 0.8rem; }
   }
 </style>

@@ -4,18 +4,17 @@ pub mod webext;
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::ops::Deref;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use axum::extract::{ConnectInfo, Request, State};
-use axum::handler::{Handler, HandlerWithoutStateExt};
 use axum::middleware::Next;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use rust_embed::RustEmbed;
 
 use aide::{axum::ApiRouter, openapi};
-use http::{HeaderName, HeaderValue, Method, StatusCode, header};
+use http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode, header};
 use tokio::sync::{Semaphore, mpsc::Sender};
 use tower_http::{
     compression::CompressionLayer,
@@ -33,15 +32,13 @@ use crate::utils::ip_headers::should_trust_proxy_headers;
 use crate::web::webext::serve;
 
 pub use session::MaybeSessionId;
-use webext::StaticFile;
 
 #[derive(RustEmbed, Clone)]
 #[folder = "../../packages/web/dist"]
 pub struct Files;
 
-#[derive(RustEmbed, Clone)]
-#[folder = "../../packages/tracker/lib"]
-struct Script;
+const SCRIPT: &str = include_str!("../../../../packages/tracker/lib/script.js");
+static SCRIPT_ETAG: LazyLock<String> = LazyLock::new(|| format!("\"{}\"", blake3::hash(SCRIPT.as_bytes()).to_hex()));
 
 #[derive(Clone)]
 pub struct RouterState {
@@ -115,6 +112,17 @@ impl Deref for RouterState {
     }
 }
 
+async fn script(headers: HeaderMap) -> Response {
+    let cache_headers = [
+        (header::CACHE_CONTROL, "public, max-age=3600, stale-while-revalidate=86400"),
+        (header::ETAG, SCRIPT_ETAG.as_str()),
+    ];
+    if headers.get(header::IF_NONE_MATCH).is_some_and(|etag| etag == SCRIPT_ETAG.as_str()) {
+        return (StatusCode::NOT_MODIFIED, cache_headers).into_response();
+    }
+    (cache_headers, [(header::CONTENT_TYPE, "text/javascript")], SCRIPT).into_response()
+}
+
 async fn warn_untrusted_proxy_headers(State(state): State<RouterState>, request: Request, next: Next) -> Response {
     let peer_ip = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(addr)| addr.ip());
     let is_private = peer_ip.is_some_and(|ip| {
@@ -186,7 +194,8 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .merge(routes::admin::router())
         .merge(routes::auth::router(&app.config))
         .merge(routes::external_auth::router(&app.config))
-        .merge(routes::dashboard::router());
+        .merge(routes::dashboard::router())
+        .layer(SetResponseHeaderLayer::if_not_present(header::CACHE_CONTROL, HeaderValue::from_static("private")));
     let state = RouterState {
         app: app.clone(),
         events: queues.events,
@@ -198,7 +207,7 @@ pub fn router(app: Arc<Liwan>, queues: EventQueues) -> Result<(axum::Router<()>,
         .nest("/api/event", routes::event::router(&app.config))
         .nest("/api/v1", routes::v1::router())
         .nest("/api/dashboard", dashboard)
-        .route_service("/script.js", StaticFile::<Script>::new("script.js").layer(script_cors).into_service())
+        .route("/script.js", axum::routing::get(script).layer(script_cors))
         .fallback(axum::routing::get(serve))
         .with_state(state.clone())
         .finish_api(&mut api);

@@ -13,7 +13,7 @@ import { getDimensionFilter, type ProjectQuery } from "..";
 import { BrowserIcon, MobileDeviceIcon, OrientationIcon, OSIcon, ReferrerIcon } from "../icons";
 import { DetailsModal } from "./modal";
 
-type DimensionProps = {
+export type DimensionProps = {
 	dimension: Dimension;
 	propertyKey?: string;
 	query: ProjectQuery;
@@ -160,40 +160,16 @@ export const DimensionTable = (props: DimensionProps) => {
 						<LoadingSpinner immediate />
 					</div>
 				)}
-				{dataTruncated?.map((d) => {
-					return (
-						<div
-							key={d.dimensionValue}
-							style={{ order: order?.indexOf(d.dimensionValue) }}
-							className={styles.dimensionRow}
-						>
-							<DimensionValueBar
-								value={d.value}
-								biggest={biggest}
-								selected={isSelected(props.query, props.dimension, d.dimensionValue, props.propertyKey)}
-							>
-								<DimensionLabel dimension={props.dimension} value={d} onSelect={props.onSelect} onOpen={props.onOpen} />
-							</DimensionValueBar>
-							<div>{formatMetricVal(d.value, props.query.metric)}</div>
-						</div>
-					);
-				})}
-				{/* {isLoading && dataTruncated?.length === 0 && (
-				)} */}
+				{dataTruncated?.map((d) => (
+					<DimensionRow key={d.dimensionValue} {...props} row={d} order={order} biggest={biggest} />
+				))}
 				{!isLoading && dataTruncated?.length === 0 && (
 					<div className={styles.dimensionEmpty}>
 						<div>No data available</div>
 					</div>
 				)}
 			</div>
-			<DetailsModal
-				dimension={props.dimension}
-				propertyKey={props.propertyKey}
-				query={props.query}
-				onSelect={props.onSelect}
-				onOpen={props.onOpen}
-				onBack={props.onBack}
-			/>
+			<DetailsModal {...props} />
 		</>
 	);
 };
@@ -214,6 +190,19 @@ export const DimensionValueButton = ({ children, onSelect }: { children: string;
 	</button>
 );
 
+const ExternalLink = ({ href, label }: { href: string; label: string }) => (
+	<a href={href} target="_blank" rel="noreferrer" className={styles.external} aria-label={`Open ${label} in a new tab`}>
+		<SquareArrowOutUpRightIcon size={16} />
+	</a>
+);
+
+const renderUtmDimensionLabel = (value: DimensionTableRow, onSelect: () => void) => (
+	<>
+		<PinIcon size={24} />
+		<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
+	</>
+);
+
 const renderUrlDimensionLabel = (value: DimensionTableRow, onSelect: () => void) => {
 	const url = tryParseUrl(value.dimensionValue);
 
@@ -221,15 +210,7 @@ const renderUrlDimensionLabel = (value: DimensionTableRow, onSelect: () => void)
 		<>
 			<LinkIcon size={16} />
 			<DimensionValueButton onSelect={onSelect}>{formatPath(url)}</DimensionValueButton>
-			<a
-				href={getHref(url)}
-				target="_blank"
-				rel="noreferrer"
-				className={styles.external}
-				aria-label={`Open ${value.dimensionValue} in a new tab`}
-			>
-				<SquareArrowOutUpRightIcon size={16} />
-			</a>
+			<ExternalLink href={getHref(url)} label={value.dimensionValue} />
 			{typeof url !== "string" && <span className={styles.hostname}>{formatHost(url)}</span>}
 		</>
 	);
@@ -258,36 +239,11 @@ const formatScreenWidth = (value: string) => {
 };
 
 const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: () => void) => React.ReactNode> = {
-	utm_campaign: (value, onSelect) => (
-		<>
-			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
-		</>
-	),
-	utm_content: (value, onSelect) => (
-		<>
-			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
-		</>
-	),
-	utm_medium: (value, onSelect) => (
-		<>
-			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
-		</>
-	),
-	utm_source: (value, onSelect) => (
-		<>
-			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
-		</>
-	),
-	utm_term: (value, onSelect) => (
-		<>
-			<PinIcon size={24} />
-			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue || "Unknown/None"}</DimensionValueButton>
-		</>
-	),
+	utm_campaign: renderUtmDimensionLabel,
+	utm_content: renderUtmDimensionLabel,
+	utm_medium: renderUtmDimensionLabel,
+	utm_source: renderUtmDimensionLabel,
+	utm_term: renderUtmDimensionLabel,
 	platform: (value, onSelect) => (
 		<>
 			<OSIcon os={value.dimensionValue} size={24} />
@@ -309,15 +265,7 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 			<>
 				<LinkIcon size={16} />
 				<DimensionValueButton onSelect={onSelect}>{formatHost(url)}</DimensionValueButton>
-				<a
-					href={getHref(url)}
-					target="_blank"
-					rel="noreferrer"
-					className={styles.external}
-					aria-label={`Open ${value.dimensionValue} in a new tab`}
-				>
-					<SquareArrowOutUpRightIcon size={16} />
-				</a>
+				<ExternalLink href={getHref(url)} label={value.dimensionValue} />
 			</>
 		);
 	},
@@ -356,15 +304,7 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 				<ReferrerIcon referrer={value.dimensionValue} icon={value.icon} size={24} />
 				<DimensionValueButton onSelect={onSelect}>{name}</DimensionValueButton>
 				{value.dimensionValue && isValidFqdn(value.dimensionValue) && (
-					<a
-						href={`https://${value.dimensionValue}`}
-						target="_blank"
-						rel="noreferrer"
-						className={styles.external}
-						aria-label={`Open ${value.dimensionValue} in a new tab`}
-					>
-						<SquareArrowOutUpRightIcon size={16} />
-					</a>
+					<ExternalLink href={`https://${value.dimensionValue}`} label={value.dimensionValue} />
 				)}
 			</>
 		);
@@ -409,31 +349,37 @@ const isValidFqdn = (fqdn: string) => {
 	}
 };
 
-export const DimensionLabel = ({
+export const DimensionRow = ({
+	row,
+	order,
+	biggest,
 	dimension,
-	value,
+	propertyKey,
+	query,
 	onSelect,
 	onOpen,
-}: {
-	dimension: Dimension;
-	value: DimensionTableRow;
-	onSelect?: (value: DimensionTableRow) => void;
-	onOpen?: (value: DimensionTableRow) => void;
-}) => (
-	<>
-		{dimensionLabels[dimension](value, () => onSelect?.(value))}
-		{onOpen && (
-			<button
-				type="button"
-				className={styles.openButton}
-				aria-label={`Open ${value.dimensionValue}`}
-				title={`Open ${value.dimensionValue}`}
-				onClick={() => onOpen(value)}
-			>
-				<ChevronRightIcon size={20} />
-			</button>
-		)}
-	</>
+}: DimensionProps & { row: DimensionTableRow; order?: string[]; biggest: number }) => (
+	<div style={{ order: order?.indexOf(row.dimensionValue) }} className={styles.dimensionRow}>
+		<DimensionValueBar
+			value={row.value}
+			biggest={biggest}
+			selected={isSelected(query, dimension, row.dimensionValue, propertyKey)}
+		>
+			{dimensionLabels[dimension](row, () => onSelect(row))}
+			{onOpen && (
+				<button
+					type="button"
+					className={styles.openButton}
+					aria-label={`Open ${row.dimensionValue}`}
+					title={`Open ${row.dimensionValue}`}
+					onClick={() => onOpen(row)}
+				>
+					<ChevronRightIcon size={20} />
+				</button>
+			)}
+		</DimensionValueBar>
+		<div>{formatMetricVal(row.value, query.metric)}</div>
+	</div>
 );
 
 export const DimensionValueBar = ({

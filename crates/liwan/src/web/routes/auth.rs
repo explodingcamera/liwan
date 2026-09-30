@@ -1,10 +1,7 @@
-use aide::{
-    UseApi,
-    axum::{ApiRouter, IntoApiResponse, routing::*},
-};
+use aide::axum::{ApiRouter, IntoApiResponse, routing::*};
 use axum::{Json, extract::State};
 use axum_extra::extract::CookieJar;
-use http::{StatusCode, header};
+use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::task::spawn_blocking;
@@ -72,8 +69,8 @@ pub struct MeResponse {
     pub role: UserRole,
 }
 
-async fn me(Auth(user): Auth) -> UseApi<impl IntoApiResponse, Json<MeResponse>> {
-    ([(header::CACHE_CONTROL, "private")], Json(MeResponse { username: user.username, role: user.role })).into()
+async fn me(Auth(user): Auth) -> Json<MeResponse> {
+    Json(MeResponse { username: user.username, role: user.role })
 }
 
 async fn setup(app: State<RouterState>, Json(params): Json<SetupRequest>) -> ApiResult<impl IntoApiResponse> {

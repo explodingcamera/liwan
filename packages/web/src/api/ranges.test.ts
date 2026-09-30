@@ -49,11 +49,10 @@ describe("DateRange", () => {
 		expect(pastRange.endsToday()).toBe(false);
 	});
 
-	it("should calculate graph range and data points", () => {
+	it("should calculate graph interval", () => {
 		const start = startOfDay(new Date(2024, 10, 1));
 		const end = endOfDay(new Date(2024, 10, 7));
 		const range = new DateRange({ start, end });
-		expect(range.getGraphRange()).toBe("day");
 		expect(range.getGraphInterval()).toBe("day");
 	});
 
@@ -62,7 +61,6 @@ describe("DateRange", () => {
 		const end = endOfDay(new Date(2024, 10, 2));
 		const range = new DateRange({ start, end });
 
-		expect(range.getGraphRange()).toBe("hour");
 		expect(range.getGraphInterval()).toBe("hour");
 	});
 
@@ -96,16 +94,6 @@ describe("DateRange", () => {
 
 		expect(start).toEqual(startOfMonth(subMonths(now, 11)));
 		expect(end).toEqual(endOfDay(now));
-	});
-
-	it("should include years on axis and tooltip labels for ranges spanning calendar years", () => {
-		const range = new DateRange({
-			start: new Date(2024, 11, 30),
-			end: new Date(2025, 0, 2),
-		});
-
-		expect(range.getAxisRange()).toBe("day+year");
-		expect(range.getTooltipRange()).toBe("day+hour");
 	});
 
 	it("should start weekToDate on monday and end today", () => {

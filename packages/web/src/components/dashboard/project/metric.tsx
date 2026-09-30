@@ -1,3 +1,4 @@
+import cardStyles from "./card.module.css";
 import styles from "./metric.module.css";
 
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
@@ -5,7 +6,6 @@ import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import type { Metric, StatsResponse } from "@/constants";
 import { metrics as defaultMetrics } from "@/constants";
 import { cls, formatMetricVal, formatPercent } from "@/utils";
-import { CardButton } from "./card";
 
 export const SelectMetrics = ({
 	data,
@@ -89,7 +89,6 @@ export const SelectMetric = ({
 	value?: number | null;
 	metric: Metric;
 	prevValue?: number | null;
-	decimals?: number;
 	onSelect: () => void;
 	selected: boolean;
 }) => {
@@ -105,7 +104,7 @@ export const SelectMetric = ({
 	const formattedChange = changePercent > 0 ? `+${formatPercent(changePercent)}` : formatPercent(changePercent);
 
 	return (
-		<CardButton onClick={onSelect} active={selected} className={styles.metric}>
+		<button type="button" className={cls(styles.metric, cardStyles.card)} onClick={onSelect} data-active={selected}>
 			<h2>{title}</h2>
 			<h3>
 				{unavailable ? "Unavailable" : formatMetricVal(currentValue, metric)}
@@ -117,6 +116,6 @@ export const SelectMetric = ({
 					)}
 				</span>
 			</h3>
-		</CardButton>
+		</button>
 	);
 };

@@ -76,11 +76,6 @@ impl DateRange {
         Ok(Self { start, end: self.start })
     }
 
-    /// Return whether the range ends after the current time
-    pub fn ends_in_future(&self) -> bool {
-        self.end > Utc::now()
-    }
-
     /// Return the range duration
     pub fn duration(&self) -> chrono::Duration {
         self.end - self.start

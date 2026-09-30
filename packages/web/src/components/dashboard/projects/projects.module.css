@@ -52,11 +52,6 @@
       }
     }
   }
-
-  .graph {
-    opacity: 1;
-    transition: opacity 0.2s ease;
-  }
 }
 
 .header {
@@ -64,21 +59,6 @@
   justify-content: end;
   align-items: center;
   margin-bottom: 1rem;
-
-  h1,
-  details {
-    margin: 0;
-  }
-
-  a {
-    cursor: pointer;
-  }
-
-  h1 {
-    @media (max-width: 500px) {
-      display: none;
-    }
-  }
 
   @media (max-width: 500px) {
     flex-direction: column;

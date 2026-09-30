@@ -51,12 +51,6 @@
     font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--text-muted);
-
-    div.icon {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.2rem;
-    }
   }
 }
 

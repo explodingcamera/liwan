@@ -6,7 +6,6 @@ import {
 	addWeeks,
 	addYears,
 	differenceInCalendarDays,
-	differenceInHours,
 	differenceInMonths,
 	endOfDay,
 	endOfMonth,
@@ -24,11 +23,8 @@ import {
 	startOfYear,
 	subDays,
 	subMonths,
-	subWeeks,
-	subYears,
 } from "date-fns";
 
-import type { GraphRange } from "@/components/dashboard/project/graph";
 import type { GraphInterval } from "@/constants";
 import { formatDateRange } from "@/utils";
 
@@ -131,23 +127,11 @@ export class DateRange {
 		});
 	}
 
-	#shiftByRange(direction: -1 | 1): DateRange {
-		if (this.#isCalendarDayRange()) {
-			return this.#shiftByCalendarDays(direction);
-		}
-
-		return this.#shiftByExactDuration(direction);
-	}
-
 	toAPI(): { start: string; end: string } {
 		const { start, end } = this.getBucketBounds();
 		const startIso = start.toISOString();
 		const endIso = end.toISOString();
 		return { start: startIso, end: endIso };
-	}
-
-	getGraphRange(): GraphRange {
-		return this.getGraphInterval();
 	}
 
 	getGraphInterval(): GraphInterval {
@@ -164,109 +148,48 @@ export class DateRange {
 		return bucketEnd < end ? bucketEnd : end;
 	}
 
-	getAxisRange(): "hour" | "day" | "day+year" {
-		const { end } = this.getBucketBounds();
-		if (differenceInHours(end, this.value.start) <= 24) return "hour";
-		if (!isSameYear(this.value.start, this.value.end)) return "day+year";
-		return "day";
-	}
-
-	getTooltipRange(): "hour" | "day+hour" | "day" | "day+year" {
-		if (this.getGraphInterval() === "day") return this.getAxisRange() === "day+year" ? "day+year" : "day";
-		const dayCount = this.#getDayCount();
-		if (dayCount === 1) return "hour";
-		return "day+hour";
-	}
-
 	#isDayBeforeYesterday() {
 		return isSameDay(subDays(new Date(), 2), this.value.start) && isSameDay(subDays(new Date(), 2), this.value.end);
+	}
+
+	#shift(direction: -1 | 1): DateRange {
+		const { start, end } = this.value;
+		if (
+			isEqual(startOfWeek(start, WEEK_STARTS_ON), start) &&
+			isEqual(endOfWeek(end, WEEK_STARTS_ON), end) &&
+			isSameWeek(start, end, WEEK_STARTS_ON)
+		) {
+			return new DateRange({ start: addWeeks(start, direction), end: addWeeks(end, direction) });
+		}
+		if (isEqual(startOfMonth(start), start) && isEqual(endOfMonth(end), end) && isSameMonth(start, end)) {
+			return new DateRange({
+				start: startOfMonth(addMonths(start, direction)),
+				end: endOfMonth(addMonths(end, direction)),
+			});
+		}
+		if (isEqual(startOfYear(start), start) && isEqual(endOfYear(end), end) && isSameYear(start, end)) {
+			return new DateRange({
+				start: startOfYear(addYears(start, direction)),
+				end: endOfYear(addYears(end, direction)),
+			});
+		}
+		if (this.#isRollingYearRange()) {
+			return new DateRange({ start: addYears(start, direction), end: addYears(end, direction) });
+		}
+		return this.#isCalendarDayRange() ? this.#shiftByCalendarDays(direction) : this.#shiftByExactDuration(direction);
 	}
 
 	previous() {
 		if (this.variant === "allTime") return this;
 		if (this.#value === "today") return new DateRange("yesterday");
-
-		if (
-			isEqual(startOfWeek(this.value.start, WEEK_STARTS_ON), this.value.start) &&
-			isEqual(endOfWeek(this.value.end, WEEK_STARTS_ON), this.value.end) &&
-			isSameWeek(this.value.start, this.value.end, WEEK_STARTS_ON)
-		) {
-			const start = subWeeks(this.value.start, 1);
-			const end = subWeeks(this.value.end, 1);
-			return new DateRange({ start, end });
-		}
-
-		if (
-			isEqual(startOfMonth(this.value.start), this.value.start) &&
-			isEqual(endOfMonth(this.value.end), this.value.end) &&
-			isSameMonth(this.value.start, this.value.end)
-		) {
-			const start = startOfMonth(subMonths(this.value.start, 1));
-			const end = endOfMonth(subMonths(this.value.end, 1));
-			return new DateRange({ start, end });
-		}
-
-		if (
-			isEqual(startOfYear(this.value.start), this.value.start) &&
-			isEqual(endOfYear(this.value.end), this.value.end) &&
-			isSameYear(this.value.start, this.value.end)
-		) {
-			const start = startOfYear(subYears(this.value.start, 1));
-			const end = endOfYear(subYears(this.value.end, 1));
-			return new DateRange({ start, end });
-		}
-
-		if (this.#isRollingYearRange()) {
-			const start = subYears(this.value.start, 1);
-			const end = subYears(this.value.end, 1);
-			return new DateRange({ start, end });
-		}
-
-		return this.#shiftByRange(-1);
+		return this.#shift(-1);
 	}
 
 	next() {
 		if (isAfter(this.value.end, new Date())) return this;
 		if (this.#value === "yesterday") return new DateRange("today");
 		if (this.#isDayBeforeYesterday()) return new DateRange("yesterday");
-
-		if (
-			isEqual(startOfWeek(this.value.start, WEEK_STARTS_ON), this.value.start) &&
-			isEqual(endOfWeek(this.value.end, WEEK_STARTS_ON), this.value.end) &&
-			isSameWeek(this.value.start, this.value.end, WEEK_STARTS_ON)
-		) {
-			const start = addWeeks(this.value.start, 1);
-			const end = addWeeks(this.value.end, 1);
-			return new DateRange({ start, end });
-		}
-
-		if (
-			isEqual(startOfMonth(this.value.start), this.value.start) &&
-			isEqual(endOfMonth(this.value.end), this.value.end) &&
-			isSameMonth(this.value.start, this.value.end)
-		) {
-			const start = startOfMonth(addMonths(this.value.start, 1));
-			const end = endOfMonth(addMonths(this.value.end, 1));
-			return new DateRange({ start, end });
-		}
-
-		if (
-			isEqual(startOfYear(this.value.start), this.value.start) &&
-			isEqual(endOfYear(this.value.end), this.value.end) &&
-			isSameYear(this.value.start, this.value.end)
-		) {
-			const start = addYears(this.value.start, 1);
-			const end = addYears(this.value.end, 1);
-			return new DateRange({ start, end });
-		}
-
-		if (this.#isRollingYearRange()) {
-			const start = addYears(this.value.start, 1);
-			const end = addYears(this.value.end, 1);
-			return new DateRange({ start, end });
-		}
-
-		return this.#shiftByRange(1);
+		return this.#shift(1);
 	}
 }
 

@@ -62,8 +62,6 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/settings/prune", post(prune_handler))
 }
 
-pub struct AdminAPI;
-
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 struct CreateUserRequest {
     username: String,
@@ -340,10 +338,7 @@ struct PruneResponse {
     total: PruneEntityStats,
 }
 
-async fn get_users(
-    app: State<RouterState>,
-    Admin(_): Admin,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<UsersResponse>>> {
+async fn get_users(app: State<RouterState>, Admin(_): Admin) -> ApiResult<Json<UsersResponse>> {
     let users = tokio::task::spawn_blocking(move || app.users.all())
         .await
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
@@ -352,13 +347,10 @@ async fn get_users(
         .map(|u| UserResponse { username: u.username, role: u.role })
         .collect();
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(UsersResponse { users })).into())
+    Ok(Json(UsersResponse { users }))
 }
 
-async fn teams_handler(
-    app: State<RouterState>,
-    Admin(_): Admin,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<TeamsResponse>>> {
+async fn teams_handler(app: State<RouterState>, Admin(_): Admin) -> ApiResult<Json<TeamsResponse>> {
     let teams = tokio::task::spawn_blocking(move || app.teams.all())
         .await
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
@@ -372,19 +364,19 @@ async fn teams_handler(
             projects: team.access.projects,
         })
         .collect();
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(TeamsResponse { teams })).into())
+    Ok(Json(TeamsResponse { teams }))
 }
 
 async fn team_create_handler(
     app: State<RouterState>,
     Admin(_): Admin,
     Json(req): Json<CreateTeamRequest>,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<CreateTeamResponse>>> {
+) -> ApiResult<Json<CreateTeamResponse>> {
     let id = tokio::task::spawn_blocking(move || app.teams.create(&req.display_name))
         .await
         .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
         .http_err("Failed to create team", StatusCode::BAD_REQUEST)?;
-    Ok(Json(CreateTeamResponse { id }).into())
+    Ok(Json(CreateTeamResponse { id }))
 }
 
 async fn team_update_handler(
@@ -560,10 +552,7 @@ async fn project_update_handler(
     Ok(empty_response())
 }
 
-async fn projects_handler(
-    app: State<RouterState>,
-    MaybeAuth(user): MaybeAuth,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectsResponse>>> {
+async fn projects_handler(app: State<RouterState>, MaybeAuth(user): MaybeAuth) -> ApiResult<Json<ProjectsResponse>> {
     let projects = tokio::task::spawn_blocking(move || {
         app.projects
             .all()?
@@ -576,14 +565,14 @@ async fn projects_handler(
     .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
     .http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(ProjectsResponse { projects })).into())
+    Ok(Json(ProjectsResponse { projects }))
 }
 
 async fn project_handler(
     app: State<RouterState>,
     MaybeAuth(user): MaybeAuth,
     Path(project_id): Path<String>,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectResponse>>> {
+) -> ApiResult<Json<ProjectResponse>> {
     let resp = tokio::task::spawn_blocking(move || {
         let project = app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
         if !can_view_project(&project, user.as_ref()) {
@@ -594,14 +583,11 @@ async fn project_handler(
     .await
     .http_status(StatusCode::INTERNAL_SERVER_ERROR)??;
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(resp)).into())
+    Ok(Json(resp))
 }
 
-async fn settings_handler(
-    app: State<RouterState>,
-    Admin(_): Admin,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<CollectionSettings>>> {
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(app.settings.global())).into())
+async fn settings_handler(app: State<RouterState>, Admin(_): Admin) -> ApiResult<Json<CollectionSettings>> {
+    Ok(Json(app.settings.global()))
 }
 
 async fn settings_update_handler(
@@ -653,14 +639,14 @@ async fn project_settings_handler(
     app: State<RouterState>,
     Path(project_id): Path<String>,
     Admin(_): Admin,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<ProjectDisplaySettings>>> {
+) -> ApiResult<Json<ProjectDisplaySettings>> {
     app.projects.get(&project_id).http_status(StatusCode::NOT_FOUND)?;
     let settings = app
         .project_settings
         .get(&project_id)
         .http_err("Failed to get project display settings", StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(settings)).into())
+    Ok(Json(settings))
 }
 
 async fn project_settings_update_handler(
@@ -682,15 +668,14 @@ async fn entity_settings_handler(
     app: State<RouterState>,
     Path(entity_id): Path<String>,
     Admin(_): Admin,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<EntityCollectionSettingsResponse>>> {
+) -> ApiResult<Json<EntityCollectionSettingsResponse>> {
     if !app.entities.exists(&entity_id).http_err("Failed to get entity", StatusCode::INTERNAL_SERVER_ERROR)? {
         http_bail!(StatusCode::NOT_FOUND, "Entity not found")
     }
 
     let settings = app.settings.entity(&entity_id);
     let resolved = app.settings.resolved_for_entity(&entity_id);
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(EntityCollectionSettingsResponse { settings, resolved }))
-        .into())
+    Ok(Json(EntityCollectionSettingsResponse { settings, resolved }))
 }
 
 async fn entity_settings_update_handler(
@@ -804,10 +789,7 @@ async fn project_delete_handler(
     Ok(empty_response())
 }
 
-async fn entities_handler(
-    app: State<RouterState>,
-    Admin(_): Admin,
-) -> ApiResult<UseApi<impl IntoApiResponse, Json<EntitiesResponse>>> {
+async fn entities_handler(app: State<RouterState>, Admin(_): Admin) -> ApiResult<Json<EntitiesResponse>> {
     let entities = app.entities.all().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut resp = Vec::new();
@@ -829,7 +811,7 @@ async fn entities_handler(
         });
     }
 
-    Ok(([(http::header::CACHE_CONTROL, "private")], Json(EntitiesResponse { entities: resp })).into())
+    Ok(Json(EntitiesResponse { entities: resp }))
 }
 
 async fn entity_create_handler(

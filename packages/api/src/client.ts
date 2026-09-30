@@ -35,6 +35,7 @@ export type Client = {
 };
 
 const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const backoff = (attempt: number) => sleep(100 * 2 ** attempt);
 
 const batchEndpoint = (endpoint: string) => {
 	const url = new URL(endpoint);
@@ -94,8 +95,7 @@ export function createClient(options: ClientOptions): Client {
 				});
 			} catch {
 				if (attempt >= maxRetries) throw new Error("Liwan batch delivery failed after retries");
-				const delay = 100 * 2 ** attempt;
-				await sleep(delay + Math.random() * delay * 0.25);
+				await backoff(attempt);
 				continue;
 			} finally {
 				clearTimeout(timeout);
@@ -113,8 +113,7 @@ export function createClient(options: ClientOptions): Client {
 			if (Number.isFinite(retryAfter) && retryAfter > 0) {
 				await sleep(retryAfter * 1_000);
 			} else {
-				const delay = 100 * 2 ** attempt;
-				await sleep(delay + Math.random() * delay * 0.25);
+				await backoff(attempt);
 			}
 		}
 	};

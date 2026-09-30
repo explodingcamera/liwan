@@ -175,35 +175,6 @@
   font-size: var(--font-size-md);
 }
 
-.deleteButton {
-  width: fit-content;
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.deleteButton:hover {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.settingsLink {
-  box-sizing: border-box;
-  display: inline-grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  color: var(--text-muted);
-}
-
-.settingsLink:hover {
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--border-surface);
-  text-decoration: none;
-}
-
 .entityId {
   display: inline;
   width: auto;

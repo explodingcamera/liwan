@@ -1,23 +1,18 @@
 use crate::utils::hash::db_name;
-use rusqlite::{Connection, OpenFlags, Result};
+use rusqlite::{Connection, Result};
 use std::path::{Path, PathBuf};
 
 pub struct SqliteConnectionManager {
     source: PathBuf,
-    flags: OpenFlags,
 }
 
 impl SqliteConnectionManager {
     pub fn file(path: impl AsRef<Path>) -> Self {
-        Self { source: path.as_ref().to_path_buf(), flags: OpenFlags::default() }
+        Self { source: path.as_ref().to_path_buf() }
     }
 
     pub fn memory() -> Self {
-        Self { source: format!("file:{}?mode=memory&cache=shared", db_name()).into(), flags: OpenFlags::default() }
-    }
-
-    pub fn with_flags(self, flags: OpenFlags) -> Self {
-        Self { flags, ..self }
+        Self { source: format!("file:{}?mode=memory&cache=shared", db_name()).into() }
     }
 }
 
@@ -26,7 +21,7 @@ impl r2d2::ManageConnection for SqliteConnectionManager {
     type Error = rusqlite::Error;
 
     fn connect(&self) -> Result<Connection> {
-        let connection = Connection::open_with_flags(&self.source, self.flags)?;
+        let connection = Connection::open(&self.source)?;
         connection.pragma_update(None, "foreign_keys", "ON")?;
         Ok(connection)
     }

@@ -434,3 +434,21 @@ async fn event_properties_are_reported() -> Result<()> {
         .assert_status_bad_request();
     Ok(())
 }
+
+#[tokio::test]
+async fn tracker_script_is_cached_and_revalidated() -> Result<()> {
+    let app = common::app();
+    let (tx, _rx) = common::events();
+    let client = common::TestClient::new(app.clone(), tx);
+
+    let res = client.get("/script.js").await;
+    res.assert_status_success();
+    assert_eq!(res.header("content-type"), "text/javascript");
+    assert_eq!(res.header("cache-control"), "public, max-age=3600, stale-while-revalidate=86400");
+    let etag = res.header("etag").to_str()?.to_string();
+
+    let res = client.get_with_headers("/script.js", vec![("if-none-match".to_string(), etag)]).await;
+    res.assert_status(http::StatusCode::NOT_MODIFIED);
+
+    Ok(())
+}

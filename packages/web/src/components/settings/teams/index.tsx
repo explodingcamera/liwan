@@ -4,7 +4,7 @@ import styles from "../settings.module.css";
 import type { SubmitEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { navigate } from "astro:transitions/client";
-import { PlusIcon, SettingsIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
@@ -12,10 +12,10 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
-import { appPath, basePath } from "@/config";
+import { appPath } from "@/config";
 import { invalidateTeams, useProjects, useTeams, useUsers } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
-import { SettingsField, SettingsForm, SettingsHeader } from "../form";
+import { getSettingsPathId, SettingsField, SettingsForm, SettingsHeader, SettingsLink } from "../form";
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
 
@@ -75,13 +75,7 @@ export const TeamsTable = () => {
 		{
 			id: "edit",
 			render: (team) => (
-				<a
-					className={styles.settingsLink}
-					href={appPath(`/settings/teams/${team.id}`)}
-					aria-label={`Open ${team.displayName} settings`}
-				>
-					<SettingsIcon size={18} />
-				</a>
+				<SettingsLink href={appPath(`/settings/teams/${team.id}`)} label={`Open ${team.displayName} settings`} />
 			),
 		},
 	];
@@ -91,7 +85,7 @@ export const TeamsTable = () => {
 export const TeamSettingsPage = ({ teamId }: { teamId: string }) => {
 	const [id, setId] = useState(teamId);
 	useEffect(() => {
-		setId(window.location.pathname.slice(basePath.length).replace(/\/$/, "").split("/settings/teams/")[1] || teamId);
+		setId(getSettingsPathId("/settings/teams/") || teamId);
 	}, [teamId]);
 	return <TeamSettingsContent key={id} teamId={id} />;
 };

@@ -1,7 +1,6 @@
 import styles from "../settings.module.css";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { SettingsIcon } from "lucide-react";
 
 import { api } from "@/api";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -9,12 +8,28 @@ import { Snippet } from "@/components/ui/snippet";
 import type { Column } from "@/components/ui/table";
 import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
-import { appPath, basePath } from "@/config";
+import { appPath } from "@/config";
 import type { EntityCollectionSettings } from "@/constants";
 import { invalidateEntities, useEntities, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
-import { AllowedHostnamesEditor, DocsLink, FiltersEditor, GeoSelect, VisitorModeSelect } from "../filters";
-import { SettingsField, SettingsFieldset, SettingsForm, SettingsHeader, SettingsPanel, SettingsTabs } from "../form";
+import {
+	AllowedHostnamesEditor,
+	DocsLink,
+	FiltersEditor,
+	GeoSelect,
+	RetentionSelect,
+	VisitorModeSelect,
+} from "../filters";
+import {
+	getSettingsPathId,
+	SettingsField,
+	SettingsFieldset,
+	SettingsForm,
+	SettingsHeader,
+	SettingsLink,
+	SettingsPanel,
+	SettingsTabs,
+} from "../form";
 import type { Tag } from "../tags";
 import { Tags } from "../tags";
 
@@ -23,42 +38,11 @@ export { CreateEntity } from "./dialogs";
 type EntityTab = "general" | "collection" | "filters";
 type EntitySettingsSection = "collection" | "filters";
 
-const retentionOptions = [
-	{ value: "inherit", label: "Inherit global" },
-	{ value: "keep_all", label: "Keep all history" },
-	{ value: "30", label: "1 month" },
-	{ value: "90", label: "3 months" },
-	{ value: "180", label: "6 months" },
-	{ value: "365", label: "1 year" },
-	{ value: "730", label: "2 years" },
-] as const;
-const retentionValues = retentionOptions.map((option) => option.value);
-
-const retentionValue = (retention: EntityCollectionSettings["dataRetention"]) => {
-	if (retention.mode === "inherit") return "inherit";
-	if (retention.mode === "all") return "keep_all";
-	const value = String(retention.days);
-	return (retentionValues as readonly string[]).includes(value) ? value : "365";
-};
-
-const getSettingsPathId = (prefix: string) => {
-	const path = window.location.pathname.slice(basePath.length).replace(/\/$/, "");
-	return path.startsWith(prefix) ? path.slice(prefix.length) : "";
-};
-
 const entityTabs = [
 	{ value: "general", label: "General" },
 	{ value: "collection", label: "Collection" },
 	{ value: "filters", label: "Filters" },
 ] as const satisfies readonly { value: EntityTab; label: string }[];
-
-const SettingsLink = ({ href, label }: { href: string; label: string }) => {
-	return (
-		<a href={href} className={styles.settingsLink} aria-label={label} title={label}>
-			<SettingsIcon size={18} />
-		</a>
-	);
-};
 
 const EntityId = ({ id }: { id: string }) => (
 	<button
@@ -284,7 +268,7 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 								window.location.href = appPath("/settings/entities");
 							}}
 							trigger={
-								<button type="button" className={`${styles.deleteButton} button-danger`}>
+								<button type="button" className="button-danger">
 									Delete entity
 								</button>
 							}
@@ -384,33 +368,11 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 								}
 								name="historyRetention"
 							>
-								<select
-									name="historyRetention"
-									value={retentionValue(settings.dataRetention)}
-									onChange={(event) => {
-										const next = event.currentTarget.value;
-										if (!(retentionValues as readonly string[]).includes(next)) return;
-										if (next === "inherit") {
-											saveCollectionSettings({
-												dataRetention: { mode: "inherit" },
-											});
-										} else if (next === "keep_all") {
-											saveCollectionSettings({
-												dataRetention: { mode: "all" },
-											});
-										} else {
-											saveCollectionSettings({
-												dataRetention: { mode: "days", days: Number(next) },
-											});
-										}
-									}}
-								>
-									{retentionOptions.map((option) => (
-										<option key={option.value} value={option.value}>
-											{option.label}
-										</option>
-									))}
-								</select>
+								<RetentionSelect
+									value={settings.dataRetention}
+									onChange={(dataRetention) => saveCollectionSettings({ dataRetention })}
+									allowInherit
+								/>
 							</SettingsField>
 						</SettingsPanel>
 						<SettingsPanel value="filters">
