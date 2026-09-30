@@ -27,10 +27,10 @@ import {
 	subWeeks,
 	subYears,
 } from "date-fns";
-import { formatDateRange } from "little-date";
 
 import type { GraphRange } from "@/components/dashboard/project/graph";
 import type { GraphInterval } from "@/constants";
+import { formatDateRange } from "@/utils";
 
 type DateRangeValue = { start: Date; end: Date };
 const WEEK_STARTS_ON = { weekStartsOn: 1 as const };
@@ -245,8 +245,8 @@ export class DateRange {
 			isEqual(endOfMonth(this.value.end), this.value.end) &&
 			isSameMonth(this.value.start, this.value.end)
 		) {
-			const start = addMonths(this.value.start, 1);
-			const end = addMonths(this.value.end, 1);
+			const start = startOfMonth(addMonths(this.value.start, 1));
+			const end = endOfMonth(addMonths(this.value.end, 1));
 			return new DateRange({ start, end });
 		}
 

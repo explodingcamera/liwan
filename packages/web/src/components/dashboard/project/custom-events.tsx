@@ -1,13 +1,12 @@
 import cardStyles from "./dimensions/dimensions.module.css";
 
 import { useDeferredValue, useState } from "react";
-import fuzzysort from "fuzzysort";
 import { XIcon, ZapIcon, ZoomInIcon } from "lucide-react";
 
 import { Dialog } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { useCustomEvents } from "@/hooks/api";
-import { cls, formatMetricVal } from "@/utils";
+import { cls, formatMetricVal, fuzzyFilter } from "@/utils";
 import type { ProjectQuery } from ".";
 import { DimensionValueBar, DimensionValueButton } from "./dimensions";
 
@@ -48,9 +47,7 @@ export const CustomEventsCard = ({
 	const rows = (events.data?.rows ?? []).filter(
 		(row) => query.eventName === "pageview" || row.name === query.eventName,
 	);
-	const searchResults = deferredSearch
-		? fuzzysort.go(deferredSearch, rows, { key: "name" }).map((result) => result.obj)
-		: rows;
+	const searchResults = deferredSearch ? fuzzyFilter(deferredSearch, rows, ["name"]) : rows;
 
 	if (query.project.customEventsHidden) return null;
 

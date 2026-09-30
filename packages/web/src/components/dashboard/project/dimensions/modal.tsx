@@ -1,7 +1,6 @@
 import styles from "./dimensions.module.css";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import fuzzysort from "fuzzysort";
 import { XIcon, ZoomInIcon } from "lucide-react";
 
 import { Dialog } from "@/components/ui/dialog";
@@ -9,7 +8,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import type { Dimension, DimensionTableRow } from "@/constants";
 import { dimensionNames, eventMetricName } from "@/constants";
 import { useDimension } from "@/hooks/api";
-import { cls, formatMetricVal } from "@/utils";
+import { cls, formatMetricVal, fuzzyFilter } from "@/utils";
 import type { ProjectQuery } from "..";
 import { Breadcrumb, DimensionLabel, DimensionValueBar, isSelected } from ".";
 
@@ -40,11 +39,7 @@ export const DetailsModal = ({
 
 	const results = useMemo(() => {
 		if (!deferredFilter || !data) return data;
-		return fuzzysort
-			.go(deferredFilter, data, {
-				keys: ["displayName", "dimensionValue", "value"],
-			})
-			.map((r) => r.obj);
+		return fuzzyFilter(deferredFilter, data, ["displayName", "dimensionValue", "value"]);
 	}, [deferredFilter, data]);
 
 	return (

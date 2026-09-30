@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { differenceInCalendarDays, endOfDay, startOfDay, startOfMonth, subDays, subMonths } from "date-fns";
+import { differenceInCalendarDays, endOfDay, endOfMonth, startOfDay, startOfMonth, subDays, subMonths } from "date-fns";
 
 import { DateRange, ranges } from "./ranges";
 
@@ -175,6 +175,15 @@ describe("DateRange", () => {
 		expect(range.next().value).toEqual({
 			start: startOfDay(new Date(2024, 10, 4)),
 			end: endOfDay(new Date(2024, 10, 6)),
+		});
+	});
+
+	it("should shift full months to the full next month", () => {
+		const range = new DateRange({ start: startOfMonth(new Date(2023, 1, 1)), end: endOfMonth(new Date(2023, 1, 1)) });
+
+		expect(range.next().value).toEqual({
+			start: startOfMonth(new Date(2023, 2, 1)),
+			end: endOfMonth(new Date(2023, 2, 1)),
 		});
 	});
 });

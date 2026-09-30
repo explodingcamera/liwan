@@ -12,11 +12,11 @@ export function useQuery<
 >(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, c?: QueryClient): UseQueryResult<TData, TError> {
 	return _useQuery(
 		{
+			...options,
 			enabled(query) {
 				if (typeof window === "undefined") return false;
 				return typeof options.enabled === "function" ? options.enabled(query) : (options.enabled ?? true);
 			},
-			...options,
 		},
 		c || queryClient,
 	);
