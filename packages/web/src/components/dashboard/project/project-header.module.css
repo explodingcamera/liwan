@@ -1,5 +1,5 @@
 .statsHeader {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   margin-bottom: 0;
   align-items: center;
   display: flex;
@@ -19,19 +19,9 @@
     display: inline-flex;
     gap: 0.2rem;
     align-items: center;
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
   }
-}
-
-.settingsButton {
-  display: inline-flex;
-  vertical-align: middle;
-  color: var(--text-muted);
-}
-
-.settingsButton:hover {
-  color: var(--text);
 }
 
 @keyframes pulse {

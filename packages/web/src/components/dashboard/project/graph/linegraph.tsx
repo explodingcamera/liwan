@@ -392,14 +392,14 @@ export const LineGraph = ({
 			>
 				<defs>
 					<linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
-						<stop offset="0%" stopColor="var(--graph-line-color)" stopOpacity="0.25" />
-						<stop offset="100%" stopColor="var(--graph-line-color)" stopOpacity="0" />
+						<stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.25" />
+						<stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0" />
 					</linearGradient>
 				</defs>
 				<g id="y-grid" />
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
-				<path id="line" fill="none" stroke="var(--graph-line-color)" />
-				<path id="line-dotted" fill="none" stroke="var(--graph-line-color)" strokeDasharray="5, 5" />
+				<path id="line" fill="none" stroke="var(--chart-line)" />
+				<path id="line-dotted" fill="none" stroke="var(--chart-line)" strokeDasharray="5, 5" />
 				<g id="cursor" opacity="0">
 					<path id="needle" fill="none" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
 					<foreignObject id="tooltip" width="190" height="100">

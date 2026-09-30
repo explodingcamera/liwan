@@ -47,29 +47,15 @@
       }
 
       :global(a:hover) {
-        background: light-dark(transparent, #303743);
-        border-color: var(--surface-outline);
+        background: light-dark(transparent, var(--surface-active));
+        border-color: var(--border-surface);
       }
     }
   }
 
-  .stats,
   .graph {
     opacity: 1;
     transition: opacity 0.2s ease;
-  }
-
-  .error {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 1.5rem;
-    font-weight: 500;
   }
 }
 
@@ -115,12 +101,12 @@
   width: 2rem;
   height: 2rem;
   border: 1px solid transparent;
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   transition: transform 150ms ease-out;
 
   &:hover {
     background: var(--surface-hover);
-    border-color: var(--surface-outline);
+    border-color: var(--border-surface);
   }
 
   &[data-panel-open] {

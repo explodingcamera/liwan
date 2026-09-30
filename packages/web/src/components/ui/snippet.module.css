@@ -4,7 +4,7 @@
   position: relative;
   overflow: hidden;
   border: 1px solid var(--field-border);
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   background: var(--field);
 }
 
@@ -42,7 +42,7 @@
 }
 
 .tag {
-  color: var(--settings-icon-color);
+  color: var(--text-icon);
   font-weight: 650;
 }
 
@@ -55,7 +55,7 @@
   background: transparent;
   font: inherit;
   font-style: normal;
-  color: var(--settings-icon-color);
+  color: var(--text-icon);
   font-weight: 650;
   text-decoration: underline;
   text-decoration-style: dotted;

@@ -12,10 +12,10 @@
   min-height: 2.15rem;
   padding: 0.48rem 0.75rem;
   border: 1px solid var(--accent-fill);
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   background: var(--accent-fill);
   color: var(--accent-contrast);
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
   font-weight: 500;
   line-height: 1.25;
   text-decoration: none;
@@ -75,7 +75,7 @@
   min-height: var(--field-height);
   padding: var(--field-padding);
   border: 1px solid var(--field-border);
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   background: var(--field);
   color: var(--text);
   font-size: var(--field-font-size);
@@ -86,7 +86,7 @@
   height: var(--field-height);
   appearance: none;
   padding-right: 2.2rem;
-  background-image: var(--select-chevron);
+  background-image: var(--icon-chevron-down);
   background-repeat: no-repeat;
   background-position: right 0.6rem center;
   background-size: 1rem;

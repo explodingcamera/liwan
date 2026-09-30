@@ -152,17 +152,17 @@ const licenseText = (text: string) => {
 <style>
   h1 {
     margin-bottom: 1.5rem;
-    font-size: 1.75rem;
+    font-size: var(--font-size-xl);
   }
 
   h2 {
     margin-bottom: 0.35rem;
-    font-size: 1.15rem;
+    font-size: var(--font-size-lg);
   }
 
   h3 {
     margin: 1.75rem 0 0.55rem;
-    font-size: 1rem;
+    font-size: var(--font-size-lg);
   }
 
   .intro {
@@ -190,7 +190,7 @@ const licenseText = (text: string) => {
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--border);
     list-style: none;
-    font-size: 0.825rem;
+    font-size: var(--font-size-md);
   }
 
   .packageName {
@@ -223,7 +223,7 @@ const licenseText = (text: string) => {
 
   .packageHeader {
     color: var(--text-muted);
-    font-size: 0.7rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -235,7 +235,7 @@ const licenseText = (text: string) => {
 
   .license h4 {
     margin: 1.25rem 0 0.4rem;
-    font-size: 0.9rem;
+    font-size: var(--font-size-md);
     font-weight: 600;
   }
 
@@ -249,7 +249,7 @@ const licenseText = (text: string) => {
     border-radius: var(--radius);
     background: var(--surface);
     overflow: auto;
-    font-size: 0.75rem;
+    font-size: var(--font-size-sm);
     line-height: 1.45;
     white-space: pre-wrap;
   }
@@ -273,7 +273,7 @@ const licenseText = (text: string) => {
       width: 4rem;
       color: var(--text-muted);
       content: attr(data-label);
-      font-size: 0.7rem;
+      font-size: var(--font-size-sm);
       font-weight: 600;
       letter-spacing: 0.04em;
       text-transform: uppercase;

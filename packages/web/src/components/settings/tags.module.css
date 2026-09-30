@@ -17,7 +17,7 @@
   padding: 0.15rem 0.23rem;
   cursor: text;
   border: 1px solid var(--field-border);
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   background-color: var(--field);
   color: var(--text);
   outline: none;
@@ -64,8 +64,8 @@
   gap: 0.25rem;
   padding: 0.25rem 0.28rem 0.25rem 0.55rem;
   cursor: default;
-  border-radius: 0.25rem;
-  background: var(--tag-background);
+  border-radius: var(--radius-sm);
+  background: var(--surface-chip);
   color: var(--accent-contrast);
   font-size: var(--field-font-size);
   line-height: 1.25;
@@ -79,7 +79,7 @@
   width: 1.15rem;
   height: 1.15rem;
   cursor: pointer;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-sm);
   color: inherit;
 }
 

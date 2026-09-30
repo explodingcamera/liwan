@@ -31,12 +31,12 @@ button.card {
   background: transparent;
 
   &[data-active="true"] {
-    background: var(--metric-button-active-background);
-    border-color: var(--metric-button-border, var(--surface-outline));
+    background: var(--metric-button-active-background, light-dark(transparent, var(--surface-active)));
+    border-color: var(--metric-button-border, var(--border-surface));
   }
 
   &:hover:not([data-active="true"]) {
-    background: var(--metric-button-hover-background);
-    border-color: var(--metric-button-border, var(--surface-outline));
+    background: var(--metric-button-hover-background, light-dark(#f6f6f7, #252c38));
+    border-color: var(--metric-button-border, var(--border-surface));
   }
 }

@@ -29,7 +29,7 @@
 }
 
 .header[data-has-back] .titleGroup h1 {
-  font-size: 1rem;
+  font-size: var(--font-size-lg);
 }
 
 .backButton {
@@ -38,7 +38,7 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   color: var(--text-muted);
 }
 
@@ -62,7 +62,7 @@
 .description {
   max-width: 46rem;
   margin-bottom: 1rem;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   line-height: 1.35;
 }
 
@@ -108,7 +108,7 @@
 
 .label,
 .legend {
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   font-weight: 500;
   line-height: 1.25;
   margin-bottom: 0;
@@ -117,7 +117,7 @@
 .fieldDescription {
   display: block;
   margin: 0;
-  font-size: 0.825rem;
+  font-size: var(--font-size-md);
   line-height: 1.3;
 }
 
@@ -140,7 +140,7 @@
 
 .fieldsetDescription {
   margin-bottom: 0.6rem;
-  font-size: 0.825rem;
+  font-size: var(--font-size-md);
   line-height: 1.3;
 }
 
@@ -167,8 +167,8 @@
   align-items: center;
   padding: 0.13rem;
   border: 1px solid var(--field-border);
-  border-radius: 999px;
-  background: var(--switch-inactive-bg);
+  border-radius: var(--radius-full);
+  background: var(--surface-active);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -193,7 +193,7 @@
 .switchThumb {
   width: 1.05rem;
   height: 1.05rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface);
   box-shadow: 0 1px 3px rgb(0 0 0 / 24%);
   transition: translate 0.15s ease;

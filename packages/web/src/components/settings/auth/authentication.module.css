@@ -11,7 +11,7 @@
 .signInOptions h2,
 .callbackSection h2 {
   margin: 0 0 0.25rem;
-  font-size: 1rem;
+  font-size: var(--font-size-lg);
 }
 
 .signInOptions > p,
@@ -19,7 +19,7 @@
 .callbackSection > p {
   margin: 0 0 0.65rem;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .optionList {
@@ -51,7 +51,7 @@
 .providerFieldset > .internalStatus {
   margin: 0.65rem 0 0;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .providerGrid {
@@ -129,14 +129,14 @@
 
 .providerText strong {
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   font-weight: 500;
 }
 
 .providerText small {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

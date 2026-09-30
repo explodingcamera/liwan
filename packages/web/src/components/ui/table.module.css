@@ -10,7 +10,7 @@
   margin-top: 0.5rem;
   animation: tableLoad 0.3s ease;
   overflow-x: auto;
-  border: 1px solid var(--surface-outline);
+  border: 1px solid var(--border-surface);
   border-radius: var(--radius);
 }
 
@@ -22,13 +22,13 @@
 
 .table {
   width: 100%;
-  background: var(--inset-surface);
+  background: var(--surface-inset);
   border-collapse: separate;
   border-spacing: 0;
   border-radius: var(--radius);
   overflow: hidden;
   margin-bottom: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
 
   th,
   td {
@@ -48,7 +48,7 @@
   }
 
   th {
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--text-muted);
 

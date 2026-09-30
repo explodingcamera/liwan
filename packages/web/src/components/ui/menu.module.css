@@ -18,9 +18,9 @@
   gap: 0.6rem;
   width: 100%;
   padding: 0.45rem 0.6rem;
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
   text-decoration: none;
   cursor: pointer;
 }
@@ -33,7 +33,7 @@
   outline: none;
 }
 .item[data-selected] {
-  background: light-dark(#e8eaf0, #303743);
+  background: var(--surface-active);
 }
 .separator {
   height: 1px;

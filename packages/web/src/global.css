@@ -32,16 +32,16 @@
   }
 
   h1 {
-    font-size: 1.8rem;
+    font-size: var(--font-size-xl);
   }
   h2 {
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
   }
   h3 {
-    font-size: 1.25rem;
+    font-size: var(--font-size-lg);
   }
   h4 {
-    font-size: 1.125rem;
+    font-size: var(--font-size-lg);
   }
 
   a {

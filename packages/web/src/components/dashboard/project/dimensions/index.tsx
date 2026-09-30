@@ -18,6 +18,8 @@ type DimensionProps = {
 	propertyKey?: string;
 	query: ProjectQuery;
 	onSelect: (value: DimensionTableRow) => void;
+	/** Shows a chevron next to each row to open it, e.g. to list a property key's values */
+	onOpen?: (value: DimensionTableRow) => void;
 	onBack?: () => void;
 };
 
@@ -170,7 +172,7 @@ export const DimensionTable = (props: DimensionProps) => {
 								biggest={biggest}
 								selected={isSelected(props.query, props.dimension, d.dimensionValue, props.propertyKey)}
 							>
-								<DimensionLabel dimension={props.dimension} value={d} onSelect={props.onSelect} />
+								<DimensionLabel dimension={props.dimension} value={d} onSelect={props.onSelect} onOpen={props.onOpen} />
 							</DimensionValueBar>
 							<div>{formatMetricVal(d.value, props.query.metric)}</div>
 						</div>
@@ -189,6 +191,7 @@ export const DimensionTable = (props: DimensionProps) => {
 				propertyKey={props.propertyKey}
 				query={props.query}
 				onSelect={props.onSelect}
+				onOpen={props.onOpen}
 				onBack={props.onBack}
 			/>
 		</>
@@ -410,11 +413,28 @@ export const DimensionLabel = ({
 	dimension,
 	value,
 	onSelect,
+	onOpen,
 }: {
 	dimension: Dimension;
 	value: DimensionTableRow;
 	onSelect?: (value: DimensionTableRow) => void;
-}) => dimensionLabels[dimension](value, () => onSelect?.(value));
+	onOpen?: (value: DimensionTableRow) => void;
+}) => (
+	<>
+		{dimensionLabels[dimension](value, () => onSelect?.(value))}
+		{onOpen && (
+			<button
+				type="button"
+				className={styles.openButton}
+				aria-label={`Open ${value.dimensionValue}`}
+				title={`Open ${value.dimensionValue}`}
+				onClick={() => onOpen(value)}
+			>
+				<ChevronRightIcon size={20} />
+			</button>
+		)}
+	</>
+);
 
 export const DimensionValueBar = ({
 	value,
@@ -436,6 +456,10 @@ export const DimensionValueBar = ({
 );
 
 export const isSelected = (query: ProjectQuery, dimension: Dimension, value: string, propertyKey?: string) => {
+	// in the property key list, a key is active while any filter uses it
+	if (dimension === "property" && propertyKey === undefined) {
+		return query.filters.some((filter) => filter.dimension === "property" && filter.key === value);
+	}
 	const selected = getDimensionFilter(dimension, value, propertyKey);
 	return query.filters.some(
 		(filter) =>

@@ -29,11 +29,11 @@
 
 button.metric {
   min-width: 7rem;
-  font-size: 0.8rem;
+  font-size: var(--font-size-sm);
 
   h3 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: var(--font-size-lg);
     font-weight: 500;
     display: inline-flex;
     gap: 0.5rem;
@@ -44,13 +44,13 @@ button.metric {
   h2 {
     color: var(--text-muted);
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--font-size-md);
     font-weight: 500;
     margin-bottom: 0.3rem;
   }
 
   span.change {
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
   }
 

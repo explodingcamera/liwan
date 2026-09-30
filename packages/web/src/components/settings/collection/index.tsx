@@ -80,7 +80,7 @@ export const CollectionSettingsPage = () => {
 	};
 
 	return (
-		<div className={styles.page}>
+		<div>
 			{!settings && !loadError && <LoadingSpinner />}
 			{settings && (
 				<SettingsForm id="collection-settings-form">

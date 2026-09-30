@@ -18,12 +18,14 @@ export const DetailsModal = ({
 	propertyKey,
 	query,
 	onSelect,
+	onOpen,
 	onBack,
 }: {
 	dimension: Dimension;
 	propertyKey?: string;
 	query: ProjectQuery;
 	onSelect?: (value: DimensionTableRow) => void;
+	onOpen?: (value: DimensionTableRow) => void;
 	onBack?: () => void;
 }) => {
 	const { data, biggest, order, isLoading } = useDimension({
@@ -91,7 +93,7 @@ export const DetailsModal = ({
 								biggest={biggest}
 								selected={isSelected(query, dimension, d.dimensionValue, propertyKey)}
 							>
-								<DimensionLabel dimension={dimension} value={d} onSelect={onSelect} />
+								<DimensionLabel dimension={dimension} value={d} onSelect={onSelect} onOpen={onOpen} />
 							</DimensionValueBar>
 							<div>{formatMetricVal(d.value, query.metric)}</div>
 						</div>

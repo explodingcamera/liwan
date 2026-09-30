@@ -48,13 +48,13 @@
 }
 
 .toast[data-tone="success"] {
-  --toast-accent: light-dark(#15803d, #4ade80);
+  --toast-accent: var(--success);
 }
 .toast[data-tone="error"] {
   --toast-accent: var(--danger);
 }
 .toast[data-tone="warning"] {
-  --toast-accent: light-dark(#a16207, #fbbf24);
+  --toast-accent: var(--warning);
 }
 
 .toast::after {
@@ -106,7 +106,7 @@
 
 .indicator {
   width: 0.35rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--toast-accent);
 }
 
@@ -121,7 +121,7 @@
 .title {
   margin: 0;
   color: var(--text-strong);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -129,7 +129,7 @@
 .description {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: var(--font-size-md);
   line-height: 1.35;
 }
 
@@ -142,7 +142,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-muted);
   box-shadow: none;

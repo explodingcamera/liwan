@@ -24,21 +24,21 @@ form.password {
 
 .header {
   display: flex;
-  background-color: var(--inset-surface);
-  border: 1px solid var(--surface-outline);
+  background-color: var(--surface-inset);
+  border: 1px solid var(--border-surface);
   border-radius: var(--radius);
   padding: 1rem;
   align-items: center;
   gap: 0.5rem;
 
   h2 {
-    font-size: 1.3rem;
+    font-size: var(--font-size-lg);
     margin: 0;
   }
 
   p {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--font-size-md);
     color: var(--text-muted);
 
     &[data-loading="true"] {
@@ -69,7 +69,7 @@ form.password {
   }
 
   h2 {
-    font-size: 1.2rem;
+    font-size: var(--font-size-lg);
   }
 }
 

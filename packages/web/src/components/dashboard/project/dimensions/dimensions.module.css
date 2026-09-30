@@ -24,7 +24,7 @@
       cursor: pointer;
       margin-right: auto;
       padding-right: 1.4rem;
-      background: var(--select-chevron) no-repeat right center / 1rem;
+      background: var(--icon-chevron-down) no-repeat right center / 1rem;
       outline: none;
       box-shadow: none;
       font-weight: 600;
@@ -84,7 +84,10 @@
     border-bottom-right-radius: 6px;
   }
 
-  &:hover::after,
+  &:hover::after {
+    background: light-dark(rgb(11 20 56 / 15%), rgb(165 209 255 / 18%));
+  }
+
   &.selected::after {
     background: light-dark(rgb(11 20 56 / 22%), rgb(165 209 255 / 30%));
   }
@@ -116,7 +119,8 @@
 
   .loadingOverlay {
     position: absolute;
-    inset: 0;
+    /* bars sit half their bottom padding above the rows, so cover that too */
+    inset: -0.25rem 0 0;
     z-index: 2;
     display: flex;
     align-items: center;
@@ -198,6 +202,28 @@
   align-items: center;
 }
 
+.openButton {
+  all: unset;
+  display: flex;
+  flex: none;
+  align-items: center;
+  /* large click target, with the icon kept close to the label */
+  height: 1.9rem;
+  padding: 0 0.5rem 0 0.1rem;
+  margin-left: -0.3rem;
+  cursor: pointer;
+  color: var(--text-muted);
+
+  &:hover {
+    color: var(--text-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
 .hostname {
   opacity: 0.7;
   font-size: 0.6rem;
@@ -267,7 +293,7 @@
   &:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
-    border-radius: var(--control-radius);
+    border-radius: var(--radius-control);
   }
 }
 .detailsModal .search {

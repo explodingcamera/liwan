@@ -1,16 +1,18 @@
 import styles from "./dimensions/dimensions.module.css";
 
-import type { Dispatch, SetStateAction } from "react";
+import { type Dispatch, type SetStateAction, useState } from "react";
 
 import type { DimensionFilter } from "@/constants";
 import { dimensionNames, eventMetricName } from "@/constants";
 import { getDimensionFilter, type ProjectQuery } from ".";
 import { Breadcrumb, DimensionTable } from "./dimensions";
 
-const isOpenKeyFilter = (filter: DimensionFilter) =>
-	filter.dimension === "property" && filter.filterType === "is_null" && filter.inversed;
+const usesKey = (filter: DimensionFilter, key: string) => filter.dimension === "property" && filter.key === key;
 
-/** Lists property keys; opening a key filters by `key is set` and lists its values. */
+/**
+ * Lists property keys. Selecting a key filters by `key is set` or clears its filters if it has any,
+ * and its chevron lists the key's values.
+ */
 export const PropertiesCard = ({
 	query,
 	onSelect,
@@ -20,9 +22,14 @@ export const PropertiesCard = ({
 	onSelect: (filter: DimensionFilter) => void;
 	setFilters: Dispatch<SetStateAction<DimensionFilter[]>>;
 }) => {
-	const propertyKey = query.filters.findLast(isOpenKeyFilter)?.key ?? undefined;
-	const closeKey = () =>
-		setFilters((filters) => filters.filter((filter) => !isOpenKeyFilter(filter) || filter.key !== propertyKey));
+	const [propertyKey, setPropertyKey] = useState<string>();
+	const closeKey = () => setPropertyKey(undefined);
+	const toggleKey = (key: string) =>
+		setFilters((filters) =>
+			filters.some((filter) => usesKey(filter, key))
+				? filters.filter((filter) => !usesKey(filter, key))
+				: [...filters, { dimension: "property", key, filterType: "is_null", inversed: true }],
+		);
 
 	return (
 		<article className={styles.card}>
@@ -39,13 +46,11 @@ export const PropertiesCard = ({
 				propertyKey={propertyKey}
 				query={query}
 				onBack={propertyKey ? closeKey : undefined}
+				onOpen={propertyKey ? undefined : (value) => setPropertyKey(value.dimensionValue)}
 				onSelect={(value) =>
 					propertyKey
 						? onSelect(getDimensionFilter("property", value.dimensionValue, propertyKey))
-						: setFilters((filters) => [
-								...filters,
-								{ dimension: "property", key: value.dimensionValue, filterType: "is_null", inversed: true },
-							])
+						: toggleKey(value.dimensionValue)
 				}
 			/>
 		</article>

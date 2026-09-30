@@ -6,7 +6,7 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   font-weight: 500;
   line-height: 1.25;
 }
@@ -23,7 +23,7 @@
   display: block;
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.825rem;
+  font-size: var(--font-size-md);
   line-height: 1.3;
 }
 
@@ -44,7 +44,7 @@
   margin: 0;
   padding: 0.2rem 0.5rem;
   border: 0;
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text);
   box-shadow: none;
@@ -72,8 +72,8 @@
   padding: 0.35rem 0.5rem;
   border: 0;
   background: transparent;
-  color: var(--settings-icon-color);
-  font-size: 0.875rem;
+  color: var(--text-icon);
+  font-size: var(--font-size-md);
   font-weight: 500;
   opacity: 0.78;
   box-shadow: none;
@@ -81,7 +81,7 @@
 
 .addRuleAction button:hover {
   background: var(--surface-hover);
-  color: var(--settings-icon-color);
+  color: var(--text-icon);
   opacity: 1;
 }
 
@@ -109,7 +109,7 @@
   min-height: var(--field-height);
   padding: 0.15rem 0.23rem;
   border: 1px solid var(--field-border);
-  border-radius: var(--control-radius);
+  border-radius: var(--radius-control);
   background-color: var(--field);
   color: var(--text);
 }
@@ -156,10 +156,10 @@
   max-width: 100%;
   gap: 0.25rem;
   padding: 0.25rem 0.28rem 0.25rem 0.55rem;
-  border-radius: 0.25rem;
-  background: var(--tag-background);
+  border-radius: var(--radius-sm);
+  background: var(--surface-chip);
   color: var(--accent-contrast);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   line-height: 1.25;
 }
 
@@ -171,7 +171,7 @@
   width: 1.15rem;
   height: 1.15rem;
   cursor: pointer;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-sm);
   color: inherit;
 }
 
@@ -195,9 +195,9 @@
 
 .ruleCard {
   margin: 0;
-  border: 1px solid var(--surface-outline);
+  border: 1px solid var(--border-surface);
   border-radius: var(--radius);
-  background: var(--inset-surface);
+  background: var(--surface-inset);
   overflow: hidden;
   animation: ruleEnter 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -242,7 +242,7 @@
 
 .ruleHeader strong {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
 }
 
@@ -272,14 +272,14 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--settings-icon-color);
+  color: var(--text-icon);
   opacity: 0.68;
   box-shadow: none;
 }
 
 .ruleActions .iconButton:hover,
 .filterRow .iconButton:hover {
-  color: var(--settings-icon-color);
+  color: var(--text-icon);
   opacity: 1;
 }
 

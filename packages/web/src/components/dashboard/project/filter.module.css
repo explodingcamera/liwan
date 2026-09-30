@@ -36,7 +36,7 @@
   align-items: center;
   gap: 0.4rem;
   white-space: nowrap;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
 }
 
 .inverted input[type="radio"] {
@@ -54,7 +54,7 @@
   padding-right: 0;
 
   span {
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
   }
 
@@ -82,7 +82,7 @@
   }
 
   span {
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     margin: 0;
   }
