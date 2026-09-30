@@ -44,6 +44,7 @@ import { event } from "liwan-tracker";
 await event("signup", {
   endpoint: "https://liwan.example.com/api/event",
   entity: "example",
+  properties: { plan: "pro" },
 });
 ```
 
@@ -87,7 +88,14 @@ export type EventOptions = {
    * Defaults to `true`. Ignored for custom events and in server-side environments.
    */
   exit?: boolean;
+
+  /**
+   * Custom properties to send with the event.
+   */
+  properties?: EventProperties;
 };
+
+export type EventProperties = Record<string, string | number | boolean | null | undefined>;
 
 /**
  * Sends an event to the Liwan API.

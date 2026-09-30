@@ -11,21 +11,27 @@ import { dimensionNames, eventMetricName } from "@/constants";
 import { useDimension } from "@/hooks/api";
 import { cls, formatMetricVal } from "@/utils";
 import type { ProjectQuery } from "..";
-import { DimensionLabel, DimensionValueBar, isSelected } from ".";
+import { Breadcrumb, DimensionLabel, DimensionValueBar, isSelected } from ".";
 
 export const DetailsModal = ({
 	dimension,
+	propertyKey,
 	query,
 	onSelect,
+	onBack,
 }: {
 	dimension: Dimension;
+	propertyKey?: string;
 	query: ProjectQuery;
 	onSelect?: (value: DimensionTableRow) => void;
+	onBack?: () => void;
 }) => {
 	const { data, biggest, order, isLoading } = useDimension({
 		dimension,
+		propertyKey,
 		...query,
 	});
+	const title = propertyKey ?? dimensionNames[dimension];
 
 	const [filter, setFilter] = useState("");
 	const deferredFilter = useDeferredValue(filter);
@@ -41,8 +47,8 @@ export const DetailsModal = ({
 
 	return (
 		<Dialog
-			title={`${dimensionNames[dimension]} by ${eventMetricName(query.metric, query.eventName)}`}
-			description={`Detailed breakdown of ${dimensionNames[dimension]} by ${eventMetricName(query.metric, query.eventName)}.`}
+			title={`${title} by ${eventMetricName(query.metric, query.eventName)}`}
+			description={`Detailed breakdown of ${title} by ${eventMetricName(query.metric, query.eventName)}.`}
 			hideTitle
 			hideDescription
 			autoOverflow
@@ -56,7 +62,11 @@ export const DetailsModal = ({
 		>
 			<div className={styles.dimensionTable} style={{ "--count": data?.length } as React.CSSProperties}>
 				<div className={styles.dimensionHeader}>
-					<div>{dimensionNames[dimension]}</div>
+					{onBack ? (
+						<Breadcrumb parent={dimensionNames[dimension]} title={title} onBack={onBack} />
+					) : (
+						<div>{title}</div>
+					)}
 					<div>{eventMetricName(query.metric, query.eventName)}</div>
 					<Dialog.Close className={styles.detailsClose} aria-label="Close dialog">
 						<XIcon size={20} />
@@ -79,7 +89,7 @@ export const DetailsModal = ({
 							<DimensionValueBar
 								value={d.value}
 								biggest={biggest}
-								selected={isSelected(query, dimension, d.dimensionValue)}
+								selected={isSelected(query, dimension, d.dimensionValue, propertyKey)}
 							>
 								<DimensionLabel dimension={dimension} value={d} onSelect={onSelect} />
 							</DimensionValueBar>

@@ -275,7 +275,7 @@ async fn private_projects() -> Result<()> {
     let res = client
         .get_with_headers("/api/dashboard/projects", vec![("cookie".to_string(), common::cookie_header(&login2))])
         .await;
-    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "visibility": "private", "entities": [], "hiddenMetrics": [], "hiddenDimensions": [], "customEventsDisplay": "auto"}]}));
+    res.assert_json(&json!({"projects": [{"displayName": "Private Project", "id": "private-project", "visibility": "private", "entities": [], "hiddenMetrics": [], "hiddenDimensions": ["property"], "customEventsHidden": true}]}));
 
     Ok(())
 }

@@ -12,7 +12,9 @@ use http::StatusCode;
 use schemars::JsonSchema;
 use url::Url;
 
-use super::event::{ProcessEventRequest, enqueue_events, process_event, validate_process_request};
+use super::event::{
+    ProcessEventRequest, RawEventProperties, enqueue_events, event_properties, process_event, validate_process_request,
+};
 use crate::app::models::AccessPermission;
 use crate::web::{
     RouterState,
@@ -45,6 +47,7 @@ struct BatchEventRequest {
     ip: Option<String>,
     screen_width: Option<String>,
     orientation: Option<String>,
+    properties: Option<RawEventProperties>,
 }
 
 #[derive(serde::Serialize, JsonSchema)]
@@ -135,6 +138,7 @@ fn prepare_batch_event(entity_id: &str, event: BatchEventRequest) -> Result<Proc
     if created_at > Utc::now() + chrono::Duration::seconds(MAX_FUTURE_SECONDS) {
         anyhow::bail!("timestamp is too far in the future");
     }
+    let properties = event_properties(event.properties)?;
     let request = ProcessEventRequest {
         entity_id: entity_id.to_string(),
         name: event.name,
@@ -142,6 +146,7 @@ fn prepare_batch_event(entity_id: &str, event: BatchEventRequest) -> Result<Proc
         referrer: event.referrer,
         screen_width: event.screen_width,
         orientation: event.orientation,
+        properties,
         created_at,
         user_agent: event.user_agent,
         ip,

@@ -14,6 +14,8 @@
   }
 
   body {
+    /* body is a flex item of html, so without this wide tables widen the whole page instead of scrolling */
+    min-width: 0;
     background: var(--page);
     color: var(--text);
   }
@@ -96,5 +98,5 @@
 :where(input, select, textarea):focus-visible {
   outline: none;
   border-color: var(--focus);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 18%, transparent);
+  box-shadow: var(--field-focus-ring);
 }

@@ -2,7 +2,7 @@ import styles from "./dimensions.module.css";
 
 import { useEffect, useState } from "react";
 import { Tabs } from "@base-ui/react/tabs";
-import { LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon } from "lucide-react";
+import { ChevronRightIcon, LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon, TagIcon } from "lucide-react";
 
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { Dimension, DimensionTableRow } from "@/constants";
@@ -15,8 +15,10 @@ import { DetailsModal } from "./modal";
 
 type DimensionProps = {
 	dimension: Dimension;
+	propertyKey?: string;
 	query: ProjectQuery;
 	onSelect: (value: DimensionTableRow) => void;
+	onBack?: () => void;
 };
 
 export const DimensionCard = (props: DimensionProps) => {
@@ -143,6 +145,7 @@ export const DimensionTabs = ({
 export const DimensionTable = (props: DimensionProps) => {
 	const { data, biggest, order, isLoading } = useDimension({
 		dimension: props.dimension,
+		propertyKey: props.propertyKey,
 		...props.query,
 	});
 	const dataTruncated = data?.slice(0, 6);
@@ -165,7 +168,7 @@ export const DimensionTable = (props: DimensionProps) => {
 							<DimensionValueBar
 								value={d.value}
 								biggest={biggest}
-								selected={isSelected(props.query, props.dimension, d.dimensionValue)}
+								selected={isSelected(props.query, props.dimension, d.dimensionValue, props.propertyKey)}
 							>
 								<DimensionLabel dimension={props.dimension} value={d} onSelect={props.onSelect} />
 							</DimensionValueBar>
@@ -181,12 +184,28 @@ export const DimensionTable = (props: DimensionProps) => {
 					</div>
 				)}
 			</div>
-			<DetailsModal dimension={props.dimension} query={props.query} onSelect={props.onSelect} />
+			<DetailsModal
+				dimension={props.dimension}
+				propertyKey={props.propertyKey}
+				query={props.query}
+				onSelect={props.onSelect}
+				onBack={props.onBack}
+			/>
 		</>
 	);
 };
 
-const DimensionValueButton = ({ children, onSelect }: { children: string; onSelect?: () => void }) => (
+export const Breadcrumb = ({ parent, title, onBack }: { parent: string; title: string; onBack: () => void }) => (
+	<div className={styles.breadcrumb}>
+		<button type="button" onClick={onBack}>
+			{parent}
+		</button>
+		<ChevronRightIcon size={16} aria-hidden="true" />
+		<span title={title}>{title}</span>
+	</div>
+);
+
+export const DimensionValueButton = ({ children, onSelect }: { children: string; onSelect?: () => void }) => (
 	<button type="button" className={styles.dimensionItemSelect} onClick={onSelect}>
 		<span title={children}>{children}</span>
 	</button>
@@ -353,6 +372,12 @@ const dimensionLabels: Record<Dimension, (value: DimensionTableRow, onSelect: ()
 			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
 		</>
 	),
+	property: (value, onSelect) => (
+		<>
+			<TagIcon size={16} />
+			<DimensionValueButton onSelect={onSelect}>{value.dimensionValue}</DimensionValueButton>
+		</>
+	),
 	screen_width: (value, onSelect) => (
 		<>
 			<MonitorIcon size={16} />
@@ -410,11 +435,12 @@ export const DimensionValueBar = ({
 	</div>
 );
 
-export const isSelected = (query: ProjectQuery, dimension: Dimension, value: string) => {
-	const selected = getDimensionFilter(dimension, value);
+export const isSelected = (query: ProjectQuery, dimension: Dimension, value: string, propertyKey?: string) => {
+	const selected = getDimensionFilter(dimension, value, propertyKey);
 	return query.filters.some(
 		(filter) =>
 			filter.dimension === selected.dimension &&
+			filter.key === selected.key &&
 			filter.filterType === selected.filterType &&
 			filter.value === selected.value &&
 			!filter.inversed,

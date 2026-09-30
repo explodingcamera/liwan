@@ -69,13 +69,12 @@ async fn test_event() -> Result<()> {
 #[tokio::test]
 async fn custom_event_reports_respect_display_setting() -> Result<()> {
     let app = common::app();
-    let (queues, _) = common::events();
+    let (queues, mut rx) = common::events();
     let client = common::TestClient::new(app.clone(), queues);
     app.seed_database(0)?;
 
     let now = chrono::Utc::now();
-    let conn = app.events_conn()?;
-    conn.execute(
+    app.events_conn()?.execute(
         "insert into events (entity_id, visitor_group_id, event, created_at, path) values (?, ?, ?, ?, ?)",
         duckdb::params!["entity-1", "visitor-1", "pageview", now, "/home"],
     )?;
@@ -83,14 +82,19 @@ async fn custom_event_reports_respect_display_setting() -> Result<()> {
     let report = || json!({ "range": range, "filters": [] });
     let endpoint = "/api/dashboard/project/public-project/custom-events";
 
-    let response = client.post(endpoint, report()).await;
-    response.assert_status_success();
-    assert_eq!(response.json::<serde_json::Value>()["hasCustomEvents"], false);
+    let project = || async { client.get("/api/dashboard/project/public-project").await.json::<serde_json::Value>() };
+    assert_eq!(project().await["customEventsHidden"], true);
 
-    conn.execute(
-        "insert into events (entity_id, visitor_group_id, event, created_at, path) values (?, ?, ?, ?, ?)",
-        duckdb::params!["entity-1", "visitor-1", "signup", now, "/signup"],
-    )?;
+    client
+        .post_with_headers(
+            "/api/event",
+            json!({ "entity_id": "entity-1", "name": "signup", "url": "https://example.com/signup" }),
+            vec![("user-agent".to_string(), "test".to_string())],
+        )
+        .await
+        .assert_status_success();
+    app.events.append(std::iter::once(rx.events.recv().await.expect("event should be queued")))?;
+    assert_eq!(project().await["customEventsHidden"], false);
     let response = client.post(endpoint, report()).await;
     response.assert_status_success();
     let body: serde_json::Value = response.json();
@@ -264,7 +268,7 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
         .post_with_headers(
             "/api/v1/events",
             json!({ "entityId": "server", "events": [
-                { "name": "pageview", "url": "https://example.com/docs", "createdAt": created_at, "ip": "8.8.8.8" },
+                { "name": "pageview", "url": "https://example.com/docs", "createdAt": created_at, "ip": "8.8.8.8", "properties": { "plan": "pro", "seats": 5 } },
                 { "name": "pageview", "url": "https://example.com/bot", "userAgent": "Googlebot" }
             ] }),
             headers(),
@@ -276,6 +280,8 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
     let event = receivers.events.recv().await.expect("event should be queued");
     assert_eq!(event.entity_id, "server");
     assert_eq!(event.created_at.to_rfc3339(), created_at);
+    assert_eq!(event.properties.get("plan").map(String::as_str), Some("pro"));
+    assert_eq!(event.properties.get("seats").map(String::as_str), Some("5"));
 
     let invalid = client
         .post_with_headers(
@@ -370,5 +376,61 @@ async fn full_queue_rejects_the_complete_batch() -> Result<()> {
 
     response.assert_status(http::StatusCode::SERVICE_UNAVAILABLE);
     assert!(receiver.try_recv().is_err());
+    Ok(())
+}
+
+#[tokio::test]
+async fn event_properties_are_reported() -> Result<()> {
+    let app = common::app();
+    let (tx, mut rx) = common::events();
+    let client = common::TestClient::new(app.clone(), tx);
+    app.seed_database(0)?;
+    let user_agent = || vec![("user-agent".to_string(), "test".to_string())];
+
+    client
+        .post_with_headers(
+            "/api/event",
+            json!({
+                "entity_id": "entity-1",
+                "name": "pageview",
+                "url": "https://example.com/",
+                "properties": { "plan": "pro", "beta": true, "unset": null }
+            }),
+            user_agent(),
+        )
+        .await
+        .assert_status_success();
+    let event = tokio::time::timeout(std::time::Duration::from_secs(1), rx.events.recv())
+        .await
+        .expect("event should be received")
+        .expect("event channel should not be closed");
+    app.events.append(std::iter::once(event))?;
+
+    let now = chrono::Utc::now();
+    let range = json!({ "start": now - chrono::Duration::hours(1), "end": now + chrono::Duration::hours(1) });
+    let dimension = |property_key: Option<&str>| json!({ "range": range, "filters": [], "metric": "views", "dimension": "property", "propertyKey": property_key });
+    let response = client.post("/api/dashboard/project/public-project/dimension", dimension(None)).await;
+    response.assert_status_success();
+    let body: serde_json::Value = response.json();
+    assert_eq!(body["data"][0]["dimensionValue"], "beta");
+    assert_eq!(body["data"][1]["dimensionValue"], "plan");
+
+    let response = client.post("/api/dashboard/project/public-project/dimension", dimension(Some("plan"))).await;
+    response.assert_status_success();
+    let body: serde_json::Value = response.json();
+    assert_eq!(body["data"][0]["dimensionValue"], "pro");
+    assert_eq!(body["data"][0]["value"], 1.0);
+
+    let filters = json!([{ "dimension": "property", "key": "plan", "filterType": "equal", "value": "free" }]);
+    let response =
+        client.post("/api/dashboard/project/public-project/stats", json!({ "range": range, "filters": filters })).await;
+    response.assert_status_success();
+    assert_eq!(response.json::<serde_json::Value>()["stats"]["totalViews"], 0);
+
+    let missing_key = json!([{ "dimension": "property", "filterType": "equal", "value": "free" }]);
+    client
+        .post("/api/dashboard/project/public-project/stats", json!({ "range": range, "filters": missing_key }))
+        .await
+        .assert_status_bad_request();
     Ok(())
 }

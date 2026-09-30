@@ -153,6 +153,8 @@ struct DimensionRequest {
     filters: Vec<DimensionFilter>,
     metric: Metric,
     dimension: Dimension,
+    /// Property key whose values are listed; without it, property keys are listed
+    property_key: Option<String>,
     event: Option<String>,
 }
 
@@ -289,6 +291,13 @@ async fn project_detailed_handler(
     reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
     let collection = app.settings.resolved_for_entities(&entities);
     let event = report_event(req.event.as_deref(), &req.filters, Some(req.metric), display.custom_events_display())?;
+    match (req.dimension, req.property_key.as_deref()) {
+        (Dimension::Property, Some(key)) => {
+            reports::validate_property_key(key).http_status(StatusCode::BAD_REQUEST)?;
+        }
+        (_, Some(_)) => http_bail!(StatusCode::BAD_REQUEST, "Only property reports can have a property key"),
+        _ => {}
+    }
     if event != "pageview" && matches!(req.dimension, Dimension::UrlEntry | Dimension::UrlExit) {
         http_bail!(StatusCode::BAD_REQUEST, "Entry and exit pages are not supported for custom events")
     }
@@ -296,7 +305,12 @@ async fn project_detailed_handler(
     if display.is_metric_hidden(&collection, req.metric) {
         http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
     }
-    if display.is_dimension_hidden(&collection, req.dimension) {
+    let (events, entity_ids) = (app.app.events.clone(), entities.clone());
+    let data = spawn_blocking(move || events.custom_data(&entity_ids))
+        .await
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?
+        .http_status(StatusCode::INTERNAL_SERVER_ERROR)?;
+    if display.is_dimension_hidden(&collection, data, req.dimension) {
         http_bail!(StatusCode::BAD_REQUEST, "Dimension is hidden for this project")
     }
 
@@ -308,6 +322,7 @@ async fn project_detailed_handler(
             &event,
             &req.range,
             &req.dimension,
+            req.property_key.as_deref(),
             &req.filters,
             &req.metric,
             max_results,

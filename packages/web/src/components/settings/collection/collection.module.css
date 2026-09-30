@@ -243,25 +243,10 @@
   padding: 0.32rem 0.55rem;
 }
 
-.prune {
-  margin-top: 1.2rem;
-  margin-bottom: 0;
-}
-
-.prune p {
-  margin-bottom: 0.5rem;
-}
-
 .pruneActions {
   display: flex;
-  justify-content: flex-end;
+  flex: none;
   gap: 0.6rem;
-  margin-bottom: 0.5rem;
-}
-
-.pruneActions button {
-  width: fit-content;
-  padding: 0.45rem 0.75rem;
 }
 
 @media (max-width: 700px) {
@@ -290,10 +275,6 @@
 
   .hostnameInput button,
   .hostnameRow button {
-    width: 100%;
-  }
-
-  .pruneActions button {
     width: 100%;
   }
 }

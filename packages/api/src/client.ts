@@ -6,6 +6,7 @@ export type EventMetadata = {
 	ip?: string;
 	screenWidth?: string;
 	orientation?: string;
+	properties?: Record<string, string | number | boolean | null>;
 };
 
 type QueuedEvent = Omit<EventMetadata, "createdAt"> & { entityId: string; name: string; createdAt: string };

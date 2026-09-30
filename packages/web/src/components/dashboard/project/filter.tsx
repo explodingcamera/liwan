@@ -27,6 +27,7 @@ export const SelectFilters = ({
 			...value,
 			{
 				dimension: filter.dimension as DimensionFilter["dimension"],
+				key: filter.key,
 				filterType: filter.filterType,
 				value: filter.value,
 				inversed: filter.inversed ?? false,
@@ -51,7 +52,7 @@ export const SelectFilters = ({
 			{value.map((filter, i) => (
 				<article className={styles.filter} key={i}>
 					<div className={styles.filterField}>
-						<span>{dimensionNames[filter.dimension]}</span>
+						<span>{filter.dimension === "property" ? filter.key : dimensionNames[filter.dimension]}</span>
 						<span className={styles.filterType}>
 							{filterOptions[filter.dimension]?.displayType?.(filter) ??
 								(filter.inversed ? filterNamesInverted[filter.filterType] : filterNames[filter.filterType])}
@@ -81,6 +82,7 @@ export const SelectFilters = ({
 
 export type FilterOption = {
 	label: string;
+	hasKey?: boolean;
 	filterTypes?: readonly FilterType[];
 	invertable?: boolean;
 	custom?: boolean;
@@ -166,6 +168,17 @@ export const filterOptions: Record<string, FilterOption> = {
 		invertable: true,
 		filterTypes: ["equal", "contains"],
 	},
+	property: {
+		label: "Property",
+		hasKey: true,
+		invertable: true,
+		filterTypes: ["equal", "contains", "starts_with", "ends_with", "is_null"],
+		displayType: (filter) => {
+			if (filter.filterType === "is_null") return filter.inversed ? "is set" : "is not set";
+			if (filter.filterType === "equal") return filter.inversed ? "is not" : "is";
+			return filter.inversed ? filterNamesInverted[filter.filterType] : filterNames[filter.filterType];
+		},
+	},
 	mobile: {
 		label: dimensionNames.mobile,
 		custom: true,
@@ -195,6 +208,7 @@ const displayFilters = Object.keys(filterOptions).filter(
 
 export type GenericFilter = {
 	dimension: string;
+	key?: string;
 	filterType: FilterType;
 	value?: string | null;
 	inversed?: boolean;
@@ -242,8 +256,10 @@ export const FilterDialog = ({
 			return;
 
 		const value = data.get("value");
+		const key = data.get("key");
 		onAdd({
 			dimension: selectedDimension,
+			key: filter.hasKey && typeof key === "string" ? key.trim() : undefined,
 			inversed: filter.invertable && data.get("show-matches") === "inverted",
 			filterType: filterType as FilterType,
 			value: typeof value === "string" ? value : null,
@@ -281,6 +297,13 @@ export const FilterDialog = ({
 				</label>
 
 				{filter.custom && filter.render?.()}
+
+				{filter.hasKey && (
+					<label>
+						Key
+						<input type="text" name="key" required maxLength={64} pattern=".*\S.*" />
+					</label>
+				)}
 
 				{!filter.custom && (
 					<div className={styles.formInvertable}>

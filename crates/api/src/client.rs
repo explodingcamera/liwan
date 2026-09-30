@@ -191,6 +191,7 @@ impl Future for Worker {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 enum Message {
     Event(Arc<str>, Event),
     Flush(Sender<Result<(), Error>>),

@@ -80,8 +80,18 @@ fn benchmark_reports(c: &mut Criterion) {
                 &metric,
                 |b, metric| {
                     b.iter(|| {
-                        reports::dimension_report(&conn, &entities, "pageview", &range, &dimension, &[], metric, 1000)
-                            .expect("dimension_report failed")
+                        reports::dimension_report(
+                            &conn,
+                            &entities,
+                            "pageview",
+                            &range,
+                            &dimension,
+                            None,
+                            &[],
+                            metric,
+                            1000,
+                        )
+                        .expect("dimension_report failed")
                     });
                 },
             );

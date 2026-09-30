@@ -37,6 +37,25 @@ pub fn validate_request(range: &DateRange, filters: &[DimensionFilter], limits: 
     {
         bail!("Report filter values cannot exceed {} bytes", limits.report_max_filter_value_bytes);
     }
+    for filter in filters {
+        match (filter.dimension, filter.key.as_deref()) {
+            (Dimension::Property, Some(key)) => validate_property_key(key)?,
+            (Dimension::Property, None) => bail!("Property filters require a key"),
+            (_, Some(_)) => bail!("Only property filters can have a key"),
+            (_, None) => {}
+        }
+    }
+
+    Ok(())
+}
+
+const MAX_PROPERTY_KEY_CHARS: usize = 64;
+
+/// Validate a custom property key.
+pub fn validate_property_key(key: &str) -> Result<()> {
+    if key.is_empty() || key.chars().count() > MAX_PROPERTY_KEY_CHARS {
+        bail!("Property keys must be between 1 and {MAX_PROPERTY_KEY_CHARS} characters");
+    }
 
     Ok(())
 }
@@ -155,6 +174,8 @@ pub enum Dimension {
     ScreenWidth,
     /// Screen orientation
     Orientation,
+    /// Custom property keys, or the values of one key when a property key is given
+    Property,
 }
 
 impl Display for Dimension {
@@ -178,6 +199,7 @@ impl Display for Dimension {
             Self::UtmTerm => "utm_term",
             Self::ScreenWidth => "screen_width",
             Self::Orientation => "orientation",
+            Self::Property => "property",
         })
     }
 }
@@ -204,6 +226,7 @@ impl Dimension {
             Self::UtmTerm,
             Self::ScreenWidth,
             Self::Orientation,
+            Self::Property,
         ]
     }
 }
@@ -243,6 +266,8 @@ pub struct ReportStats {
 #[serde(rename_all = "camelCase")]
 pub struct DimensionFilter {
     pub(super) dimension: Dimension,
+    /// Property key, required for property filters
+    pub(super) key: Option<String>,
     pub(super) filter_type: FilterType,
     pub(super) inversed: Option<bool>,
     pub(super) strict: Option<bool>,
@@ -268,6 +293,7 @@ mod tests {
     fn filter(value: Option<String>) -> DimensionFilter {
         DimensionFilter {
             dimension: Dimension::Path,
+            key: None,
             filter_type: FilterType::Equal,
             inversed: None,
             strict: None,

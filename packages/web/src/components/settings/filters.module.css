@@ -106,16 +106,21 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
-  min-height: 2.15rem;
-  padding: 0.15rem 0.2rem;
+  min-height: var(--field-height);
+  padding: 0.15rem 0.23rem;
   border: 1px solid var(--field-border);
   border-radius: var(--control-radius);
   background-color: var(--field);
   color: var(--text);
 }
 
+.hostnameBox:hover {
+  border-color: var(--field-border-hover);
+}
+
 .hostnameBox:focus-within {
   border-color: var(--focus);
+  box-shadow: var(--field-focus-ring);
 }
 
 .hostnameBox input {
@@ -123,7 +128,7 @@
   min-width: 6rem;
   height: 1.5rem;
   min-height: 1.5rem;
-  font-size: 0.9rem;
+  font-size: var(--field-font-size);
   margin: 0;
   padding: 0 0.25rem;
   border: 0;
@@ -132,10 +137,6 @@
   box-shadow: none;
   outline: none;
   appearance: none;
-}
-
-.hostnameBox:has(.hostnameChip) input {
-  padding-left: 0;
 }
 
 .hostnameBox input:focus,

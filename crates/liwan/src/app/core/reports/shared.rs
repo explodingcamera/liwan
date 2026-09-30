@@ -15,6 +15,10 @@ pub(super) fn build_filter_clause(filters: &[DimensionFilter]) -> Result<(String
     let filter_clauses = filters
 		.iter()
 		.map(|filter| {
+			if filter.dimension == Dimension::Property {
+				params.push(filter.key.clone());
+			}
+
 			let filter_value = match (filter.value.clone(), filter.filter_type, filter.inversed.unwrap_or(false)) {
 				(Some(value), filter_type, inversed) => {
 					params.push(value);
@@ -83,6 +87,7 @@ pub(super) fn build_filter_clause(filters: &[DimensionFilter]) -> Result<(String
 				Dimension::UtmTerm => format!("utm_term {filter_value}"),
 				Dimension::ScreenWidth => format!("screen_width {filter_value}"),
 				Dimension::Orientation => format!("orientation {filter_value}"),
+				Dimension::Property => format!("map_extract_value(properties, ?) {filter_value}"),
 			})
 		})
 		.collect::<Result<Vec<String>>>()?;

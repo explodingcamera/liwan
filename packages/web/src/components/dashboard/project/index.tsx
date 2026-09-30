@@ -16,6 +16,7 @@ import { SelectFilters } from "./filter";
 import { LineGraph } from "./graph";
 import { SelectMetrics } from "./metric";
 import { ProjectHeader } from "./project-header";
+import { PropertiesCard } from "./properties";
 import { SelectRange } from "./range";
 
 const Worldmap = lazy(() => import("./worldmap").then((module) => ({ default: module.Worldmap })));
@@ -27,7 +28,9 @@ export type ProjectQuery = {
 	eventName: string;
 };
 
-export const getDimensionFilter = (dimension: Dimension, value: string): DimensionFilter => {
+export const getDimensionFilter = (dimension: Dimension, value: string, propertyKey?: string): DimensionFilter => {
+	if (dimension === "property") return { dimension, key: propertyKey, filterType: "equal", value };
+
 	if (dimension === "city")
 		// remove the first two characters from the dimension value
 		// which are the country code
@@ -131,7 +134,9 @@ export const Project = () => {
 
 	const toggleFilter = useCallback(
 		(filter: DimensionFilter) => {
-			const index = filters.findIndex((f) => f.dimension === filter.dimension && f.filterType === filter.filterType);
+			const index = filters.findIndex(
+				(f) => f.dimension === filter.dimension && f.key === filter.key && f.filterType === filter.filterType,
+			);
 			if (index === -1) {
 				setFilters([...filters, filter]);
 			} else if (filters[index].value !== filter.value || filters[index].inversed || filters[index].strict) {
@@ -209,7 +214,7 @@ export const Project = () => {
 					onClearEvent={() => selectEvent("pageview")}
 					value={visibleFilters}
 					onChange={setFilters}
-					dimensions={dimensions.filter(
+					dimensions={[...dimensions, "property" as const].filter(
 						(dimension) =>
 							!project.hiddenDimensions.includes(dimension) &&
 							(eventName === "pageview" || (dimension !== "url_entry" && dimension !== "url_exit")),
@@ -249,14 +254,10 @@ export const Project = () => {
 				{activeMetric && deviceDimensions.length > 0 && (
 					<DimensionDropdownCard dimensions={deviceDimensions} query={query} onSelect={onSelectDimRow} />
 				)}
-				<CustomEventsCard
-					projectId={project.id}
-					range={range}
-					filters={visibleFilters}
-					display={project.customEventsDisplay}
-					selectedEvent={eventName}
-					onSelectEvent={selectEvent}
-				/>
+				<CustomEventsCard query={query} onSelectEvent={selectEvent} />
+				{activeMetric && !project.hiddenDimensions.includes("property") && (
+					<PropertiesCard query={query} onSelect={toggleFilter} setFilters={setFilters} />
+				)}
 			</div>
 		</div>
 	);

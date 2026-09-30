@@ -2,7 +2,7 @@ import dialogStyles from "./dialogs.module.css";
 import styles from "./settings.module.css";
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDaysIcon, ChevronDownIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { CalendarDaysIcon, PlusIcon, SettingsIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
@@ -126,9 +126,9 @@ export const ApiKeys = () => {
 				return (
 					<span>
 						{expiration <= new Date() ? (
-							<span className={styles.apiKeyExpired}>Expired on {expiration.toLocaleString()}</span>
+							<span className={styles.apiKeyExpired}>Expired on {expiration.toLocaleDateString()}</span>
 						) : (
-							expiration.toLocaleString()
+							expiration.toLocaleDateString()
 						)}
 					</span>
 				);
@@ -203,18 +203,15 @@ export const ApiKeys = () => {
 						<div className={styles.apiKeyAccessGrid}>
 							<div className={styles.apiKeyAccessRow}>
 								<SettingsField label="Entities" description="Direct access to entities." htmlFor="create-entity-access">
-									<div className={styles.apiKeySelect}>
-										<select
-											id="create-entity-access"
-											value={entityAccess}
-											onChange={(event) => setForm({ ...form, entityAccess: event.currentTarget.value as AccessScope })}
-										>
-											<option value="none">No entities</option>
-											<option value="selected">Selected entities</option>
-											<option value="all">All entities</option>
-										</select>
-										<ChevronDownIcon size={16} aria-hidden="true" />
-									</div>
+									<select
+										id="create-entity-access"
+										value={entityAccess}
+										onChange={(event) => setForm({ ...form, entityAccess: event.currentTarget.value as AccessScope })}
+									>
+										<option value="none">No entities</option>
+										<option value="selected">Selected entities</option>
+										<option value="all">All entities</option>
+									</select>
 								</SettingsField>
 								{entityAccess === "selected" && (
 									<Tags
@@ -234,20 +231,15 @@ export const ApiKeys = () => {
 									description="Follows project membership."
 									htmlFor="create-project-access"
 								>
-									<div className={styles.apiKeySelect}>
-										<select
-											id="create-project-access"
-											value={projectAccess}
-											onChange={(event) =>
-												setForm({ ...form, projectAccess: event.currentTarget.value as AccessScope })
-											}
-										>
-											<option value="none">No projects</option>
-											<option value="selected">Selected projects</option>
-											<option value="all">All projects</option>
-										</select>
-										<ChevronDownIcon size={16} aria-hidden="true" />
-									</div>
+									<select
+										id="create-project-access"
+										value={projectAccess}
+										onChange={(event) => setForm({ ...form, projectAccess: event.currentTarget.value as AccessScope })}
+									>
+										<option value="none">No projects</option>
+										<option value="selected">Selected projects</option>
+										<option value="all">All projects</option>
+									</select>
 								</SettingsField>
 								{projectAccess === "selected" && (
 									<Tags
@@ -289,7 +281,7 @@ export const ApiKeys = () => {
 						</SettingsFieldset>
 					</div>
 					<SettingsField label="Expiration" htmlFor="create-key-expiration">
-						<div className={`${styles.apiKeySelect} ${styles.apiKeyExpirationSelect}`}>
+						<div className={styles.apiKeyExpirationSelect}>
 							<CalendarDaysIcon size={16} aria-hidden="true" />
 							<select
 								id="create-key-expiration"
@@ -302,7 +294,6 @@ export const ApiKeys = () => {
 									</option>
 								))}
 							</select>
-							<ChevronDownIcon size={16} aria-hidden="true" />
 						</div>
 					</SettingsField>
 					<div className="action-row">
@@ -449,30 +440,23 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 						<div className={styles.apiKeyAccessGrid}>
 							<div className={styles.apiKeyAccessRow}>
 								<SettingsField label="Entities" description="Direct access to entities." htmlFor="edit-entity-access">
-									<div className={styles.apiKeySelect}>
-										<select
-											id="edit-entity-access"
-											value={entityAccess}
-											onChange={(event) => {
-												const next = event.currentTarget.value as AccessScope;
-												setForm({ ...form, entityAccess: next });
-												save({
-													...key,
-													entities:
-														next === "all"
-															? "all"
-															: next === "selected"
-																? selectedEntities.map((tag) => tag.value)
-																: [],
-												});
-											}}
-										>
-											<option value="none">No entities</option>
-											<option value="selected">Selected entities</option>
-											<option value="all">All entities</option>
-										</select>
-										<ChevronDownIcon size={16} aria-hidden="true" />
-									</div>
+									<select
+										id="edit-entity-access"
+										value={entityAccess}
+										onChange={(event) => {
+											const next = event.currentTarget.value as AccessScope;
+											setForm({ ...form, entityAccess: next });
+											save({
+												...key,
+												entities:
+													next === "all" ? "all" : next === "selected" ? selectedEntities.map((tag) => tag.value) : [],
+											});
+										}}
+									>
+										<option value="none">No entities</option>
+										<option value="selected">Selected entities</option>
+										<option value="all">All entities</option>
+									</select>
 								</SettingsField>
 								{entityAccess === "selected" && (
 									<Tags
@@ -496,30 +480,23 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 							</div>
 							<div className={styles.apiKeyAccessRow}>
 								<SettingsField label="Projects" description="Follows project membership." htmlFor="edit-project-access">
-									<div className={styles.apiKeySelect}>
-										<select
-											id="edit-project-access"
-											value={projectAccess}
-											onChange={(event) => {
-												const next = event.currentTarget.value as AccessScope;
-												setForm({ ...form, projectAccess: next });
-												save({
-													...key,
-													projects:
-														next === "all"
-															? "all"
-															: next === "selected"
-																? selectedProjects.map((tag) => tag.value)
-																: [],
-												});
-											}}
-										>
-											<option value="none">No projects</option>
-											<option value="selected">Selected projects</option>
-											<option value="all">All projects</option>
-										</select>
-										<ChevronDownIcon size={16} aria-hidden="true" />
-									</div>
+									<select
+										id="edit-project-access"
+										value={projectAccess}
+										onChange={(event) => {
+											const next = event.currentTarget.value as AccessScope;
+											setForm({ ...form, projectAccess: next });
+											save({
+												...key,
+												projects:
+													next === "all" ? "all" : next === "selected" ? selectedProjects.map((tag) => tag.value) : [],
+											});
+										}}
+									>
+										<option value="none">No projects</option>
+										<option value="selected">Selected projects</option>
+										<option value="all">All projects</option>
+									</select>
 								</SettingsField>
 								{projectAccess === "selected" && (
 									<Tags
@@ -637,7 +614,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 			>
 				<form onSubmit={regenerate}>
 					<SettingsField label="Expiration" htmlFor="regenerate-key-expiration">
-						<div className={`${styles.apiKeySelect} ${styles.apiKeyExpirationSelect}`}>
+						<div className={styles.apiKeyExpirationSelect}>
 							<CalendarDaysIcon size={16} aria-hidden="true" />
 							<select
 								id="regenerate-key-expiration"
@@ -650,7 +627,6 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 									</option>
 								))}
 							</select>
-							<ChevronDownIcon size={16} aria-hidden="true" />
 						</div>
 					</SettingsField>
 					<div className="action-row">

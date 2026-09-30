@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -63,6 +64,8 @@ pub struct Event {
     pub(crate) screen_width: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) orientation: Option<String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) properties: BTreeMap<String, String>,
 }
 
 impl Event {
@@ -77,6 +80,7 @@ impl Event {
             user_agent: None,
             screen_width: None,
             orientation: None,
+            properties: BTreeMap::new(),
         }
     }
 
@@ -103,6 +107,16 @@ impl Event {
     /// Adds a referrer.
     pub fn referrer(mut self, referrer: impl Into<String>) -> Self {
         self.referrer = Some(referrer.into());
+        self
+    }
+
+    /// Adds a custom property.
+    ///
+    /// ```
+    /// let event = liwan_api::Event::new("signup", "https://example.com/signup").property("plan", "pro");
+    /// ```
+    pub fn property(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.properties.insert(key.into(), value.into());
         self
     }
 }

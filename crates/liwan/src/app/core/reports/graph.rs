@@ -254,6 +254,7 @@ mod tests {
             utm_term: None,
             screen_width: None,
             orientation: None,
+            properties: Default::default(),
             track_sessions: true,
         }
     }

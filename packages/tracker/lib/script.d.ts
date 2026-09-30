@@ -4,6 +4,7 @@ declare global {
     __liwan_loaded?: boolean;
   }
 }
+export type EventProperties = Record<string, string | number | boolean | null | undefined>;
 export type EventOptions = {
   /**
    * The URL of the page where the event occurred.
@@ -37,6 +38,10 @@ export type EventOptions = {
    * Defaults to `true`. Ignored for custom events and in server-side environments.
    */
   exit?: boolean;
+  /**
+   * Custom properties to send with the event.
+   */
+  properties?: EventProperties;
 };
 /**
  * Sends an event to the Liwan API.

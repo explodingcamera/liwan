@@ -72,13 +72,24 @@
 ) {
   display: block;
   width: 100%;
-  min-height: 2.15rem;
-  padding: 0.45rem 0.6rem;
+  min-height: var(--field-height);
+  padding: var(--field-padding);
   border: 1px solid var(--field-border);
   border-radius: var(--control-radius);
   background: var(--field);
   color: var(--text);
-  line-height: 1.35;
+  font-size: var(--field-font-size);
+  line-height: var(--field-line-height);
+}
+/* browsers ignore line-height on selects, so size them explicitly */
+:where(select) {
+  height: var(--field-height);
+  appearance: none;
+  padding-right: 2.2rem;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 1rem;
 }
 :where(input, select, textarea):disabled {
   opacity: 0.55;

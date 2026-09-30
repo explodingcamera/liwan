@@ -15,6 +15,7 @@ pub fn dimension_report(
     event: &str,
     range: &DateRange,
     dimension: &Dimension,
+    property_key: Option<&str>,
     filters: &[DimensionFilter],
     metric: &Metric,
     max_results: usize,
@@ -53,6 +54,12 @@ pub fn dimension_report(
         Dimension::UtmTerm => ("utm_term", None),
         Dimension::ScreenWidth => ("screen_width", None),
         Dimension::Orientation => ("orientation", None),
+        Dimension::Property => match property_key {
+            None => ("unnest(map_keys(properties))", Some("properties is not null".to_string())),
+            Some(_) => {
+                ("map_extract_value(properties, ?)", Some("map_extract_value(properties, ?) is not null".to_string()))
+            }
+        },
     };
     let filters_sql = match (filters_sql.is_empty(), dimension_scope_sql) {
         (true, Some(scope)) => format!("and ({scope})"),
@@ -60,11 +67,13 @@ pub fn dimension_report(
         (_, None) => filters_sql,
     };
 
+    params.extend(property_key);
     params.push(event);
     params.push(range.start);
     params.push(range.end);
     params.extend(entities);
     params.extend_from_params(filters_params);
+    params.extend(property_key);
 
     let query = format!(
         "--sql
@@ -120,6 +129,7 @@ pub fn dimension_report(
 mod tests {
     use super::*;
     use crate::app::Liwan;
+    use crate::app::models::FilterType;
     use crate::config::Config;
     use chrono::{Duration, TimeZone, Utc};
 
@@ -144,6 +154,7 @@ mod tests {
             "pageview",
             &range,
             &Dimension::Path,
+            None,
             &[],
             &Metric::Views,
             max_results,
@@ -151,5 +162,76 @@ mod tests {
         .expect("failed to build dimension report");
 
         assert_eq!(report.len(), max_results);
+    }
+
+    #[test]
+    fn dimension_report_lists_property_keys_and_values() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let conn = app.events_conn().unwrap();
+        let now = Utc::now();
+        for (visitor, event, properties, path) in [
+            ("one", "pageview", Some("{'plan'='pro', 'ref'='x'}"), "/"),
+            ("two", "pageview", Some("{'plan'='pro'}"), "/pricing"),
+            ("three", "pageview", Some("{'plan'='free'}"), "/"),
+            ("four", "pageview", None, "/"),
+            ("one", "signup", Some("{'source'='ad'}"), "/"),
+        ] {
+            conn.execute(
+                "insert into events (entity_id, visitor_group_id, event, created_at, path, properties) values ('a', ?, ?, ?, ?, ?::map(varchar, varchar))",
+                duckdb::params![visitor, event, now, path, properties],
+            )
+            .unwrap();
+        }
+        let range = DateRange { start: now - Duration::hours(1), end: now + Duration::hours(1) };
+        let report = |event: &str, key: Option<&str>, filters: &[DimensionFilter]| {
+            dimension_report(
+                &conn,
+                &["a".into()],
+                event,
+                &range,
+                &Dimension::Property,
+                key,
+                filters,
+                &Metric::Views,
+                10,
+            )
+            .unwrap()
+            .into_iter()
+            .collect::<Vec<_>>()
+        };
+        let row = |name: &str, value: f64| (name.to_string(), value);
+
+        assert_eq!(report("pageview", None, &[]), [row("plan", 3.0), row("ref", 1.0)]);
+        assert_eq!(report("signup", None, &[]), [row("source", 1.0)]);
+        assert_eq!(report("pageview", Some("plan"), &[]), [row("free", 1.0), row("pro", 2.0)]);
+
+        let filter = |key: &str, filter_type: FilterType, value: Option<&str>| DimensionFilter {
+            dimension: Dimension::Property,
+            key: Some(key.into()),
+            filter_type,
+            inversed: None,
+            strict: None,
+            value: value.map(Into::into),
+        };
+        let pro = filter("plan", FilterType::Equal, Some("pro"));
+        assert_eq!(report("pageview", Some("ref"), std::slice::from_ref(&pro)), [row("x", 1.0)]);
+        let unset = filter("plan", FilterType::IsNull, None);
+        assert_eq!(
+            dimension_report(
+                &conn,
+                &["a".into()],
+                "pageview",
+                &range,
+                &Dimension::Path,
+                None,
+                &[unset],
+                &Metric::Views,
+                10
+            )
+            .unwrap()
+            .into_iter()
+            .collect::<Vec<_>>(),
+            [row("/", 1.0)]
+        );
     }
 }

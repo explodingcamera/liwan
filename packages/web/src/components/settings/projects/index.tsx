@@ -46,7 +46,7 @@ const displayDimensionGroups = [
 	},
 	{ label: "Device", dimensions: ["platform", "browser", "mobile", "screen_width", "orientation"] },
 	{ label: "Pages", dimensions: ["url", "url_entry", "url_exit", "fqdn"] },
-	{ label: "Other", dimensions: ["country", "city"] },
+	{ label: "Other", dimensions: ["country", "city", "property"] },
 ] as const satisfies readonly {
 	label: string;
 	dimensions: readonly Dimension[];

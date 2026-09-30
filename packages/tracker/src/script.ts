@@ -11,9 +11,12 @@ type Payload = {
 	referrer?: string;
 	screen_width?: string;
 	orientation?: string;
+	properties?: EventProperties;
 	exit?: boolean;
 	// biome-ignore lint/suspicious/noExplicitAny: we want to allow any additional properties to be sent in the payload
 } & Record<string, any>;
+
+export type EventProperties = Record<string, string | number | boolean | null | undefined>;
 
 export type EventOptions = {
 	/**
@@ -52,6 +55,11 @@ export type EventOptions = {
 	 * Defaults to `true`. Ignored for custom events and in server-side environments.
 	 */
 	exit?: boolean;
+
+	/**
+	 * Custom properties to send with the event.
+	 */
+	properties?: EventProperties;
 };
 
 let scriptEl: HTMLScriptElement | null = null;
@@ -86,7 +94,7 @@ const sendCurrentExit = () => {
 	if (noWindow || document.visibilityState !== "hidden" || !currentExit || exitSentWhileHidden) return;
 	exitSentWhileHidden = true;
 
-	const body = JSON.stringify({ ...currentExit.payload, exit: true });
+	const body = JSON.stringify({ ...currentExit.payload, properties: undefined, exit: true });
 	void fetch(currentExit.endpoint, {
 		method: "POST",
 		headers: { "Content-Type": "text/plain;charset=UTF-8" },
@@ -184,6 +192,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 
 	const payload = <Payload>{
 		name,
+		properties: options?.properties,
 		entity_id: options?.entity || entity,
 		referrer: options?.referrer || referrer,
 		url: sanitizeUrl(url),

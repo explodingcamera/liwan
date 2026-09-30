@@ -38,6 +38,31 @@ const UTM_SOURCES: &[&str] = &["", "google", "bing", "facebook", "twitter"];
 const UTM_TERMS: &[&str] = &["", "liwan", "analytics", "tracking", "web"];
 const SCREEN_WIDTH_BUCKETS: &[&str] = &["xs", "sm", "md", "lg", "xl", "2xl"];
 const ORIENTATIONS: &[&str] = &["portrait", "landscape"];
+// Values are ordered from most to least common, and an empty value leaves the property unset.
+const PROPERTIES: &[(&str, &str, &[&str])] = &[
+    ("pageview", "theme", &["light", "dark", ""]),
+    ("pageview", "logged_in", &["false", "true"]),
+    ("pageview", "docs_version", &["", "", "", "v2", "v1"]),
+    ("login", "method", &["password", "google", "github", "sso"]),
+    ("signup", "plan", &["free", "pro", "team"]),
+    ("signup", "source", &["pricing_page", "homepage", "blog_post", "docs"]),
+    ("trial_started", "plan", &["pro", "team"]),
+    ("checkout_started", "plan", &["pro", "team", "enterprise"]),
+    ("checkout_started", "billing", &["yearly", "monthly"]),
+    ("add_to_cart", "item", &["pro_plan", "extra_seats", "team_plan", "priority_support"]),
+    ("purchase", "plan", &["pro", "team", "enterprise"]),
+    ("purchase", "billing", &["yearly", "monthly"]),
+    ("purchase", "seats", &["1", "2", "5", "3", "10", "25", "50"]),
+    ("purchase", "coupon", &["", "", "", "LAUNCH20", "BLACKFRIDAY"]),
+    ("download", "file", &["whitepaper.pdf", "pricing-guide.pdf", "brand-kit.zip", "report-2025.pdf"]),
+    ("newsletter_subscribed", "list", &["weekly_digest", "product_updates", "engineering"]),
+    ("contact_form_submitted", "topic", &["sales", "support", "partnership", "press"]),
+    ("video_played", "video", &["product_tour", "getting_started", "customer_story"]),
+    ("video_played", "autoplay", &["false", "true"]),
+    ("search", "results", &["1-10", "10+", "0"]),
+    ("search", "section", &["docs", "blog", "changelog"]),
+    ("share", "network", &["x", "linkedin", "copy_link", "email", "reddit"]),
+];
 
 pub fn random_events(
     time_range: (DateTime<Utc>, DateTime<Utc>),
@@ -130,6 +155,12 @@ pub fn random_events(
         let (city, country) = random_el(CITIES, 0.8);
         let screen_width = random_el(SCREEN_WIDTH_BUCKETS, 0.0);
         let orientation = random_el(ORIENTATIONS, 0.0);
+        let properties = PROPERTIES
+            .iter()
+            .filter(|(name, _, _)| *name == event)
+            .map(|(_, key, values)| (key.to_string(), random_el(values, -0.8).to_string()))
+            .filter(|(_, value)| !value.is_empty())
+            .collect();
 
         Some(Event {
             browser: if browser.is_empty() { None } else { Some(browser.to_string()) },
@@ -151,6 +182,7 @@ pub fn random_events(
             utm_term: Some(random_el(UTM_TERMS, 0.6).to_string()),
             screen_width: Some(screen_width.to_string()),
             orientation: Some(orientation.to_string()),
+            properties,
             track_sessions: true,
         })
     })

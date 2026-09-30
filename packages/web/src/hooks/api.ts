@@ -7,6 +7,8 @@ import { createToast } from "@/components/ui/toast";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
 import { toDataPoints } from "../components/dashboard/project/graph";
 
+const numericCollator = new Intl.Collator(undefined, { numeric: true });
+
 const getStatusCode = (error: unknown) => (error as { status?: number } | undefined)?.status;
 
 export const useMe = () => {
@@ -137,9 +139,11 @@ export const useDimension = ({
 	range,
 	filters,
 	eventName = "pageview",
+	propertyKey,
 }: {
 	project: ProjectResponse;
 	dimension: Dimension;
+	propertyKey?: string;
 	metric: Metric;
 	filters: DimensionFilter[];
 	range: DateRange;
@@ -153,13 +157,14 @@ export const useDimension = ({
 } => {
 	const { data, isFetching, error } = useQuery({
 		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
-		queryKey: ["dimension", project.id, dimension, metric, range.cacheKey(), filters, eventName],
+		queryKey: ["dimension", project.id, dimension, propertyKey, metric, range.cacheKey(), filters, eventName],
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/dimension"]
 				.post({
 					params: { project_id: project.id },
 					json: {
 						dimension,
+						propertyKey,
 						filters,
 						metric,
 						event: eventName,
@@ -178,8 +183,10 @@ export const useDimension = ({
 
 	return useMemo(() => {
 		const biggest = data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0;
-		const sortedData = data?.data?.toSorted((a, b) =>
-			metric === "bounce_rate" ? a.value - b.value : b.value - a.value,
+		const sortedData = data?.data?.toSorted(
+			(a, b) =>
+				(metric === "bounce_rate" ? a.value - b.value : b.value - a.value) ||
+				numericCollator.compare(a.dimensionValue, b.dimensionValue),
 		);
 		const order = sortedData?.map((d) => d.dimensionValue);
 		return { data: sortedData, biggest, order, isLoading: isFetching, error };

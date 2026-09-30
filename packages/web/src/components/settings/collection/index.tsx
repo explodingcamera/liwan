@@ -1,3 +1,4 @@
+import settingsStyles from "../settings.module.css";
 import styles from "./collection.module.css";
 
 import { useEffect, useState } from "react";
@@ -8,7 +9,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { createToast } from "@/components/ui/toast";
 import type { CollectionSettings, DataRetention } from "@/constants";
 import { DocsLink, FiltersEditor, GeoSelect, VisitorModeSelect } from "../filters";
-import { SettingsField, SettingsFieldset, SettingsForm, SettingsPanel, SettingsSwitch, SettingsTabs } from "../form";
+import { SettingsField, SettingsForm, SettingsPanel, SettingsSwitch, SettingsTabs } from "../form";
 
 type CollectionTab = (typeof collectionTabs)[number];
 
@@ -190,15 +191,14 @@ export const CollectionSettingsPage = () => {
 									))}
 								</select>
 							</SettingsField>
-							<SettingsFieldset
-								legend="Prune data"
-								description={
-									<>
+							<div className={settingsStyles.dangerZone}>
+								<div>
+									<strong>Prune data</strong>
+									<p>
 										Apply saved collection and retention settings to existing events. Drop rules only affect new events.
 										Run a dry run to preview changes. <DocsLink hash="retention-and-pruning" />
-									</>
-								}
-							>
+									</p>
+								</div>
 								<div className={styles.pruneActions}>
 									<button type="button" className="button-secondary" onClick={() => prune(true)}>
 										Dry run
@@ -207,18 +207,20 @@ export const CollectionSettingsPage = () => {
 										title="Prune data?"
 										description="This permanently applies the current collection settings to historical data. Run a dry run first to preview the changes."
 										trigger={
-											<button type="button" className="button-primary">
+											<button type="button" className={`${settingsStyles.deleteButton} button-danger`}>
 												Prune now
 											</button>
 										}
 									>
 										<div className="action-row">
 											<Dialog.Close className="button-secondary">Cancel</Dialog.Close>
-											<Dialog.Close onClick={() => prune(false)}>Prune now</Dialog.Close>
+											<Dialog.Close className="button-danger" onClick={() => prune(false)}>
+												Prune now
+											</Dialog.Close>
 										</div>
 									</Dialog>
 								</div>
-							</SettingsFieldset>
+							</div>
 							<Dialog title="Prune result" open={pruneResultOpen} onOpenChange={setPruneResultOpen} trigger={false}>
 								<p>{pruneResult}</p>
 								<Dialog.Close>Close</Dialog.Close>

@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 use anyhow::{Result, bail};
 use rusqlite::OptionalExtension;
 
-use crate::app::models::{DisplayOverride, GeoDetail, ProjectDisplaySettings, ResolvedCollectionSettings};
+use crate::app::models::{CustomData, DisplayOverride, GeoDetail, ProjectDisplaySettings, ResolvedCollectionSettings};
 use crate::app::reports::{Dimension, Metric};
 use crate::app::{SqlitePool, models};
 
@@ -234,8 +234,22 @@ impl ProjectDisplaySettings {
         self.metric_display_overrides.get("custom_events").copied().unwrap_or(DisplayOverride::Auto)
     }
 
-    /// Return whether a dimension is hidden by project or collection settings.
-    pub fn is_dimension_hidden(&self, entities: &[ResolvedCollectionSettings], dimension: Dimension) -> bool {
+    /// Return whether the custom-events card is hidden, in auto mode when no custom events were recorded.
+    pub fn is_custom_events_hidden(&self, data: CustomData) -> bool {
+        match self.custom_events_display() {
+            DisplayOverride::Show => false,
+            DisplayOverride::Hide => true,
+            DisplayOverride::Auto => !data.events,
+        }
+    }
+
+    /// Return whether a dimension is hidden by project settings, collection settings, or missing data.
+    pub fn is_dimension_hidden(
+        &self,
+        entities: &[ResolvedCollectionSettings],
+        data: CustomData,
+        dimension: Dimension,
+    ) -> bool {
         match self.dimension_display_overrides.get(&dimension.to_string()).copied().unwrap_or(DisplayOverride::Auto) {
             DisplayOverride::Show => false,
             DisplayOverride::Hide => true,
@@ -248,6 +262,7 @@ impl ProjectDisplaySettings {
                 | Dimension::UtmCampaign
                 | Dimension::UtmContent
                 | Dimension::UtmTerm => entities.iter().any(|settings| !settings.track_utm_params),
+                Dimension::Property => !data.properties,
                 _ => false,
             },
         }

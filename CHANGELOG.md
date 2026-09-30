@@ -24,6 +24,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 - Added support for hosting Liwan under a sub-path in `base_url`
 - Added support for custom events
+- Added support for custom properties
 - Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
 - Added authenticated batch event ingestion endpoint
 - Added API key management UI

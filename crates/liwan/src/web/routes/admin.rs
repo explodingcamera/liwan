@@ -162,7 +162,7 @@ pub struct ProjectResponse {
     pub visibility: ProjectVisibility,
     pub hidden_metrics: Vec<Metric>,
     pub hidden_dimensions: Vec<Dimension>,
-    pub custom_events_display: crate::app::models::DisplayOverride,
+    pub custom_events_hidden: bool,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
@@ -183,6 +183,7 @@ impl ProjectResponse {
         let entity_ids: Vec<String> = entities.iter().map(|entity| entity.id.clone()).collect();
         let collection = app.settings.resolved_for_entities(&entity_ids);
         let display = app.project_settings.get(&project.id)?;
+        let data = app.events.custom_data(&entity_ids)?;
 
         Ok(Self {
             id: project.id.clone(),
@@ -192,7 +193,7 @@ impl ProjectResponse {
                 .map(|entity| ProjectEntity { id: entity.id, display_name: entity.display_name })
                 .collect(),
             visibility: project.visibility,
-            custom_events_display: display.custom_events_display(),
+            custom_events_hidden: display.is_custom_events_hidden(data),
             hidden_metrics: Metric::all()
                 .iter()
                 .copied()
@@ -201,7 +202,7 @@ impl ProjectResponse {
             hidden_dimensions: Dimension::all()
                 .iter()
                 .copied()
-                .filter(|dimension| display.is_dimension_hidden(&collection, *dimension))
+                .filter(|dimension| display.is_dimension_hidden(&collection, data, *dimension))
                 .collect(),
         })
     }

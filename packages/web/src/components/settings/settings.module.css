@@ -308,36 +308,24 @@ details.edit summary + ul {
   margin-bottom: 0;
 }
 
-.apiKeySelect {
-  position: relative;
-}
-
-.apiKeySelect select {
-  appearance: none;
-  width: 100%;
-  margin: 0;
-  padding-right: 2.25rem;
-}
-
-.apiKeySelect > svg {
-  position: absolute;
-  top: 50%;
-  right: 0.75rem;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
 .apiKeyExpirationSelect {
+  position: relative;
   margin-top: 0.35rem;
 }
 
 .apiKeyExpirationSelect select {
-  padding-right: 4.25rem;
+  margin: 0;
+  padding-right: 3.8rem;
 }
 
-.apiKeyExpirationSelect > svg:first-child {
-  right: 2.25rem;
+/* sits just left of the select chevron */
+.apiKeyExpirationSelect > svg {
+  position: absolute;
+  top: 50%;
+  right: 2.1rem;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 @media (max-width: 520px) {

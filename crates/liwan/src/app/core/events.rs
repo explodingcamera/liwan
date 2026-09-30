@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
@@ -9,7 +10,7 @@ use rand::distr::{SampleString, StandardUniform};
 use tokio::sync::mpsc::Receiver;
 use tokio_util::time::DelayQueue;
 
-use crate::app::models::{Event, EventExit, GeoDetail, ResolvedCollectionSettings, event_params};
+use crate::app::models::{CustomData, Event, EventExit, GeoDetail, ResolvedCollectionSettings, event_params};
 use crate::app::{DuckDBPool, SqlitePool};
 use crate::utils::duckdb::{ParamVec, repeat_vars};
 
@@ -21,6 +22,8 @@ pub struct LiwanEvents {
     sqlite: SqlitePool,
     daily_salt: Arc<ArcSwap<(String, DateTime<Utc>)>>,
     visitor_group_rotation_hour: u8,
+    /// Per-entity cache for [`LiwanEvents::custom_data`], updated as events are appended
+    custom_data: Arc<Mutex<HashMap<String, CustomData>>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -40,7 +43,13 @@ impl LiwanEvents {
                 Ok((row.get(0)?, row.get(1)?))
             })?
         };
-        Ok(Self { duckdb, sqlite, daily_salt: ArcSwap::new(daily_salt.into()).into(), visitor_group_rotation_hour })
+        Ok(Self {
+            duckdb,
+            sqlite,
+            daily_salt: ArcSwap::new(daily_salt.into()).into(),
+            visitor_group_rotation_hour,
+            custom_data: Default::default(),
+        })
     }
 
     /// Get the visitor group salt, generating a new one after the daily local rotation time
@@ -63,13 +72,44 @@ impl LiwanEvents {
         }
     }
 
+    /// Return whether any of the entities has recorded custom events or custom properties.
+    ///
+    /// Each entity is queried once and then kept up to date by [`LiwanEvents::append`].
+    pub fn custom_data(&self, entities: &[String]) -> Result<CustomData> {
+        let mut result = CustomData::default();
+        for entity in entities {
+            let cached = self.custom_data.lock().expect("custom data lock").get(entity).copied();
+            let data = match cached {
+                Some(data) => data,
+                None => {
+                    let data = self.duckdb.get()?.query_row(
+                        "select
+                            exists(select 1 from events where entity_id = $1 and event <> 'pageview'),
+                            exists(select 1 from events where entity_id = $1 and properties is not null)",
+                        params![entity],
+                        |row| Ok(CustomData { events: row.get(0)?, properties: row.get(1)? }),
+                    )?;
+                    self.custom_data.lock().expect("custom data lock").insert(entity.clone(), data);
+                    data
+                }
+            };
+            result.events |= data.events;
+            result.properties |= data.properties;
+        }
+        Ok(result)
+    }
+
     /// Append events in a batch and update session timing fields when needed
     pub fn append(&self, events: impl Iterator<Item = Event>) -> Result<()> {
         let conn = self.duckdb.get()?;
         let mut first_event_time = None;
         let mut session_entities = Vec::new();
+        let mut custom_data = Vec::new();
         let mut appender = conn.appender("events").context("Failed to get DuckDB appender")?;
         for event in events {
+            if event.event != "pageview" || !event.properties.is_empty() {
+                custom_data.push((event.entity_id.clone(), event.event != "pageview", !event.properties.is_empty()));
+            }
             if event.track_sessions && event.event == "pageview" {
                 if first_event_time.is_none_or(|first_event_time| event.created_at < first_event_time) {
                     first_event_time = Some(event.created_at);
@@ -82,6 +122,15 @@ impl LiwanEvents {
         }
 
         appender.flush().context("Failed to flush events to DuckDB")?;
+        // only update entities that are already cached; the others are queried on first use
+        let mut cache = self.custom_data.lock().expect("custom data lock");
+        for (entity, events, properties) in custom_data {
+            if let Some(data) = cache.get_mut(&entity) {
+                data.events |= events;
+                data.properties |= properties;
+            }
+        }
+        drop(cache);
         if let Some(first_event_time) = first_event_time {
             update_event_times(&conn, first_event_time, &session_entities)
                 .context("Failed to update event times in DuckDB")?;
@@ -376,6 +425,7 @@ mod tests {
             utm_term: None,
             screen_width: None,
             orientation: None,
+            properties: Default::default(),
             track_sessions: true,
         }
     }
@@ -446,5 +496,40 @@ mod tests {
         assert_eq!(rows[0].2, Some(chrono::Duration::seconds(120)));
         assert_eq!(rows[1], ("signup".into(), None, None));
         assert_eq!(rows[2].1, Some(chrono::Duration::seconds(120)));
+    }
+
+    #[test]
+    fn properties_round_trip_through_appender() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let properties: crate::app::models::EventProperties = [
+            ("plan", "pro"),
+            ("delimiters", "a=b, {c}: [d]"),
+            ("quotes", "it's \"quoted\""),
+            ("backslash", "C:\\path\\"),
+            ("  spaced  ", "  padded  "),
+            ("unicode", "grüße 🦆"),
+            ("empty", ""),
+            ("null", "NULL"),
+            ("k'ey=", "v\\'"),
+        ]
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect();
+        let mut with_properties = event(Utc::now());
+        with_properties.properties = properties.clone();
+        app.events.append(vec![with_properties, event(Utc::now())].into_iter()).unwrap();
+
+        let conn = app.events_conn().unwrap();
+        let stored = conn
+            .prepare("select unnest(map_keys(properties)), unnest(map_values(properties)) from events")
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap()
+            .collect::<std::result::Result<crate::app::models::EventProperties, _>>()
+            .unwrap();
+        assert_eq!(stored, properties);
+        let without: u64 =
+            conn.query_row("select count(*) from events where properties is null", [], |row| row.get(0)).unwrap();
+        assert_eq!(without, 1);
     }
 }

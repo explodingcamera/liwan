@@ -159,20 +159,6 @@
   gap: 0.15rem;
 }
 
-.form input,
-.form select,
-.form textarea {
-  font-size: 0.9rem;
-}
-
-@media (max-width: 600px) {
-  .form input,
-  .form select,
-  .form textarea {
-    font-size: 1rem;
-  }
-}
-
 .switchRoot {
   box-sizing: border-box;
   width: 2.45rem;

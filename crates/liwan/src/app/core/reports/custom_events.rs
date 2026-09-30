@@ -21,7 +21,6 @@ pub struct CustomEventRow {
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomEventsReport {
-    pub has_custom_events: bool,
     pub rows: Vec<CustomEventRow>,
     pub truncated: bool,
 }
@@ -35,7 +34,7 @@ pub fn custom_events_report(
     limit: usize,
 ) -> Result<CustomEventsReport> {
     if entities.is_empty() {
-        return Ok(CustomEventsReport { has_custom_events: false, rows: Vec::new(), truncated: false });
+        return Ok(CustomEventsReport { rows: Vec::new(), truncated: false });
     }
 
     let entity_vars = repeat_vars(entities.len());
@@ -62,17 +61,8 @@ pub fn custom_events_report(
             Ok(CustomEventRow { name: row.get(0)?, completions: row.get(1)?, uniques: row.get(2)? })
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
-    let has_custom_events = if rows.is_empty() {
-        conn.query_row(
-            &format!("select exists(select 1 from events where entity_id in ({entity_vars}) and event <> 'pageview')"),
-            duckdb::params_from_iter(entities),
-            |row| row.get(0),
-        )?
-    } else {
-        true
-    };
     let truncated = rows.len() > limit;
-    Ok(CustomEventsReport { has_custom_events, rows: rows.into_iter().take(limit).collect(), truncated })
+    Ok(CustomEventsReport { rows: rows.into_iter().take(limit).collect(), truncated })
 }
 
 #[cfg(test)]
@@ -106,27 +96,22 @@ mod tests {
         }
         let range = DateRange { start: now - Duration::hours(1), end: now + Duration::hours(1) };
         let report = custom_events_report(&conn, &["a".into()], &range, &[], 1).unwrap();
-        assert!(report.has_custom_events);
         assert!(report.truncated);
         assert_eq!(report.rows[0].name, "signup");
         assert_eq!(report.rows[0].completions, 3);
         assert_eq!(report.rows[0].uniques, 2);
 
         let empty = DateRange { start: now - Duration::hours(3), end: now - Duration::hours(2) };
-        let report = custom_events_report(&conn, &["a".into()], &empty, &[], 10).unwrap();
-        assert!(report.has_custom_events);
-        assert!(report.rows.is_empty());
-        assert!(!custom_events_report(&conn, &["c".into()], &range, &[], 10).unwrap().has_custom_events);
+        assert!(custom_events_report(&conn, &["a".into()], &empty, &[], 10).unwrap().rows.is_empty());
 
         let filter = DimensionFilter {
             dimension: Dimension::Path,
+            key: None,
             filter_type: FilterType::Equal,
             inversed: None,
             strict: None,
             value: Some("/missing".into()),
         };
-        let report = custom_events_report(&conn, &["a".into()], &range, &[filter], 10).unwrap();
-        assert!(report.has_custom_events);
-        assert!(report.rows.is_empty());
+        assert!(custom_events_report(&conn, &["a".into()], &range, &[filter], 10).unwrap().rows.is_empty());
     }
 }

@@ -4,7 +4,7 @@ import styles from "../settings.module.css";
 import type { SubmitEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { navigate } from "astro:transitions/client";
-import { ChevronDownIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { PlusIcon, SettingsIcon } from "lucide-react";
 
 import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
@@ -188,22 +188,19 @@ const TeamSettingsContent = ({ teamId }: { teamId: string }) => {
 					description="Choose which projects members can view."
 					htmlFor="team-project-scope"
 				>
-					<div className={styles.apiKeySelect}>
-						<select
-							id="team-project-scope"
-							value={projectScope}
-							onChange={(event) => {
-								const next = event.currentTarget.value as typeof projectScope;
-								setProjectScope(next);
-								saveTeam(name, members, next, access);
-							}}
-						>
-							<option value="none">No projects</option>
-							<option value="selected">Selected projects</option>
-							<option value="all">All projects</option>
-						</select>
-						<ChevronDownIcon size={16} aria-hidden="true" />
-					</div>
+					<select
+						id="team-project-scope"
+						value={projectScope}
+						onChange={(event) => {
+							const next = event.currentTarget.value as typeof projectScope;
+							setProjectScope(next);
+							saveTeam(name, members, next, access);
+						}}
+					>
+						<option value="none">No projects</option>
+						<option value="selected">Selected projects</option>
+						<option value="all">All projects</option>
+					</select>
 				</SettingsField>
 				{projectScope === "selected" && (
 					<Tags

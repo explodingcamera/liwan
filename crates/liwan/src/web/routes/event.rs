@@ -1,6 +1,6 @@
 use crate::app::models::{
-    EventExit, FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings, VisitorGroupMode,
-    hostname_allowed,
+    EventExit, EventProperties, FilterType, GeoDetail, IngestDropRule, IngestFilter, ResolvedCollectionSettings,
+    VisitorGroupMode, hostname_allowed,
 };
 use crate::app::{Liwan, models::Event};
 use crate::config::Config;
@@ -64,9 +64,15 @@ struct EventRequest {
     referrer: Option<String>,
     screen_width: Option<String>,
     orientation: Option<String>,
+    properties: Option<RawEventProperties>,
     #[serde(default)]
     exit: bool,
 }
+
+pub(super) type RawEventProperties = std::collections::BTreeMap<String, serde_json::Value>;
+
+const MAX_PROPERTIES: usize = 30;
+const MAX_PROPERTY_VALUE_CHARS: usize = 255;
 
 pub(super) struct ProcessEventRequest {
     pub(super) entity_id: String,
@@ -75,6 +81,7 @@ pub(super) struct ProcessEventRequest {
     pub(super) referrer: Option<String>,
     pub(super) screen_width: Option<String>,
     pub(super) orientation: Option<String>,
+    pub(super) properties: EventProperties,
     pub(super) created_at: DateTime<Utc>,
     pub(super) user_agent: Option<String>,
     pub(super) ip: Option<IpAddr>,
@@ -120,6 +127,9 @@ async fn event_handler(
         http_bail!(StatusCode::BAD_REQUEST, "invalid entity_id")
     }
     let url = Url::from_str(&event.url).context("invalid url").http_err("invalid url", StatusCode::BAD_REQUEST)?;
+    let properties = event_properties(event.properties)
+        .context("invalid event")
+        .http_err("invalid event", StatusCode::BAD_REQUEST)?;
     let app = state.app.clone();
     let request = ProcessEventRequest {
         entity_id: event.entity_id,
@@ -128,6 +138,7 @@ async fn event_handler(
         referrer: event.referrer,
         screen_width: event.screen_width,
         orientation: event.orientation,
+        properties,
         created_at: Utc::now(),
         user_agent: Some(user_agent.as_str().to_string()),
         ip,
@@ -290,6 +301,7 @@ pub(super) fn process_event(
         utm_term: utm.term,
         screen_width: event.screen_width,
         orientation: event.orientation,
+        properties: event.properties,
         track_sessions: settings.track_sessions,
     };
 
@@ -320,6 +332,33 @@ pub(super) fn validate_process_request(event: &ProcessEventRequest) -> Result<()
         anyhow::bail!("orientation cannot be longer than 20 characters");
     }
     Ok(())
+}
+
+/// Validate client properties and coerce their values to strings.
+pub(super) fn event_properties(properties: Option<RawEventProperties>) -> Result<EventProperties> {
+    let mut result = EventProperties::new();
+    for (key, value) in properties.unwrap_or_default() {
+        let value = match value {
+            serde_json::Value::Null => continue,
+            serde_json::Value::String(value) if value.is_empty() => continue,
+            serde_json::Value::String(value) => value,
+            serde_json::Value::Number(value) => value.to_string(),
+            serde_json::Value::Bool(value) => value.to_string(),
+            serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
+                anyhow::bail!("property values must be strings, numbers, or booleans")
+            }
+        };
+        let key = key.trim();
+        crate::app::reports::validate_property_key(key)?;
+        if value.chars().count() > MAX_PROPERTY_VALUE_CHARS {
+            anyhow::bail!("property values cannot be longer than {MAX_PROPERTY_VALUE_CHARS} characters");
+        }
+        result.insert(key.to_string(), value);
+    }
+    if result.len() > MAX_PROPERTIES {
+        anyhow::bail!("events cannot have more than {MAX_PROPERTIES} properties");
+    }
+    Ok(result)
 }
 
 fn ingest_drop_rule_matches(event: &Event, rule: &IngestDropRule) -> bool {
@@ -439,6 +478,7 @@ mod test {
             utm_term: None,
             screen_width: None,
             orientation: None,
+            properties: Default::default(),
             track_sessions: true,
         };
 
@@ -470,6 +510,7 @@ mod test {
             utm_term: None,
             screen_width: None,
             orientation: None,
+            properties: Default::default(),
             track_sessions: true,
         };
 
@@ -533,9 +574,42 @@ mod test {
             utm_term: None,
             screen_width: None,
             orientation: None,
+            properties: Default::default(),
             track_sessions: true,
         };
 
         assert!(!ingest_drop_rule_matches(&event, &IngestDropRule { filters: Vec::new() }));
+    }
+
+    #[test]
+    fn event_properties_coerce_and_validate() {
+        let properties = |value: serde_json::Value| event_properties(Some(serde_json::from_value(value).unwrap()));
+
+        let parsed = properties(serde_json::json!({
+            " plan ": "pro",
+            "count": 3,
+            "ratio": 1.5,
+            "beta": true,
+            "unset": null,
+            "empty": "",
+        }))
+        .unwrap();
+        assert_eq!(
+            parsed.into_iter().collect::<Vec<_>>(),
+            [("beta", "true"), ("count", "3"), ("plan", "pro"), ("ratio", "1.5")]
+                .map(|(key, value)| (key.to_string(), value.to_string()))
+        );
+        assert!(event_properties(None).unwrap().is_empty());
+
+        assert!(properties(serde_json::json!({ "nested": { "a": 1 } })).is_err());
+        assert!(properties(serde_json::json!({ "list": [1] })).is_err());
+        assert!(properties(serde_json::json!({ "  ": "value" })).is_err());
+        assert!(properties(serde_json::json!({ "k".repeat(65): "value" })).is_err());
+        assert!(properties(serde_json::json!({ "key": "v".repeat(256) })).is_err());
+        assert!(properties(serde_json::json!({ "k".repeat(64): "ü".repeat(255) })).is_ok());
+
+        let many = (0..31).map(|i| (format!("key{i}"), serde_json::json!("value"))).collect::<RawEventProperties>();
+        assert!(event_properties(Some(many.clone())).is_err());
+        assert!(event_properties(Some(many.into_iter().take(30).collect())).is_ok());
     }
 }

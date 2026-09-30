@@ -353,6 +353,7 @@ async fn pruning_supports_dry_run_and_is_idempotent() -> Result<()> {
         utm_term: None,
         screen_width: None,
         orientation: None,
+        properties: Default::default(),
         track_sessions: true,
     };
     app.events.append(
