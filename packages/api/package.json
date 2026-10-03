@@ -33,7 +33,7 @@
 	},
 	"peerDependencies": {
 		"express": "^4.0.0 || ^5.0.0",
-		"hono": "^4.0.0"
+		"hono": "^4.13.12"
 	},
 	"peerDependenciesMeta": {
 		"express": {
@@ -47,7 +47,7 @@
 		"@types/bun": "^1.4.2",
 		"@types/express": "^5.0.6",
 		"express": "^5.2.1",
-		"hono": "^4.13.8",
+		"hono": "^4.13.12",
 		"tsdown": "^0.23.0",
 		"typescript": "^7.0.2"
 	},

@@ -34,7 +34,7 @@ pub fn parse_geoip_headers(headers: &http::HeaderMap, sources: &[GeoIpHeaderSour
         let value = value.trim();
         (!value.is_empty() && value.len() <= 255).then(|| value.to_owned())
     };
-    let header = |name: &str| headers.get(name)?.to_str().ok().and_then(&value);
+    let header = |name: &str| headers.get(name)?.to_str().ok().and_then(value);
 
     let mut values = GeoIpHeaderValues::default();
     for source in sources {
@@ -54,7 +54,7 @@ pub fn parse_geoip_headers(headers: &http::HeaderMap, sources: &[GeoIpHeaderSour
                         .split(',')
                         .filter_map(|part| part.trim().split_once('='))
                         .find_map(|(name, value)| name.eq_ignore_ascii_case(key).then_some(value))
-                        .and_then(&value)
+                        .and_then(value)
                 };
                 (get("country_code"), get("city"))
             }
@@ -63,7 +63,7 @@ pub fn parse_geoip_headers(headers: &http::HeaderMap, sources: &[GeoIpHeaderSour
                     .get("x-nf-geo")
                     .and_then(|value| value.to_str().ok())
                     .and_then(|value| serde_json::from_str::<serde_json::Value>(value).ok());
-                let get = |pointer: &str| geo.as_ref()?.pointer(pointer)?.as_str().and_then(&value);
+                let get = |pointer: &str| geo.as_ref()?.pointer(pointer)?.as_str().and_then(value);
                 (get("/country/code"), get("/city"))
             }
         };
