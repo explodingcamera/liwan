@@ -55,3 +55,18 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for OneOrMany<T> {
         }))
     }
 }
+
+/// Read and write durations as human-readable strings such as `14d`.
+pub mod human_duration {
+    use ::serde::{Deserialize, Deserializer, Serializer, de::Error};
+    use std::time::Duration;
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Duration, D::Error> {
+        let value = String::deserialize(deserializer)?;
+        humantime::parse_duration(&value).map_err(D::Error::custom)
+    }
+
+    pub fn serialize<S: Serializer>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&humantime::format_duration(*duration).to_string())
+    }
+}

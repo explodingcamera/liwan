@@ -42,6 +42,7 @@ Add a small tracking script to your website with a single line of HTML. Works wi
 
 **Single sign-on**\
 Manage accounts with Google Workspaces, Microsoft Entra, or your own OpenID Connect provider like Keycloak or Dex.
+Set `session_duration = "24h"` (or `LIWAN_SESSION_DURATION=24h`) to limit how long a dashboard login lasts. Sessions do not renew, and changing this setting does not shorten existing sessions. Admins can revoke sessions immediately in user settings.
 
 ## License
 

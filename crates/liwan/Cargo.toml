@@ -54,6 +54,7 @@ blake3 = { version = "1.8" }
 chrono = { version = "0.4", default-features = false, features = ["now", "serde", "std"] }
 chrono-tz = "0.10"
 config = { version = "0.15", default-features = false, features = ["toml"] }
+humantime = "2.4"
 nix = { version = "0.31", features = ["user"] }
 rand = { version = "0.10", default-features = false, features = ["std", "thread_rng"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }

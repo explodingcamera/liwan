@@ -142,6 +142,7 @@ async fn expired_session() -> Result<()> {
 async fn authentication_cookie_boundaries() -> Result<()> {
     let mut config = Config::default();
     config.base_url = "https://liwan.example.com".to_string();
+    config.session_duration = std::time::Duration::from_secs(24 * 60 * 60);
     let app = Liwan::new_memory(config)?;
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app.clone(), tx);
@@ -155,10 +156,12 @@ async fn authentication_cookie_boundaries() -> Result<()> {
     assert_eq!(session.http_only(), Some(true));
     assert_eq!(session.secure(), Some(true));
     assert_eq!(session.same_site(), Some(axum_extra::extract::cookie::SameSite::Strict));
+    assert_eq!(session.max_age().map(|age| age.whole_seconds()), Some(24 * 60 * 60));
     assert_eq!(username.path(), Some("/"));
     assert!(!username.http_only().unwrap_or(false));
     assert_eq!(username.secure(), Some(true));
     assert_eq!(username.same_site(), Some(axum_extra::extract::cookie::SameSite::Strict));
+    assert_eq!(username.max_age().map(|age| age.whole_seconds()), Some(24 * 60 * 60));
 
     let res = client
         .get_with_headers("/api/dashboard/auth/me", vec![("cookie".to_string(), "liwan-username=test".to_string())])

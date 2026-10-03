@@ -141,7 +141,11 @@ async fn logout(
 ) -> ApiResult<impl IntoApiResponse> {
     if let Some(session_id) = session_id {
         let sessions = app.sessions.clone();
-        let _ = spawn_blocking(move || sessions.delete(&session_id)).await;
+        match spawn_blocking(move || sessions.delete(&session_id)).await {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => tracing::warn!(%error, "failed to expire logout session"),
+            Err(error) => tracing::warn!(%error, "failed to run logout session expiry"),
+        }
     }
     Ok((clear_session(&app), empty_response()))
 }

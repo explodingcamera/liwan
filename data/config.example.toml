@@ -9,6 +9,9 @@ listen = 9042  # The port to listen on (http)
 ## defaults to ./liwan-data on other platforms
 # data_dir="./liwan-data"
 
+## Dashboard session lifetime (default: 14 days).
+# session_duration = "14d"
+
 ## Trusted client IP headers (used in order), defaults to X-Forwarded-For.
 ## Presets: cloudflare, fastly, fly, cloudfront, akamai.
 ## Provider presets can be combined with standard or custom headers.

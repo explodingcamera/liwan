@@ -29,6 +29,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Added authenticated batch event ingestion endpoint
 - Added API key management UI
 - Added teams for assigning project read access to groups of users and internal projects visible to signed-in users
+- Added a configurable maximum session duration
 
 ### ⚠️ Breaking Changes
 

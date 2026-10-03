@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::num::NonZeroU16;
 use std::str::FromStr;
+use std::time::Duration;
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,6 +22,10 @@ pub struct Config {
     pub disable_favicons: bool,
     pub disable_ntp_check: bool,
     pub data_dir: String,
+
+    /// Maximum lifetime of a dashboard login, without renewal.
+    #[serde(with = "crate::utils::serde::human_duration")]
+    pub session_duration: Duration,
     pub geoip: GeoIpConfig,
     pub duckdb: DuckdbConfig,
     pub limits: LimitsConfig,
@@ -51,6 +56,7 @@ impl Default for Config {
             disable_favicons: false,
             disable_ntp_check: false,
             data_dir,
+            session_duration: Duration::from_secs(24 * 60 * 60 * 14),
             geoip: Default::default(),
             duckdb: Default::default(),
             limits: Default::default(),
@@ -220,6 +226,10 @@ impl Config {
         }
         if config.visitor_group_rotation_hour > 23 {
             bail!("Invalid visitor_group_rotation_hour: must be between 0 and 23");
+        }
+        if !(Duration::from_secs(60 * 60)..=Duration::from_secs(365 * 24 * 60 * 60)).contains(&config.session_duration)
+        {
+            bail!("Invalid session_duration: must be between 1 hour and 365 days");
         }
         if config.limits.report_max_concurrency == 0 || config.limits.report_max_concurrency > 10 {
             bail!("Invalid limits.report_max_concurrency: must be between 1 and 10");
@@ -463,6 +473,7 @@ mod test {
         assert_eq!(config.base_url, "http://localhost:9042");
         assert_eq!(config.listen_addr(), "0.0.0.0:9042");
         assert_eq!(config.data_dir, default.data_dir);
+        assert_eq!(config.session_duration, Duration::from_secs(24 * 60 * 60 * 14));
         assert_eq!(config.visitor_group_rotation_hour, 4);
         assert!(config.geoip.maxmind_db_path.is_none());
         assert!(config.geoip.maxmind_account_id.is_none());
@@ -509,5 +520,27 @@ mod test {
 
         let error = Config::load(None, [("LIWAN_LIMITS_REPORT_MAX_CONCURRENCY", "11")]).unwrap_err();
         assert!(error.to_string().contains("must be between 1 and 10"));
+    }
+
+    #[test]
+    fn test_session_duration() {
+        let (_temp_dir, path) = temp_config("session.config.toml", "session_duration = \"2 days\"");
+        assert_eq!(
+            Config::load(Some(path), Vec::<(String, String)>::new()).unwrap().session_duration,
+            Duration::from_secs(48 * 60 * 60)
+        );
+        assert_eq!(
+            Config::load(None, [("LIWAN_SESSION_DURATION", "24h")]).unwrap().session_duration,
+            Duration::from_secs(24 * 60 * 60)
+        );
+        let serialized = serde_json::to_value(Config::default()).unwrap();
+        assert!(serialized["session_duration"].is_string());
+        assert_eq!(
+            serde_json::from_value::<Config>(serialized).unwrap().session_duration,
+            Config::default().session_duration
+        );
+        for value in ["0", "0s", "0h", "8761h", "banana", "14", "-1d"] {
+            assert!(Config::load(None, [("LIWAN_SESSION_DURATION", value)]).is_err());
+        }
     }
 }
