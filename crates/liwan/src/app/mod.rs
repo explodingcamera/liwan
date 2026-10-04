@@ -3,7 +3,10 @@ mod db;
 
 pub mod models;
 pub use core::reports;
-pub use core::{ExternalAuthLogin, ExternalAuthProvider, ExternalAuthSettings, ExternalAuthStart, LiwanExternalAuth};
+pub use core::{
+    ExternalAuthLogin, ExternalAuthProvider, ExternalAuthSettings, ExternalAuthStart, GroupTeamMapping,
+    LiwanExternalAuth,
+};
 use std::sync::Arc;
 
 use crate::{config::Config, utils::writable::check_directory_writable};

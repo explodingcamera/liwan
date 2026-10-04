@@ -20,7 +20,11 @@ fn settings(overrides: Value) -> Value {
         "allowedDomain": null,
         "tenantId": null,
         "allowUserCreation": false,
-        "allowSessionReuse": true
+        "allowSessionReuse": true,
+        "defaultTeamId": null,
+        "groupTeamMappings": [],
+        "additionalScopes": "",
+        "groupClaimName": ""
     });
     settings.as_object_mut().unwrap().extend(overrides.as_object().unwrap().clone());
     settings
@@ -131,6 +135,53 @@ async fn invalid_enabled_settings_are_not_persisted() -> Result<()> {
         .await;
     response.assert_status_bad_request();
     assert!(!app.external_auth.settings()?.enabled);
+    Ok(())
+}
+
+#[tokio::test]
+async fn team_assignment_settings_are_validated() -> Result<()> {
+    let (app, client, cookies) = authenticated_client(UserRole::Admin).await?;
+    let team_id = app.teams.create("Engineering")?;
+    let headers = || vec![("cookie".to_string(), cookies.clone())];
+    let response = client
+        .put_with_headers(
+            "/api/dashboard/admin/auth",
+            settings(json!({
+                "defaultTeamId": team_id,
+                "groupTeamMappings": [{ "groupId": "engineering", "teamId": team_id }],
+                "groupClaimName": "groups",
+                "additionalScopes": "groups"
+            })),
+            headers(),
+        )
+        .await;
+    response.assert_status_success();
+    let body: Value = response.json();
+    assert_eq!(body["defaultTeamId"], team_id);
+    assert_eq!(body["groupTeamMappings"][0]["groupId"], "engineering");
+    assert_eq!(body["additionalScopes"], "groups");
+
+    let response = client
+        .put_with_headers(
+            "/api/dashboard/admin/auth",
+            settings(json!({
+                "defaultTeamId": team_id,
+                "groupClaimName": "groups",
+                "groupTeamMappings": [
+                    { "groupId": "engineering", "teamId": team_id },
+                    { "groupId": "engineering", "teamId": team_id }
+                ]
+            })),
+            headers(),
+        )
+        .await;
+    response.assert_status_bad_request();
+
+    let response = client
+        .put_with_headers("/api/dashboard/admin/auth", settings(json!({ "defaultTeamId": "missing" })), headers())
+        .await;
+    response.assert_status_bad_request();
+    assert_eq!(app.external_auth.settings()?.default_team_id.as_deref(), Some(team_id.as_str()));
     Ok(())
 }
 

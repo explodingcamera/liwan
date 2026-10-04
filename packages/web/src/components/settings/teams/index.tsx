@@ -47,7 +47,7 @@ export const CreateTeam = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<SettingsField label="Team name">
+				<SettingsField label="Team name *">
 					<input name="displayName" required autoComplete="off" />
 				</SettingsField>
 				<div className="action-row">
@@ -149,7 +149,7 @@ const TeamSettingsContent = ({ teamId }: { teamId: string }) => {
 		<SettingsForm>
 			<SettingsHeader title={team.displayName} backHref={appPath("/settings/teams")} backLabel="Back to teams" />
 			<div className={styles.detailPanel}>
-				<SettingsField label="Team name">
+				<SettingsField label="Team name *">
 					<input
 						value={name}
 						required

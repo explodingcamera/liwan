@@ -53,7 +53,7 @@ export const CreateProject = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<SettingsField label="Project ID" description="Used in dashboard URLs and cannot be changed later.">
+				<SettingsField label="Project ID *" description="Used in dashboard URLs and cannot be changed later.">
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -63,7 +63,7 @@ export const CreateProject = () => {
 						autoComplete="off"
 					/>
 				</SettingsField>
-				<SettingsField label="Project name" description="Identifies this project in the dashboard.">
+				<SettingsField label="Project name *" description="Identifies this project in the dashboard.">
 					<input required name="displayName" type="text" placeholder="My Project" autoComplete="off" />
 				</SettingsField>
 				<SettingsField

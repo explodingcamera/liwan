@@ -277,7 +277,7 @@ export const ApiKeys = () => {
 				title="Create API key"
 			>
 				<form onSubmit={create}>
-					<SettingsField label="Key name">
+					<SettingsField label="Key name *">
 						<input
 							required
 							type="text"
@@ -397,7 +397,7 @@ const ApiKeyEditor = ({ initialKey }: { initialKey: ApiKey }) => {
 			<SettingsForm>
 				<SettingsHeader title={key.displayName} backHref={appPath("/settings/api-keys")} backLabel="Back to API Keys" />
 				<fieldset disabled={saving || regenerating} className={`${styles.detailPanel} ${styles.apiKeyDetailPanel}`}>
-					<SettingsField label="Name" description="Identifies this key in the dashboard." name="displayName">
+					<SettingsField label="Name *" description="Identifies this key in the dashboard." name="displayName">
 						<input
 							required
 							maxLength={100}

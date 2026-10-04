@@ -28,8 +28,10 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
 - Added authenticated batch event ingestion endpoint
 - Added API key management UI
-- Added teams for assigning project read access to groups of users and internal projects visible to signed-in users
+- Added teams for assigning project read access to groups of users
+- Added internal project visibility for all signed-in users
 - Added a configurable maximum session duration
+- Added automatic team assignment for new SSO accounts
 
 ### ⚠️ Breaking Changes
 

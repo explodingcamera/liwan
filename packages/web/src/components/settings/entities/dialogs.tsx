@@ -43,7 +43,7 @@ export const CreateEntity = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<SettingsField label="Entity ID" description="Used in the tracking snippet and cannot be changed.">
+				<SettingsField label="Entity ID *" description="Used in the tracking snippet and cannot be changed.">
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-.]{1,40}$"
@@ -53,7 +53,7 @@ export const CreateEntity = () => {
 						autoComplete="off"
 					/>
 				</SettingsField>
-				<SettingsField label="Entity name" description="Identifies this entity in the dashboard.">
+				<SettingsField label="Entity name *" description="Identifies this entity in the dashboard.">
 					<input required name="displayName" type="text" placeholder="My Website" autoComplete="off" />
 				</SettingsField>
 				<div className="action-row">

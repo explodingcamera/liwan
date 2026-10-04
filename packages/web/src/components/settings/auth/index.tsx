@@ -1,7 +1,7 @@
 import styles from "./authentication.module.css";
 
 import { useEffect, useRef, useState } from "react";
-import { KeyRoundIcon } from "lucide-react";
+import { KeyRoundIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { api } from "@/api";
 import { ProviderLogo } from "@/components/login";
@@ -9,6 +9,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { CopyableValue } from "@/components/ui/snippet";
 import { createToast } from "@/components/ui/toast";
 import type { ExternalAuthProvider, ExternalAuthSettings, ExternalAuthSettingsUpdate } from "@/constants";
+import { useTeams } from "@/hooks/api";
 import { SettingsField, SettingsForm, SettingsHeader, SettingsSwitch } from "../form";
 
 const providers: { value: ExternalAuthProvider; label: string; description: string }[] = [
@@ -22,6 +23,14 @@ const errorMessage = (error: unknown) =>
 		? error.message
 		: "Failed to update authentication settings";
 
+const withTeamDefaults = (settings: ExternalAuthSettings): ExternalAuthSettings => ({
+	...settings,
+	defaultTeamId: settings.defaultTeamId ?? null,
+	groupTeamMappings: settings.groupTeamMappings ?? [],
+	additionalScopes: settings.additionalScopes ?? "",
+	groupClaimName: settings.groupClaimName ?? "",
+});
+
 type ProviderSettingsProps = {
 	settings: ExternalAuthSettings;
 	clientSecret: string;
@@ -29,6 +38,7 @@ type ProviderSettingsProps = {
 	update: <K extends keyof ExternalAuthSettings>(key: K, value: ExternalAuthSettings[K]) => void;
 	selectProvider: (provider: ExternalAuthProvider | "internal") => void;
 	setClientSecret: (value: string) => void;
+	teams: { id: string; displayName: string }[];
 };
 
 const ProviderSettings = ({
@@ -38,11 +48,12 @@ const ProviderSettings = ({
 	update,
 	selectProvider,
 	setClientSecret,
+	teams,
 }: ProviderSettingsProps) => (
 	<>
 		<fieldset className={styles.providerFieldset}>
 			<legend>Sign-in method</legend>
-			<p>Use liwan passwords only, or add single sign-on with one external provider.</p>
+			<p>Use liwan passwords alone or alongside one external provider.</p>
 			<div className={styles.providerGrid}>
 				<label className={styles.providerCard}>
 					<input
@@ -56,8 +67,8 @@ const ProviderSettings = ({
 						<KeyRoundIcon aria-hidden="true" />
 					</span>
 					<span className={styles.providerText}>
-						<strong>Internal</strong>
-						<small>liwan username and password</small>
+						<strong>Internal only</strong>
+						<small>No external sign-in</small>
 					</span>
 				</label>
 				{providers.map((provider) => (
@@ -106,34 +117,138 @@ const ProviderSettings = ({
 			</section>
 		)}
 		{settings.enabled && (
-			<div className={styles.configuration}>
+			<section
+				className={styles.configuration}
+				aria-labelledby={settings.provider === "google" ? undefined : "team-assignment-heading"}
+				aria-label={settings.provider === "google" ? "Team assignment" : undefined}
+			>
+				{settings.provider !== "google" && (
+					<div className={styles.groupMappings}>
+						<h2 id="team-assignment-heading">Team assignment</h2>
+						<p>Assign teams once when a new account is created.</p>
+					</div>
+				)}
+				<SettingsField label={settings.provider === "google" ? "Default team for new users" : "Default team"}>
+					<select
+						value={settings.defaultTeamId ?? ""}
+						onChange={(event) => update("defaultTeamId", event.currentTarget.value || null)}
+					>
+						<option value="">No default team</option>
+						{teams.map((team) => (
+							<option value={team.id} key={team.id}>
+								{team.displayName}
+							</option>
+						))}
+					</select>
+				</SettingsField>
 				{settings.provider === "oidc" && (
 					<SettingsField
-						label="Sign-in button label"
+						label={settings.groupTeamMappings.length > 0 ? "Group claim *" : "Group claim"}
+						description="ID token claim containing group values."
+					>
+						<input
+							value={settings.groupClaimName}
+							required={settings.groupTeamMappings.length > 0}
+							onChange={(event) => update("groupClaimName", event.currentTarget.value)}
+						/>
+					</SettingsField>
+				)}
+				{settings.provider !== "google" && (
+					<div className={styles.groupMappings}>
+						<strong className={styles.mappingLabel}>Team mappings</strong>
+						<p>Match {settings.provider === "oidc" ? "claim values" : "Entra group IDs"} to teams at signup.</p>
+						{settings.groupTeamMappings.map((mapping, index) => (
+							<div className={styles.mappingRow} key={index}>
+								<input
+									aria-label={`${settings.provider === "oidc" ? "Claim value" : "Group ID"} ${index + 1}`}
+									placeholder={settings.provider === "oidc" ? "Claim value *" : "Group ID *"}
+									required
+									value={mapping.groupId}
+									onChange={(event) =>
+										update(
+											"groupTeamMappings",
+											settings.groupTeamMappings.map((entry, position) =>
+												position === index ? { ...entry, groupId: event.currentTarget.value } : entry,
+											),
+										)
+									}
+								/>
+								<select
+									aria-label={`Team for mapping ${index + 1}`}
+									required
+									value={mapping.teamId}
+									onChange={(event) =>
+										update(
+											"groupTeamMappings",
+											settings.groupTeamMappings.map((entry, position) =>
+												position === index ? { ...entry, teamId: event.currentTarget.value } : entry,
+											),
+										)
+									}
+								>
+									<option value="">Select team *</option>
+									{teams.map((team) => (
+										<option value={team.id} key={team.id}>
+											{team.displayName}
+										</option>
+									))}
+								</select>
+								<button
+									type="button"
+									className="button-secondary"
+									aria-label={`Remove mapping ${index + 1}`}
+									onClick={() =>
+										update(
+											"groupTeamMappings",
+											settings.groupTeamMappings.filter((_, position) => position !== index),
+										)
+									}
+								>
+									<Trash2Icon size={16} />
+								</button>
+							</div>
+						))}
+						<button
+							type="button"
+							className="button-secondary"
+							onClick={() => update("groupTeamMappings", [...settings.groupTeamMappings, { groupId: "", teamId: "" }])}
+						>
+							<PlusIcon size={16} /> Add mapping
+						</button>
+					</div>
+				)}
+			</section>
+		)}
+		{settings.enabled && (
+			<div className={styles.configuration}>
+				<h2 className={styles.sectionHeading}>Provider configuration</h2>
+				{settings.provider === "oidc" && (
+					<SettingsField
+						label="Sign-in button label *"
 						description='Appears as "Continue with [label]" on the sign-in page.'
 						name="displayName"
 					>
 						<input
 							name="displayName"
 							value={settings.displayName}
-							required={settings.enabled}
+							required
 							onChange={(event) => update("displayName", event.currentTarget.value)}
 						/>
 					</SettingsField>
 				)}
 				<SettingsField
-					label={settings.provider === "microsoft" ? "Application (client) ID" : "Client ID"}
+					label={settings.provider === "microsoft" ? "Application (client) ID *" : "Client ID *"}
 					name="clientId"
 				>
 					<input
 						name="clientId"
 						value={settings.clientId}
-						required={settings.enabled}
+						required
 						onChange={(event) => update("clientId", event.currentTarget.value)}
 					/>
 				</SettingsField>
 				<SettingsField
-					label="Client secret"
+					label={secretConfigured ? "Client secret" : "Client secret *"}
 					description={
 						secretConfigured
 							? "A secret is stored. Enter a new value to replace it."
@@ -147,13 +262,13 @@ const ProviderSettings = ({
 						value={clientSecret}
 						placeholder={secretConfigured ? "∗∗∗∗∗∗∗∗" : undefined}
 						autoComplete="new-password"
-						required={settings.enabled && !secretConfigured}
+						required={!secretConfigured}
 						onChange={(event) => setClientSecret(event.currentTarget.value)}
 					/>
 				</SettingsField>
 				{settings.provider === "oidc" && (
 					<SettingsField
-						label="Issuer URL"
+						label="Issuer URL *"
 						description="The base URL used to discover your provider's OpenID Connect configuration."
 						name="issuerUrl"
 					>
@@ -161,7 +276,7 @@ const ProviderSettings = ({
 							type="url"
 							name="issuerUrl"
 							value={settings.issuerUrl ?? ""}
-							required={settings.enabled}
+							required
 							onChange={(event) => update("issuerUrl", event.currentTarget.value || null)}
 						/>
 					</SettingsField>
@@ -179,26 +294,48 @@ const ProviderSettings = ({
 						/>
 					</SettingsField>
 				)}
+				{settings.provider === "oidc" && (
+					<SettingsField
+						label="Additional scopes"
+						description="Space-separated scopes to request in addition to openid, profile, and email."
+					>
+						<input
+							value={settings.additionalScopes}
+							onChange={(event) => update("additionalScopes", event.currentTarget.value)}
+						/>
+					</SettingsField>
+				)}
 				{settings.provider === "microsoft" && (
 					<SettingsField
-						label="Directory (tenant) ID"
+						label="Directory (tenant) ID *"
 						description="The directory ID for the Microsoft Entra tenant that can sign in."
 						name="tenantId"
 					>
 						<input
 							name="tenantId"
 							value={settings.tenantId ?? ""}
-							required={settings.enabled}
+							required
 							onChange={(event) => update("tenantId", event.currentTarget.value || null)}
 						/>
 					</SettingsField>
 				)}
+				<SettingsField
+					label="Callback URL"
+					description={
+						settings.provider === "microsoft"
+							? "Add this URL as a Web redirect URI in Microsoft Entra ID."
+							: "Add this URL to the provider's allowed redirect URLs."
+					}
+				>
+					<CopyableValue value={settings.callbackUrl} label="Callback URL" />
+				</SettingsField>
 			</div>
 		)}
 	</>
 );
 
 export const AuthenticationSettingsPage = () => {
+	const { teams } = useTeams();
 	const [form, setForm] = useState<{ settings?: ExternalAuthSettings; clientSecret: string }>({ clientSecret: "" });
 	const { settings, clientSecret } = form;
 	const [savedSettings, setSavedSettings] = useState<ExternalAuthSettings>();
@@ -212,9 +349,10 @@ export const AuthenticationSettingsPage = () => {
 			.get()
 			.json()
 			.then((settings) => {
-				setForm({ settings, clientSecret: "" });
-				setSavedSettings(settings);
-				providerDrafts.current[settings.provider] = { settings, clientSecret: "" };
+				const next = withTeamDefaults(settings);
+				setForm({ settings: next, clientSecret: "" });
+				setSavedSettings(next);
+				providerDrafts.current[next.provider] = { settings: next, clientSecret: "" };
 			})
 			.catch((error) => {
 				setError(errorMessage(error));
@@ -255,6 +393,9 @@ export const AuthenticationSettingsPage = () => {
 				issuerUrl: null,
 				allowedDomain: null,
 				tenantId: null,
+				groupTeamMappings: [],
+				additionalScopes: "",
+				groupClaimName: "",
 			},
 		});
 	};
@@ -277,6 +418,10 @@ export const AuthenticationSettingsPage = () => {
 			tenantId: settings.provider === "microsoft" ? settings.tenantId : null,
 			allowUserCreation: settings.allowUserCreation,
 			allowSessionReuse: settings.allowSessionReuse,
+			defaultTeamId: settings.defaultTeamId,
+			groupTeamMappings: settings.provider === "google" ? [] : settings.groupTeamMappings,
+			additionalScopes: settings.provider === "oidc" ? settings.additionalScopes : "",
+			groupClaimName: settings.provider === "oidc" ? settings.groupClaimName : "",
 		};
 
 		api["/api/dashboard/admin/auth"]
@@ -284,9 +429,10 @@ export const AuthenticationSettingsPage = () => {
 			.json()
 			.then((next) => {
 				if (typeof next === "string") throw new Error(next);
-				setForm({ settings: next, clientSecret: "" });
-				setSavedSettings(next);
-				providerDrafts.current[next.provider] = { settings: next, clientSecret: "" };
+				const normalized = withTeamDefaults(next);
+				setForm({ settings: normalized, clientSecret: "" });
+				setSavedSettings(normalized);
+				providerDrafts.current[normalized.provider] = { settings: normalized, clientSecret: "" };
 				createToast("Authentication settings updated", "success");
 			})
 			.catch((error) => createToast(errorMessage(error), "error"));
@@ -318,18 +464,8 @@ export const AuthenticationSettingsPage = () => {
 					update={update}
 					selectProvider={selectProvider}
 					setClientSecret={(clientSecret) => setForm({ ...form, clientSecret })}
+					teams={teams}
 				/>
-				{settings.enabled && (
-					<div className={styles.callbackSection}>
-						<h2>Callback URL</h2>
-						<p>
-							{settings.provider === "microsoft"
-								? "In Microsoft Entra ID, select the Web platform and add this exact URL as a redirect URI."
-								: "Add this exact URL to the provider application's allowed redirect URLs."}
-						</p>
-						<CopyableValue value={settings.callbackUrl} label="Callback URL" />
-					</div>
-				)}
 			</SettingsForm>
 		</div>
 	);

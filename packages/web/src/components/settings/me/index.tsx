@@ -71,7 +71,7 @@ export const MyAccount = () => {
 					<h2>Update password</h2>
 					<p>Changing your password signs you out on other devices.</p>
 					<label>
-						Current password
+						Current password *
 						<input
 							required
 							type="password"
@@ -81,7 +81,7 @@ export const MyAccount = () => {
 						/>
 					</label>
 					<label>
-						New password
+						New password *
 						<input
 							minLength={8}
 							required
@@ -93,7 +93,7 @@ export const MyAccount = () => {
 					</label>
 
 					<label>
-						Confirm new password
+						Confirm new password *
 						<input
 							minLength={8}
 							required

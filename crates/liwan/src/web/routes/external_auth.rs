@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 use crate::{
-    app::{ExternalAuthProvider, ExternalAuthSettings},
+    app::{ExternalAuthProvider, ExternalAuthSettings, GroupTeamMapping},
     config::Config,
     web::{
         RouterState,
@@ -98,6 +98,10 @@ struct ExternalAuthSettingsResponse {
     tenant_id: Option<String>,
     allow_user_creation: bool,
     allow_session_reuse: bool,
+    default_team_id: Option<String>,
+    group_team_mappings: Vec<GroupTeamMapping>,
+    additional_scopes: String,
+    group_claim_name: String,
     callback_url: String,
 }
 
@@ -117,6 +121,10 @@ struct UpdateExternalAuthSettings {
     tenant_id: Option<String>,
     allow_user_creation: bool,
     allow_session_reuse: bool,
+    default_team_id: Option<String>,
+    group_team_mappings: Vec<GroupTeamMapping>,
+    additional_scopes: String,
+    group_claim_name: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -180,6 +188,12 @@ async fn update_settings(
             }
             ExternalAuthProvider::Google => true,
         };
+    if !same_client_registration
+        && !request.group_team_mappings.is_empty()
+        && request.group_team_mappings == existing.group_team_mappings
+    {
+        http_bail!(StatusCode::BAD_REQUEST, "reconfigure group mappings when changing the provider registration");
+    }
     let client_secret = if request.clear_client_secret {
         None
     } else if let Some(client_secret) = request.client_secret {
@@ -200,6 +214,10 @@ async fn update_settings(
         tenant_id: request.tenant_id,
         allow_user_creation: request.allow_user_creation,
         allow_session_reuse: request.allow_session_reuse,
+        default_team_id: request.default_team_id,
+        group_team_mappings: request.group_team_mappings,
+        additional_scopes: request.additional_scopes,
+        group_claim_name: request.group_claim_name,
     };
     if let Err(error) = app.external_auth.update_settings(&settings).await {
         tracing::debug!(%error, "external authentication settings validation failed");
@@ -299,6 +317,10 @@ fn settings_response(app: &RouterState, settings: ExternalAuthSettings) -> Exter
         tenant_id: settings.tenant_id,
         allow_user_creation: settings.allow_user_creation,
         allow_session_reuse: settings.allow_session_reuse,
+        default_team_id: settings.default_team_id,
+        group_team_mappings: settings.group_team_mappings,
+        additional_scopes: settings.additional_scopes,
+        group_claim_name: settings.group_claim_name,
         callback_url: app.external_auth.callback_url().to_string(),
     }
 }

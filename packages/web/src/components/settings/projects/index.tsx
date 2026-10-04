@@ -227,7 +227,7 @@ const ProjectSettingsContent = ({ projectId }: { projectId: string }) => {
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={projectTabs}>
 				<SettingsPanel value="general" className={styles.detailPanel}>
 					<SettingsField
-						label="Project name"
+						label="Project name *"
 						description="Identifies this project in the dashboard."
 						name="displayName"
 					>

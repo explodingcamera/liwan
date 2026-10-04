@@ -14,7 +14,8 @@ pub use api_keys::{ApiKeyAccess, LiwanApiKeys};
 pub use entities::LiwanEntities;
 pub use events::{LiwanEvents, PruneStats};
 pub use external_auth::{
-    ExternalAuthLogin, ExternalAuthProvider, ExternalAuthSettings, ExternalAuthStart, LiwanExternalAuth,
+    ExternalAuthLogin, ExternalAuthProvider, ExternalAuthSettings, ExternalAuthStart, GroupTeamMapping,
+    LiwanExternalAuth,
 };
 pub use onboarding::LiwanOnboarding;
 pub use projects::LiwanProjects;

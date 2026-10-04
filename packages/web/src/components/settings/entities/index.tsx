@@ -221,7 +221,11 @@ const EntitySettingsContent = ({ entityId }: { entityId: string }) => {
 			/>
 			<SettingsTabs value={tab} onValueChange={setTab} tabs={entityTabs}>
 				<SettingsPanel value="general" className={styles.detailPanel}>
-					<SettingsField label="Entity name" description="Identifies this entity in the dashboard." name="displayName">
+					<SettingsField
+						label="Entity name *"
+						description="Identifies this entity in the dashboard."
+						name="displayName"
+					>
 						<input
 							required
 							name="displayName"

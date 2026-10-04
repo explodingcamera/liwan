@@ -300,7 +300,7 @@ export const FilterDialog = ({
 
 				{filter.hasKey && (
 					<label>
-						Key
+						Key *
 						<input type="text" name="key" required maxLength={64} pattern=".*\S.*" />
 					</label>
 				)}
@@ -340,7 +340,7 @@ export const FilterDialog = ({
 
 				{!filter.custom && filterType !== "is_null" && (
 					<label>
-						Value
+						Value *
 						<input type="text" name="value" required />
 					</label>
 				)}

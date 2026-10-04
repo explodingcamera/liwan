@@ -1,4 +1,4 @@
-use std::net::IpAddr;
+use std::{collections::HashMap, net::IpAddr};
 
 use anyhow::{Context, Result, bail};
 use oauth2::{AuthType, EndpointMaybeSet, EndpointNotSet, EndpointSet};
@@ -22,9 +22,26 @@ struct ProviderClaims {
     hd: Option<String>,
     #[serde(default)]
     tid: Option<String>,
+    #[serde(default)]
+    groups: Option<serde_json::Value>,
+    #[serde(default)]
+    hasgroups: bool,
+    #[serde(default, rename = "_claim_names")]
+    claim_names: Option<serde_json::Value>,
+    #[serde(flatten)]
+    other: HashMap<String, serde_json::Value>,
 }
 
 impl AdditionalClaims for ProviderClaims {}
+
+impl ProviderClaims {
+    fn group_values(&self, claim_name: &str) -> (Option<Vec<String>>, bool) {
+        let values = if claim_name == "groups" { self.groups.as_ref() } else { self.other.get(claim_name) };
+        let incomplete =
+            self.hasgroups || self.claim_names.as_ref().is_some_and(|names| names.get(claim_name).is_some());
+        (values.cloned().and_then(|value| serde_json::from_value(value).ok()), incomplete)
+    }
+}
 
 type ProviderIdTokenFields = IdTokenFields<
     ProviderClaims,
@@ -76,6 +93,8 @@ pub(super) struct Provider {
     provider_key: String,
     policy: ProviderPolicy,
     allow_session_reuse: bool,
+    additional_scopes: Vec<String>,
+    group_claim_name: String,
 }
 
 impl Provider {
@@ -110,7 +129,18 @@ impl Provider {
         .set_auth_type(auth_type)
         .set_redirect_uri(RedirectUrl::new(redirect_url.to_string())?);
 
-        Ok(Self { client: oidc_client, provider_key, policy, allow_session_reuse: settings.allow_session_reuse })
+        Ok(Self {
+            client: oidc_client,
+            provider_key,
+            policy,
+            allow_session_reuse: settings.allow_session_reuse,
+            additional_scopes: settings.additional_scopes.split_whitespace().map(str::to_string).collect(),
+            group_claim_name: if settings.provider == ExternalAuthProvider::Microsoft {
+                "groups".to_string()
+            } else {
+                settings.group_claim_name.clone()
+            },
+        })
     }
 
     pub(super) fn authorize(&self) -> Authorization {
@@ -125,6 +155,8 @@ impl Provider {
             .add_scope(Scope::new("profile".to_string()))
             .add_scope(Scope::new("email".to_string()))
             .set_pkce_challenge(challenge);
+        let request =
+            self.additional_scopes.iter().fold(request, |request, scope| request.add_scope(Scope::new(scope.clone())));
         let request = if self.allow_session_reuse { request } else { request.add_prompt(CoreAuthPrompt::Login) };
         let (url, state, nonce) = request.url();
         Authorization { url, state: state.secret().clone(), secret: FlowSecret { nonce, verifier } }
@@ -167,10 +199,13 @@ impl Provider {
             .map(|value| value.as_str().to_string())
             .or_else(|| claims.email().map(|value| value.as_str().to_string()))
             .or_else(|| claims.name().and_then(|name| name.get(None)).map(|value| value.as_str().to_string()));
+        let (groups, groups_overage) = claims.additional_claims().group_values(&self.group_claim_name);
         Ok(ExternalIdentity {
             provider_key: self.provider_key.clone(),
             subject: claims.subject().as_str().to_string(),
             username_hint,
+            groups,
+            groups_overage,
         })
     }
 }
@@ -297,5 +332,26 @@ mod tests {
             microsoft_issuer("72F988BF-86F1-41AF-91AB-2D7CD011DB47").unwrap(),
             "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0"
         );
+    }
+
+    #[test]
+    fn reads_configured_group_claims_and_detects_incomplete_lists() {
+        let claims: ProviderClaims = serde_json::from_value(serde_json::json!({
+            "groups": ["engineering"],
+            "roles": ["analyst"],
+        }))
+        .unwrap();
+        assert_eq!(claims.group_values("groups"), (Some(vec!["engineering".into()]), false));
+        assert_eq!(claims.group_values("roles"), (Some(vec!["analyst".into()]), false));
+        assert_eq!(claims.group_values("missing"), (None, false));
+
+        let malformed: ProviderClaims = serde_json::from_value(serde_json::json!({ "roles": [7] })).unwrap();
+        assert_eq!(malformed.group_values("roles"), (None, false));
+
+        let incomplete: ProviderClaims = serde_json::from_value(serde_json::json!({
+            "groups": [7], "hasgroups": true, "_claim_names": { "groups": "src1" }
+        }))
+        .unwrap();
+        assert_eq!(incomplete.group_values("groups"), (None, true));
     }
 }

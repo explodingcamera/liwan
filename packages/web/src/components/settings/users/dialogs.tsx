@@ -46,7 +46,7 @@ export const CreateUser = () => {
 			}
 		>
 			<form onSubmit={handleSubmit}>
-				<SettingsField label="Username" description="Cannot be changed later.">
+				<SettingsField label="Username *" description="Cannot be changed later.">
 					<input
 						required
 						pattern="^[A-Za-z0-9_\-]{2,20}$"
@@ -56,7 +56,7 @@ export const CreateUser = () => {
 						autoComplete="username"
 					/>
 				</SettingsField>
-				<SettingsField label="Password" description="Must be at least 8 characters.">
+				<SettingsField label="Password *" description="Must be at least 8 characters.">
 					<input required name="password" type="password" autoComplete="new-password" minLength={8} />
 				</SettingsField>
 				<label className={styles.switchLabel}>
