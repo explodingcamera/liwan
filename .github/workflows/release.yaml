@@ -9,7 +9,7 @@ jobs:
   create-release:
     permissions:
       contents: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -23,7 +23,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-web:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
@@ -52,13 +52,13 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-24.04
+            os: ubuntu-26.04
             build-tool: cargo-zigbuild
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-24.04
+            os: ubuntu-26.04-arm
             build-tool: cargo-zigbuild
           - target: aarch64-apple-darwin
-            os: macos-latest
+            os: macos-26
             build-tool: cargo
 
     runs-on: ${{ matrix.os }}
