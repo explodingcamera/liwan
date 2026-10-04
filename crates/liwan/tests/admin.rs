@@ -10,6 +10,58 @@ use std::num::NonZeroU32;
 mod common;
 
 #[tokio::test]
+async fn entities_list_respects_team_access() -> Result<()> {
+    let app = common::app();
+    let (queues, _receivers) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    app.users.create("admin", "testtest", UserRole::Admin)?;
+    app.users.create("viewer", "testtest", UserRole::User)?;
+    app.entities.create(&Entity { id: "allowed".into(), display_name: "Allowed".into() }, &[])?;
+    app.entities.create(&Entity { id: "hidden".into(), display_name: "Hidden".into() }, &[])?;
+    app.projects.create(
+        &Project {
+            id: "visible".into(),
+            display_name: "Visible".into(),
+            visibility: ProjectVisibility::Private,
+            secret: None,
+        },
+        &["allowed".into()],
+    )?;
+    app.projects.create(
+        &Project {
+            id: "unlisted".into(),
+            display_name: "Unlisted".into(),
+            visibility: ProjectVisibility::Unlisted,
+            secret: None,
+        },
+        &["allowed".into(), "hidden".into()],
+    )?;
+    let team_id = app.teams.create("Viewers")?;
+    let admin = common::login(&client, "admin", "testtest").await;
+    client
+        .put_with_headers(
+            &format!("/api/dashboard/team/{team_id}"),
+            json!({"displayName": "Viewers", "users": ["viewer"], "projects": ["visible"]}),
+            vec![("cookie".into(), common::cookie_header(&admin))],
+        )
+        .await
+        .assert_status_success();
+
+    client.get("/api/dashboard/entities").await.assert_status(http::StatusCode::UNAUTHORIZED);
+    let admin_headers = vec![("cookie".into(), common::cookie_header(&admin))];
+    let admin_list: Value = client.get_with_headers("/api/dashboard/entities", admin_headers).await.json();
+    assert_eq!(admin_list["entities"].as_array().unwrap().len(), 2);
+    let viewer = common::login(&client, "viewer", "testtest").await;
+    let headers = || vec![("cookie".into(), common::cookie_header(&viewer))];
+    let listed: Value = client.get_with_headers("/api/dashboard/entities", headers()).await.json();
+    assert_eq!(
+        listed["entities"],
+        json!([{"id": "allowed", "displayName": "Allowed", "projects": [{"id": "visible", "displayName": "Visible", "visibility": "private"}]}])
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn teams_grant_project_read_access() -> Result<()> {
     let app = common::app();
     let (queues, _receivers) = common::events();

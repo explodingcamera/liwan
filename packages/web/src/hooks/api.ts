@@ -14,7 +14,7 @@ const getStatusCode = (error: unknown) => (error as { status?: number } | undefi
 export const useMe = () => {
 	const { data, isLoading, error } = useQuery({
 		queryKey: ["me"],
-		staleTime: 30_000,
+		staleTime: 5 * 60_000,
 		refetchOnMount: false,
 		retry: false,
 		queryFn: () => api["/api/dashboard/auth/me"].get().json(),

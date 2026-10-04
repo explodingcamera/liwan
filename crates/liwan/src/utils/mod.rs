@@ -7,6 +7,7 @@ pub mod r2d2_sqlite;
 pub(crate) mod referrer;
 pub(crate) mod refinery_duckdb;
 pub(crate) mod refinery_sqlite;
+#[cfg(any(debug_assertions, test))]
 pub(crate) mod seed;
 pub mod serde;
 pub(crate) mod signals;

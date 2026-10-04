@@ -12,7 +12,7 @@ import { createToast } from "@/components/ui/toast";
 import { appPath } from "@/config";
 import type { Dimension, DisplayOverride, ProjectDisplaySettings, ProjectVisibility } from "@/constants";
 import { dimensionNames, displayOverrides, metricNames, metrics } from "@/constants";
-import { invalidateProjects, useEntities, useProjects } from "@/hooks/api";
+import { invalidateProjects, useEntities, useMe, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
 import {
 	getSettingsPathId,
@@ -62,12 +62,14 @@ const projectTabs = [
 
 export const ProjectsTable = () => {
 	const { projects, isLoading } = useProjects();
+	const { role } = useMe();
 
 	const columns: Column<(typeof projects)[number]>[] = [
 		{
 			id: "displayName",
 			header: "Name",
-			render: (row) => <a href={appPath(`/settings/projects/${row.id}`)}>{row.displayName}</a>,
+			render: (row) =>
+				role === "admin" ? <a href={appPath(`/settings/projects/${row.id}`)}>{row.displayName}</a> : row.displayName,
 			nowrap: true,
 		},
 		{
@@ -83,20 +85,26 @@ export const ProjectsTable = () => {
 					{row.entities.map((entity, i) => (
 						<Fragment key={entity.id}>
 							{i > 0 && ", "}
-							<a href={appPath(`/settings/entities/${entity.id}`)}>{entity.displayName}</a>
+							{role === "admin" ? (
+								<a href={appPath(`/settings/entities/${entity.id}`)}>{entity.displayName}</a>
+							) : (
+								entity.displayName
+							)}
 						</Fragment>
 					))}
 				</>
 			),
 			full: true,
 		},
-		{
+	];
+	if (role === "admin") {
+		columns.push({
 			id: "edit",
 			render: (row) => (
 				<SettingsLink href={appPath(`/settings/projects/${row.id}`)} label={`Open ${row.displayName} settings`} />
 			),
-		},
-	];
+		});
+	}
 
 	return <Table columns={columns} rows={projects} isLoading={isLoading} />;
 };

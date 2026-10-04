@@ -9,10 +9,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { appPath } from "@/config";
 import type { ProjectVisibility } from "@/constants";
-import { invalidateProjects } from "@/hooks/api";
+import { invalidateProjects, useMe } from "@/hooks/api";
 import { SettingsField } from "../form";
 
 export const CreateProject = () => {
+	const { role } = useMe();
 	const { mutate } = useMutation({
 		mutationFn: api["/api/dashboard/project/{project_id}"].post,
 		onSuccess: (_res, variables) => {
@@ -41,6 +42,8 @@ export const CreateProject = () => {
 			},
 		});
 	};
+
+	if (role !== "admin") return null;
 
 	return (
 		<Dialog

@@ -789,18 +789,23 @@ async fn project_delete_handler(
     Ok(empty_response())
 }
 
-async fn entities_handler(app: State<RouterState>, Admin(_): Admin) -> ApiResult<Json<EntitiesResponse>> {
+async fn entities_handler(app: State<RouterState>, MaybeAuth(user): MaybeAuth) -> ApiResult<Json<EntitiesResponse>> {
+    let Some(user) = user else { http_bail!(StatusCode::UNAUTHORIZED, "Authentication required") };
     let entities = app.entities.all().http_err("Failed to get entities", StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut resp = Vec::new();
     for entity in entities {
+        let projects =
+            app.entities.projects(&entity.id).http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?;
+        let visible_projects: Vec<_> =
+            projects.into_iter().filter(|project| can_enumerate_project(project, Some(&user))).collect();
+        if user.role != UserRole::Admin && visible_projects.is_empty() {
+            continue;
+        }
         resp.push(EntityResponse {
             id: entity.id.clone(),
             display_name: entity.display_name.clone(),
-            projects: app
-                .entities
-                .projects(&entity.id)
-                .http_err("Failed to get projects", StatusCode::INTERNAL_SERVER_ERROR)?
+            projects: visible_projects
                 .into_iter()
                 .map(|project| EntityProject {
                     id: project.id,

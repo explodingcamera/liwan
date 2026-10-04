@@ -8,10 +8,11 @@ import { api, useMutation } from "@/api";
 import { Dialog } from "@/components/ui/dialog";
 import { createToast } from "@/components/ui/toast";
 import { appPath } from "@/config";
-import { invalidateEntities } from "@/hooks/api";
+import { invalidateEntities, useMe } from "@/hooks/api";
 import { SettingsField } from "../form";
 
 export const CreateEntity = () => {
+	const { role } = useMe();
 	const { mutate } = useMutation({
 		mutationFn: api["/api/dashboard/entity"].post,
 		onSuccess: (_res, variables) => {
@@ -31,6 +32,8 @@ export const CreateEntity = () => {
 		};
 		mutate({ json: { id, displayName, projects: [] } });
 	};
+
+	if (role !== "admin") return null;
 
 	return (
 		<Dialog

@@ -2,7 +2,7 @@
 import { Font } from "astro:assets";
 import "../global.css";
 
-import { ClientRouter, fade } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 
 import ThemeSwitcher from "@/components/ui/theme-switcher.astro";
 import { ToastHost } from "@/components/ui/toast";
@@ -10,7 +10,7 @@ import { ToastHost } from "@/components/ui/toast";
 type Props = { title: string; hideFooter?: boolean };
 ---
 
-<html lang="en" transition:animate={fade({ duration: "100ms" })}>
+<html lang="en" transition:animate="none">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />

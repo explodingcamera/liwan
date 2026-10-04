@@ -10,7 +10,7 @@ import { Table } from "@/components/ui/table";
 import { createToast } from "@/components/ui/toast";
 import { appPath } from "@/config";
 import type { EntityCollectionSettings } from "@/constants";
-import { invalidateEntities, useEntities, useProjects } from "@/hooks/api";
+import { invalidateEntities, useEntities, useMe, useProjects } from "@/hooks/api";
 import { DeleteDialog } from "../dialogs";
 import {
 	AllowedHostnamesEditor,
@@ -81,6 +81,7 @@ const EntityId = ({ id }: { id: string }) => (
 
 export const EntitiesTable = () => {
 	const { entities, isLoading, authError } = useEntities();
+	const { role } = useMe();
 
 	if (authError) {
 		return "You don't have permission to view this page.";
@@ -90,7 +91,8 @@ export const EntitiesTable = () => {
 		{
 			id: "displayName",
 			header: "Name",
-			render: (row) => <a href={appPath(`/settings/entities/${row.id}`)}>{row.displayName}</a>,
+			render: (row) =>
+				role === "admin" ? <a href={appPath(`/settings/entities/${row.id}`)}>{row.displayName}</a> : row.displayName,
 			nowrap: true,
 		},
 		{
@@ -107,20 +109,26 @@ export const EntitiesTable = () => {
 					{row.projects.map((project, i) => (
 						<Fragment key={project.id}>
 							{i > 0 && ", "}
-							<a href={appPath(`/settings/projects/${project.id}`)}>{project.displayName}</a>
+							{role === "admin" ? (
+								<a href={appPath(`/settings/projects/${project.id}`)}>{project.displayName}</a>
+							) : (
+								project.displayName
+							)}
 						</Fragment>
 					))}
 				</>
 			),
 			full: true,
 		},
-		{
+	];
+	if (role === "admin") {
+		columns.push({
 			id: "edit",
 			render: (row) => (
 				<SettingsLink href={appPath(`/settings/entities/${row.id}`)} label={`Open ${row.displayName} settings`} />
 			),
-		},
-	];
+		});
+	}
 
 	return <Table columns={columns} rows={entities} isLoading={isLoading} />;
 };

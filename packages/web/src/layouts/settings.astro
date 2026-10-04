@@ -19,13 +19,18 @@ const path = Astro.url.pathname;
 const { title } = Astro.props;
 
 const groups = [
-	{ label: "General", pages: [{ href: "/settings/me", label: "My Account", icon: UserIcon }] },
+	{
+		label: "General",
+		pages: [
+			{ href: "/settings/me", label: "My Account", icon: UserIcon },
+			{ href: "/settings/projects", label: "Projects", icon: TablePropertiesIcon },
+			{ href: "/settings/entities", label: "Entities", icon: CodeIcon },
+		],
+	},
 	{
 		label: "Admin",
 		admin: true,
 		pages: [
-			{ href: "/settings/projects", label: "Projects", icon: TablePropertiesIcon },
-			{ href: "/settings/entities", label: "Entities", icon: CodeIcon },
 			{ href: "/settings/collection", label: "Collection", icon: DatabaseIcon },
 			{ href: "/settings/users", label: "Users", icon: UsersIcon },
 			{ href: "/settings/teams", label: "Teams", icon: UsersIcon },
@@ -72,11 +77,23 @@ const groups = [
 
 <script>
   import { navigate } from "astro:transitions/client";
+  import { api } from "@/api/client";
+  import { queryClient } from "@/api/query";
   import { appPath } from "@/config";
 
   function handleSelectChange(event: Event) {
     navigate(appPath((event.currentTarget as HTMLSelectElement).value));
   }
+
+  document.addEventListener("astro:before-swap", (event) => {
+    const role = document.querySelector<HTMLElement>(".settings")?.dataset.role;
+    const nextSettings = event.newDocument.querySelector<HTMLElement>(".settings");
+    if (!role || !nextSettings) return;
+
+    const adminPage = !!nextSettings.querySelector("[data-admin-nav] a[aria-current]") ||
+      ["/settings/projects/", "/settings/entities/"].some((path) => event.to.pathname.startsWith(appPath(path)));
+    if (role === "admin" || !adminPage) nextSettings.dataset.role = role;
+  });
 
   document.addEventListener("astro:page-load", async () => {
     const settings = document.querySelector<HTMLElement>(".settings");
@@ -84,24 +101,27 @@ const groups = [
     document.getElementById("select-settings-page")?.addEventListener("change", handleSelectChange);
 
     try {
-      const response = await fetch(appPath("/api/dashboard/auth/me"));
-      if (response.status === 401) {
-        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        window.location.replace(appPath(`/login?${new URLSearchParams({ returnTo })}`));
-        return;
-      }
-      if (!response.ok) throw new Error("Failed to load account");
-
-      const { role } = await response.json();
+      const { role } = await queryClient.fetchQuery({
+        queryKey: ["me"],
+        queryFn: () => api["/api/dashboard/auth/me"].get().json(),
+        staleTime: 5 * 60_000,
+      });
       if (role !== "admin") {
-        if (settings.querySelector("[data-admin-nav] a[aria-current]")) {
+        if (settings.querySelector("[data-admin-nav] a[aria-current]") ||
+            ["/settings/projects/", "/settings/entities/"].some((path) =>
+              window.location.pathname.startsWith(`${appPath(path)}`))) {
           window.location.replace(appPath("/settings/me"));
           return;
         }
         settings.querySelector("optgroup[data-admin-nav]")?.remove();
       }
       settings.dataset.role = role;
-    } catch {
+    } catch (error) {
+      if ((error as { status?: number }).status === 401) {
+        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.replace(appPath(`/login?${new URLSearchParams({ returnTo })}`));
+        return;
+      }
       settings.querySelector<HTMLElement>(".content")!.textContent = "Failed to load account. Refresh to try again.";
       settings.dataset.role = "user";
     }
