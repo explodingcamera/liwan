@@ -3,7 +3,7 @@ use rand::distr::{Alphanumeric, SampleString};
 use std::collections::HashSet;
 
 use crate::app::{
-    SqlitePool,
+    GroupTeamMapping, SqlitePool,
     models::{Access, AccessPermission, AccessScope, Team},
 };
 
@@ -141,6 +141,17 @@ impl LiwanTeams {
     pub fn delete(&self, id: &str) -> Result<()> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
+        let (default_team_id, mappings): (Option<String>, String) = tx.query_row(
+            "select default_team_id, group_team_mappings from external_auth_settings where id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        let mut mappings: Vec<GroupTeamMapping> = serde_json::from_str(&mappings)?;
+        mappings.retain(|mapping| mapping.team_id != id);
+        tx.execute(
+            "update external_auth_settings set default_team_id = ?, group_team_mappings = ? where id = 1",
+            rusqlite::params![default_team_id.filter(|team_id| team_id != id), serde_json::to_string(&mappings)?],
+        )?;
         tx.execute("delete from team_users where team_id = ?", [id])?;
         tx.execute("delete from team_projects where team_id = ?", [id])?;
         tx.execute("delete from team_entities where team_id = ?", [id])?;
@@ -153,11 +164,35 @@ impl LiwanTeams {
 #[cfg(test)]
 mod tests {
     use crate::app::{
-        Liwan,
+        GroupTeamMapping, Liwan,
         models::{AccessPermission, AccessScope, Entity, Project, ProjectVisibility, UserRole},
     };
     use crate::config::Config;
     use crate::utils::validate::{can_enumerate_project, can_view_project};
+
+    #[tokio::test]
+    async fn deleting_team_clears_external_auth_assignments() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let deleted = app.teams.create("Deleted").unwrap();
+        let retained = app.teams.create("Retained").unwrap();
+        let mut settings = app.external_auth.settings().unwrap();
+        settings.group_claim_name = "groups".into();
+        settings.default_team_id = Some(deleted.clone());
+        settings.group_team_mappings = vec![
+            GroupTeamMapping { group_id: "old".into(), team_id: deleted.clone() },
+            GroupTeamMapping { group_id: "current".into(), team_id: retained.clone() },
+        ];
+        app.external_auth.update_settings(&settings).await.unwrap();
+
+        app.teams.delete(&deleted).unwrap();
+
+        let settings = app.external_auth.settings().unwrap();
+        assert_eq!(settings.default_team_id, None);
+        assert_eq!(
+            settings.group_team_mappings,
+            vec![GroupTeamMapping { group_id: "current".into(), team_id: retained }]
+        );
+    }
 
     #[test]
     fn team_grants_follow_membership_and_project_changes() {

@@ -7,7 +7,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::builder("https://analytics.example.com", api_key, reqwest::Client::builder().build()?)?
         .build_tokio()?;
 
-    let tracking = LiwanLayer::new(client.clone(), "docs")
+    let tracking = LiwanLayer::new(client.clone(), "my-entity-id")
         .origin("https://service.example.com")
         .paths(PathFilter::new().include("/").exclude("/health"));
 

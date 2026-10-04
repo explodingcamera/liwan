@@ -39,23 +39,27 @@ describe("server client", () => {
 		);
 	});
 
-	test("continues with queued events after a rejected batch", async () => {
-		let requests = 0;
+	test("retains rejected batches for another flush", async () => {
+		const names: string[] = [];
 		const client = createClient({
 			endpoint: "https://liwan.example",
 			apiKey: "key",
 			batchSize: 1,
 			flushInterval: 1,
-			fetch: async () => new Response(null, { status: ++requests === 1 ? 400 : 202 }),
+			fetch: async (_input, init) => {
+				const body = JSON.parse(String(init?.body));
+				names.push(body.events[0].name);
+				return new Response(null, { status: names.length === 1 ? 400 : 202 });
+			},
 		});
 
 		client.event("docs", "first", { url: "https://example.com/one" });
 		client.event("docs", "second", { url: "https://example.com/two" });
 		await expect(client.flush()).rejects.toThrow("status 400");
 		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		expect(requests).toBe(2);
+		expect(names).toEqual(["first"]);
 		await client.close();
+		expect(names).toEqual(["first", "first", "second"]);
 	});
 
 	test("rejects invalid timing options", () => {

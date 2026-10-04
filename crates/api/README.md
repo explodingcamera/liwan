@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?
     .build_tokio()?;
 
-    client.event("docs", liwan_api::Event::pageview("https://example.com/docs"))?;
+    client.event("my-entity-id", liwan_api::Event::pageview("https://example.com/docs"))?;
     client.shutdown().await?;
     Ok(())
 }

@@ -7,7 +7,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .batch_size(100)
         .build_tokio()?;
 
-    analytics.event("worker", Event::new("job_completed", "https://worker.example.com/jobs/import"))?;
+    analytics.event("my-entity-id", Event::new("job_completed", "https://worker.example.com/jobs/import"))?;
     analytics.shutdown().await?;
     Ok(())
 }

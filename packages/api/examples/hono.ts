@@ -1,6 +1,5 @@
-// bun add hono liwan-api
+import { getConnInfo } from "@hono/bun";
 import { Hono } from "hono";
-import { getConnInfo } from "hono/bun";
 import { createClient } from "liwan-api";
 import { honoMiddleware } from "liwan-api/hono";
 
@@ -10,7 +9,17 @@ const analytics = createClient({
 });
 
 const app = new Hono();
-app.use("*", honoMiddleware(analytics, "docs", { peerIp: (context) => getConnInfo(context).remote.address }));
+app.use(
+	"*",
+	honoMiddleware(analytics, "my-entity-id", {
+		peerIp: (context) => getConnInfo(context).remote.address,
+		clientIp: {
+			sources: ["x-forwarded-for"],
+			// Trust only a reverse proxy connecting over loopback. Use your proxy's address or subnet otherwise.
+			trustedProxies: ["127.0.0.1", "::1"],
+		},
+	}),
+);
 
 app.get("/", (context) => context.text("Hello"));
 const server = Bun.serve({ fetch: app.fetch, port: 3000 });

@@ -76,7 +76,6 @@ export function createClient(options: ClientOptions): Client {
 	let closed = false;
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let activeFlush: Promise<void> | undefined;
-	let lastError: Error | undefined;
 
 	const send = async (entityId: string, events: Omit<QueuedEvent, "entityId">[]) => {
 		for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -122,38 +121,32 @@ export function createClient(options: ClientOptions): Client {
 		if (timer) clearTimeout(timer);
 		timer = undefined;
 		if (activeFlush) return activeFlush;
+		let failed = false;
 		activeFlush = (async () => {
 			while (queue.length > 0) {
 				const entityId = queue[0].entityId;
 				let count = 1;
 				while (count < batchSize && count < queue.length && queue[count].entityId === entityId) count++;
-				const events = queue.splice(0, count).map(({ entityId: _, ...event }) => event);
+				const events = queue.slice(0, count).map(({ entityId: _, ...event }) => event);
 				try {
 					await send(entityId, events);
 				} catch (error) {
-					lastError = error instanceof Error ? error : new Error("Liwan batch delivery failed");
-					break;
-				} finally {
-					queuedCount -= events.length;
+					failed = true;
+					throw error;
 				}
+				queue.splice(0, count);
+				queuedCount -= count;
 			}
 		})().finally(() => {
 			activeFlush = undefined;
-			if (!closed && queue.length > 0 && !timer) {
-				timer = setTimeout(() => void startFlush(), flushInterval);
+			if (!closed && !failed && queue.length > 0 && !timer) {
+				timer = setTimeout(() => void startFlush().catch(() => {}), flushInterval);
 			}
 		});
 		return activeFlush;
 	};
 
-	const flush = async () => {
-		await (activeFlush ?? startFlush());
-		if (lastError) {
-			const error = lastError;
-			lastError = undefined;
-			throw error;
-		}
-	};
+	const flush = async () => await (activeFlush ?? startFlush());
 
 	return {
 		event(entityId, name, metadata) {
@@ -172,9 +165,9 @@ export function createClient(options: ClientOptions): Client {
 			});
 			queuedCount++;
 			if (queue.length >= batchSize) {
-				void startFlush();
+				void startFlush().catch(() => {});
 			} else if (!timer) {
-				timer = setTimeout(() => void startFlush(), flushInterval);
+				timer = setTimeout(() => void startFlush().catch(() => {}), flushInterval);
 			}
 		},
 		flush,

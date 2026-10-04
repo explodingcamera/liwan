@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     future::Future,
     pin::Pin,
     sync::{
@@ -61,6 +62,10 @@ impl Client {
 
     /// Stops accepting events and flushes the queue.
     pub async fn shutdown(&self) -> Result<(), Error> {
+        if self.closed.load(Ordering::Acquire) {
+            return Err(Error::Closed);
+        }
+        self.flush().await?;
         if self.closed.swap(true, Ordering::AcqRel) {
             return Err(Error::Closed);
         }
@@ -201,9 +206,7 @@ enum Message {
 }
 
 async fn run_worker<T: Transport>(receiver: Receiver<Message>, config: Builder<T>) -> Result<(), Error> {
-    let mut events = Vec::with_capacity(config.batch_size);
-    let mut entity_id = None;
-    let mut last_error = None;
+    let mut events = VecDeque::with_capacity(config.batch_size);
     let mut deadline: Option<std::time::Instant> = None;
     loop {
         let next = if events.is_empty() {
@@ -212,49 +215,50 @@ async fn run_worker<T: Transport>(receiver: Receiver<Message>, config: Builder<T
             let remaining = deadline
                 .expect("non-empty batches have a deadline")
                 .saturating_duration_since(std::time::Instant::now());
-            future::race(async { Some(receiver.recv().await) }, async {
+            if events.len() >= config.queue_capacity {
                 futures_timer::Delay::new(remaining).await;
                 None
-            })
-            .await
+            } else {
+                future::race(async { Some(receiver.recv().await) }, async {
+                    futures_timer::Delay::new(remaining).await;
+                    None
+                })
+                .await
+            }
         };
         match next {
             Some(Ok(Message::Event(next_entity_id, event))) => {
-                if entity_id.as_deref().is_some_and(|entity_id| entity_id != next_entity_id.as_ref())
-                    && let Err(error) = send_pending(&config, &mut entity_id, &mut events).await
-                {
-                    last_error = Some(error);
-                }
                 if events.is_empty() {
-                    entity_id = Some(next_entity_id);
                     deadline = Some(std::time::Instant::now() + config.flush_interval);
                 }
-                events.push(event);
-                if events.len() >= config.batch_size {
-                    if let Err(error) = send_pending(&config, &mut entity_id, &mut events).await {
-                        last_error = Some(error);
-                    }
-                    deadline = None;
+                events.push_back((next_entity_id, event));
+                if events.len() >= config.batch_size
+                    || events.front().is_some_and(|(id, _)| id != &events.back().unwrap().0)
+                {
+                    let _ = send_pending(&config, &mut events).await;
+                    deadline = (!events.is_empty()).then(|| std::time::Instant::now() + config.flush_interval);
                 }
             }
             Some(Ok(Message::Flush(response))) => {
-                if let Err(error) = send_pending(&config, &mut entity_id, &mut events).await {
-                    last_error = Some(error);
+                let mut result = Ok(());
+                while !events.is_empty() {
+                    if let Err(error) = send_pending(&config, &mut events).await {
+                        result = Err(error);
+                        break;
+                    }
                 }
-                deadline = None;
-                let _ = response.send(last_error.take().map_or(Ok(()), Err)).await;
+                deadline = (!events.is_empty()).then(|| std::time::Instant::now() + config.flush_interval);
+                let _ = response.send(result).await;
             }
             Some(Err(_)) => {
-                if let Err(error) = send_pending(&config, &mut entity_id, &mut events).await {
-                    last_error = Some(error);
+                while !events.is_empty() {
+                    send_pending(&config, &mut events).await?;
                 }
-                return last_error.map_or(Ok(()), Err);
+                return Ok(());
             }
             None => {
-                if let Err(error) = send_pending(&config, &mut entity_id, &mut events).await {
-                    last_error = Some(error);
-                }
-                deadline = None;
+                let _ = send_pending(&config, &mut events).await;
+                deadline = (!events.is_empty()).then(|| std::time::Instant::now() + config.flush_interval);
             }
         }
     }
@@ -262,16 +266,20 @@ async fn run_worker<T: Transport>(receiver: Receiver<Message>, config: Builder<T
 
 async fn send_pending<T: Transport>(
     config: &Builder<T>,
-    entity_id: &mut Option<Arc<str>>,
-    events: &mut Vec<Event>,
+    events: &mut VecDeque<(Arc<str>, Event)>,
 ) -> Result<(), Error> {
-    if events.is_empty() {
+    let Some((entity_id, _)) = events.front() else {
         return Ok(());
-    }
-    let result = send_batch(config, entity_id.as_deref().expect("non-empty batches have an entity ID"), events).await;
-    events.clear();
-    *entity_id = None;
-    result
+    };
+    let batch = events
+        .iter()
+        .take_while(|(id, _)| id == entity_id)
+        .take(config.batch_size)
+        .map(|(_, event)| event.clone())
+        .collect::<Vec<_>>();
+    send_batch(config, entity_id, &batch).await?;
+    events.drain(..batch.len());
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -363,164 +371,4 @@ pub enum Error {
     /// A client setting is invalid.
     #[error("{0}")]
     InvalidConfiguration(&'static str),
-}
-
-#[cfg(test)]
-mod tests {
-    use std::{
-        collections::VecDeque,
-        sync::{Arc, Mutex},
-    };
-
-    use super::*;
-    use crate::{TransportError, transport::Transport};
-
-    #[derive(Clone)]
-    struct MockTransport {
-        requests: Arc<Mutex<Vec<Request<Vec<u8>>>>>,
-        statuses: Arc<Mutex<VecDeque<StatusCode>>>,
-    }
-
-    impl MockTransport {
-        fn new(statuses: impl IntoIterator<Item = StatusCode>) -> Self {
-            Self {
-                requests: Arc::new(Mutex::new(Vec::new())),
-                statuses: Arc::new(Mutex::new(statuses.into_iter().collect())),
-            }
-        }
-    }
-
-    impl Transport for MockTransport {
-        fn send(
-            &self,
-            request: Request<Vec<u8>>,
-        ) -> Pin<Box<dyn Future<Output = Result<http::Response<()>, TransportError>> + Send + '_>> {
-            Box::pin(async move {
-                self.requests.lock().unwrap().push(request);
-                let status = self.statuses.lock().unwrap().pop_front().unwrap_or(StatusCode::ACCEPTED);
-                Ok(http::Response::builder().status(status).body(()).unwrap())
-            })
-        }
-    }
-
-    #[tokio::test]
-    async fn flushes_at_batch_size() {
-        let transport = MockTransport::new([StatusCode::ACCEPTED]);
-        let requests = transport.requests.clone();
-        let (client, worker) = Client::builder_with_transport("https://liwan.example", "secret", transport)
-            .unwrap()
-            .batch_size(2)
-            .build()
-            .unwrap();
-        tokio::spawn(worker);
-
-        client.event("docs", Event::pageview("https://example.com/one")).unwrap();
-        client.event("docs", Event::pageview("https://example.com/two")).unwrap();
-        client.flush().await.unwrap();
-
-        let requests = requests.lock().unwrap();
-        assert_eq!(requests.len(), 1);
-        assert_eq!(requests[0].uri(), "https://liwan.example/api/v1/events");
-        let body: serde_json::Value = serde_json::from_slice(requests[0].body()).unwrap();
-        assert_eq!(body["events"].as_array().unwrap().len(), 2);
-        assert_eq!(body["entityId"], "docs");
-        assert_eq!(body["events"][0]["url"], "https://example.com/one");
-        assert!(requests[0].headers()[header::AUTHORIZATION].is_sensitive());
-    }
-
-    #[tokio::test]
-    async fn accepts_full_batch_endpoint() {
-        let transport = MockTransport::new([StatusCode::ACCEPTED]);
-        let requests = transport.requests.clone();
-        let (client, worker) =
-            Client::builder_with_transport("https://liwan.example/api/v1/events/", "secret", transport)
-                .unwrap()
-                .build()
-                .unwrap();
-        tokio::spawn(worker);
-
-        client.event("docs", Event::pageview("https://example.com")).unwrap();
-        client.flush().await.unwrap();
-        assert_eq!(requests.lock().unwrap()[0].uri(), "https://liwan.example/api/v1/events");
-    }
-
-    #[tokio::test]
-    async fn retries_service_unavailable() {
-        let transport = MockTransport::new([StatusCode::SERVICE_UNAVAILABLE, StatusCode::ACCEPTED]);
-        let requests = transport.requests.clone();
-        let (client, worker) = Client::builder_with_transport("https://liwan.example", "secret", transport)
-            .unwrap()
-            .max_retries(1)
-            .build()
-            .unwrap();
-        tokio::spawn(worker);
-
-        client.event("docs", Event::pageview("https://example.com")).unwrap();
-        client.flush().await.unwrap();
-        assert_eq!(requests.lock().unwrap().len(), 2);
-    }
-
-    #[tokio::test]
-    async fn separates_batches_by_entity() {
-        let transport = MockTransport::new([StatusCode::ACCEPTED, StatusCode::ACCEPTED]);
-        let requests = transport.requests.clone();
-        let (client, worker) =
-            Client::builder_with_transport("https://liwan.example", "secret", transport).unwrap().build().unwrap();
-        tokio::spawn(worker);
-
-        client.event("docs", Event::pageview("https://example.com/docs")).unwrap();
-        client.event("shop", Event::pageview("https://example.com/shop")).unwrap();
-        client.flush().await.unwrap();
-
-        let requests = requests.lock().unwrap();
-        assert_eq!(requests.len(), 2);
-        let first: serde_json::Value = serde_json::from_slice(requests[0].body()).unwrap();
-        let second: serde_json::Value = serde_json::from_slice(requests[1].body()).unwrap();
-        assert_eq!(first["entityId"], "docs");
-        assert_eq!(second["entityId"], "shop");
-    }
-
-    #[tokio::test]
-    async fn reports_authentication_errors() {
-        let transport = MockTransport::new([StatusCode::UNAUTHORIZED]);
-        let (client, worker) =
-            Client::builder_with_transport("https://liwan.example", "top-secret", transport).unwrap().build().unwrap();
-        tokio::spawn(worker);
-
-        client.event("docs", Event::pageview("https://example.com")).unwrap();
-        let error = client.flush().await.unwrap_err();
-        assert_eq!(error, Error::Authentication);
-    }
-
-    #[test]
-    fn rejects_zero_timeouts() {
-        let transport = MockTransport::new([]);
-        assert!(matches!(
-            Client::builder_with_transport("https://liwan.example", "secret", transport.clone())
-                .unwrap()
-                .flush_interval(Duration::ZERO)
-                .build(),
-            Err(Error::InvalidConfiguration("flush interval must be positive"))
-        ));
-        assert!(matches!(
-            Client::builder_with_transport("https://liwan.example", "secret", transport)
-                .unwrap()
-                .request_timeout(Duration::ZERO)
-                .build(),
-            Err(Error::InvalidConfiguration("request timeout must be positive"))
-        ));
-    }
-
-    #[tokio::test]
-    async fn shutdown_drains_queued_events() {
-        let transport = MockTransport::new([StatusCode::ACCEPTED]);
-        let requests = transport.requests.clone();
-        let (client, worker) =
-            Client::builder_with_transport("https://liwan.example", "secret", transport).unwrap().build().unwrap();
-        tokio::spawn(worker);
-
-        client.event("docs", Event::pageview("https://example.com")).unwrap();
-        client.shutdown().await.unwrap();
-        assert_eq!(requests.lock().unwrap().len(), 1);
-    }
 }

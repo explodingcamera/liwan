@@ -8,8 +8,9 @@ const analytics = createClient({
 });
 
 const app = express();
-// Configure Express's "trust proxy" setting if the app runs behind a trusted reverse proxy.
-app.use(expressMiddleware(analytics, "docs", { exclude: ["/health"] }));
+// Trust only a reverse proxy connecting over loopback. Use your proxy's address or subnet otherwise.
+app.set("trust proxy", "loopback");
+app.use(expressMiddleware(analytics, "my-entity-id", { exclude: ["/health"] }));
 
 app.get("/", (_request, response) => response.send("Hello"));
 const server = app.listen(3000);

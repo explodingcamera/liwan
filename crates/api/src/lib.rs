@@ -1,4 +1,4 @@
-//! A framework-neutral client for the Liwan API.
+//! Official client library for the Liwan API.
 
 #![deny(missing_docs)]
 

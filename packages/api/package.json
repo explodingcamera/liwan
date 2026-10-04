@@ -2,7 +2,7 @@
 	"name": "liwan-api",
 	"description": "Server-side Liwan analytics API client",
 	"homepage": "https://liwan.dev",
-	"version": "1.0.0",
+	"version": "0.1.0",
 	"license": "Apache-2.0",
 	"type": "module",
 	"repository": {
@@ -10,7 +10,7 @@
 		"url": "git+https://github.com/explodingcamera/liwan.git",
 		"directory": "packages/api"
 	},
-	"files": ["dist", "examples", "README.md"],
+	"files": ["dist", "examples", "README.md", "CHANGELOG.md"],
 	"scripts": {
 		"build": "tsdown",
 		"check:browser": "bun build src/index.ts --target browser --outdir ../../target/liwan-api-browser",
@@ -33,7 +33,7 @@
 	},
 	"peerDependencies": {
 		"express": "^4.0.0 || ^5.0.0",
-		"hono": "^4.13.12"
+		"hono": "^4.13.13"
 	},
 	"peerDependenciesMeta": {
 		"express": {
@@ -44,10 +44,11 @@
 		}
 	},
 	"devDependencies": {
+		"@hono/bun": "^1.0.0",
 		"@types/bun": "^1.4.2",
 		"@types/express": "^5.0.6",
 		"express": "^5.2.1",
-		"hono": "^4.13.12",
+		"hono": "^4.13.13",
 		"tsdown": "^0.23.0",
 		"typescript": "^7.0.2"
 	},
