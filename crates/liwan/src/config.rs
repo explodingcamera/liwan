@@ -21,6 +21,10 @@ pub struct Config {
     // don't load favicons from the duckduckgo api
     pub disable_favicons: bool,
     pub disable_ntp_check: bool,
+    /// Links shown in the dashboard footer.
+    pub footer_links: Vec<FooterLink>,
+    /// HTML inserted directly into the dashboard's `<head>`.
+    pub head_html: OneOrMany<String>,
     pub data_dir: String,
 
     /// Maximum lifetime of a dashboard login, without renewal.
@@ -55,6 +59,8 @@ impl Default for Config {
             port: None,
             disable_favicons: false,
             disable_ntp_check: false,
+            footer_links: Vec::new(),
+            head_html: Default::default(),
             data_dir,
             session_duration: Duration::from_secs(24 * 60 * 60 * 14),
             geoip: Default::default(),
@@ -69,6 +75,14 @@ impl Default for Config {
             visitor_group_rotation_hour: 4,
         }
     }
+}
+
+/// A link or HTML shown in the dashboard footer.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum FooterLink {
+    Html(String),
+    Link { label: String, url: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -372,6 +386,40 @@ mod test {
 
         assert!(config.trusted_headers.is_empty());
         assert!(config.trusted_proxies.is_empty());
+    }
+
+    #[test]
+    fn test_custom_html_config() {
+        let (_temp_dir, config_path) = temp_config(
+            "custom-html.config.toml",
+            r#"
+                head_html = ['<meta name="custom" content="enabled">', '<meta name="second" content="yes">']
+                footer_links = [{ label = "Privacy & terms", url = "https://example.com/privacy?a=1&b=2" }, '<a href="/help">Help</a>']
+            "#,
+        );
+
+        let config = Config::load(Some(config_path), Vec::<(String, String)>::new()).unwrap();
+        assert_eq!(
+            config.head_html.as_ref(),
+            &[
+                "<meta name=\"custom\" content=\"enabled\">".to_string(),
+                "<meta name=\"second\" content=\"yes\">".to_string()
+            ]
+        );
+        assert_eq!(
+            config.footer_links,
+            vec![
+                FooterLink::Link {
+                    label: "Privacy & terms".to_string(),
+                    url: "https://example.com/privacy?a=1&b=2".to_string(),
+                },
+                FooterLink::Html("<a href=\"/help\">Help</a>".to_string())
+            ]
+        );
+        assert_eq!(
+            Config::load(None, [("LIWAN_HEAD_HTML", "<meta name='single'>")]).unwrap().head_html.as_ref(),
+            &["<meta name='single'>".to_string()]
+        );
     }
 
     #[test]

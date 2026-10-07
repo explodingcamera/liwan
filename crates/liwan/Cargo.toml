@@ -76,7 +76,7 @@ ipnet = "2.12"
 oauth2 = { git = "https://github.com/explodingcamera-contrib/oauth2-rs", default-features = false }
 openidconnect = { git = "https://github.com/explodingcamera-contrib/openidconnect-rs", default-features = false }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "stream"] }
-rust-embed = { version = "8.12", features = ["mime-guess"] }
+rust-embed = { version = "8.13", features = ["mime-guess"] }
 schemars = { version = "1.2", features = ["chrono04", "derive"] }
 tower = { version = "0.5", default-features = false }
 tower_governor = { version = "0.8", default-features = false, features = ["axum"] }

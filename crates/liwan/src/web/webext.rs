@@ -2,7 +2,7 @@ use std::convert::Infallible;
 use std::fmt::Display;
 use std::net::{IpAddr, SocketAddr};
 
-use crate::config::Config;
+use crate::config::{Config, FooterLink};
 use crate::utils::geoip_headers::parse_geoip_headers;
 use crate::utils::ip_headers::{ClientIpHeaderSource, TrustedProxy, parse_client_ip, should_trust_proxy_headers};
 use crate::web::Files;
@@ -103,6 +103,8 @@ impl IntoResponse for ApiError {
 }
 
 const CONFIG_PLACEHOLDER: &str = "__LIWAN_CONFIG__";
+const HEAD_HTML_PLACEHOLDER: &str = "<!-- LIWAN_HEAD_HTML -->";
+const FOOTER_LINKS_PLACEHOLDER: &str = "<!-- LIWAN_FOOTER_LINKS -->";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -195,6 +197,7 @@ pub(super) async fn serve(
                 .replace("url=/", &format!("url={base_path}/"))
                 .replace("url(\"/_assets/", &format!("url(\"{base_path}/_assets/"))
         };
+        let body = inject_custom_html(body, &state.config);
         let hash = blake3::hash(body.as_bytes()).to_hex().to_string();
         (Body::from(body), hash)
     } else {
@@ -215,6 +218,20 @@ pub(super) async fn serve(
     }
 
     Ok(builder.body(body).unwrap())
+}
+
+fn inject_custom_html(html: String, config: &Config) -> String {
+    let links = config
+        .footer_links
+        .iter()
+        .map(|link| match link {
+            FooterLink::Html(html) => html.clone(),
+            FooterLink::Link { label, url } => format!("<a href=\"{url}\">{label}</a>"),
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    html.replace(FOOTER_LINKS_PLACEHOLDER, &links).replace(HEAD_HTML_PLACEHOLDER, &config.head_html.join("\n"))
 }
 
 pub(crate) fn empty_response() -> impl IntoApiResponse {
@@ -382,6 +399,33 @@ impl FromRequestParts<RouterState> for GeoLocationHeaders {
 mod tests {
     use super::*;
     use crate::utils::ip_headers::TrustedProxy;
+
+    #[test]
+    fn custom_html_is_inserted_without_leaking_markers() {
+        let mut config = Config::default();
+        config.head_html =
+            vec!["<meta name=\"custom\" content=\"enabled\">".into(), "<meta name=\"second\">".into()].into();
+        config.footer_links = vec![
+            FooterLink::Link { label: "Terms".into(), url: "https://example.com/terms".into() },
+            FooterLink::Html("<a href=\"/help\">Help</a>".into()),
+        ];
+        let html = format!(
+            "<head>{HEAD_HTML_PLACEHOLDER}</head><footer>{FOOTER_LINKS_PLACEHOLDER}<a href=\"/attributions\">Licenses</a></footer>"
+        );
+        let rendered = inject_custom_html(html, &config);
+
+        assert!(rendered.contains("<meta name=\"custom\" content=\"enabled\">"));
+        assert!(rendered.contains("<meta name=\"second\">"));
+        assert!(rendered.contains("<a href=\"https://example.com/terms\">Terms</a>"));
+        assert!(rendered.contains("<a href=\"/help\">Help</a>"));
+        assert!(rendered.contains("<a href=\"/attributions\">Licenses</a>"));
+        assert!(!rendered.contains(HEAD_HTML_PLACEHOLDER));
+        assert!(!rendered.contains(FOOTER_LINKS_PLACEHOLDER));
+
+        let empty =
+            inject_custom_html(format!("{HEAD_HTML_PLACEHOLDER}{FOOTER_LINKS_PLACEHOLDER}"), &Config::default());
+        assert!(empty.is_empty());
+    }
 
     fn request(peer_ip: &str) -> http::Request<()> {
         let mut request = http::Request::builder().header("x-forwarded-for", "203.0.113.10").body(()).unwrap();

@@ -27,6 +27,7 @@ type Props = { title: string; hideFooter?: boolean };
     <ClientRouter />
     <script id="liwan-config" type="application/json" is:inline>__LIWAN_CONFIG__</script>
     <title>{Astro.props.title} | liwan</title>
+    <!-- LIWAN_HEAD_HTML -->
   </head>
   <body>
     <slot />
@@ -43,6 +44,7 @@ type Props = { title: string; hideFooter?: boolean };
             </small>
           </div>
           <small class="footer-links">
+            <!-- LIWAN_FOOTER_LINKS -->
             <a href="/attributions">Licenses</a>
           </small>
         </footer>

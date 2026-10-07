@@ -12,6 +12,13 @@ listen = 9042  # The port to listen on (http)
 ## Dashboard session lifetime (default: 14 days).
 # session_duration = "14d"
 
+## Additional dashboard footer links. Include the base path in local URLs if configured.
+# footer_links = [{ label = "Privacy", url = "https://example.com/privacy" }, '<a href="/help">Help</a>']
+
+## Custom HTML for the dashboard page head. Use only trusted HTML.
+# head_html = '<meta name="custom" content="value">'
+# head_html = ['<meta name="custom" content="value">', '<link rel="stylesheet" href="https://example.com/style.css">']
+
 ## Trusted client IP headers (used in order), defaults to X-Forwarded-For.
 ## Presets: cloudflare, fastly, fly, cloudfront, akamai.
 ## Provider presets can be combined with standard or custom headers.

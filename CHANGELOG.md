@@ -22,6 +22,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### Features
 
+- Added configurable dashboard footer links and custom HTML in the page head
 - Added support for hosting Liwan under a sub-path in `base_url`
 - Added support for custom events
 - Added support for custom properties
