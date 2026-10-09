@@ -56,6 +56,28 @@ describe("DateRange", () => {
 		expect(range.getGraphInterval()).toBe("day");
 	});
 
+	it("offers intervals suited to the selected range", () => {
+		const rangeForDays = (days: number) =>
+			new DateRange({ start: new Date(2024, 0, 1), end: endOfDay(new Date(2024, 0, days)) });
+
+		expect(rangeForDays(1).getGraphIntervals()).toEqual(["hour"]);
+		expect(rangeForDays(7).getGraphIntervals()).toEqual(["hour", "day"]);
+		expect(rangeForDays(30).getGraphIntervals()).toEqual(["hour", "day", "week"]);
+		expect(rangeForDays(90).getGraphIntervals()).toEqual(["day", "week", "month"]);
+		expect(rangeForDays(400).getGraphIntervals()).toEqual(["day", "week", "month"]);
+		expect(rangeForDays(732).getGraphIntervals()).toEqual(["day", "week", "month"]);
+		expect(rangeForDays(733).getGraphIntervals()).toEqual(["week", "month"]);
+		expect(rangeForDays(6).getGraphInterval()).toBe("hour");
+		expect(rangeForDays(30).getGraphInterval()).toBe("day");
+		expect(rangeForDays(90).getGraphInterval()).toBe("day");
+		expect(rangeForDays(180).getGraphInterval()).toBe("day");
+		expect(rangeForDays(366).getGraphInterval()).toBe("day");
+		expect(rangeForDays(367).getGraphInterval()).toBe("week");
+		expect(rangeForDays(400).getGraphInterval()).toBe("week");
+		expect(rangeForDays(1120).getGraphInterval()).toBe("week");
+		expect(rangeForDays(1121).getGraphInterval()).toBe("month");
+	});
+
 	it("should use inclusive calendar hours for short multi-day ranges", () => {
 		const start = startOfDay(new Date(2024, 10, 1));
 		const end = endOfDay(new Date(2024, 10, 2));
@@ -79,13 +101,6 @@ describe("DateRange", () => {
 		const { start, end } = ranges.last7Days().range;
 
 		expect(differenceInCalendarDays(end, start) + 1).toBe(7);
-	});
-
-	it("should keep last7DaysHourly at seven calendar days", () => {
-		const { start, end } = ranges.last7DaysHourly().range;
-
-		expect(differenceInCalendarDays(end, start) + 1).toBe(7);
-		expect(new DateRange("last7DaysHourly").getGraphInterval()).toBe("hour");
 	});
 
 	it("should keep last12Months to the current month and never future months", () => {

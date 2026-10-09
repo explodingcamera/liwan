@@ -127,6 +127,10 @@ pub enum GraphInterval {
     Hour,
     /// Daily buckets
     Day,
+    /// Weekly buckets, starting Monday
+    Week,
+    /// Monthly buckets
+    Month,
 }
 
 /// Dimension selected for table reports and filters

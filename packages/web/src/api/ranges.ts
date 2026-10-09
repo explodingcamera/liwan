@@ -135,15 +135,34 @@ export class DateRange {
 	}
 
 	getGraphInterval(): GraphInterval {
-		if (this.variant === "last7DaysHourly") return "hour";
-		if (this.variant === "weekToDate") return this.#getDayCount() < 4 ? "hour" : "day";
-		if (this.variant === "monthToDate") return this.#getDayCount() < 7 ? "hour" : "day";
-		if (this.#getDayCount() < 7) return "hour";
+		const days = this.#getDayCount();
+		if (this.variant === "weekToDate") return days < 4 ? "hour" : "day";
+		if (this.variant === "monthToDate") return days < 7 ? "hour" : "day";
+		if (days < 7) return "hour";
+		if (days > 160 * 7) return "month";
+		if (days > 366) return "week";
 		return "day";
 	}
 
-	getGraphBucketEnd(bucketStart: Date): Date {
-		const bucketEnd = this.getGraphInterval() === "hour" ? addHours(bucketStart, 1) : addDays(bucketStart, 1);
+	getGraphIntervals(): GraphInterval[] {
+		const days = this.#getDayCount();
+		return [
+			...(days <= 30 ? ["hour" as const] : []),
+			...(days >= 2 && days <= 2 * 366 ? ["day" as const] : []),
+			...(days >= 14 ? ["week" as const] : []),
+			...(days >= 60 ? ["month" as const] : []),
+		];
+	}
+
+	getGraphBucketEnd(bucketStart: Date, interval: GraphInterval = this.getGraphInterval()): Date {
+		const bucketEnd =
+			interval === "hour"
+				? addHours(bucketStart, 1)
+				: interval === "week"
+					? addWeeks(bucketStart, 1)
+					: interval === "month"
+						? addMonths(bucketStart, 1)
+						: addDays(bucketStart, 1);
 		const { end } = this.getBucketBounds();
 		return bucketEnd < end ? bucketEnd : end;
 	}
@@ -196,7 +215,6 @@ export class DateRange {
 export const wellKnownRanges = {
 	today: "Today",
 	yesterday: "Yesterday",
-	last7DaysHourly: "Last 7 Days (hourly)",
 	last7Days: "Last 7 Days",
 	last30Days: "Last 30 Days",
 	last12Months: "Last 12 Months",
@@ -226,7 +244,6 @@ export const ranges: Record<RangeName, () => { range: { start: Date; end: Date }
 		const end = endOfDay(start);
 		return { range: { start: start, end } };
 	},
-	last7DaysHourly: () => ({ range: lastXDays(7) }),
 	last7Days: () => ({ range: lastXDays(7) }),
 	last30Days: () => ({ range: lastXDays(30) }),
 	last12Months: () => {

@@ -4,7 +4,14 @@ import { api } from "@/api/client";
 import { queryClient, useQuery } from "@/api/query";
 import type { DateRange } from "@/api/ranges";
 import { createToast } from "@/components/ui/toast";
-import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
+import type {
+	Dimension,
+	DimensionFilter,
+	DimensionTableRow,
+	GraphInterval,
+	Metric,
+	ProjectResponse,
+} from "@/constants";
 import { toDataPoints } from "../components/dashboard/project/graph";
 
 const numericCollator = new Intl.Collator(undefined, { numeric: true });
@@ -199,6 +206,7 @@ export const useProjectGraph = ({
 	filters = [],
 	eventName = "pageview",
 	enabled = true,
+	interval: selectedInterval = "auto",
 }: {
 	projectId?: string;
 	metric: Metric;
@@ -206,6 +214,7 @@ export const useProjectGraph = ({
 	filters?: DimensionFilter[];
 	eventName?: string;
 	enabled?: boolean;
+	interval?: GraphInterval | "auto";
 }) => {
 	let refetchInterval: number | undefined;
 	let staleTime = 1000 * 60 * 10;
@@ -213,7 +222,10 @@ export const useProjectGraph = ({
 		refetchInterval = 1000 * 60;
 		staleTime = 0;
 	}
-	const interval = range.getGraphInterval();
+	const interval =
+		selectedInterval === "auto" || !range.getGraphIntervals().includes(selectedInterval)
+			? range.getGraphInterval()
+			: selectedInterval;
 	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, interval, timezone, eventName];
 
@@ -240,7 +252,7 @@ export const useProjectGraph = ({
 						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
-					return { data: toDataPoints(req.data), metric, range };
+					return { data: toDataPoints(req.data), metric, range, interval };
 				}),
 		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
 	});
@@ -251,6 +263,7 @@ export const useProjectGraph = ({
 		graph: graphResult?.data,
 		displayMetric: graphResult?.metric ?? metric,
 		displayRange: graphResult?.range ?? range,
+		displayInterval: graphResult?.interval ?? interval,
 		isLoading,
 		isError,
 		isUpdating,

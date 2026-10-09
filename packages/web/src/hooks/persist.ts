@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { DateRange } from "@/api/ranges";
-import type { Metric } from "@/constants";
+import type { GraphInterval, Metric } from "@/constants";
 
 export const useMetric = () => {
 	const [metric, _setMetric] = useState<Metric>(
@@ -15,12 +15,25 @@ export const useMetric = () => {
 };
 
 export const useRange = () => {
-	const [range, _setRange] = useState<DateRange>(() =>
-		DateRange.deserialize(localStorage.getItem("liwan/date-range") || "last30Days"),
-	);
+	const [{ range, interval }, setSelection] = useState<{ range: DateRange; interval: GraphInterval | "auto" }>(() => {
+		try {
+			const saved = JSON.parse(localStorage.getItem("liwan/date-range") || "{}") as {
+				range?: string;
+				interval?: GraphInterval | "auto";
+			};
+			return { range: DateRange.deserialize(saved.range ?? "last30Days"), interval: saved.interval ?? "auto" };
+		} catch {
+			return { range: new DateRange("last30Days"), interval: "auto" };
+		}
+	});
+	useEffect(() => {
+		localStorage.setItem("liwan/date-range", JSON.stringify({ range: range.serialize(), interval }));
+	}, [range, interval]);
 	const setRange = useCallback((range: DateRange) => {
-		_setRange(range);
-		localStorage.setItem("liwan/date-range", range.serialize());
+		setSelection((current) => ({ ...current, range, interval: "auto" }));
 	}, []);
-	return { range, setRange };
+	const setInterval = useCallback((value: GraphInterval | "auto") => {
+		setSelection((current) => ({ ...current, interval: value }));
+	}, []);
+	return { range, setRange, interval, setInterval };
 };

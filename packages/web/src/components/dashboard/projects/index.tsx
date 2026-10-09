@@ -12,7 +12,7 @@ import { ProjectHeader } from "@/components/dashboard/project/project-header";
 import { SelectRange } from "@/components/dashboard/project/range";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { appPath } from "@/config";
-import type { Metric, ProjectResponse } from "@/constants";
+import type { GraphInterval, Metric, ProjectResponse } from "@/constants";
 import { metricNames, metrics } from "@/constants";
 import { useMe, useProjectGraph, useProjectStats } from "@/hooks/api";
 import { useMetric, useRange } from "@/hooks/persist";
@@ -51,7 +51,7 @@ export const Projects = () => {
 	});
 
 	const { metric, setMetric } = useMetric();
-	const { range, setRange } = useRange();
+	const { range, setRange, interval } = useRange();
 	const [hiddenProjects, setHiddenProjects] = useState<string[]>([]);
 	const visibleMetrics = metrics.filter((metric) =>
 		data?.projects.some((project) => !project.hiddenMetrics.includes(metric)),
@@ -110,7 +110,13 @@ export const Projects = () => {
 				>
 					{data?.projects.map((project) => (
 						<Accordion.Item key={project.id} value={project.id}>
-							<Project project={project} metric={activeMetric ?? "views"} setMetric={setMetric} range={range} />
+							<Project
+								project={project}
+								metric={activeMetric ?? "views"}
+								setMetric={setMetric}
+								range={range}
+								interval={interval}
+							/>
 						</Accordion.Item>
 					))}
 				</Accordion.Root>
@@ -124,11 +130,13 @@ const Project = ({
 	metric,
 	setMetric,
 	range,
+	interval,
 }: {
 	project: ProjectResponse;
 	metric: Metric;
 	setMetric: (value: Metric) => void;
 	range: DateRange;
+	interval: GraphInterval | "auto";
 }) => {
 	const visibleMetrics = metrics.filter((metric) => !project.hiddenMetrics.includes(metric));
 	const reportMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
@@ -136,12 +144,14 @@ const Project = ({
 		graph,
 		displayMetric,
 		displayRange,
+		displayInterval,
 		isLoading: graphLoading,
 		isUpdating: graphUpdating,
 	} = useProjectGraph({
 		projectId: project.id,
 		metric: reportMetric ?? "views",
 		range,
+		interval,
 		enabled: Boolean(reportMetric),
 	});
 
@@ -182,6 +192,7 @@ const Project = ({
 							isLoading={graphLoading}
 							isUpdating={graphUpdating}
 							range={displayRange}
+							interval={displayInterval}
 						/>
 					</div>
 				</Accordion.Panel>

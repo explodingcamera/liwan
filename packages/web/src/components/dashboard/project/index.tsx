@@ -1,7 +1,7 @@
 import cardStyles from "./dimensions/dimensions.module.css";
 import styles from "./index.module.css";
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DateRange } from "@/api/ranges";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -67,7 +67,37 @@ export const Project = () => {
 	const [eventName, setEventName] = useState("pageview");
 
 	const { metric, setMetric } = useMetric();
-	const { range, setRange } = useRange();
+	const { range, setRange, interval: graphInterval, setInterval: setGraphInterval } = useRange();
+	const previousGraphRange = useRef<{ before: DateRange; after: DateRange; interval: typeof graphInterval } | null>(
+		null,
+	);
+	const selectRange = useCallback(
+		(selected: DateRange) => {
+			previousGraphRange.current = null;
+			setRange(selected);
+		},
+		[setRange],
+	);
+	const selectGraphRange = useCallback(
+		(selected: DateRange) => {
+			const origin =
+				previousGraphRange.current?.after.serialize() === range.serialize() ? previousGraphRange.current : null;
+			previousGraphRange.current = {
+				before: origin?.before ?? range,
+				after: selected,
+				interval: origin?.interval ?? graphInterval,
+			};
+			setRange(selected);
+			setGraphInterval("auto");
+		},
+		[range, graphInterval, setRange, setGraphInterval],
+	);
+	const undoGraphRange = useCallback(() => {
+		if (previousGraphRange.current?.after.serialize() !== range.serialize()) return;
+		setRange(previousGraphRange.current.before);
+		setGraphInterval(previousGraphRange.current.interval);
+		previousGraphRange.current = null;
+	}, [range, setRange, setGraphInterval]);
 
 	const { project, notFound } = useProject(projectId);
 	const visibleMetrics: Metric[] = useMemo(
@@ -94,6 +124,7 @@ export const Project = () => {
 		graph,
 		displayMetric,
 		displayRange,
+		displayInterval,
 		isUpdating: graphUpdating,
 		isLoading: graphLoading,
 	} = useProjectGraph({
@@ -103,6 +134,7 @@ export const Project = () => {
 		filters: visibleFilters,
 		eventName,
 		enabled: Boolean(activeMetric),
+		interval: graphInterval,
 	});
 	const {
 		stats,
@@ -198,7 +230,7 @@ export const Project = () => {
 			<div className={styles.projectReport}>
 				<div className={styles.projectHeader}>
 					<ProjectHeader project={project} stats={stats} />
-					<SelectRange onSelect={setRange} range={range} projectId={project.id} />
+					<SelectRange onSelect={selectRange} range={range} projectId={project.id} />
 				</div>
 				<SelectMetrics
 					className={styles.projectStats}
@@ -227,6 +259,12 @@ export const Project = () => {
 							title={eventMetricName(displayMetric, eventName)}
 							metric={displayMetric}
 							range={displayRange}
+							interval={displayInterval}
+							selectedInterval={graphInterval}
+							onSelectInterval={setGraphInterval}
+							onSelectRange={graphLoading || graphUpdating ? undefined : selectGraphRange}
+							onUndoRange={undoGraphRange}
+							availableIntervals={range.getGraphIntervals()}
 							isLoading={graphLoading}
 							isUpdating={graphUpdating}
 						/>

@@ -1,7 +1,7 @@
 import styles from "./filter.module.css";
 
 import type { ReactElement, SubmitEvent } from "react";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 
 import { Dialog } from "@/components/ui/dialog";
@@ -96,83 +96,83 @@ export const filterOptions: Record<string, FilterOption> = {
 	platform: {
 		label: dimensionNames.platform,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	browser: {
 		label: dimensionNames.browser,
 		invertable: true,
-		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+		filterTypes: ["contains", "equal", "starts_with", "ends_with"],
 	},
 	url: {
 		label: dimensionNames.url,
 		invertable: true,
-		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+		filterTypes: ["contains", "equal", "starts_with", "ends_with"],
 	},
 	url_entry: {
 		label: dimensionNames.url_entry,
 		invertable: true,
-		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+		filterTypes: ["contains", "equal", "starts_with", "ends_with"],
 	},
 	url_exit: {
 		label: dimensionNames.url_exit,
 		invertable: true,
-		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+		filterTypes: ["contains", "equal", "starts_with", "ends_with"],
 	},
 	fqdn: {
 		label: dimensionNames.fqdn,
 		invertable: true,
-		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+		filterTypes: ["contains", "equal", "starts_with", "ends_with"],
 	},
 	path: {
 		label: dimensionNames.path,
 		invertable: true,
-		filterTypes: ["equal", "contains", "starts_with", "ends_with"],
+		filterTypes: ["contains", "equal", "starts_with", "ends_with"],
 	},
 	referrer: {
 		label: dimensionNames.referrer,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	city: {
 		label: dimensionNames.city,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	country: {
 		label: dimensionNames.country,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	utm_campaign: {
 		label: dimensionNames.utm_campaign,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	utm_content: {
 		label: dimensionNames.utm_content,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	utm_medium: {
 		label: dimensionNames.utm_medium,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	utm_source: {
 		label: dimensionNames.utm_source,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	utm_term: {
 		label: dimensionNames.utm_term,
 		invertable: true,
-		filterTypes: ["equal", "contains"],
+		filterTypes: ["contains", "equal"],
 	},
 	property: {
 		label: "Property",
 		hasKey: true,
 		invertable: true,
-		filterTypes: ["equal", "contains", "starts_with", "ends_with", "is_null"],
+		filterTypes: ["contains", "equal", "starts_with", "ends_with", "is_null"],
 		displayType: (filter) => {
 			if (filter.filterType === "is_null") return filter.inversed ? "is set" : "is not set";
 			if (filter.filterType === "equal") return filter.inversed ? "is not" : "is";
@@ -232,14 +232,18 @@ export const FilterDialog = ({
 	const closeRef = useRef<HTMLButtonElement>(null);
 	const selectableDimensions = dimensions.filter((dimension) => options[dimension]);
 	const [dimension, setDimension] = useState(selectableDimensions[0] ?? "url");
-	const [selectedFilterType, setSelectedFilterType] = useState<FilterType>();
+	const [selectedCondition, setSelectedCondition] = useState<string>();
 	const selectedDimension = options[dimension] ? dimension : (selectableDimensions[0] ?? "");
 	const filter = options[selectedDimension];
 	if (!filter) return null;
+	const selectedFilterType = selectedCondition?.replace(/^not:/, "") as FilterType | undefined;
 	const filterType =
-		selectedFilterType && (filter.filterTypes as readonly FilterType[] | undefined)?.includes(selectedFilterType)
+		selectedFilterType && filter.filterTypes?.includes(selectedFilterType)
 			? selectedFilterType
 			: filter.filterTypes?.[0];
+	const condition = filterType
+		? `${selectedCondition?.startsWith("not:") && allowInverted && filter.invertable ? "not:" : ""}${filterType}`
+		: undefined;
 
 	const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -251,16 +255,19 @@ export const FilterDialog = ({
 			return;
 		}
 
-		const filterType = data.get("filterType");
-		if (typeof filterType !== "string" || !(filter.filterTypes as readonly string[] | undefined)?.includes(filterType))
-			return;
+		const selected = data.get("condition");
+		if (typeof selected !== "string") return;
+		const inversed = selected.startsWith("not:");
+		const filterType = inversed ? selected.slice(4) : selected;
+		if (!(filter.filterTypes as readonly string[] | undefined)?.includes(filterType)) return;
+		if (inversed && (!allowInverted || !filter.invertable)) return;
 
 		const value = data.get("value");
 		const key = data.get("key");
 		onAdd({
 			dimension: selectedDimension,
 			key: filter.hasKey && typeof key === "string" ? key.trim() : undefined,
-			inversed: filter.invertable && data.get("show-matches") === "inverted",
+			inversed,
 			filterType: filterType as FilterType,
 			value: typeof value === "string" ? value : null,
 		});
@@ -272,7 +279,7 @@ export const FilterDialog = ({
 			onOpenChange={(open) => {
 				if (open) return;
 				setDimension(selectableDimensions[0] ?? "url");
-				setSelectedFilterType(undefined);
+				setSelectedCondition(undefined);
 			}}
 			title="Add Filter"
 			description="Filter the report by a specific dimension."
@@ -306,36 +313,29 @@ export const FilterDialog = ({
 				)}
 
 				{!filter.custom && (
-					<div className={styles.formInvertable}>
-						<label>
-							Filter type
-							<select
-								name="filterType"
-								value={filterType}
-								onChange={(event) => setSelectedFilterType(event.currentTarget.value as FilterType)}
-							>
-								{filter.filterTypes?.map((filterType) => (
-									<option key={filterType} value={filterType}>
-										{capitalizeAll(filterNames[filterType])}
+					<label>
+						Condition
+						<select
+							name="condition"
+							value={condition}
+							onChange={(event) => setSelectedCondition(event.currentTarget.value)}
+						>
+							{filter.filterTypes?.map((type) => (
+								<Fragment key={type}>
+									<option value={type}>
+										{capitalizeAll(filter.displayType?.({ filterType: type, inversed: false }) ?? filterNames[type])}
 									</option>
-								))}
-							</select>
-						</label>
-						{allowInverted && filter.invertable && (
-							<div className={styles.inverted}>
-								<fieldset>
-									<label>
-										<input name="show-matches" defaultChecked value="default" type="radio" />
-										Show matches
-									</label>
-									<label>
-										<input name="show-matches" type="radio" value="inverted" />
-										Exclude matches
-									</label>
-								</fieldset>
-							</div>
-						)}
-					</div>
+									{allowInverted && filter.invertable && (
+										<option value={`not:${type}`}>
+											{capitalizeAll(
+												filter.displayType?.({ filterType: type, inversed: true }) ?? filterNamesInverted[type],
+											)}
+										</option>
+									)}
+								</Fragment>
+							))}
+						</select>
+					</label>
 				)}
 
 				{!filter.custom && filterType !== "is_null" && (

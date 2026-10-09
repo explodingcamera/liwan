@@ -43,3 +43,7 @@
     }
   }
 }
+
+.tooltip.graphTooltip {
+  max-width: 16rem;
+}

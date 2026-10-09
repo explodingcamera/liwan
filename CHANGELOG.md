@@ -22,6 +22,8 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### Features
 
+- Added drag-to-select custom date ranges on project graphs with automatic resolution and double-click undo
+- Added selectable hourly, daily, weekly, and monthly dashboard graph intervals
 - Added configurable dashboard footer links and custom HTML in the page head
 - Added support for hosting Liwan under a sub-path in `base_url`
 - Added support for custom events

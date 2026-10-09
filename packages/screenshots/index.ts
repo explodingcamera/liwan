@@ -35,7 +35,7 @@ for (const [name, darkMode, fullPage] of [
 	["liwan-desktop-full-dark.png", true, true],
 ] as const) {
 	const page = await browser.newPage();
-	await page.setViewport({ width: 1100, height: 1445 });
+	await page.setViewport({ width: 1100, height: 1360 });
 	await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: darkMode ? "dark" : "light" }]);
 	await page.goto("https://demo.liwan.dev/p/liwan.dev", { waitUntil: "networkidle2" });
 	if (!fullPage) await page.addStyleTag({ content: geoCardMargin });

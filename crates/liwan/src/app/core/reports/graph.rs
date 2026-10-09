@@ -1,7 +1,7 @@
 use crate::app::DuckDBConn;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
 use anyhow::{Context, Result};
-use chrono::{DateTime, Days, Duration, LocalResult, NaiveDate, Offset, TimeZone, Timelike, Utc};
+use chrono::{DateTime, Datelike, Days, Duration, LocalResult, NaiveDate, Offset, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 
 use super::shared::{build_filter_clause, metric_aggregate_sql};
@@ -83,6 +83,17 @@ pub fn build_graph_buckets(
                 .context("Graph start is out of bounds")?
         }
         GraphInterval::Day => resolve_local_day_start(timezone, local_date(timezone, range.start)?)?,
+        GraphInterval::Week => {
+            let date = local_date(timezone, range.start)?;
+            let monday = date
+                .checked_sub_days(Days::new(u64::from(date.weekday().num_days_from_monday())))
+                .context("Failed to align bucket week")?;
+            resolve_local_day_start(timezone, monday)?
+        }
+        GraphInterval::Month => {
+            let date = local_date(timezone, range.start)?;
+            resolve_local_day_start(timezone, date.with_day(1).context("Invalid month start")?)?
+        }
     };
 
     let mut buckets = Vec::new();
@@ -101,6 +112,21 @@ pub fn build_graph_buckets(
                     .checked_add_days(Days::new(1))
                     .context("Failed to advance bucket date")?;
                 resolve_local_day_start(timezone, next_date)?
+            }
+            GraphInterval::Week => {
+                let next_date = local_date(timezone, bucket_start)?
+                    .checked_add_days(Days::new(7))
+                    .context("Failed to advance bucket date")?;
+                resolve_local_day_start(timezone, next_date)?
+            }
+            GraphInterval::Month => {
+                let date = local_date(timezone, bucket_start)?;
+                let next_month = date
+                    .with_day(1)
+                    .context("Invalid month start")?
+                    .checked_add_months(chrono::Months::new(1))
+                    .context("Failed to advance bucket month")?;
+                resolve_local_day_start(timezone, next_month)?
             }
         };
 
@@ -304,6 +330,39 @@ mod tests {
                 .to_string(),
             "2024-01-03 12:00"
         );
+    }
+
+    #[test]
+    fn build_graph_buckets_aligns_weeks_and_months() {
+        let timezone = "America/New_York";
+        let range = DateRange {
+            start: local_datetime(Tz::America__New_York, 2024, 2, 28, 12, 0),
+            end: local_datetime(Tz::America__New_York, 2024, 4, 2, 12, 0),
+        };
+
+        let weeks = build_graph_buckets(&range, GraphInterval::Week, Some(timezone), 2000).unwrap();
+        let months = build_graph_buckets(&range, GraphInterval::Month, Some(timezone), 2000).unwrap();
+        let local_starts = |buckets: &[DateRange]| {
+            buckets
+                .iter()
+                .map(|bucket| bucket.start.with_timezone(&Tz::America__New_York).format("%Y-%m-%d %H:%M").to_string())
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            local_starts(&weeks),
+            vec![
+                "2024-02-26 00:00",
+                "2024-03-04 00:00",
+                "2024-03-11 00:00",
+                "2024-03-18 00:00",
+                "2024-03-25 00:00",
+                "2024-04-01 00:00"
+            ]
+        );
+        assert_eq!(local_starts(&months), vec!["2024-02-01 00:00", "2024-03-01 00:00", "2024-04-01 00:00"]);
+        assert_eq!(weeks.last().unwrap().end, range.end);
+        assert_eq!(months.last().unwrap().end, range.end);
     }
 
     #[test]

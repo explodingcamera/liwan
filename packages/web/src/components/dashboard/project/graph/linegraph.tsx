@@ -12,11 +12,11 @@ import "d3-transition";
 import { differenceInHours, isSameYear } from "date-fns";
 
 import type { DateRange } from "@/api/ranges";
-import type { Metric } from "@/constants";
+import type { GraphInterval, Metric } from "@/constants";
 import { formatMetricVal, formatMetricValEvenly } from "@/utils";
 import type { DataPoint } from ".";
 import { axisBottom, axisLeft } from "./axis";
-import { getGraphRenderData } from "./render-data";
+import { getGraphRenderData, getGraphSelectionIndices, getSelectedGraphRange } from "./render-data";
 
 type DateDisplayRange = "day" | "hour" | "day+hour" | "day+hour+year" | "day+year";
 
@@ -67,8 +67,9 @@ const getTooltipDateRange = (
 	start: Date,
 	end: Date,
 	range: DateRange,
+	interval: GraphInterval,
 ): "hour" | "day+hour" | "day+hour+year" | "day" | "day+year" => {
-	if (range.getGraphInterval() === "day") return getAxisDateRange(start, end) === "day+year" ? "day+year" : "day";
+	if (interval !== "hour") return getAxisDateRange(start, end) === "day+year" ? "day+year" : "day";
 	if (range.value.start.toDateString() === range.value.end.toDateString()) return "hour";
 	return isSameYear(start, end) ? "day+hour" : "day+hour+year";
 };
@@ -90,11 +91,17 @@ export const LineGraph = ({
 	title,
 	metric,
 	range,
+	interval,
+	onSelectRange,
+	onUndoRange,
 }: {
 	data: DataPoint[];
 	title: string;
 	metric: Metric;
 	range: DateRange;
+	interval: GraphInterval;
+	onSelectRange?: (range: DateRange) => void;
+	onUndoRange?: () => void;
 }) => {
 	const svgRef = useRef<SVGSVGElement | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
@@ -132,7 +139,7 @@ export const LineGraph = ({
 	useEffect(() => {
 		if (!svgRef.current || !dimensions) return;
 		const svg = select(svgRef.current);
-		const { domainMaxX, dottedLineData, solidLineData } = getGraphRenderData(data, range);
+		const { domainMaxX, dottedLineData, solidLineData } = getGraphRenderData(data, range, interval);
 
 		const [minX] = extent(data, (d) => d.x).map((d) => d || new Date());
 		const maxX = domainMaxX;
@@ -272,7 +279,7 @@ export const LineGraph = ({
 		});
 
 		return () => void xAxisElement.interrupt();
-	}, [data, dimensions, metric, range]);
+	}, [data, dimensions, metric, range, interval]);
 
 	useEffect(() => {
 		const svgElement = svgRef.current;
@@ -280,21 +287,94 @@ export const LineGraph = ({
 
 		const svg = select(svgElement);
 		const cursor = svg.selectChild("#cursor");
+		const selection = svg.selectChild("#selection");
 		const tooltip = cursor.selectChild("#tooltip");
 		const needle = cursor.selectChild("#needle");
 		const tooltipElement = tooltip.node() as SVGForeignObjectElement | null;
 		const tooltipHeight = Number(tooltipElement?.getAttribute("height")) || 100;
-		const { domainMaxX } = getGraphRenderData(data, range);
+		const { domainMaxX } = getGraphRenderData(data, range, interval);
 		const [minX] = extent(data, (d) => d.x).map((d) => d || new Date());
 		const xAxis = scaleTime().domain([minX, domainMaxX]).range([0, dimensions.width]);
-		const dateRange = getTooltipDateRange(minX, domainMaxX, range);
+		const dateRange = getTooltipDateRange(minX, domainMaxX, range, interval);
 		let animationFrame: number | undefined;
 		let previousSide: "left" | "right" | undefined;
 		let previousOffset: number | undefined;
 		let previousSnappedX: number | undefined;
+		let dragStart: number | undefined;
+		let dragEnd: number | undefined;
+		let dragPointerId: number | undefined;
 		const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const pointerX = (event: PointerEvent) =>
+			Math.max(0, Math.min(event.clientX - svgElement.getBoundingClientRect().left, dimensions.width));
+		const pointerDown = (event: PointerEvent) => {
+			if (!onSelectRange || data.length < 2 || event.pointerType !== "mouse" || event.button !== 0) return;
+			event.preventDefault();
+			window.cancelAnimationFrame(animationFrame ?? 0);
+			dragStart = pointerX(event);
+			dragEnd = dragStart;
+			dragPointerId = event.pointerId;
+			svgElement.setPointerCapture(event.pointerId);
+		};
+		const pointerMove = (event: PointerEvent) => {
+			if (dragStart === undefined) return;
+			dragEnd = pointerX(event);
+			if (Math.abs(dragEnd - dragStart) < 6) {
+				selection.attr("visibility", "hidden");
+				return;
+			}
+			cursor.attr("opacity", 0);
+			const indices = getGraphSelectionIndices(data, xAxis.invert(dragStart), xAxis.invert(dragEnd));
+			if (!indices) return;
+			const [first, last] = indices;
+			const left = xAxis(data[first].x);
+			const right = xAxis(data[last].x);
+			selection
+				.selectChild("rect")
+				.attr("x", Math.min(left, dimensions.width - 2))
+				.attr("width", Math.max(2, right - left))
+				.attr("height", Math.max(0, dimensions.height - 40));
+			selection
+				.selectChild("#selection-start")
+				.attr("x1", left)
+				.attr("x2", left)
+				.attr("y2", dimensions.height - 40);
+			selection
+				.selectChild("#selection-end")
+				.attr("x1", right)
+				.attr("x2", right)
+				.attr("y2", dimensions.height - 40);
+			selection.attr("visibility", "visible");
+		};
+		const cancelDrag = () => {
+			const pointerId = dragPointerId;
+			dragStart = undefined;
+			dragEnd = undefined;
+			dragPointerId = undefined;
+			selection.attr("visibility", "hidden");
+			if (pointerId !== undefined && svgElement.hasPointerCapture(pointerId))
+				svgElement.releasePointerCapture(pointerId);
+		};
+		const pointerUp = (event: PointerEvent) => {
+			if (dragStart === undefined) return;
+			const end = pointerX(event);
+			const start = dragStart;
+			cancelDrag();
+			if (Math.abs(end - start) < 6) return;
+			const selected = getSelectedGraphRange(data, range, interval, xAxis.invert(start), xAxis.invert(end));
+			if (selected) onSelectRange?.(selected);
+		};
+		const doubleClick = (event: MouseEvent) => {
+			event.preventDefault();
+			onUndoRange?.();
+		};
+		const keyDown = (event: KeyboardEvent) => {
+			if (event.key !== "Escape" || dragStart === undefined) return;
+			event.preventDefault();
+			cancelDrag();
+		};
 
 		const mouseMove = (event: MouseEvent) => {
+			if (dragStart !== undefined) return;
 			window.cancelAnimationFrame(animationFrame ?? 0);
 			animationFrame = window.requestAnimationFrame(() => {
 				const tooltipPadding = 10;
@@ -302,7 +382,10 @@ export const LineGraph = ({
 				const svgRect = svgElement.getBoundingClientRect();
 				const svgWidth = svgRect.width;
 				const svgHeight = svgRect.height;
-				const tooltipWidth = Math.min(190, Math.max(0, svgWidth - tooltipPadding * 2));
+				const tooltipWidth = Math.min(
+					metric === "unique_visitors" || metric === "avg_time_on_site" ? 232 : 190,
+					Math.max(0, svgWidth - tooltipPadding * 2),
+				);
 				tooltipElement?.setAttribute("width", String(tooltipWidth));
 				const x = event.clientX - svgRect.left - 1;
 				const point = data.reduce((closestPoint, currentPoint) => {
@@ -365,17 +448,32 @@ export const LineGraph = ({
 
 		svgElement.addEventListener("mousemove", mouseMove);
 		svgElement.addEventListener("mouseleave", mouseLeave);
+		svgElement.addEventListener("pointerdown", pointerDown);
+		svgElement.addEventListener("pointermove", pointerMove);
+		svgElement.addEventListener("pointerup", pointerUp);
+		svgElement.addEventListener("pointercancel", cancelDrag);
+		svgElement.addEventListener("lostpointercapture", cancelDrag);
+		svgElement.addEventListener("dblclick", doubleClick);
+		window.addEventListener("keydown", keyDown);
 
 		return () => {
 			window.cancelAnimationFrame(animationFrame ?? 0);
 			svgElement.removeEventListener("mousemove", mouseMove);
 			svgElement.removeEventListener("mouseleave", mouseLeave);
+			svgElement.removeEventListener("pointerdown", pointerDown);
+			svgElement.removeEventListener("pointermove", pointerMove);
+			svgElement.removeEventListener("pointerup", pointerUp);
+			svgElement.removeEventListener("pointercancel", cancelDrag);
+			svgElement.removeEventListener("lostpointercapture", cancelDrag);
+			svgElement.removeEventListener("dblclick", doubleClick);
+			window.removeEventListener("keydown", keyDown);
+			cancelDrag();
 			cursor.interrupt();
 			tooltip.interrupt();
 			cursor.attr("opacity", 0);
 			tooltip.attr("opacity", 1);
 		};
-	}, [data, dimensions, metric, range]);
+	}, [data, dimensions, metric, range, interval, onSelectRange, onUndoRange]);
 
 	return (
 		<div ref={containerRef} className={styles.graph}>
@@ -395,10 +493,15 @@ export const LineGraph = ({
 				<path id="background" fill="url(#graphGradient)" stroke="none" />
 				<path id="line" fill="none" stroke="var(--chart-line)" />
 				<path id="line-dotted" fill="none" stroke="var(--chart-line)" strokeDasharray="5, 5" />
+				<g id="selection" className={styles.selection} visibility="hidden">
+					<rect y="0" />
+					<line id="selection-start" y1="0" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
+					<line id="selection-end" y1="0" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
+				</g>
 				<g id="cursor" opacity="0">
 					<path id="needle" fill="none" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
-					<foreignObject id="tooltip" width="190" height="100">
-						<div className={tooltipStyles.tooltip}>
+					<foreignObject id="tooltip" width="232" height="100">
+						<div className={`${tooltipStyles.tooltip} ${tooltipStyles.graphTooltip}`}>
 							<h2 className="date">{title}</h2>
 							<h3>
 								<span>{title}</span> <span className="value" />

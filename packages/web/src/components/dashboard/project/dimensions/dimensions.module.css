@@ -62,7 +62,7 @@
   flex: 1;
   position: relative;
   z-index: 1;
-  padding-left: 0.5rem;
+  padding-left: 0.4rem;
   padding-bottom: 0.5rem;
   display: flex;
   align-items: center;
@@ -80,8 +80,7 @@
     transition:
       width 0.3s ease-in-out,
       background-color 0.1s ease-in-out;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
+    border-radius: 9px;
   }
 
   &:hover::after {

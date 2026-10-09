@@ -2,6 +2,15 @@
   height: 100%;
   background-color: transparent;
 
+  .selection {
+    pointer-events: none;
+
+    rect {
+      fill: var(--accent-fill);
+      fill-opacity: 0.15;
+    }
+  }
+
   :global(.tick) {
     pointer-events: none;
   }
@@ -35,6 +44,46 @@
       animation-delay: 0s;
     }
   }
+}
+
+.intervalButton {
+  position: absolute;
+  top: 0.3rem;
+  left: 0.5rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  height: 2rem;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  opacity: 0.45;
+  cursor: pointer;
+
+  &:hover,
+  &[data-popup-open] {
+    opacity: 0.85;
+  }
+
+  &:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--text-strong);
+    outline-offset: 2px;
+  }
+}
+
+.intervalPopup {
+  min-width: 8.5rem;
+}
+
+.intervalItem {
+  padding: 0.35rem 0.5rem;
+  font-size: var(--font-size-sm);
 }
 
 @keyframes fadeInOverlay {
