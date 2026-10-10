@@ -55,10 +55,29 @@ listen = 9042  # The port to listen on (http)
 # memory_limit=2G
 
 [limits]  # Resource limits
+## Maximum time a report may run before timing out.
 # report_timeout_seconds=30
+
+## Maximum number of reports running at once.
 # report_max_concurrency=8
+
+## Maximum number of days in a requested report range.
 # report_max_range_days=3660
+
+## Maximum number of values returned per dimension report.
 # report_max_dimension_results=1000
+
+## Minimum entry sessions for bounce rate in summary and dimension reports. Set to 0 to disable.
+# report_min_bounce_rate_sessions=10
+
+## Minimum measured pageviews for average time on site in summary and dimension reports. Set to 0 to disable.
+# report_min_avg_time_on_site_samples=5
+
+## Maximum number of time buckets returned by a graph report.
 # report_max_datapoints=2000
+
+## Maximum number of filters per report request.
 # report_max_filters=20
+
+## Maximum length of each filter value, in bytes.
 # report_max_filter_value_bytes=2048

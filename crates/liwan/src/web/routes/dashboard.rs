@@ -259,11 +259,20 @@ async fn project_stats_handler(
     let req2 = req.clone();
     let event_prev = event.clone();
     let previous_range = req.range.prev().http_status(StatusCode::BAD_REQUEST)?;
+    let limits = app.config.limits.clone();
+    let previous_limits = limits.clone();
 
     let (mut stats, mut stats_prev) = tokio::try_join!(
-        run_report(&app, move |conn| reports::overall_stats(conn, &entities, &event, &req.range, &req.filters)),
+        run_report(&app, move |conn| reports::overall_stats(
+            conn,
+            &entities,
+            &event,
+            &req.range,
+            &req.filters,
+            &limits
+        )),
         run_report(&app, move |conn| {
-            reports::overall_stats(conn, &entities2, &event_prev, &previous_range, &req2.filters)
+            reports::overall_stats(conn, &entities2, &event_prev, &previous_range, &req2.filters, &previous_limits)
         }),
     )?;
 
@@ -315,6 +324,11 @@ async fn project_detailed_handler(
     }
 
     let max_results = app.config.limits.report_max_dimension_results;
+    let min_samples = match req.metric {
+        Metric::BounceRate => app.config.limits.report_min_bounce_rate_sessions,
+        Metric::AvgTimeOnSite => app.config.limits.report_min_avg_time_on_site_samples,
+        _ => 0,
+    };
     let stats = run_report(&app, move |conn| {
         reports::dimension_report(
             conn,
@@ -326,6 +340,7 @@ async fn project_detailed_handler(
             &req.filters,
             &req.metric,
             max_results,
+            min_samples,
         )
     })
     .await?;

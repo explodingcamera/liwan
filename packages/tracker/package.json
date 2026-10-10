@@ -26,7 +26,7 @@
 	"type": "module",
 	"scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
 	"devDependencies": {
-		"tsdown": "^0.23.0",
+		"tsdown": "^0.23.1",
 		"typescript": "^7.0.2"
 	},
 	"files": ["lib", "README.md"],

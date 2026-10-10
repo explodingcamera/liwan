@@ -5,7 +5,7 @@ use crate::utils::duckdb::{ParamVec, repeat_vars};
 use anyhow::Result;
 use duckdb::params_from_iter;
 
-use super::shared::{SESSION_DURATION_SQL, build_filter_clause, metric_aggregate_sql};
+use super::shared::{SESSION_DURATION_SQL, build_filter_clause, metric_aggregate_sql, metric_sample_count_sql};
 use super::{DateRange, Dimension, DimensionFilter, Metric, ReportTable};
 
 /// Build a dimension table report for a metric
@@ -19,6 +19,7 @@ pub fn dimension_report(
     filters: &[DimensionFilter],
     metric: &Metric,
     max_results: usize,
+    min_samples: u64,
 ) -> Result<ReportTable> {
     if entities.is_empty() {
         return Ok(BTreeMap::new());
@@ -29,6 +30,15 @@ pub fn dimension_report(
     let (filters_sql, filters_params) = build_filter_clause(filters)?;
 
     let metric_column = metric_aggregate_sql(*metric, "sd");
+    let sample_filter = if matches!(metric, Metric::BounceRate | Metric::AvgTimeOnSite) {
+        format!("having {} >= {min_samples}", metric_sample_count_sql(*metric, "sd"))
+    } else {
+        String::new()
+    };
+    let order_column = match metric {
+        Metric::BounceRate => "metric_value asc",
+        _ => "metric_value desc",
+    };
     let (dimension_column, dimension_scope_sql) = match dimension {
         Dimension::Url => ("concat(fqdn, path)", None),
         Dimension::UrlEntry => (
@@ -98,31 +108,16 @@ pub fn dimension_report(
 			{metric_column} as metric_value
 		from session_data sd
 		group by dimension_value
-		order by metric_value desc
+		{sample_filter}
+		order by {order_column}
 		limit {max_results};
 	"
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
 
-    match metric {
-        Metric::Views | Metric::UniqueVisitors => {
-            let rows = stmt.query_map(params_from_iter(params), |row| {
-                let dimension_value: String = row.get(0)?;
-                Ok((dimension_value, row.get(1)?))
-            })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, f64>, duckdb::Error>>()?;
-            Ok(report_table)
-        }
-        Metric::AvgTimeOnSite | Metric::BounceRate => {
-            let rows = stmt.query_map(params_from_iter(params), |row| {
-                let dimension_value: String = row.get(0)?;
-                Ok((dimension_value, row.get(1)?))
-            })?;
-            let report_table = rows.collect::<Result<BTreeMap<String, f64>, duckdb::Error>>()?;
-            Ok(report_table)
-        }
-    }
+    let rows = stmt.query_map(params_from_iter(params), |row| Ok((row.get(0)?, row.get(1)?)))?;
+    Ok(rows.collect::<Result<ReportTable, duckdb::Error>>()?)
 }
 
 #[cfg(test)]
@@ -158,10 +153,140 @@ mod tests {
             &[],
             &Metric::Views,
             max_results,
+            0,
         )
         .expect("failed to build dimension report");
 
         assert_eq!(report.len(), max_results);
+    }
+
+    #[test]
+    fn bounce_rate_reports_entry_session_counts() {
+        let app = Liwan::new_memory(Config::default()).expect("failed to create app");
+        let conn = app.events_conn().expect("failed to get events conn");
+        let start = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).single().expect("valid date");
+        for (visitor, path, offset) in
+            [("one", "/popular", 0), ("one", "/popular", 1), ("two", "/popular", 2), ("three", "/small", 3)]
+        {
+            conn.execute(
+                "insert into events (entity_id, visitor_group_id, event, created_at, path) values ('a', ?, 'pageview', ?, ?)",
+                duckdb::params![visitor, start + Duration::hours(offset), path],
+            )
+            .expect("failed to insert pageview");
+        }
+        conn.execute(
+            "insert into events (entity_id, visitor_group_id, event, created_at, path, time_to_next_event) values ('a', 'four', 'pageview', ?, '/good', interval '5 minutes')",
+            duckdb::params![start + Duration::hours(4)],
+        )
+        .expect("failed to insert entry pageview");
+        conn.execute(
+            "insert into events (entity_id, visitor_group_id, event, created_at, path, time_from_last_event) values ('a', 'four', 'pageview', ?, '/good', interval '5 minutes')",
+            duckdb::params![start + Duration::hours(4) + Duration::minutes(5)],
+        )
+        .expect("failed to insert second pageview");
+        let range = DateRange { start: start - Duration::hours(1), end: start + Duration::days(1) };
+        let report = dimension_report(
+            &conn,
+            &["a".into()],
+            "pageview",
+            &range,
+            &Dimension::Path,
+            None,
+            &[],
+            &Metric::BounceRate,
+            10,
+            0,
+        )
+        .expect("failed to build bounce rate report");
+
+        assert_eq!(report["/popular"], 1.0);
+        assert_eq!(report["/small"], 1.0);
+        assert_eq!(report["/good"], 0.0);
+
+        let ranked = dimension_report(
+            &conn,
+            &["a".into()],
+            "pageview",
+            &range,
+            &Dimension::Path,
+            None,
+            &[],
+            &Metric::BounceRate,
+            1,
+            1,
+        )
+        .expect("failed to build ranked bounce rate report");
+        assert_eq!(ranked.len(), 1);
+        assert_eq!(ranked["/good"], 0.0);
+
+        let filtered = dimension_report(
+            &conn,
+            &["a".into()],
+            "pageview",
+            &range,
+            &Dimension::Path,
+            None,
+            &[],
+            &Metric::BounceRate,
+            10,
+            2,
+        )
+        .expect("failed to filter bounce rate report");
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered["/popular"], 1.0);
+    }
+
+    #[test]
+    fn avg_time_reports_only_measured_pageviews() {
+        let app = Liwan::new_memory(Config::default()).expect("failed to create app");
+        let conn = app.events_conn().expect("failed to get events conn");
+        let start = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).single().expect("valid date");
+        for (visitor, offset, duration) in [("one", 0, Some(60)), ("two", 1, Some(120)), ("three", 2, None)] {
+            let created_at = start + Duration::hours(offset);
+            conn.execute(
+                "insert into events (entity_id, visitor_group_id, event, created_at, path, exited_at) values ('a', ?, 'pageview', ?, '/', ?)",
+                duckdb::params![visitor, created_at, duration.map(|seconds| created_at + Duration::seconds(seconds))],
+            )
+            .expect("failed to insert pageview");
+        }
+        conn.execute(
+            "insert into events (entity_id, visitor_group_id, event, created_at, path, exited_at) values ('a', 'four', 'pageview', ?, '/small', ?)",
+            duckdb::params![start + Duration::hours(3), start + Duration::hours(3) + Duration::seconds(600)],
+        )
+        .expect("failed to insert pageview");
+        let range = DateRange { start: start - Duration::hours(1), end: start + Duration::days(1) };
+        let report = dimension_report(
+            &conn,
+            &["a".into()],
+            "pageview",
+            &range,
+            &Dimension::Path,
+            None,
+            &[],
+            &Metric::AvgTimeOnSite,
+            10,
+            0,
+        )
+        .expect("failed to build average time report");
+
+        assert_eq!(report["/"], 90.0);
+        assert_eq!(report["/small"], 600.0);
+
+        let ranked = dimension_report(
+            &conn,
+            &["a".into()],
+            "pageview",
+            &range,
+            &Dimension::Path,
+            None,
+            &[],
+            &Metric::AvgTimeOnSite,
+            1,
+            2,
+        )
+        .expect("failed to build ranked average time report");
+        assert_eq!(ranked.len(), 1);
+        assert_eq!(ranked["/"], 90.0);
     }
 
     #[test]
@@ -194,6 +319,7 @@ mod tests {
                 filters,
                 &Metric::Views,
                 10,
+                0,
             )
             .unwrap()
             .into_iter()
@@ -226,7 +352,8 @@ mod tests {
                 None,
                 &[unset],
                 &Metric::Views,
-                10
+                10,
+                0,
             )
             .unwrap()
             .into_iter()

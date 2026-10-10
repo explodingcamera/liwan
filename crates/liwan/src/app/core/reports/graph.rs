@@ -161,6 +161,8 @@ pub fn overall_report(
     let mut params = ParamVec::new();
 
     let (filters_sql, filters_params) = build_filter_clause(filters)?;
+    // Apply the same filters, but not the minimum sample counts used by summary and dimension reports.
+    // Suppressing sparse time buckets would create misleading gaps in the graph.
     let metric_sql = metric_aggregate_sql(*metric, "sd");
     let time_bins_sql = build_time_bins_values_sql(buckets.len());
 

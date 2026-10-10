@@ -123,6 +123,10 @@ pub struct LimitsConfig {
     pub report_timeout_seconds: u64,
     pub report_max_range_days: i64,
     pub report_max_dimension_results: usize,
+    /// Minimum entry sessions for bounce rates in summary and dimension reports.
+    pub report_min_bounce_rate_sessions: u64,
+    /// Minimum measured pageviews for average time in summary and dimension reports.
+    pub report_min_avg_time_on_site_samples: u64,
     pub report_max_datapoints: usize,
     pub report_max_filters: usize,
     pub report_max_filter_value_bytes: usize,
@@ -135,6 +139,8 @@ impl Default for LimitsConfig {
             report_timeout_seconds: 30,
             report_max_range_days: 3660,
             report_max_dimension_results: 1000,
+            report_min_bounce_rate_sessions: 10,
+            report_min_avg_time_on_site_samples: 5,
             report_max_datapoints: 2000,
             report_max_filters: 20,
             report_max_filter_value_bytes: 2048,
@@ -539,6 +545,8 @@ mod test {
         assert_eq!(config.limits.report_timeout_seconds, 30);
         assert_eq!(config.limits.report_max_range_days, 3660);
         assert_eq!(config.limits.report_max_dimension_results, 1000);
+        assert_eq!(config.limits.report_min_bounce_rate_sessions, 10);
+        assert_eq!(config.limits.report_min_avg_time_on_site_samples, 5);
         assert_eq!(config.limits.report_max_datapoints, 2000);
         assert_eq!(config.limits.report_max_filters, 20);
         assert_eq!(config.limits.report_max_filter_value_bytes, 2048);
@@ -568,6 +576,20 @@ mod test {
 
         let error = Config::load(None, [("LIWAN_LIMITS_REPORT_MAX_CONCURRENCY", "11")]).unwrap_err();
         assert!(error.to_string().contains("must be between 1 and 10"));
+    }
+
+    #[test]
+    fn test_report_sample_limit_overrides() {
+        let config = Config::load(
+            None,
+            [
+                ("LIWAN_LIMITS_REPORT_MIN_BOUNCE_RATE_SESSIONS", "0"),
+                ("LIWAN_LIMITS_REPORT_MIN_AVG_TIME_ON_SITE_SAMPLES", "3"),
+            ],
+        )
+        .expect("report sample limits should load from environment variables");
+        assert_eq!(config.limits.report_min_bounce_rate_sessions, 0);
+        assert_eq!(config.limits.report_min_avg_time_on_site_samples, 3);
     }
 
     #[test]

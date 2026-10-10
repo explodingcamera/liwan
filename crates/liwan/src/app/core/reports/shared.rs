@@ -5,6 +5,27 @@ use super::{Dimension, DimensionFilter, FilterType, Metric};
 
 pub(super) const SESSION_DURATION_SQL: &str = "interval '30 minutes'";
 
+pub(super) fn measured_duration_sql(alias: &str) -> String {
+    format!(
+        "extract(epoch from case
+            when {alias}.time_to_next_event is not null and {alias}.time_to_next_event between interval '0 seconds' and {SESSION_DURATION_SQL}
+                then {alias}.time_to_next_event
+            when {alias}.exited_at between {alias}.created_at and {alias}.created_at + {SESSION_DURATION_SQL}
+                then {alias}.exited_at - {alias}.created_at
+        end)"
+    )
+}
+
+pub(super) fn metric_sample_count_sql(metric: Metric, alias: &str) -> String {
+    match metric {
+        Metric::BounceRate => format!(
+            "count(*) filter (where {alias}.time_from_last_event is null or {alias}.time_from_last_event > {SESSION_DURATION_SQL})"
+        ),
+        Metric::AvgTimeOnSite => format!("count({})", measured_duration_sql(alias)),
+        _ => "null::ubigint".to_string(),
+    }
+}
+
 pub(super) fn build_filter_clause(filters: &[DimensionFilter]) -> Result<(String, ParamVec<'_>)> {
     let mut params = ParamVec::new();
 
@@ -112,16 +133,6 @@ pub(super) fn metric_aggregate_sql(metric: Metric, alias: &str) -> String {
 			"
 			)
         }
-        Metric::AvgTimeOnSite => {
-            format!(
-				"--sql
-			coalesce(avg(extract(epoch from case
-				when {alias}.time_to_next_event is not null and {alias}.time_to_next_event between interval '0 seconds' and {SESSION_DURATION_SQL}
-					then {alias}.time_to_next_event
-				when {alias}.exited_at between {alias}.created_at and {alias}.created_at + {SESSION_DURATION_SQL}
-					then {alias}.exited_at - {alias}.created_at
-			end)), 0)"
-			)
-        }
+        Metric::AvgTimeOnSite => format!("coalesce(avg({}), 0)", measured_duration_sql(alias)),
     }
 }

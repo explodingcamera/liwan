@@ -92,7 +92,7 @@ export const SelectMetric = ({
 	onSelect: () => void;
 	selected: boolean;
 }) => {
-	const unavailable = value == null || prevValue == null;
+	const unavailable = value == null;
 	const currentValue = value ?? 0;
 	const previousValue = prevValue ?? 0;
 	const change = currentValue - previousValue;
@@ -109,7 +109,7 @@ export const SelectMetric = ({
 			<h3>
 				{unavailable ? "Unavailable" : formatMetricVal(currentValue, metric)}
 				<span style={{ color }} className={styles.change}>
-					{!unavailable && (
+					{!unavailable && prevValue != null && (
 						<>
 							{icon} {formattedChange}
 						</>

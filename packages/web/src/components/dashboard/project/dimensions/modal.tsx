@@ -12,7 +12,7 @@ import { Breadcrumb, type DimensionProps, DimensionRow } from ".";
 
 export const DetailsModal = (props: DimensionProps) => {
 	const { dimension, propertyKey, query, onBack } = props;
-	const { data, biggest, order, isLoading } = useDimension({
+	const { data, biggest, isLoading } = useDimension({
 		dimension,
 		propertyKey,
 		...query,
@@ -62,7 +62,7 @@ export const DetailsModal = (props: DimensionProps) => {
 					className={styles.search}
 				/>
 				{results?.map((d) => (
-					<DimensionRow key={d.dimensionValue} {...props} row={d} order={order} biggest={biggest} />
+					<DimensionRow key={d.dimensionValue} {...props} row={d} biggest={biggest} />
 				))}
 				{isLoading && (
 					<div className={styles.loadingOverlay} data-no-delay={!data}>

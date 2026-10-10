@@ -59,6 +59,7 @@
 }
 
 .percentage {
+  --bar-radius: 9px;
   flex: 1;
   position: relative;
   z-index: 1;
@@ -73,14 +74,18 @@
     content: "";
     position: absolute;
     left: 0;
-    width: var(--percentage);
+    width: min(100%, calc(var(--percentage) + var(--bar-radius) + var(--bar-radius)));
     height: 100%;
     background: light-dark(rgb(11 20 56 / 9%), rgb(165 209 255 / 9%));
     z-index: -1;
     transition:
       width 0.3s ease-in-out,
       background-color 0.1s ease-in-out;
-    border-radius: 9px;
+    border-radius: var(--bar-radius);
+  }
+
+  &[data-empty="true"]::after {
+    width: 0;
   }
 
   &:hover::after {

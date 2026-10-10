@@ -1,10 +1,11 @@
 use crate::app::DuckDBConn;
+use crate::config::LimitsConfig;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use duckdb::params_from_iter;
 
-use super::shared::{build_filter_clause, metric_aggregate_sql};
+use super::shared::{build_filter_clause, metric_aggregate_sql, metric_sample_count_sql};
 use super::{DateRange, DimensionFilter, Metric, ReportStats};
 
 /// Return the earliest event timestamp for the selected entities
@@ -56,6 +57,7 @@ pub fn overall_stats(
     event: &str,
     range: &DateRange,
     filters: &[DimensionFilter],
+    limits: &LimitsConfig,
 ) -> Result<ReportStats> {
     if entities.is_empty() {
         return Ok(ReportStats::default());
@@ -70,6 +72,11 @@ pub fn overall_stats(
         (metric_aggregate_sql(Metric::BounceRate, "sd"), metric_aggregate_sql(Metric::AvgTimeOnSite, "sd"))
     } else {
         ("null::double".into(), "null::double".into())
+    };
+    let (bounce_samples, time_samples) = if event == "pageview" {
+        (metric_sample_count_sql(Metric::BounceRate, "sd"), metric_sample_count_sql(Metric::AvgTimeOnSite, "sd"))
+    } else {
+        ("0::ubigint".into(), "0::ubigint".into())
     };
 
     let mut params = ParamVec::new();
@@ -100,19 +107,30 @@ pub fn overall_stats(
 			{metric_total} as total_views,
 			{metric_unique_visitors} as unique_visitors,
 			{metric_bounce_rate} as bounce_rate,
-			{metric_avg_time_on_site} as avg_time_on_site
+			{metric_avg_time_on_site} as avg_time_on_site,
+			{bounce_samples} as bounce_samples,
+			{time_samples} as time_samples
 		from session_data sd;
 	"
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
     let result = stmt.query_row(duckdb::params_from_iter(params), |row| {
-        Ok(ReportStats {
+        let mut stats = ReportStats {
             total_views: row.get(0)?,
             unique_visitors: row.get(1)?,
             bounce_rate: row.get(2)?,
             avg_time_on_site: row.get(3)?,
-        })
+        };
+        let bounce_samples: u64 = row.get(4)?;
+        let time_samples: u64 = row.get(5)?;
+        if bounce_samples < limits.report_min_bounce_rate_sessions {
+            stats.bounce_rate = None;
+        }
+        if time_samples < limits.report_min_avg_time_on_site_samples {
+            stats.avg_time_on_site = None;
+        }
+        Ok(stats)
     })?;
 
     Ok(result)
@@ -153,9 +171,29 @@ mod tests {
         .expect("failed to insert event");
 
         let range = DateRange { start: created_at - Duration::minutes(1), end: exited_at + Duration::minutes(1) };
-        let stats =
-            overall_stats(&conn, &["entity-1".to_string()], "pageview", &range, &[]).expect("failed to build stats");
+        let limits = LimitsConfig {
+            report_min_bounce_rate_sessions: 0,
+            report_min_avg_time_on_site_samples: 0,
+            ..Default::default()
+        };
+        let stats = overall_stats(&conn, &["entity-1".to_string()], "pageview", &range, &[], &limits)
+            .expect("failed to build stats");
 
         assert_eq!(stats.avg_time_on_site, Some(90.0));
+
+        let limits = LimitsConfig {
+            report_min_bounce_rate_sessions: 1,
+            report_min_avg_time_on_site_samples: 2,
+            ..Default::default()
+        };
+        let stats = overall_stats(&conn, &["entity-1".to_string()], "pageview", &range, &[], &limits)
+            .expect("failed to build stats with separate limits");
+        assert_eq!(stats.bounce_rate, Some(1.0));
+        assert_eq!(stats.avg_time_on_site, None);
+
+        let stats = overall_stats(&conn, &["entity-1".to_string()], "pageview", &range, &[], &LimitsConfig::default())
+            .expect("failed to build stats with default limits");
+        assert_eq!(stats.bounce_rate, None);
+        assert_eq!(stats.avg_time_on_site, None);
     }
 }

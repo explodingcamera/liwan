@@ -25,6 +25,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 
 ### Features
 
+- Bounce-rate and average-time metrics now omit low-sample values from summary cards and breakdowns, with configurable minimum counts under `[limits]`.
 - Added support for custom events
 - Added support for custom properties
 - Added authenticated batch event ingestion endpoint

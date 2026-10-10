@@ -3,6 +3,9 @@
 }
 
 .popup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
   min-width: 11rem;
   padding: 0.25rem;
   border: 1px solid var(--border);

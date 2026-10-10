@@ -65,7 +65,10 @@ fn benchmark_reports(c: &mut Criterion) {
         let mut group = c.benchmark_group("overall_stats");
         configure_group(&mut group);
         group.bench_function("all_metrics", |b| {
-            b.iter(|| reports::overall_stats(&conn, &entities, "pageview", &range, &[]).expect("overall_stats failed"));
+            b.iter(|| {
+                reports::overall_stats(&conn, &entities, "pageview", &range, &[], &app.config.limits)
+                    .expect("overall_stats failed")
+            });
         });
         group.finish();
     }
@@ -90,6 +93,7 @@ fn benchmark_reports(c: &mut Criterion) {
                             &[],
                             metric,
                             1000,
+                            0,
                         )
                         .expect("dimension_report failed")
                     });

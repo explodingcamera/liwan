@@ -158,7 +158,6 @@ export const useDimension = ({
 }): {
 	data: DimensionTableRow[] | undefined;
 	biggest: number;
-	order: string[] | undefined;
 	isLoading: boolean;
 	error: unknown;
 } => {
@@ -195,8 +194,7 @@ export const useDimension = ({
 				(metric === "bounce_rate" ? a.value - b.value : b.value - a.value) ||
 				numericCollator.compare(a.dimensionValue, b.dimensionValue),
 		);
-		const order = sortedData?.map((d) => d.dimensionValue);
-		return { data: sortedData, biggest, order, isLoading: isFetching, error };
+		return { data: sortedData, biggest, isLoading: isFetching, error };
 	}, [data, isFetching, error, metric]);
 };
 export const useProjectGraph = ({

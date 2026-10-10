@@ -145,7 +145,7 @@ export const DimensionTabs = ({
 };
 
 export const DimensionTable = (props: DimensionProps) => {
-	const { data, biggest, order, isLoading } = useDimension({
+	const { data, biggest, isLoading } = useDimension({
 		dimension: props.dimension,
 		propertyKey: props.propertyKey,
 		...props.query,
@@ -161,7 +161,7 @@ export const DimensionTable = (props: DimensionProps) => {
 					</div>
 				)}
 				{dataTruncated?.map((d) => (
-					<DimensionRow key={d.dimensionValue} {...props} row={d} order={order} biggest={biggest} />
+					<DimensionRow key={d.dimensionValue} {...props} row={d} biggest={biggest} />
 				))}
 				{!isLoading && dataTruncated?.length === 0 && (
 					<div className={styles.dimensionEmpty}>
@@ -351,15 +351,14 @@ const isValidFqdn = (fqdn: string) => {
 
 export const DimensionRow = ({
 	row,
-	order,
 	biggest,
 	dimension,
 	propertyKey,
 	query,
 	onSelect,
 	onOpen,
-}: DimensionProps & { row: DimensionTableRow; order?: string[]; biggest: number }) => (
-	<div style={{ order: order?.indexOf(row.dimensionValue) }} className={styles.dimensionRow}>
+}: DimensionProps & { row: DimensionTableRow; biggest: number }) => (
+	<div className={styles.dimensionRow}>
 		<DimensionValueBar
 			value={row.value}
 			biggest={biggest}
@@ -395,7 +394,8 @@ export const DimensionValueBar = ({
 }) => (
 	<div
 		className={cls(styles.percentage, selected && styles.selected)}
-		style={{ "--percentage": `${(value / biggest) * 100}%` } as React.CSSProperties}
+		data-empty={value <= 0}
+		style={{ "--percentage": `${biggest > 0 ? (value / biggest) * 100 : 0}%` } as React.CSSProperties}
 	>
 		{children}
 	</div>
