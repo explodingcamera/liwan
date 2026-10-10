@@ -1,13 +1,24 @@
-# liwan-api
+# @liwan.dev/api
 
 JavaScript and TypeScript client for the [Liwan](https://liwan.dev) API.
 
+While the API is pre-1.0, its minor version tracks the Liwan 1.x release needed for its latest features. Patch releases are independent, and older clients keep working with newer servers but need an update for new features.
+
+## Install
+
 ```sh
-npm install liwan-api
+# npm
+npm install @liwan.dev/api
+
+# Bun
+bun add @liwan.dev/api
+
+# pnpm
+pnpm add @liwan.dev/api
 ```
 
 ```ts
-import { createClient } from "liwan-api";
+import { createClient } from "@liwan.dev/api";
 
 const client = createClient({
   endpoint: "https://liwan.example.com",
@@ -15,7 +26,7 @@ const client = createClient({
 });
 ```
 
-See [examples/](examples/) for usage examples. For client-side tracking, use [liwan-tracker](https://www.npmjs.com/package/liwan-tracker).
+See [examples/](examples/) for usage examples. For client-side tracking, use [@liwan.dev/tracker](https://www.npmjs.com/package/@liwan.dev/tracker).
 
 ## License
 

@@ -1,7 +1,7 @@
 import { getConnInfo } from "@hono/bun";
+import { createClient } from "@liwan.dev/api";
+import { honoMiddleware } from "@liwan.dev/api/hono";
 import { Hono } from "hono";
-import { createClient } from "liwan-api";
-import { honoMiddleware } from "liwan-api/hono";
 
 const analytics = createClient({
 	endpoint: "https://analytics.example.com",

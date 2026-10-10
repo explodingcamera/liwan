@@ -2,9 +2,22 @@
 
 Tracking script for [Liwan](https://liwan.dev), an open-source analytics platform.
 
-For server-side events, use [liwan-api](https://www.npmjs.com/package/liwan-api).
+Tracker versions follow the Liwan release needed for their latest features, with patch releases numbered independently. Older trackers still work with newer servers, but need an update to use new features.
 
-The `liwan-tracker` npm package is intended for current Liwan server releases. Its network protocol may change between Liwan versions. When it does, update the npm tracker alongside Liwan. If you use the tracker script served by Liwan itself, it already uses the matching internal tracker version.
+For server-side events, use [@liwan.dev/api](https://www.npmjs.com/package/@liwan.dev/api).
+
+## Install
+
+```sh
+# npm
+npm install @liwan.dev/tracker
+
+# Bun
+bun add @liwan.dev/tracker
+
+# pnpm
+pnpm add @liwan.dev/tracker
+```
 
 ## Usage
 
@@ -23,10 +36,10 @@ When the script is loaded directly in the browser, it will automatically send pa
 
 Pageviews send a best-effort exit signal when the page becomes hidden. Set `data-exit="false"` to disable exit tracking.
 
-When using the npm package, call `trackPageviews()` to start automatic pageview tracking:
+When using the package, call `trackPageviews()` to start automatic pageview tracking:
 
 ```ts
-import { trackPageviews } from "liwan-tracker";
+import { trackPageviews } from "@liwan.dev/tracker";
 
 trackPageviews({
   endpoint: "https://liwan.example.com/api/event",
@@ -39,7 +52,7 @@ trackPageviews({
 Call `event` when an action happens. In the browser, the tracker uses the current page URL and referrer.
 
 ```ts
-import { event } from "liwan-tracker";
+import { event } from "@liwan.dev/tracker";
 
 await event("signup", {
   endpoint: "https://liwan.example.com/api/event",

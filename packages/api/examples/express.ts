@@ -1,6 +1,6 @@
+import { createClient } from "@liwan.dev/api";
+import { expressMiddleware } from "@liwan.dev/api/express";
 import express from "express";
-import { createClient } from "liwan-api";
-import { expressMiddleware } from "liwan-api/express";
 
 const analytics = createClient({
 	endpoint: "https://analytics.example.com",

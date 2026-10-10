@@ -1,0 +1,89 @@
+name: Publish client packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      rust_api:
+        description: Publish the Rust API client
+        type: boolean
+        default: false
+      npm_api:
+        description: Publish the npm API client
+        type: boolean
+        default: false
+      npm_tracker:
+        description: Publish the npm tracker
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check-selection:
+    if: '!inputs.rust_api && !inputs.npm_api && !inputs.npm_tracker'
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo 'Select at least one client package to publish.' >&2
+          exit 1
+
+  publish-rust:
+    if: github.ref == 'refs/heads/main' && inputs.rust_api
+    runs-on: ubuntu-24.04
+    environment: client-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - run: cargo test -p liwan-api --all-features --locked
+      - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        id: auth
+      - run: cargo publish -p liwan-api --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  publish-npm:
+    if: github.ref == 'refs/heads/main' && (inputs.npm_api || inputs.npm_tracker)
+    runs-on: ubuntu-24.04
+    environment: client-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+          no-cache: true
+      - run: bun install --frozen-lockfile
+      - name: Test and build API client
+        if: inputs.npm_api
+        run: |
+          bun run --cwd packages/api test
+          bun run --cwd packages/api typecheck
+          bun run --cwd packages/api build
+      - name: Build tracker
+        if: inputs.npm_tracker
+        run: |
+          bun run --cwd packages/tracker typecheck
+          bun run --cwd packages/tracker build
+      - name: Publish API client
+        if: inputs.npm_api
+        working-directory: packages/api
+        run: npm publish --access public
+      - name: Publish tracker
+        if: inputs.npm_tracker
+        working-directory: packages/tracker
+        run: npm publish --access public

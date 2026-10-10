@@ -4,7 +4,7 @@ members = ["crates/*"]
 default-members = ["crates/liwan"]
 
 [workspace.package]
-version = "1.6.0"
+version = "1.8.0"
 edition = "2024"
 rust-version = "1.99"
 homepage = "https://liwan.dev"

@@ -1,8 +1,8 @@
 {
-	"name": "liwan-api",
+	"name": "@liwan.dev/api",
 	"description": "Server-side Liwan analytics API client",
 	"homepage": "https://liwan.dev",
-	"version": "0.1.0",
+	"version": "0.8.0",
 	"license": "Apache-2.0",
 	"type": "module",
 	"repository": {

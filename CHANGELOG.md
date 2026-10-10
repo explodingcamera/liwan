@@ -16,29 +16,28 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
-> The `liwan-tracker` npm package is intended for current Liwan server releases. Its network protocol may change between Liwan versions. When it does, update the npm tracker alongside Liwan. If you use the tracker script served by Liwan itself, it already uses the matching internal tracker version.
-
 ## [Unreleased]
-
-### Features
-
-- Added drag-to-select custom date ranges on project graphs with automatic resolution and double-click undo
-- Added selectable hourly, daily, weekly, and monthly dashboard graph intervals
-- Added configurable dashboard footer links and custom HTML in the page head
-- Added support for hosting Liwan under a sub-path in `base_url`
-- Added support for custom events
-- Added support for custom properties
-- Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
-- Added authenticated batch event ingestion endpoint
-- Added API key management UI
-- Added teams for assigning project read access to groups of users
-- Added internal project visibility for all signed-in users
-- Added a configurable maximum session duration
-- Added automatic team assignment for new SSO accounts
 
 ### ⚠️ Breaking Changes
 
 - Direct per-user project assignments no longer grant access. Reassign users to teams to restore private-project access.
+- The tracker npm package is moving from `liwan-tracker` to `@liwan.dev/tracker`. Update package dependencies and imports. The old package remains available but will not receive new releases.
+
+### Features
+
+- Added support for custom events
+- Added support for custom properties
+- Added authenticated batch event ingestion endpoint
+- Added API key management UI
+- Added a configurable maximum session duration
+- Added drag-to-select custom date ranges on project graphs with automatic resolution and double-click undo
+- Added selectable hourly, daily, weekly, and monthly dashboard graph intervals
+- Added left and right arrow keyboard shortcuts for navigating dashboard date ranges
+- Added teams for assigning project read access to groups of users
+- Added internal project visibility for all signed-in users
+- Added automatic team assignment for new SSO accounts
+- Added support for hosting Liwan under a sub-path in `base_url`
+- Added configurable dashboard footer links and custom HTML in the page head
 
 ## [v1.7.0] - 2026-09-13
 
