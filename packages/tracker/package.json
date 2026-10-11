@@ -24,8 +24,13 @@
 		"url": "https://henrygressmann.de"
 	},
 	"type": "module",
-	"scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
+	"scripts": {
+		"build": "tsdown",
+		"test": "bun test tests",
+		"typecheck": "tsc --noEmit"
+	},
 	"devDependencies": {
+		"@types/bun": "^1.4.2",
 		"tsdown": "^0.23.1",
 		"typescript": "^7.0.2"
 	},

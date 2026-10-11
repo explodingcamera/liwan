@@ -3,7 +3,30 @@ declare global {
   interface Window {
     __liwan_loaded?: boolean;
   }
+  /** Default properties included with subsequent events. Set before loading the script to include the first pageview. */
+  var liwanProperties: EventProperties | undefined;
+  /** Transform a normalized event payload before it is sent. Not called for exit signals. */
+  var liwanTransformEvent: ((payload: EventPayload) => EventPayload) | undefined;
 }
+/** Normalized event sent to the API. The event transformer can edit this before it is sent. */
+export type EventPayload = {
+  /** Event name, such as `pageview` or `signup`. */
+  name: string;
+  /** Entity associated with the event. */
+  entity_id?: string;
+  /** Page URL with unrecognized query parameters and the fragment removed. */
+  url: string;
+  /** Referrer supplied by the caller or the document. */
+  referrer?: string;
+  /** Screen-width bucket, when available in the browser. */
+  screen_width?: string;
+  /** Screen orientation, when available in the browser. */
+  orientation?: string;
+  /** Global defaults merged with event-specific properties. */
+  properties?: EventProperties;
+  /** Marks a pageview exit signal. */
+  exit?: boolean;
+};
 export type EventProperties = Record<string, string | number | boolean | null | undefined>;
 export type EventOptions = {
   /**
@@ -43,6 +66,8 @@ export type EventOptions = {
    */
   properties?: EventProperties;
 };
+/** Set default properties for subsequent events. Pass `null` to remove a property. */
+export declare function setProperties(properties: EventProperties): void;
 /**
  * Sends an event to the Liwan API.
  *
@@ -69,6 +94,7 @@ export declare function event(name?: string, options?: EventOptions): Promise<vo
  * navigations using the Navigation API when available, with `popstate` as a fallback.
  *
  * Calling this function marks Liwan as loaded through `window.__liwan_loaded`.
+ * Subsequent calls are ignored.
  *
  * @param options Options passed to each pageview event.
  *

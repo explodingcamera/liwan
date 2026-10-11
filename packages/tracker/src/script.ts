@@ -2,19 +2,31 @@ declare global {
 	interface Window {
 		__liwan_loaded?: boolean;
 	}
+	/** Default properties included with subsequent events. Set before loading the script to include the first pageview. */
+	var liwanProperties: EventProperties | undefined;
+	/** Transform a normalized event payload before it is sent. Not called for exit signals. */
+	var liwanTransformEvent: ((payload: EventPayload) => EventPayload) | undefined;
 }
 
-type Payload = {
+/** Normalized event sent to the API. The event transformer can edit this before it is sent. */
+export type EventPayload = {
+	/** Event name, such as `pageview` or `signup`. */
 	name: string;
+	/** Entity associated with the event. */
 	entity_id?: string;
+	/** Page URL with unrecognized query parameters and the fragment removed. */
 	url: string;
+	/** Referrer supplied by the caller or the document. */
 	referrer?: string;
+	/** Screen-width bucket, when available in the browser. */
 	screen_width?: string;
+	/** Screen orientation, when available in the browser. */
 	orientation?: string;
+	/** Global defaults merged with event-specific properties. */
 	properties?: EventProperties;
+	/** Marks a pageview exit signal. */
 	exit?: boolean;
-	// biome-ignore lint/suspicious/noExplicitAny: we want to allow any additional properties to be sent in the payload
-} & Record<string, any>;
+};
 
 export type EventProperties = Record<string, string | number | boolean | null | undefined>;
 
@@ -62,13 +74,13 @@ export type EventOptions = {
 	properties?: EventProperties;
 };
 
+const noWindow = typeof window === "undefined";
 let scriptEl: HTMLScriptElement | null = null;
 let endpoint: string | null = null;
 let entity: string | null = null;
 let referrer: string | null = null;
 let defaultExit = true;
-const noWindow = typeof window === "undefined";
-let currentExit: { endpoint: string; payload: Payload } | null = null;
+let currentExit: { endpoint: string; payload: EventPayload } | null = null;
 let exitListenerInstalled = false;
 let exitSentWhileHidden = false;
 
@@ -151,6 +163,16 @@ const sanitizeUrl = (value: string) => {
 	return url.toString();
 };
 
+/** Set default properties for subsequent events. Pass `null` to remove a property. */
+export function setProperties(properties: EventProperties): void {
+	const defaults = { ...globalThis.liwanProperties };
+	for (const [key, value] of Object.entries(properties)) {
+		if (value == null) delete defaults[key];
+		else defaults[key] = value;
+	}
+	globalThis.liwanProperties = defaults;
+}
+
 /**
  * Sends an event to the Liwan API.
  *
@@ -194,11 +216,11 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 	const url = options?.url || (!noWindow ? location.href : null);
 	if (!url) return reject("url is required");
 
-	const payload = <Payload>{
+	let payload: EventPayload = {
 		name,
-		properties: options?.properties,
-		entity_id: options?.entity || entity,
-		referrer: options?.referrer || referrer,
+		properties: { ...globalThis.liwanProperties, ...options?.properties },
+		entity_id: options?.entity || entity || undefined,
+		referrer: options?.referrer || referrer || undefined,
 		url: sanitizeUrl(url),
 		screen_width,
 		orientation: noWindow
@@ -207,18 +229,21 @@ export async function event(name: string = "pageview", options?: EventOptions): 
 				? "portrait"
 				: "landscape",
 	};
+	if (globalThis.liwanTransformEvent) {
+		payload = globalThis.liwanTransformEvent(payload);
+	}
 	const response = await post(endpoint_url, payload);
 
 	if (!response.ok) {
 		reject(`${response.status} ${response.statusText}`.trim());
 	}
 
-	if (!noWindow && name === "pageview" && (options?.exit ?? defaultExit)) {
+	if (!noWindow && payload.name === "pageview" && (options?.exit ?? defaultExit)) {
 		currentExit = { endpoint: endpoint_url, payload };
 		exitSentWhileHidden = false;
 		installExitListener();
 		sendCurrentExit();
-	} else if (!noWindow && name === "pageview") {
+	} else if (!noWindow && (name === "pageview" || payload.name === "pageview")) {
 		currentExit = null;
 	}
 }
@@ -230,6 +255,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
  * navigations using the Navigation API when available, with `popstate` as a fallback.
  *
  * Calling this function marks Liwan as loaded through `window.__liwan_loaded`.
+ * Subsequent calls are ignored.
  *
  * @param options Options passed to each pageview event.
  *
@@ -244,6 +270,7 @@ export async function event(name: string = "pageview", options?: EventOptions): 
  * ```
  */
 export const trackPageviews = (options?: EventOptions) => {
+	if (window.__liwan_loaded) return log("Pageview tracking already started");
 	window.__liwan_loaded = true;
 	let lastPage: string | undefined;
 

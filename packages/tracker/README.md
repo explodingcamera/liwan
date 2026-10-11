@@ -36,6 +36,43 @@ When the script is loaded directly in the browser, it will automatically send pa
 
 Pageviews send a best-effort exit signal when the page becomes hidden. Set `data-exit="false"` to disable exit tracking.
 
+Set `window.liwanProperties` before loading the tracker to include properties on every pageview and custom event. You can update or delete keys later, and properties passed to `event()` take precedence.
+
+```html
+<script>
+  window.liwanProperties = { plan: "pro" };
+</script>
+<script type="module" src="https://liwan.example.com/script.js" data-entity="example"></script>
+```
+
+When importing the tracker, use `setProperties()` to update defaults. Set a key to `null` to remove it:
+
+```ts
+import { setProperties } from "@liwan.dev/tracker";
+
+setProperties({ plan: "team" });
+setProperties({ plan: null });
+```
+
+Globals in server-side environments are shared across requests. Pass request-specific properties to `event()` instead of setting global defaults.
+
+To customize events, define a synchronous `window.liwanTransformEvent` function before the tracker loads. It runs for automatic pageviews and explicit `event()` calls, including custom events. The callback receives the normalized payload, including its `name`, sanitized URL, `entity_id`, and global properties, and should return the payload to send. Exit signals do not call the transformer. If you change the URL, avoid adding query parameters or fragments that contain personal data.
+
+```html
+<script>
+  window.liwanTransformEvent = (payload) => ({
+    ...payload,
+    properties: {
+      ...payload.properties,
+      section: new URL(payload.url).pathname.split("/")[1] || "home",
+      event_type: payload.name,
+    },
+  });
+</script>
+```
+
+Keep property values free of personal data. Events support at most 30 properties, with keys up to 64 characters and values up to 255 characters.
+
 When using the package, call `trackPageviews()` to start automatic pageview tracking:
 
 ```ts
@@ -46,6 +83,8 @@ trackPageviews({
   entity: "example",
 });
 ```
+
+Calling `trackPageviews()` again logs a message and does not add another listener or send a duplicate pageview.
 
 ### Custom events
 
@@ -109,6 +148,9 @@ export type EventOptions = {
 };
 
 export type EventProperties = Record<string, string | number | boolean | null | undefined>;
+
+/** Set default properties for subsequent events. Pass `null` to remove a property. */
+export function setProperties(properties: EventProperties): void;
 
 /**
  * Sends an event to the Liwan API.

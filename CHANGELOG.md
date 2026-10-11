@@ -28,6 +28,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Bounce-rate and average-time metrics now omit low-sample values from summary cards and breakdowns, with configurable minimum counts under `[limits]`.
 - Added support for custom events
 - Added support for custom properties
+- Added tracker-wide custom properties and a hook to customize events before sending them
 - Added authenticated batch event ingestion endpoint
 - Added API key management UI
 - Added a configurable maximum session duration
