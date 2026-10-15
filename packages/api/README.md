@@ -2,6 +2,8 @@
 
 JavaScript and TypeScript client for the [Liwan](https://liwan.dev) API.
 
+**Experimental:** This client and the Liwan API are not stable yet. Their interfaces may change in future releases.
+
 While the API is pre-1.0, its minor version tracks the Liwan 1.x release needed for its latest features. Patch releases are independent, and older clients keep working with newer servers but need an update for new features.
 
 ## Install
