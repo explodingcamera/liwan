@@ -7,6 +7,7 @@ use anyhow::Result;
 use rand::distr::Alphanumeric;
 use rand::distr::SampleString;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use subtle::ConstantTimeEq;
 
 pub fn hash_password(password: &str) -> Result<String> {
     let hash = Argon2::default().hash_password(password.as_bytes()).context("Failed to hash password")?;
@@ -38,18 +39,14 @@ pub fn visitor_group_id_cidr(
 }
 
 fn hash_visitor_group(parts: &[&[u8]]) -> String {
-    const CHARS: &[u8; 62] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
     let mut hasher = blake3::Hasher::new();
     for part in parts {
+        hasher.update(&(part.len() as u64).to_le_bytes());
         hasher.update(part);
     }
     let hash = hasher.finalize();
-
-    let mut result = String::with_capacity(16);
-    for byte in hash.as_bytes().iter().take(16) {
-        result.push(CHARS[(byte % 62) as usize] as char);
-    }
-    result
+    URL_SAFE_NO_PAD.encode(&hash.as_bytes()[..12])
 }
 
 fn mask_ipv4(ip: Ipv4Addr, prefix: u8) -> Ipv4Addr {
@@ -74,15 +71,7 @@ pub fn session_token() -> String {
 
 /// Compare onboarding tokens without short-circuiting on their contents.
 pub(crate) fn onboarding_token_matches(expected: &str, candidate: &str) -> bool {
-    if expected.len() != candidate.len() {
-        return false;
-    }
-
-    let mut difference = 0u8;
-    for (expected, candidate) in expected.bytes().zip(candidate.bytes()) {
-        difference = std::hint::black_box(difference | (expected ^ candidate));
-    }
-    std::hint::black_box(difference) == 0
+    bool::from(expected.as_bytes().ct_eq(candidate.as_bytes()))
 }
 
 pub fn onboarding_token() -> String {
