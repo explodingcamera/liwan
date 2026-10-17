@@ -4,13 +4,7 @@ Rust client for the [Liwan](https://liwan.dev) API.
 
 **Experimental:** This client and the Liwan API are not stable yet. Their interfaces may change in future releases.
 
-While the API is pre-1.0, its minor version tracks the Liwan 1.x release needed for its latest features. Patch releases are independent, and older clients keep working with newer servers but need an update for new features.
-
-```sh
-cargo add liwan-api --features reqwest,tokio
-cargo add reqwest --no-default-features --features rustls
-cargo add tokio --features macros,rt-multi-thread
-```
+# Usage
 
 ```rust
 use liwan_api::Client;
