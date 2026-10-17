@@ -106,6 +106,16 @@ const CONFIG_PLACEHOLDER: &str = "__LIWAN_CONFIG__";
 const HEAD_HTML_PLACEHOLDER: &str = "<!-- LIWAN_HEAD_HTML -->";
 const FOOTER_LINKS_PLACEHOLDER: &str = "<!-- LIWAN_FOOTER_LINKS -->";
 
+fn cache_control(path: &str, is_html: bool) -> &'static str {
+    if path.starts_with("_assets/") {
+        "public, max-age=31536000, immutable"
+    } else if is_html {
+        "private, no-cache"
+    } else {
+        "public, no-cache"
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct HtmlConfig {
@@ -205,16 +215,14 @@ pub(super) async fn serve(
         (Body::from(content.data), hash)
     };
 
-    if let Some(etag) = req.headers().get(header::IF_NONE_MATCH)
-        && etag.to_str().unwrap_or("000000") == hash
-    {
-        return Err(StatusCode::NOT_MODIFIED);
-    }
+    let etag = format!("\"{hash}\"");
+    let builder = Response::builder()
+        .header(header::CONTENT_TYPE, mime)
+        .header(header::ETAG, etag.as_str())
+        .header(header::CACHE_CONTROL, cache_control(&path, is_html));
 
-    let mut builder = Response::builder().header(header::CONTENT_TYPE, mime).header(header::ETAG, hash);
-
-    if path.starts_with("_assets/") {
-        builder = builder.header(header::CACHE_CONTROL, "public, max-age=604800, immutable");
+    if req.headers().get(header::IF_NONE_MATCH).is_some_and(|value| value == etag.as_str()) {
+        return Ok(builder.status(StatusCode::NOT_MODIFIED).body(Body::empty()).unwrap());
     }
 
     Ok(builder.body(body).unwrap())
@@ -399,6 +407,13 @@ impl FromRequestParts<RouterState> for GeoLocationHeaders {
 mod tests {
     use super::*;
     use crate::utils::ip_headers::TrustedProxy;
+
+    #[test]
+    fn caches_generated_assets_and_revalidates_mutable_files() {
+        assert_eq!(cache_control("_assets/app.abc12345.js", false), "public, max-age=31536000, immutable");
+        assert_eq!(cache_control("index.html", true), "private, no-cache");
+        assert_eq!(cache_control("favicon.svg", false), "public, no-cache");
+    }
 
     #[test]
     fn custom_html_is_inserted_without_leaking_markers() {

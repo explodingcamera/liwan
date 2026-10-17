@@ -25,23 +25,23 @@
 ## Features
 
 **Understand your traffic**\
-See your most-visited pages, where visitors come from, and how traffic changes over time. The dashboard updates automatically, with bot filtering enabled by default.
+See your most-visited pages, where visitors come from, and how traffic changes over time. The dashboard updates in real time, with bot filtering enabled by default.
 
 **Easy to self-host**\
-Run Liwan as a single binary or Docker container. The dashboard and database are built in, with no additional services to manage.
+Run Liwan as a [single binary](https://liwan.dev/install/binary/) or [Docker container](https://liwan.dev/install/docker/). The dashboard and database are built in, with no additional services to manage.
 
 **Privacy first**\
-No tracking cookies or cross-site tracking. Your analytics data stays on your server, and you control what’s collected and how long it’s kept.
+No tracking cookies or cross-site tracking. Your analytics data stays on your server, and raw IP addresses aren't recorded.
 [Read more about data collection](https://liwan.dev/collected-data/).
 
 **Collect only what you need**\
 Choose what data to collect and how long to keep it. Location detail is adjustable, and campaign attribution and session metrics can be disabled independently.
 
 **Lightweight tracking**\
-Add a small tracking script to your website with a single line of HTML. Works with any framework or CMS.
+Add a small browser script with one line of HTML, or send events entirely from your server. Use either approach with any framework or CMS.
 
 **Single sign-on**\
-Manage accounts with Google Workspaces, Microsoft Entra, or your own OpenID Connect provider like Keycloak or Dex.
+Set up teams and manage accounts with Google Workspaces, Microsoft Entra, or your own OpenID Connect provider like Keycloak or Dex.
 
 ## License
 

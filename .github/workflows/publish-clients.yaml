@@ -77,6 +77,7 @@ jobs:
       - name: Build tracker
         if: inputs.npm_tracker
         run: |
+          bun run --cwd packages/tracker test
           bun run --cwd packages/tracker typecheck
           bun run --cwd packages/tracker build
       - name: Publish API client
