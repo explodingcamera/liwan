@@ -16,6 +16,16 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
+## [v1.8.1] - 2026-10-23
+
+### Security
+
+- Updated TLS root certificates to remove distrusted eMudhra certificate authorities and updated `zip` following a reported CVE. Neither issue is known to affect Liwan directly.
+
+### Other
+
+- Updated other Rust and JavaScript dependencies.
+
 ## [v1.8.0] - 2026-10-17
 
 ### ⚠️ Breaking Changes

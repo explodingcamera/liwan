@@ -17,8 +17,8 @@ on:
       - "packages/**/package.json"
       - "bun.lock"
   schedule:
-    # Every Monday at 12:30 UTC
-    - cron: "30 12 * * 1"
+    # Daily at 03:30 UTC
+    - cron: "30 3 * * *"
   workflow_dispatch:
 
 permissions:

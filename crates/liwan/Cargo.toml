@@ -26,7 +26,7 @@ name = "reports"
 arc-swap = "1.9"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 quick_cache = { version = "0.7" }
-tokio = { version = "1.53", default-features = false, features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tokio = { version = "1.54", default-features = false, features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tokio-util = { version = "0.7", features = ["io", "time"] }
 
 # encoding
@@ -93,7 +93,7 @@ ua-parser = "0.2"
 url = "2.5"
 
 # database
-duckdb = { version = "1.10506", features = ["bundled", "chrono", "r2d2"] }
+duckdb = { version = "=1.10506", features = ["bundled", "chrono", "r2d2"] }
 maxminddb = { version = "0.32", optional = true }
 mimalloc = { version = "0.1" }
 r2d2 = { version = "0.8", default-features = false }
