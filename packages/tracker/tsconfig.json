@@ -4,6 +4,8 @@
 		"module": "ESNext",
 		"moduleResolution": "Bundler",
 		"strict": true,
+		"isolatedDeclarations": true,
+		"declaration": true,
 		"types": ["bun"],
 		"lib": ["ESNext", "DOM"]
 	},

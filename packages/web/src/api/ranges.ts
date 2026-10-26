@@ -17,6 +17,7 @@ import {
 	isSameMonth,
 	isSameWeek,
 	isSameYear,
+	min,
 	startOfDay,
 	startOfMonth,
 	startOfWeek,
@@ -164,7 +165,7 @@ export class DateRange {
 						? addMonths(bucketStart, 1)
 						: addDays(bucketStart, 1);
 		const { end } = this.getBucketBounds();
-		return bucketEnd < end ? bucketEnd : end;
+		return min([bucketEnd, end]);
 	}
 
 	#isDayBeforeYesterday() {

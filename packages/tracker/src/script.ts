@@ -269,8 +269,11 @@ export async function event(name: string = "pageview", options?: EventOptions): 
  * });
  * ```
  */
-export const trackPageviews = (options?: EventOptions) => {
-	if (window.__liwan_loaded) return log("Pageview tracking already started");
+export const trackPageviews = (options?: EventOptions): void => {
+	if (window.__liwan_loaded) {
+		log("Pageview tracking already started");
+		return;
+	}
 	window.__liwan_loaded = true;
 	let lastPage: string | undefined;
 

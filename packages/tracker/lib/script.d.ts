@@ -1,4 +1,3 @@
-//#region src/script.d.ts
 declare global {
   interface Window {
     __liwan_loaded?: boolean;
@@ -109,4 +108,3 @@ export declare function event(name?: string, options?: EventOptions): Promise<vo
  * ```
  */
 export declare const trackPageviews: (options?: EventOptions) => void;
-//#endregion
