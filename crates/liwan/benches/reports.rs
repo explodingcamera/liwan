@@ -74,6 +74,17 @@ fn benchmark_reports(c: &mut Criterion) {
     }
 
     {
+        let mut group = c.benchmark_group("custom_events_report");
+        configure_group(&mut group);
+        group.bench_function("counts", |b| {
+            b.iter(|| {
+                reports::custom_events_report(&conn, &entities, &range, &[], 100).expect("custom_events_report failed")
+            });
+        });
+        group.finish();
+    }
+
+    {
         let mut group = c.benchmark_group("dimension_report");
         configure_group(&mut group);
         let dimension = Dimension::Url;

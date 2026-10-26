@@ -101,6 +101,16 @@ mod tests {
         assert_eq!(report.rows[0].completions, 3);
         assert_eq!(report.rows[0].uniques, 2);
 
+        let report = custom_events_report(&conn, &["a".into(), "b".into()], &range, &[], 10).unwrap();
+        assert!(!report.truncated);
+        assert_eq!(report.rows.len(), 2);
+        assert_eq!(report.rows[0].completions, 4);
+        assert_eq!(report.rows[0].uniques, 3);
+
+        let report = custom_events_report(&conn, &["a".into()], &range, &[], 0).unwrap();
+        assert!(report.truncated);
+        assert!(report.rows.is_empty());
+
         let empty = DateRange { start: now - Duration::hours(3), end: now - Duration::hours(2) };
         assert!(custom_events_report(&conn, &["a".into()], &empty, &[], 10).unwrap().rows.is_empty());
 

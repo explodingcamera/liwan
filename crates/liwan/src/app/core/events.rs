@@ -360,11 +360,10 @@ fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[S
     }
 
     let entity_vars = repeat_vars(entities.len());
-    // this can probably be simplified, sadly the where clause can't contain window functions
     let sql = format!("--sql
         with
             filtered_events as (
-                select *
+                select rowid, entity_id, visitor_group_id, created_at
                 from events
                 where event = 'pageview' and entity_id in ({entity_vars}) and (created_at >= ?::timestamp or visitor_group_id in (
                     select visitor_group_id
@@ -374,11 +373,9 @@ fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[S
             ),
             cte as (
                 select
-                    entity_id,
-                    visitor_group_id,
-                    created_at,
-                    created_at - lag(created_at) over (partition by entity_id, visitor_group_id order by created_at) as time_from_last_event,
-                    lead(created_at) over (partition by entity_id, visitor_group_id order by created_at) - created_at as time_to_next_event
+                    rowid,
+                    created_at - lag(created_at) over (partition by entity_id, visitor_group_id order by created_at, rowid) as time_from_last_event,
+                    lead(created_at) over (partition by entity_id, visitor_group_id order by created_at, rowid) - created_at as time_to_next_event
                 from filtered_events
             )
         update events
@@ -386,7 +383,7 @@ fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[S
                 time_from_last_event = cte.time_from_last_event,
                 time_to_next_event = cte.time_to_next_event
             from cte
-            where events.event = 'pageview' and events.entity_id = cte.entity_id and events.visitor_group_id = cte.visitor_group_id and events.created_at = cte.created_at;
+            where events.rowid = cte.rowid;
     ");
 
     let mut params = ParamVec::new();
@@ -403,6 +400,61 @@ mod tests {
     use super::*;
     use crate::app::Liwan;
     use crate::config::Config;
+
+    #[test]
+    fn failed_append_does_not_update_cache() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let conn = app.events_conn().unwrap();
+        conn.execute_batch("create unique index unique_visitor on events(visitor_group_id)").unwrap();
+        let entities = ["entity-1".into()];
+        assert!(!app.events.custom_data(&entities).unwrap().events);
+        let mut first = event(Utc::now());
+        first.event = "signup".into();
+        let second = first.clone();
+
+        assert!(app.events.append([first, second].into_iter()).is_err());
+
+        assert_eq!(conn.query_row("select count(*) from events", [], |row| row.get::<_, u64>(0)).unwrap(), 0);
+        assert!(!app.events.custom_data(&entities).unwrap().events);
+    }
+
+    #[test]
+    fn session_updates_identify_individual_rows() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let conn = app.events_conn().unwrap();
+        conn.execute_batch(
+            "insert into events (entity_id, visitor_group_id, event, created_at)
+             values ('a', 'visitor', 'pageview', '2026-01-01 00:00:00'),
+                    ('a', 'visitor', 'pageview', '2026-01-01 00:00:00'),
+                    ('a', 'visitor', 'pageview', '2026-01-01 00:01:00'),
+                    ('b', 'visitor', 'pageview', '2026-01-01 00:00:00'),
+                    ('b', 'visitor', 'pageview', '2026-01-01 00:02:00'),
+                    ('a', 'visitor', 'signup', '2026-01-01 00:00:30'),
+                    ('c', 'visitor', 'pageview', '2026-01-01 00:00:00')",
+        )
+        .unwrap();
+        let from = "2026-01-01T00:00:00Z".parse().unwrap();
+        update_event_times(&conn, from, &["a".into(), "b".into()]).unwrap();
+        let rows = conn
+            .prepare("select epoch(time_from_last_event)::bigint, epoch(time_to_next_event)::bigint from events order by rowid")
+            .unwrap()
+            .query_map([], |row| Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, Option<i64>>(1)?)))
+            .unwrap()
+            .collect::<DuckResult<Vec<_>>>()
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                (None, Some(0)),
+                (Some(0), Some(60)),
+                (Some(60), None),
+                (None, Some(120)),
+                (Some(120), None),
+                (None, None),
+                (None, None)
+            ]
+        );
+    }
 
     fn event(created_at: DateTime<Utc>) -> Event {
         Event {

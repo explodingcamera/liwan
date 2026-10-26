@@ -8,7 +8,7 @@ pub(super) const SESSION_DURATION_SQL: &str = "interval '30 minutes'";
 pub(super) fn measured_duration_sql(alias: &str) -> String {
     format!(
         "extract(epoch from case
-            when {alias}.time_to_next_event is not null and {alias}.time_to_next_event between interval '0 seconds' and {SESSION_DURATION_SQL}
+            when {alias}.time_to_next_event between interval '0 seconds' and {SESSION_DURATION_SQL}
                 then {alias}.time_to_next_event
             when {alias}.exited_at between {alias}.created_at and {alias}.created_at + {SESSION_DURATION_SQL}
                 then {alias}.exited_at - {alias}.created_at
@@ -108,6 +108,10 @@ pub(super) fn build_filter_clause(filters: &[DimensionFilter]) -> Result<(String
 				Dimension::UtmTerm => format!("utm_term {filter_value}"),
 				Dimension::ScreenWidth => format!("screen_width {filter_value}"),
 				Dimension::Orientation => format!("orientation {filter_value}"),
+				Dimension::Property if filter.filter_type == FilterType::IsNull => format!(
+					"map_contains(properties, ?) is {}true",
+					if filter.inversed.unwrap_or(false) { "" } else { "not " }
+				),
 				Dimension::Property => format!("map_extract_value(properties, ?) {filter_value}"),
 			})
 		})
@@ -120,19 +124,131 @@ pub(super) fn metric_aggregate_sql(metric: Metric, alias: &str) -> String {
     match metric {
         Metric::Views => format!("count({alias}.created_at)"),
         Metric::UniqueVisitors => format!("count(distinct {alias}.visitor_group_id)"),
-        Metric::BounceRate => {
-            format!(
-				"--sql
-			coalesce(
-				count(*)
-					filter (where ({alias}.time_from_last_event is null or {alias}.time_from_last_event > {SESSION_DURATION_SQL}) and
-								 ({alias}.time_to_next_event is null or {alias}.time_to_next_event > {SESSION_DURATION_SQL}))::double /
-				nullif(count(*) filter (where {alias}.time_from_last_event is null or {alias}.time_from_last_event > {SESSION_DURATION_SQL}), 0),
-				1
-			)
-			"
-			)
-        }
+        Metric::BounceRate => format!(
+            "coalesce(
+                avg(({alias}.time_to_next_event is null or {alias}.time_to_next_event > {SESSION_DURATION_SQL})::integer)
+                    filter (where {alias}.time_from_last_event is null or {alias}.time_from_last_event > {SESSION_DURATION_SQL}),
+                1
+            )"
+        ),
         Metric::AvgTimeOnSite => format!("coalesce(avg({}), 0)", measured_duration_sql(alias)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bounce_rate_counts_only_session_entries() {
+        let conn = duckdb::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "create table events as
+             select name, previous_seconds * interval '1 second' as time_from_last_event,
+                 next_seconds * interval '1 second' as time_to_next_event
+             from (values
+                 ('mixed', null, null), ('mixed', 1801, 1800), ('mixed', 1801, 1801),
+                 ('mixed', 1800, null), ('mixed', 0, null),
+                 ('no entries', 0, null), ('no entries', 1800, 1801),
+                 ('not bounced', null, 0)
+             ) durations(name, previous_seconds, next_seconds)",
+        )
+        .unwrap();
+        let aggregate = metric_aggregate_sql(Metric::BounceRate, "sd");
+        let samples = metric_sample_count_sql(Metric::BounceRate, "sd");
+        let query = format!("select name, {aggregate}, {samples} from events sd group by name order by name");
+        let rows = conn
+            .prepare(&query)
+            .unwrap()
+            .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?, row.get::<_, u64>(2)?)))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![("mixed".into(), 2.0 / 3.0, 3), ("no entries".into(), 1.0, 0), ("not bounced".into(), 0.0, 1)]
+        );
+
+        let empty = conn
+            .query_row(&format!("select {aggregate}, {samples} from events sd where false"), [], |row| {
+                Ok((row.get::<_, f64>(0)?, row.get::<_, u64>(1)?))
+            })
+            .unwrap();
+        assert_eq!(empty, (1.0, 0));
+    }
+
+    #[test]
+    fn property_presence_handles_null_and_empty_maps() {
+        let conn = duckdb::Connection::open_in_memory().unwrap();
+        for (inversed, expected) in [(false, vec![0, 1, 2]), (true, vec![3, 4])] {
+            let filters = [DimensionFilter {
+                dimension: Dimension::Property,
+                key: Some("plan".into()),
+                filter_type: FilterType::IsNull,
+                inversed: Some(inversed),
+                strict: None,
+                value: None,
+            }];
+            let (clause, params) = build_filter_clause(&filters).unwrap();
+            let query = format!(
+                "select id from (values
+                    (0, null::map(varchar, varchar)),
+                    (1, map()),
+                    (2, map(['other'], ['value'])),
+                    (3, map(['plan'], ['pro'])),
+                    (4, map(['plan'], ['']))
+                 ) events(id, properties) where true {clause} order by id"
+            );
+            let values = conn
+                .prepare(&query)
+                .unwrap()
+                .query_map(duckdb::params_from_iter(params), |row| row.get::<_, i32>(0))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            assert_eq!(values, expected);
+        }
+    }
+
+    #[test]
+    fn measured_duration_handles_boundaries_and_fallbacks() {
+        let conn = duckdb::Connection::open_in_memory().unwrap();
+        let query = format!(
+            "select {} from (
+                select '2026-01-01'::timestamp as created_at,
+                    next_seconds * interval '1 second' as time_to_next_event,
+                    '2026-01-01'::timestamp + exit_seconds * interval '1 second' as exited_at
+                from (values
+                    (0, null), (1800, null), (60, 120),
+                    (null, 90), (-1, 90), (1801, 90),
+                    (null, 0), (null, 1800),
+                    (null, null), (null, -1), (null, 1801)
+                ) durations(next_seconds, exit_seconds)
+            ) sd",
+            measured_duration_sql("sd")
+        );
+        let values = conn
+            .prepare(&query)
+            .unwrap()
+            .query_map([], |row| row.get::<_, Option<f64>>(0))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(
+            values,
+            vec![
+                Some(0.0),
+                Some(1800.0),
+                Some(60.0),
+                Some(90.0),
+                Some(90.0),
+                Some(90.0),
+                Some(0.0),
+                Some(1800.0),
+                None,
+                None,
+                None
+            ]
+        );
     }
 }

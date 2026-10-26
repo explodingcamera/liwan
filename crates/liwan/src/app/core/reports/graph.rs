@@ -198,25 +198,15 @@ pub fn overall_report(
 					e.entity_id in ({entity_vars})
 					{filters_sql}
 			),
-			bucketed_events as (
-				select
-					tb.bucket_idx,
-					sd.visitor_group_id,
-					sd.created_at,
-					sd.time_from_last_event,
-					sd.time_to_next_event,
-					sd.exited_at
-				from (select * from session_data order by created_at) sd
-				asof join (select * from time_bins order by bin_start) tb
-					on sd.created_at >= tb.bin_start
-				where sd.created_at < tb.bin_end
-			),
 			event_bins as (
 				select
-					sd.bucket_idx,
+					tb.bucket_idx,
 					{metric_sql} as metric_value
-				from bucketed_events sd
-				group by sd.bucket_idx
+				from session_data sd
+				asof join time_bins tb
+					on sd.created_at >= tb.bin_start
+				where sd.created_at < tb.bin_end
+				group by tb.bucket_idx
 			)
 		select
 			tb.bin_start,
@@ -390,6 +380,42 @@ mod tests {
 
         let values = report.iter().map(|point| point.value).collect::<Vec<_>>();
         assert_eq!(values, vec![1.0, 1.0]);
+    }
+
+    #[test]
+    fn overall_report_handles_irregular_buckets() {
+        let app = Liwan::new_memory(Config::default()).unwrap();
+        let conn = app.events_conn().unwrap();
+        let start = local_datetime(Tz::UTC, 2024, 1, 1, 0, 0);
+        for (visitor, hours, previous, next, exit) in [
+            ("outside", -1, None, None, None),
+            ("one", 0, None, Some(60), None),
+            ("one", 1, Some(60), None, Some(120)),
+            ("gap", 4, None, None, None),
+            ("two", 5, None, None, Some(30)),
+            ("boundary", 6, None, None, None),
+        ] {
+            conn.execute(
+                "insert into events (entity_id, visitor_group_id, event, created_at, time_from_last_event, time_to_next_event, exited_at)
+                 values ('entity-1', ?, 'pageview', ?, ? * interval '1 second', ? * interval '1 second', ?)",
+                duckdb::params![visitor, start + Duration::hours(hours), previous, next, exit.map(|seconds| start + Duration::hours(hours) + Duration::seconds(seconds))],
+            ).unwrap();
+        }
+        let range = DateRange { start: start - Duration::hours(2), end: start + Duration::hours(10) };
+        let buckets: Vec<_> = [(0, 2), (5, 6), (7, 8)]
+            .into_iter()
+            .map(|(from, to)| DateRange { start: start + Duration::hours(from), end: start + Duration::hours(to) })
+            .collect();
+        for (metric, expected) in [
+            (Metric::Views, vec![2.0, 1.0, 0.0]),
+            (Metric::UniqueVisitors, vec![1.0, 1.0, 0.0]),
+            (Metric::BounceRate, vec![0.0, 1.0, 0.0]),
+            (Metric::AvgTimeOnSite, vec![90.0, 30.0, 0.0]),
+        ] {
+            let report =
+                overall_report(&conn, &["entity-1".into()], "pageview", &range, &buckets, &[], &metric).unwrap();
+            assert_eq!(report.iter().map(|point| point.value).collect::<Vec<_>>(), expected);
+        }
     }
 
     #[test]

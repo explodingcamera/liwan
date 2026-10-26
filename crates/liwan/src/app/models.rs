@@ -33,33 +33,16 @@ pub struct Event {
 pub type EventProperties = BTreeMap<String, String>;
 
 impl Event {
-    /// Serialize properties as a DuckDB map literal, since `duckdb-rs` cannot bind MAP values.
-    // TODO: duckdb-neo should support MAP values directly
-    pub fn properties_literal(&self) -> Option<String> {
+    /// Bind properties as a native DuckDB map value.
+    pub fn properties(&self) -> Option<duckdb::types::Value> {
+        use duckdb::types::{OrderedMap, Value};
+
         if self.properties.is_empty() {
             return None;
         }
-        let quote = |literal: &mut String, text: &str| {
-            literal.push('\'');
-            for c in text.chars() {
-                if matches!(c, '\\' | '\'') {
-                    literal.push('\\');
-                }
-                literal.push(c);
-            }
-            literal.push('\'');
-        };
-        let mut literal = String::from("{");
-        for (i, (key, value)) in self.properties.iter().enumerate() {
-            if i > 0 {
-                literal.push_str(", ");
-            }
-            quote(&mut literal, key);
-            literal.push('=');
-            quote(&mut literal, value);
-        }
-        literal.push('}');
-        Some(literal)
+        let entries: Vec<_> =
+            self.properties.iter().map(|(key, value)| (Value::Text(key.clone()), Value::Text(value.clone()))).collect();
+        Some(Value::Map(OrderedMap::from(entries)))
     }
 }
 
@@ -725,7 +708,7 @@ macro_rules! event_params {
             $event.screen_width,
             $event.orientation,
             None::<chrono::DateTime<chrono::Utc>>,
-            $event.properties_literal(),
+            $event.properties(),
         ]
     };
 }

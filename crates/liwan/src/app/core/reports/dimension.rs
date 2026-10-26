@@ -66,9 +66,7 @@ pub fn dimension_report(
         Dimension::Orientation => ("orientation", None),
         Dimension::Property => match property_key {
             None => ("unnest(map_keys(properties))", Some("properties is not null".to_string())),
-            Some(_) => {
-                ("map_extract_value(properties, ?)", Some("map_extract_value(properties, ?) is not null".to_string()))
-            }
+            Some(_) => ("map_extract_value(properties, ?)", Some("map_contains(properties, ?)".to_string())),
         },
     };
     let filters_sql = match (filters_sql.is_empty(), dimension_scope_sql) {
@@ -330,6 +328,7 @@ mod tests {
         assert_eq!(report("pageview", None, &[]), [row("plan", 3.0), row("ref", 1.0)]);
         assert_eq!(report("signup", None, &[]), [row("source", 1.0)]);
         assert_eq!(report("pageview", Some("plan"), &[]), [row("free", 1.0), row("pro", 2.0)]);
+        assert!(report("pageview", Some("missing"), &[]).is_empty());
 
         let filter = |key: &str, filter_type: FilterType, value: Option<&str>| DimensionFilter {
             dimension: Dimension::Property,
