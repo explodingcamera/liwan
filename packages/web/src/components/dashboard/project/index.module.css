@@ -91,6 +91,7 @@
     &::after {
       content: "";
       position: absolute;
+      pointer-events: none;
       --direction: right;
       background: linear-gradient(to var(--direction), transparent 0%, var(--surface) 100%);
 

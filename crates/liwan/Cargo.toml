@@ -100,7 +100,7 @@ r2d2 = { version = "0.8", default-features = false }
 refinery = { version = "0.10", default-features = false }
 refinery-core = { version = "0.10", default-features = false }
 rsntp = { version = "4.1.2", default-features = false, features = ["async"] }
-rusqlite = { version = "0.40", features = ["bundled", "chrono", "modern_sqlite"] }
+rusqlite = { version = "0.41", features = ["bundled", "chrono", "modern_sqlite"] }
 
 [dev-dependencies]
 axum-test = { version = "21" }

@@ -3,32 +3,20 @@ import styles from "./map.module.css";
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { geoMercator, geoPath } from "d3-geo";
 import { select } from "d3-selection";
 import type { ZoomBehavior } from "d3-zoom";
 import { zoom as d3Zoom, zoomIdentity } from "d3-zoom";
 import { autoUpdate, FloatingPortal, flip, offset, shift, useFloating } from "@floating-ui/react";
 import { RotateCcwIcon } from "lucide-react";
-import * as topo from "topojson-client";
-import type { GeometryCollection, Topology } from "topojson-specification";
 
 import type { DimensionTableRow, Metric } from "@/constants";
 import { metricNames } from "@/constants";
 import { cls, formatMetricVal } from "@/utils";
 import geo from "../../../../../../../data/geo.json";
+import { createMapFeatures, type MapTopology } from "./paths";
 
-const projection = geoMercator().scale(125).center([45, 45]);
-const pathGenerator = geoPath(projection);
-
-type GeoProps = { name: string; iso: string };
-
-const features = topo
-	.feature<GeoProps>(geo as unknown as Topology, geo.objects.geo as GeometryCollection<GeoProps>)
-	.features.map((feature) => ({
-		path: pathGenerator(feature),
-		name: feature.properties.name,
-		iso: feature.properties.iso,
-	}));
+const features = createMapFeatures(geo as MapTopology);
+const initialZoom = zoomIdentity.translate(400, 250).scale(1.25).translate(-400, -250);
 
 type Location = {
 	name: string;
@@ -38,7 +26,7 @@ type Location = {
 const getCountries = (data: DimensionTableRow[]) => {
 	const countries = new Map<string, number>();
 	for (const row of data) {
-		countries.set(row.dimensionValue, row.value);
+		if (row.dimensionValue) countries.set(row.dimensionValue, row.value);
 	}
 	return countries;
 };
@@ -67,16 +55,20 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 		if (!svgElement) return;
 
 		const behavior = d3Zoom<SVGSVGElement, unknown>()
-			.scaleExtent([1, 8]) // Min and max zoom levels
+			.scaleExtent([0.8, 8])
 			.on("zoom", (event) => {
 				select(svgElement).select("g").attr("transform", event.transform);
-				if (!movedRef.current) {
-					movedRef.current = true;
-					setMoved(true);
+				const hasMoved =
+					event.transform.k !== initialZoom.k ||
+					event.transform.x !== initialZoom.x ||
+					event.transform.y !== initialZoom.y;
+				if (movedRef.current !== hasMoved) {
+					movedRef.current = hasMoved;
+					setMoved(hasMoved);
 				}
 			});
 		zoomBehavior.current = behavior;
-		select(svgElement).call(behavior);
+		select(svgElement).call(behavior).call(behavior.transform, initialZoom);
 
 		return () => {
 			select(svgElement).on(".zoom", null);
@@ -114,9 +106,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 	const resetZoom = () => {
 		setCurrentLocation(null);
 		if (zoomBehavior.current && svgRef.current) {
-			select(svgRef.current).call(zoomBehavior.current.transform, zoomIdentity);
-			movedRef.current = false;
-			setMoved(false);
+			select(svgRef.current).call(zoomBehavior.current.transform, initialZoom);
 		}
 	};
 

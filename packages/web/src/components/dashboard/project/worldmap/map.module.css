@@ -26,6 +26,7 @@ button.reset {
 .worldmap {
   display: flex;
   flex: 1;
+  overflow: hidden;
 
   > svg {
     flex: 1;
@@ -35,6 +36,7 @@ button.reset {
 .geo {
   stroke: var(--surface);
   stroke-width: 1;
+  vector-effect: non-scaling-stroke;
   transition:
     fill 0.3s,
     opacity 0.3s;

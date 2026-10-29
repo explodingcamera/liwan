@@ -201,6 +201,16 @@ fn get_file_meta(path: &PathBuf) -> Option<(u64, u64, u64, i64)> {
 }
 
 async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> Result<String> {
+    #[derive(serde::Deserialize)]
+    struct Metadata {
+        databases: Vec<Database>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct Database {
+        md5: String,
+    }
+
     let url = format!("{BASE_URL}{METADATA_ENDPOINT}{edition}");
     let client = reqwest::Client::new();
     let response = client
@@ -208,17 +218,11 @@ async fn get_latest_md5(edition: &str, account_id: &str, license_key: &str) -> R
         .basic_auth(account_id, Some(license_key))
         .send()
         .await?
-        .json::<ahash::HashMap<String, Vec<ahash::HashMap<String, String>>>>()
+        .error_for_status()?
+        .json::<Metadata>()
         .await?;
 
-    Ok(response
-        .get("databases")
-        .ok_or_else(|| anyhow!("No databases found"))?
-        .first()
-        .ok_or_else(|| anyhow!("MD5 hash not found"))?
-        .get("md5")
-        .ok_or_else(|| anyhow!("MD5 hash not found"))?
-        .clone())
+    response.databases.into_iter().next().map(|database| database.md5).ok_or_else(|| anyhow!("No databases found"))
 }
 
 fn file_md5(path: &Path) -> Result<String> {
