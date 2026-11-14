@@ -9,7 +9,7 @@
 		"typecheck": "bun run --bun tsc --noEmit"
 	},
 	"dependencies": {
-		"@astrojs/react": "7.1.4",
+		"@astrojs/react": "7.1.9",
 		"@base-ui/react": "^1.9.0",
 		"@explodingcamera/css": "^0.0.4",
 		"@floating-ui/react": "^0.27.20",
@@ -24,13 +24,13 @@
 		"d3-transition": "^3.0.2",
 		"d3-zoom": "^3.0.1",
 		"date-fns": "^4.4.0",
-		"lucide-react": "1.70.0",
+		"lucide-react": "1.72.0",
 		"react": "19.3.1",
 		"react-dom": "19.3.1",
 		"topojson-client": "^3.1.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.6.6",
+		"@biomejs/biome": "2.6.7",
 		"@types/bun": "^1.4.4",
 		"@types/d3-array": "^3.2.2",
 		"@types/d3-ease": "^3.0.2",
@@ -44,11 +44,11 @@
 		"@types/react-dom": "^19.3.0",
 		"@types/topojson-client": "^3.1.5",
 		"@types/topojson-specification": "^1.0.5",
-		"astro": "7.4.7",
+		"astro": "7.4.12",
 		"cookie": "^2.0.2",
 		"fets": "^0.8.13",
-		"oxc-transform-react": "^0.157.0",
-		"rollup-plugin-license": "^3.7.1",
+		"oxc-transform-react": "^0.158.0",
+		"rollup-plugin-license": "^3.7.2",
 		"typescript": "^7.0.2"
 	},
 	"packageManager": "bun@1.4.2",
