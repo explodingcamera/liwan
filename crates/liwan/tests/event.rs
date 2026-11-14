@@ -52,14 +52,14 @@ async fn test_event() -> Result<()> {
                 "dimension": "url",
                 "filters": [],
                 "metric": "views",
-                "range": { "start": start, "end": end }
+                "ranges": [{ "start": start, "end": end }]
             }),
         )
         .await;
     res.assert_status_success();
 
     let body: serde_json::Value = res.json();
-    let rows = body["data"].as_array().expect("data should be an array");
+    let rows = body["reports"][0].as_array().expect("report should be an array");
     let row = rows.iter().find(|r| r["dimensionValue"].as_str() == Some("example.com/")).expect("url row should exist");
     assert_eq!(row["value"].as_f64(), Some(1.0));
 
@@ -79,7 +79,7 @@ async fn custom_event_reports_respect_display_setting() -> Result<()> {
         duckdb::params!["entity-1", "visitor-1", "pageview", now, "/home"],
     )?;
     let range = json!({ "start": (now - chrono::Duration::hours(1)), "end": now + chrono::Duration::hours(1) });
-    let report = || json!({ "range": range, "filters": [] });
+    let report = || json!({ "ranges": [range], "filters": [] });
     let endpoint = "/api/dashboard/project/public-project/custom-events";
 
     let project = || async { client.get("/api/dashboard/project/public-project").await.json::<serde_json::Value>() };
@@ -98,45 +98,49 @@ async fn custom_event_reports_respect_display_setting() -> Result<()> {
     let response = client.post(endpoint, report()).await;
     response.assert_status_success();
     let body: serde_json::Value = response.json();
-    assert_eq!(body["rows"][0]["name"], "signup");
+    assert_eq!(body["reports"][0]["rows"][0]["name"], "signup");
 
-    let selected = json!({ "range": range, "filters": [], "event": "signup" });
+    let selected = json!({ "ranges": [range], "filters": [], "event": "signup" });
     let response = client.post("/api/dashboard/project/public-project/stats", selected.clone()).await;
     response.assert_status_success();
     let stats: serde_json::Value = response.json();
-    assert_eq!(stats["stats"]["totalViews"], 1);
-    assert!(stats["stats"]["bounceRate"].is_null());
-    assert!(stats["stats"]["avgTimeOnSite"].is_null());
+    assert_eq!(stats["reports"].as_array().unwrap().len(), 1);
+    assert_eq!(stats["reports"][0]["totalViews"], 1);
+    assert!(stats["reports"][0]["bounceRate"].is_null());
+    assert!(stats["reports"][0]["avgTimeOnSite"].is_null());
     let response = client
         .post(
             "/api/dashboard/project/public-project/dimension",
-            json!({ "range": range, "filters": [], "event": "signup", "metric": "views", "dimension": "path" }),
+            json!({ "ranges": [range], "filters": [], "event": "signup", "metric": "views", "dimension": "path" }),
         )
         .await;
     response.assert_status_success();
-    let rows = &response.json::<serde_json::Value>()["data"];
+    let rows = &response.json::<serde_json::Value>()["reports"][0];
     assert_eq!(rows[0]["dimensionValue"], "/signup");
     assert_eq!(rows[0]["value"], 1.0);
     let response = client
         .post(
             "/api/dashboard/project/public-project/graph",
-            json!({ "range": range, "filters": [], "event": "signup", "metric": "views", "interval": "hour" }),
+            json!({ "ranges": [range], "filters": [], "event": "signup", "metric": "views", "interval": "hour" }),
         )
         .await;
     response.assert_status_success();
     let graph: serde_json::Value = response.json();
-    assert_eq!(graph["data"].as_array().unwrap().iter().map(|row| row["value"].as_f64().unwrap()).sum::<f64>(), 1.0);
+    assert_eq!(
+        graph["reports"][0].as_array().unwrap().iter().map(|row| row["value"].as_f64().unwrap()).sum::<f64>(),
+        1.0
+    );
     let response = client
         .post(
             "/api/dashboard/project/public-project/dimension",
-            json!({ "range": range, "filters": [], "event": "signup", "metric": "views", "dimension": "url_entry" }),
+            json!({ "ranges": [range], "filters": [], "event": "signup", "metric": "views", "dimension": "url_entry" }),
         )
         .await;
     response.assert_status(http::StatusCode::BAD_REQUEST);
     let response = client
         .post(
             "/api/dashboard/project/public-project/graph",
-            json!({ "range": range, "filters": [], "event": "signup", "metric": "bounce_rate", "interval": "hour" }),
+            json!({ "ranges": [range], "filters": [], "event": "signup", "metric": "bounce_rate", "interval": "hour" }),
         )
         .await;
     response.assert_status(http::StatusCode::BAD_REQUEST);
@@ -416,28 +420,29 @@ async fn event_properties_are_reported() -> Result<()> {
 
     let now = chrono::Utc::now();
     let range = json!({ "start": now - chrono::Duration::hours(1), "end": now + chrono::Duration::hours(1) });
-    let dimension = |property_key: Option<&str>| json!({ "range": range, "filters": [], "metric": "views", "dimension": "property", "propertyKey": property_key });
+    let dimension = |property_key: Option<&str>| json!({ "ranges": [range], "filters": [], "metric": "views", "dimension": "property", "propertyKey": property_key });
     let response = client.post("/api/dashboard/project/public-project/dimension", dimension(None)).await;
     response.assert_status_success();
     let body: serde_json::Value = response.json();
-    assert_eq!(body["data"][0]["dimensionValue"], "beta");
-    assert_eq!(body["data"][1]["dimensionValue"], "plan");
+    assert_eq!(body["reports"][0][0]["dimensionValue"], "beta");
+    assert_eq!(body["reports"][0][1]["dimensionValue"], "plan");
 
     let response = client.post("/api/dashboard/project/public-project/dimension", dimension(Some("plan"))).await;
     response.assert_status_success();
     let body: serde_json::Value = response.json();
-    assert_eq!(body["data"][0]["dimensionValue"], "pro");
-    assert_eq!(body["data"][0]["value"], 1.0);
+    assert_eq!(body["reports"][0][0]["dimensionValue"], "pro");
+    assert_eq!(body["reports"][0][0]["value"], 1.0);
 
     let filters = json!([{ "dimension": "property", "key": "plan", "filterType": "equal", "value": "free" }]);
-    let response =
-        client.post("/api/dashboard/project/public-project/stats", json!({ "range": range, "filters": filters })).await;
+    let response = client
+        .post("/api/dashboard/project/public-project/stats", json!({ "ranges": [range], "filters": filters }))
+        .await;
     response.assert_status_success();
-    assert_eq!(response.json::<serde_json::Value>()["stats"]["totalViews"], 0);
+    assert_eq!(response.json::<serde_json::Value>()["reports"][0]["totalViews"], 0);
 
     let missing_key = json!([{ "dimension": "property", "filterType": "equal", "value": "free" }]);
     client
-        .post("/api/dashboard/project/public-project/stats", json!({ "range": range, "filters": missing_key }))
+        .post("/api/dashboard/project/public-project/stats", json!({ "ranges": [range], "filters": missing_key }))
         .await
         .assert_status_bad_request();
     Ok(())

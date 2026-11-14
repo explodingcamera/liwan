@@ -5,39 +5,50 @@ use crate::utils::duckdb::{ParamVec, repeat_vars};
 use anyhow::Result;
 use duckdb::params_from_iter;
 
-use super::shared::{SESSION_DURATION_SQL, build_filter_clause, metric_aggregate_sql, metric_sample_count_sql};
+use super::shared::{
+    SESSION_DURATION_SQL, build_filter_clause, metric_aggregate_sql, metric_sample_count_sql, range_events_sql,
+};
 use super::{DateRange, Dimension, DimensionFilter, Metric, ReportTable};
 
-/// Build a dimension table report for a metric
+/// Select top dimensions per range and return their values across every requested range.
 pub fn dimension_report(
     conn: &DuckDBConn,
     entities: &[String],
     event: &str,
-    range: &DateRange,
+    ranges: &[DateRange],
     dimension: &Dimension,
     property_key: Option<&str>,
     filters: &[DimensionFilter],
     metric: &Metric,
     max_results: usize,
     min_samples: u64,
-) -> Result<ReportTable> {
-    if entities.is_empty() {
-        return Ok(BTreeMap::new());
+) -> Result<Vec<ReportTable>> {
+    let mut reports = vec![BTreeMap::new(); ranges.len()];
+    if entities.is_empty() || ranges.is_empty() {
+        return Ok(reports);
     }
 
     let mut params = ParamVec::new();
+    let range_events = range_events_sql(ranges, &mut params);
+    let range_count = ranges.len();
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = build_filter_clause(filters)?;
 
     let metric_column = metric_aggregate_sql(*metric, "sd");
+    let sample_count = metric_sample_count_sql(*metric, "sd");
     let sample_filter = if matches!(metric, Metric::BounceRate | Metric::AvgTimeOnSite) {
-        format!("having {} >= {min_samples}", metric_sample_count_sql(*metric, "sd"))
+        format!("where sample_count >= {min_samples}")
     } else {
         String::new()
     };
     let order_column = match metric {
         Metric::BounceRate => "metric_value asc",
         _ => "metric_value desc",
+    };
+    let value_sql = if matches!(metric, Metric::BounceRate | Metric::AvgTimeOnSite) {
+        format!("case when a.sample_count >= {min_samples} then a.metric_value end")
+    } else {
+        "a.metric_value".to_string()
     };
     let (dimension_column, dimension_scope_sql) = match dimension {
         Dimension::Url => ("concat(fqdn, path)", None),
@@ -77,8 +88,6 @@ pub fn dimension_report(
 
     params.extend(property_key);
     params.push(event);
-    params.push(range.start);
-    params.push(range.end);
     params.extend(entities);
     params.extend_from_params(filters_params);
     params.extend(property_key);
@@ -86,36 +95,47 @@ pub fn dimension_report(
     let query = format!(
         "--sql
 		with
+			range_events as ({range_events}),
 			session_data as (
 				select
+					range_idx,
 					coalesce({dimension_column}, 'Unknown') as dimension_value,
 					visitor_group_id,
 					created_at,
 					time_from_last_event,
 					time_to_next_event,
 					exited_at
-				from events sd
+				from range_events sd
 				where
 					sd.event = ?::text and
-					sd.created_at >= ?::timestamp and sd.created_at < ?::timestamp and
 					sd.entity_id in ({entity_vars})
 					{filters_sql}
+			),
+			aggregates as materialized (
+				select range_idx, dimension_value,
+					{metric_column} as metric_value, {sample_count} as sample_count
+				from session_data sd
+				group by range_idx, dimension_value
+			),
+			selected_keys as (
+				select distinct dimension_value from aggregates
+				{sample_filter}
+				qualify row_number() over (partition by range_idx order by {order_column}, dimension_value) <= {max_results}
 			)
-		select
-			dimension_value,
-			{metric_column} as metric_value
-		from session_data sd
-		group by dimension_value
-		{sample_filter}
-		order by {order_column}
-		limit {max_results};
+		select r.range_idx, k.dimension_value, {value_sql}
+		from range({range_count}) r(range_idx)
+		cross join selected_keys k
+		left join aggregates a on a.range_idx = r.range_idx and a.dimension_value = k.dimension_value;
 	"
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
 
-    let rows = stmt.query_map(params_from_iter(params), |row| Ok((row.get(0)?, row.get(1)?)))?;
-    Ok(rows.collect::<Result<ReportTable, duckdb::Error>>()?)
+    let mut rows = stmt.query(params_from_iter(params))?;
+    while let Some(row) = rows.next()? {
+        reports[row.get::<_, usize>(0)?].insert(row.get(1)?, row.get(2)?);
+    }
+    Ok(reports)
 }
 
 #[cfg(test)]
@@ -140,12 +160,13 @@ mod tests {
         .expect("failed to insert events");
         let start = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
         let range = DateRange { start, end: start + Duration::days(1) };
+        let ranges = [range];
 
         let report = dimension_report(
             &conn,
             &["entity-1".to_string()],
             "pageview",
-            &range,
+            &ranges,
             &Dimension::Path,
             None,
             &[],
@@ -153,7 +174,8 @@ mod tests {
             max_results,
             0,
         )
-        .expect("failed to build dimension report");
+        .expect("failed to build dimension report")
+        .remove(0);
 
         assert_eq!(report.len(), max_results);
     }
@@ -183,11 +205,12 @@ mod tests {
         )
         .expect("failed to insert second pageview");
         let range = DateRange { start: start - Duration::hours(1), end: start + Duration::days(1) };
+        let ranges = [range];
         let report = dimension_report(
             &conn,
             &["a".into()],
             "pageview",
-            &range,
+            &ranges,
             &Dimension::Path,
             None,
             &[],
@@ -195,17 +218,18 @@ mod tests {
             10,
             0,
         )
-        .expect("failed to build bounce rate report");
+        .expect("failed to build bounce rate report")
+        .remove(0);
 
-        assert_eq!(report["/popular"], 1.0);
-        assert_eq!(report["/small"], 1.0);
-        assert_eq!(report["/good"], 0.0);
+        assert_eq!(report["/popular"], Some(1.0));
+        assert_eq!(report["/small"], Some(1.0));
+        assert_eq!(report["/good"], Some(0.0));
 
         let ranked = dimension_report(
             &conn,
             &["a".into()],
             "pageview",
-            &range,
+            &ranges,
             &Dimension::Path,
             None,
             &[],
@@ -213,15 +237,16 @@ mod tests {
             1,
             1,
         )
-        .expect("failed to build ranked bounce rate report");
+        .expect("failed to build ranked bounce rate report")
+        .remove(0);
         assert_eq!(ranked.len(), 1);
-        assert_eq!(ranked["/good"], 0.0);
+        assert_eq!(ranked["/good"], Some(0.0));
 
         let filtered = dimension_report(
             &conn,
             &["a".into()],
             "pageview",
-            &range,
+            &ranges,
             &Dimension::Path,
             None,
             &[],
@@ -229,9 +254,10 @@ mod tests {
             10,
             2,
         )
-        .expect("failed to filter bounce rate report");
+        .expect("failed to filter bounce rate report")
+        .remove(0);
         assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered["/popular"], 1.0);
+        assert_eq!(filtered["/popular"], Some(1.0));
     }
 
     #[test]
@@ -253,11 +279,12 @@ mod tests {
         )
         .expect("failed to insert pageview");
         let range = DateRange { start: start - Duration::hours(1), end: start + Duration::days(1) };
+        let ranges = [range];
         let report = dimension_report(
             &conn,
             &["a".into()],
             "pageview",
-            &range,
+            &ranges,
             &Dimension::Path,
             None,
             &[],
@@ -265,16 +292,17 @@ mod tests {
             10,
             0,
         )
-        .expect("failed to build average time report");
+        .expect("failed to build average time report")
+        .remove(0);
 
-        assert_eq!(report["/"], 90.0);
-        assert_eq!(report["/small"], 600.0);
+        assert_eq!(report["/"], Some(90.0));
+        assert_eq!(report["/small"], Some(600.0));
 
         let ranked = dimension_report(
             &conn,
             &["a".into()],
             "pageview",
-            &range,
+            &ranges,
             &Dimension::Path,
             None,
             &[],
@@ -282,9 +310,10 @@ mod tests {
             1,
             2,
         )
-        .expect("failed to build ranked average time report");
+        .expect("failed to build ranked average time report")
+        .remove(0);
         assert_eq!(ranked.len(), 1);
-        assert_eq!(ranked["/"], 90.0);
+        assert_eq!(ranked["/"], Some(90.0));
     }
 
     #[test]
@@ -306,12 +335,13 @@ mod tests {
             .unwrap();
         }
         let range = DateRange { start: now - Duration::hours(1), end: now + Duration::hours(1) };
+        let ranges = [range];
         let report = |event: &str, key: Option<&str>, filters: &[DimensionFilter]| {
             dimension_report(
                 &conn,
                 &["a".into()],
                 event,
-                &range,
+                &ranges,
                 &Dimension::Property,
                 key,
                 filters,
@@ -320,10 +350,11 @@ mod tests {
                 0,
             )
             .unwrap()
+            .remove(0)
             .into_iter()
             .collect::<Vec<_>>()
         };
-        let row = |name: &str, value: f64| (name.to_string(), value);
+        let row = |name: &str, value: f64| (name.to_string(), Some(value));
 
         assert_eq!(report("pageview", None, &[]), [row("plan", 3.0), row("ref", 1.0)]);
         assert_eq!(report("signup", None, &[]), [row("source", 1.0)]);
@@ -346,7 +377,7 @@ mod tests {
                 &conn,
                 &["a".into()],
                 "pageview",
-                &range,
+                &ranges,
                 &Dimension::Path,
                 None,
                 &[unset],
@@ -355,6 +386,7 @@ mod tests {
                 0,
             )
             .unwrap()
+            .remove(0)
             .into_iter()
             .collect::<Vec<_>>(),
             [row("/", 1.0)]

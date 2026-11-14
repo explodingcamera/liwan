@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::app::DuckDBConn;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
 
-use super::shared::build_filter_clause;
+use super::shared::{build_filter_clause, range_events_sql};
 use super::{DateRange, DimensionFilter};
 
 /// Counts for one custom event in the selected range.
@@ -13,8 +13,10 @@ use super::{DateRange, DimensionFilter};
 #[serde(rename_all = "camelCase")]
 pub struct CustomEventRow {
     pub name: String,
-    pub completions: u64,
-    pub uniques: u64,
+    /// Event completions, or null when the event has no matches in this range.
+    pub completions: Option<u64>,
+    /// Distinct visitor groups, or null when the event has no matches in this range.
+    pub uniques: Option<u64>,
 }
 
 /// Custom events visible in a project report.
@@ -25,44 +27,61 @@ pub struct CustomEventsReport {
     pub truncated: bool,
 }
 
-/// Summarize custom events for a project's entities.
+/// Select top events per range and return their counts across every requested range.
 pub fn custom_events_report(
     conn: &DuckDBConn,
     entities: &[String],
-    range: &DateRange,
+    ranges: &[DateRange],
     filters: &[DimensionFilter],
     limit: usize,
-) -> Result<CustomEventsReport> {
-    if entities.is_empty() {
-        return Ok(CustomEventsReport { rows: Vec::new(), truncated: false });
+) -> Result<Vec<CustomEventsReport>> {
+    let mut reports: Vec<_> =
+        ranges.iter().map(|_| CustomEventsReport { rows: Vec::new(), truncated: false }).collect();
+    if entities.is_empty() || ranges.is_empty() {
+        return Ok(reports);
     }
 
     let entity_vars = repeat_vars(entities.len());
     let (filters_sql, filters_params) = build_filter_clause(filters)?;
     let mut params = ParamVec::new();
-    params.push(range.start);
-    params.push(range.end);
+    let range_events = range_events_sql(ranges, &mut params);
+    let range_count = ranges.len();
     params.extend(entities);
     params.extend_from_params(filters_params);
 
     let sql = format!(
-        "select event, count(*) as completions, count(distinct visitor_group_id) as uniques
-         from events
-         where event <> 'pageview' and created_at >= ?::timestamp and created_at < ?::timestamp
-             and entity_id in ({entity_vars}) {filters_sql}
-         group by event
-         order by completions desc, event
-         limit {}",
-        limit.saturating_add(1)
+        "with range_events as ({range_events}),
+         aggregates as materialized (
+             select range_idx, event, count(*) as completions, count(distinct visitor_group_id) as uniques
+             from range_events
+             where event <> 'pageview' and entity_id in ({entity_vars}) {filters_sql}
+             group by range_idx, event
+         ),
+         selected_events as (
+             select distinct event from aggregates
+             qualify row_number() over (partition by range_idx order by completions desc, event) <= {limit}
+         ),
+         totals as (
+             select range_idx, count(*) as event_count from aggregates group by range_idx
+         )
+         select r.range_idx, k.event, a.completions, a.uniques,
+             coalesce(t.event_count, 0) > count(a.event) over (partition by r.range_idx) as truncated
+         from range({range_count}) r(range_idx)
+         left join selected_events k on true
+         left join aggregates a on a.range_idx = r.range_idx and a.event = k.event
+         left join totals t on t.range_idx = r.range_idx
+         order by r.range_idx, a.completions desc nulls last, k.event"
     );
-    let rows = conn
-        .prepare_cached(&sql)?
-        .query_map(duckdb::params_from_iter(params), |row| {
-            Ok(CustomEventRow { name: row.get(0)?, completions: row.get(1)?, uniques: row.get(2)? })
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
-    let truncated = rows.len() > limit;
-    Ok(CustomEventsReport { rows: rows.into_iter().take(limit).collect(), truncated })
+    let mut stmt = conn.prepare_cached(&sql)?;
+    let mut rows = stmt.query(duckdb::params_from_iter(params))?;
+    while let Some(row) = rows.next()? {
+        let report = &mut reports[row.get::<_, usize>(0)?];
+        report.truncated = row.get(4)?;
+        if let Some(name) = row.get(1)? {
+            report.rows.push(CustomEventRow { name, completions: row.get(2)?, uniques: row.get(3)? });
+        }
+    }
+    Ok(reports)
 }
 
 #[cfg(test)]
@@ -95,24 +114,25 @@ mod tests {
             .unwrap();
         }
         let range = DateRange { start: now - Duration::hours(1), end: now + Duration::hours(1) };
-        let report = custom_events_report(&conn, &["a".into()], &range, &[], 1).unwrap();
+        let ranges = [range];
+        let report = custom_events_report(&conn, &["a".into()], &ranges, &[], 1).unwrap().remove(0);
         assert!(report.truncated);
         assert_eq!(report.rows[0].name, "signup");
-        assert_eq!(report.rows[0].completions, 3);
-        assert_eq!(report.rows[0].uniques, 2);
+        assert_eq!(report.rows[0].completions, Some(3));
+        assert_eq!(report.rows[0].uniques, Some(2));
 
-        let report = custom_events_report(&conn, &["a".into(), "b".into()], &range, &[], 10).unwrap();
+        let report = custom_events_report(&conn, &["a".into(), "b".into()], &ranges, &[], 10).unwrap().remove(0);
         assert!(!report.truncated);
         assert_eq!(report.rows.len(), 2);
-        assert_eq!(report.rows[0].completions, 4);
-        assert_eq!(report.rows[0].uniques, 3);
+        assert_eq!(report.rows[0].completions, Some(4));
+        assert_eq!(report.rows[0].uniques, Some(3));
 
-        let report = custom_events_report(&conn, &["a".into()], &range, &[], 0).unwrap();
+        let report = custom_events_report(&conn, &["a".into()], &ranges, &[], 0).unwrap().remove(0);
         assert!(report.truncated);
         assert!(report.rows.is_empty());
 
         let empty = DateRange { start: now - Duration::hours(3), end: now - Duration::hours(2) };
-        assert!(custom_events_report(&conn, &["a".into()], &empty, &[], 10).unwrap().rows.is_empty());
+        assert!(custom_events_report(&conn, &["a".into()], &[empty], &[], 10).unwrap()[0].rows.is_empty());
 
         let filter = DimensionFilter {
             dimension: Dimension::Path,
@@ -122,6 +142,6 @@ mod tests {
             strict: None,
             value: Some("/missing".into()),
         };
-        assert!(custom_events_report(&conn, &["a".into()], &range, &[filter], 10).unwrap().rows.is_empty());
+        assert!(custom_events_report(&conn, &["a".into()], &ranges, &[filter], 10).unwrap()[0].rows.is_empty());
     }
 }

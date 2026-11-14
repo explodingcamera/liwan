@@ -85,12 +85,12 @@ export const useCustomEvents = ({
 			api["/api/dashboard/project/{project_id}/custom-events"]
 				.post({
 					params: { project_id: projectId ?? "" },
-					json: { range: range.toAPI(), filters },
+					json: { ranges: [range.toAPI()], filters },
 				})
 				.json()
 				.then((result) => {
 					if (typeof result === "string") throw new Error(result);
-					return result;
+					return result.reports[0];
 				}),
 	});
 	return { data, isLoading: isFetching, error };
@@ -174,7 +174,7 @@ export const useDimension = ({
 						filters,
 						metric,
 						event: eventName,
-						range: range.toAPI(),
+						ranges: [range.toAPI()],
 					},
 				})
 				.json()
@@ -183,15 +183,16 @@ export const useDimension = ({
 						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
-					return req;
+					return req.reports[0];
 				}),
 	});
 
 	return useMemo(() => {
-		const biggest = data?.data?.reduce((acc, d) => Math.max(acc, d.value), 0) ?? 0;
-		const sortedData = data?.data?.toSorted(
+		const biggest = data?.reduce((acc, d) => Math.max(acc, d.value ?? 0), 0) ?? 0;
+		const sortedData = data?.toSorted(
 			(a, b) =>
-				(metric === "bounce_rate" ? a.value - b.value : b.value - a.value) ||
+				Number(a.value == null) - Number(b.value == null) ||
+				(metric === "bounce_rate" ? (a.value ?? 0) - (b.value ?? 0) : (b.value ?? 0) - (a.value ?? 0)) ||
 				numericCollator.compare(a.dimensionValue, b.dimensionValue),
 		);
 		return { data: sortedData, biggest, isLoading: isFetching, error };
@@ -241,7 +242,7 @@ export const useProjectGraph = ({
 		queryFn: () =>
 			api["/api/dashboard/project/{project_id}/graph"]
 				.post({
-					json: { range: range.toAPI(), metric, interval, timezone, filters, event: eventName },
+					json: { ranges: [range.toAPI()], metric, interval, timezone, filters, event: eventName },
 					params: { project_id: projectId ?? "" },
 				})
 				.json()
@@ -250,7 +251,7 @@ export const useProjectGraph = ({
 						console.error("Error fetching graph data:", req);
 						return Promise.reject(new Error(req));
 					}
-					return { data: toDataPoints(req.data), metric, range, interval };
+					return { data: toDataPoints(req.reports[0]), metric, range, interval };
 				}),
 		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
 	});
@@ -291,10 +292,14 @@ export const useProjectStats = ({
 		queryKey: ["project_stats", projectId, range.cacheKey(), filters, eventName],
 
 		enabled: projectId !== undefined && enabled,
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/stats"]
+		queryFn: () => {
+			const current = range.toAPI();
+			const start = Date.parse(current.start);
+			const duration = Date.parse(current.end) - start;
+			const previous = { start: new Date(start - duration).toISOString(), end: current.start };
+			return api["/api/dashboard/project/{project_id}/stats"]
 				.post({
-					json: { range: range.toAPI(), filters, event: eventName },
+					json: { ranges: [current, previous], filters, event: eventName },
 					params: { project_id: projectId ?? "" },
 				})
 				.json()
@@ -304,7 +309,8 @@ export const useProjectStats = ({
 						return Promise.reject(new Error(req));
 					}
 					return req;
-				}),
+				});
+		},
 		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
 	});
 

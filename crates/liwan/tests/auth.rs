@@ -275,13 +275,13 @@ async fn private_projects() -> Result<()> {
     let reports = [
         (
             format!("{prefix}/graph"),
-            json!({"range":{"start":start,"end":end},"filters":[],"interval":"hour","timezone":"UTC","metric":"views"}),
+            json!({"ranges":[{"start":start,"end":end}],"filters":[],"interval":"hour","timezone":"UTC","metric":"views"}),
         ),
-        (format!("{prefix}/stats"), json!({"range":{"start":start,"end":end},"filters":[]})),
-        (format!("{prefix}/custom-events"), json!({"range":{"start":start,"end":end},"filters":[]})),
+        (format!("{prefix}/stats"), json!({"ranges":[{"start":start,"end":end}],"filters":[]})),
+        (format!("{prefix}/custom-events"), json!({"ranges":[{"start":start,"end":end}],"filters":[]})),
         (
             format!("{prefix}/dimension"),
-            json!({"range":{"start":start,"end":end},"filters":[],"metric":"views","dimension":"url"}),
+            json!({"ranges":[{"start":start,"end":end}],"filters":[],"metric":"views","dimension":"url"}),
         ),
     ];
 

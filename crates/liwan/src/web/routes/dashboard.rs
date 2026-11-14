@@ -90,20 +90,41 @@ pub fn router() -> ApiRouter<RouterState> {
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 struct GraphResponse {
-    data: reports::ReportGraph,
+    /// Reports in the same order as the requested ranges.
+    reports: Vec<reports::ReportGraph>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 struct StatsRequest {
-    range: DateRange,
+    /// Date ranges to report, in response order. Limits apply to each range.
+    #[schemars(length(min = 1, max = 4))]
+    ranges: Vec<DateRange>,
     filters: Vec<DimensionFilter>,
     event: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct CustomEventsRequest {
-    range: DateRange,
+    /// Date ranges to report, in response order. Top events are selected per range.
+    #[schemars(length(min = 1, max = 4))]
+    ranges: Vec<DateRange>,
     filters: Vec<DimensionFilter>,
+}
+
+#[derive(Serialize, JsonSchema)]
+struct CustomEventsResponse {
+    /// Reports in range order, each containing the events selected by any range.
+    reports: Vec<reports::CustomEventsReport>,
+}
+
+fn validate_ranges(app: &RouterState, ranges: &[DateRange], filters: &[DimensionFilter]) -> ApiResult<()> {
+    if ranges.is_empty() || ranges.len() > 4 {
+        http_bail!(StatusCode::BAD_REQUEST, "Reports require between 1 and 4 ranges")
+    }
+    for range in ranges {
+        reports::validate_request(range, filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    }
+    Ok(())
 }
 
 async fn project_custom_events_handler(
@@ -111,26 +132,28 @@ async fn project_custom_events_handler(
     Path(project_id): Path<String>,
     MaybeAuth(user): MaybeAuth,
     Json(req): Json<CustomEventsRequest>,
-) -> ApiResult<Json<reports::CustomEventsReport>> {
+) -> ApiResult<Json<CustomEventsResponse>> {
     let (entities, display) = report_project(&app, project_id, user).await?;
     if display.custom_events_display() == DisplayOverride::Hide {
         http_bail!(StatusCode::BAD_REQUEST, "Custom events are hidden for this project")
     }
-    reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    validate_ranges(&app, &req.ranges, &req.filters)?;
     if req.filters.iter().any(DimensionFilter::is_session_page_filter) {
         http_bail!(StatusCode::BAD_REQUEST, "Entry and exit page filters are not supported for custom events")
     }
     let limit = app.config.limits.report_max_dimension_results;
-    let report =
-        run_report(&app, move |conn| reports::custom_events_report(conn, &entities, &req.range, &req.filters, limit))
+    let reports =
+        run_report(&app, move |conn| reports::custom_events_report(conn, &entities, &req.ranges, &req.filters, limit))
             .await?;
-    Ok(Json(report))
+    Ok(Json(CustomEventsResponse { reports }))
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 struct GraphRequest {
-    range: DateRange,
+    /// Date ranges to report, in response order. Limits apply to each range.
+    #[schemars(length(min = 1, max = 4))]
+    ranges: Vec<DateRange>,
     filters: Vec<DimensionFilter>,
     interval: GraphInterval,
     timezone: Option<String>,
@@ -142,14 +165,16 @@ struct GraphRequest {
 #[serde(rename_all = "camelCase")]
 struct StatsResponse {
     current_visitors: u64,
-    stats: ReportStats,
-    stats_prev: ReportStats,
+    /// Reports in the same order as the requested ranges.
+    reports: Vec<ReportStats>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 struct DimensionRequest {
-    range: DateRange,
+    /// Date ranges to report, in response order. Top dimensions are selected per range.
+    #[schemars(length(min = 1, max = 4))]
+    ranges: Vec<DateRange>,
     filters: Vec<DimensionFilter>,
     metric: Metric,
     dimension: Dimension,
@@ -183,14 +208,16 @@ fn report_event(
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 struct DimensionResponse {
-    data: Vec<DimensionTableRow>,
+    /// Reports in range order, each containing the dimensions selected by any range.
+    reports: Vec<Vec<DimensionTableRow>>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "camelCase")]
 struct DimensionTableRow {
     dimension_value: String,
-    value: f64,
+    /// Metric value, or null when there is no data or not enough samples for a session metric.
+    value: Option<f64>,
     display_name: Option<String>,
     icon: Option<String>,
 }
@@ -219,7 +246,7 @@ async fn project_graph_handler(
 ) -> ApiResult<Json<GraphResponse>> {
     let (entities, display) = report_project(&app, project_id, user).await?;
 
-    reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    validate_ranges(&app, &req.ranges, &req.filters)?;
     let collection = app.settings.resolved_for_entities(&entities);
     let event = report_event(req.event.as_deref(), &req.filters, Some(req.metric), display.custom_events_display())?;
 
@@ -227,20 +254,26 @@ async fn project_graph_handler(
         http_bail!(StatusCode::BAD_REQUEST, "Metric is hidden for this project")
     }
 
-    let buckets = reports::build_graph_buckets(
-        &req.range,
-        req.interval,
-        req.timezone.as_deref(),
-        app.config.limits.report_max_datapoints,
-    )
-    .http_status(StatusCode::BAD_REQUEST)?;
+    let buckets = req
+        .ranges
+        .iter()
+        .map(|range| {
+            reports::build_graph_buckets(
+                range,
+                req.interval,
+                req.timezone.as_deref(),
+                app.config.limits.report_max_datapoints,
+            )
+        })
+        .collect::<anyhow::Result<Vec<_>>>()
+        .http_status(StatusCode::BAD_REQUEST)?;
 
-    let report = run_report(&app, move |conn| {
-        reports::overall_report(conn, &entities, &event, &req.range, &buckets, &req.filters, &req.metric)
+    let reports = run_report(&app, move |conn| {
+        reports::overall_report(conn, &entities, &event, &req.ranges, &buckets, &req.filters, &req.metric)
     })
     .await?;
 
-    Ok(Json(GraphResponse { data: report }))
+    Ok(Json(GraphResponse { reports }))
 }
 
 async fn project_stats_handler(
@@ -250,44 +283,26 @@ async fn project_stats_handler(
     Json(req): Json<StatsRequest>,
 ) -> ApiResult<Json<StatsResponse>> {
     let (entities, display) = report_project(&app, project_id, user).await?;
-    reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    validate_ranges(&app, &req.ranges, &req.filters)?;
     let event = report_event(req.event.as_deref(), &req.filters, None, display.custom_events_display())?;
 
-    let (entities2, entities3) = (entities.clone(), entities.clone());
     let collection = app.settings.resolved_for_entities(&entities);
-
-    let req2 = req.clone();
-    let event_prev = event.clone();
-    let previous_range = req.range.prev().http_status(StatusCode::BAD_REQUEST)?;
     let limits = app.config.limits.clone();
-    let previous_limits = limits.clone();
-
-    let (mut stats, mut stats_prev) = tokio::try_join!(
-        run_report(&app, move |conn| reports::overall_stats(
-            conn,
-            &entities,
-            &event,
-            &req.range,
-            &req.filters,
-            &limits
-        )),
-        run_report(&app, move |conn| {
-            reports::overall_stats(conn, &entities2, &event_prev, &previous_range, &req2.filters, &previous_limits)
-        }),
-    )?;
-
-    if display.is_metric_hidden(&collection, Metric::BounceRate) {
-        stats.bounce_rate = None;
-        stats_prev.bounce_rate = None;
-    }
-    if display.is_metric_hidden(&collection, Metric::AvgTimeOnSite) {
-        stats.avg_time_on_site = None;
-        stats_prev.avg_time_on_site = None;
-    }
-
-    let online = run_report(&app, move |conn| reports::online_users(conn, &entities3)).await?;
-
-    Ok(Json(StatsResponse { current_visitors: online, stats, stats_prev }))
+    let response = run_report(&app, move |conn| {
+        let (mut reports, current_visitors) =
+            reports::overall_stats(conn, &entities, &event, &req.ranges, &req.filters, &limits)?;
+        for stats in &mut reports {
+            if display.is_metric_hidden(&collection, Metric::BounceRate) {
+                stats.bounce_rate = None;
+            }
+            if display.is_metric_hidden(&collection, Metric::AvgTimeOnSite) {
+                stats.avg_time_on_site = None;
+            }
+        }
+        Ok(StatsResponse { current_visitors, reports })
+    })
+    .await?;
+    Ok(Json(response))
 }
 
 async fn project_detailed_handler(
@@ -297,7 +312,7 @@ async fn project_detailed_handler(
     Json(req): Json<DimensionRequest>,
 ) -> ApiResult<Json<DimensionResponse>> {
     let (entities, display) = report_project(&app, project_id, user).await?;
-    reports::validate_request(&req.range, &req.filters, &app.config.limits).http_status(StatusCode::BAD_REQUEST)?;
+    validate_ranges(&app, &req.ranges, &req.filters)?;
     let collection = app.settings.resolved_for_entities(&entities);
     let event = report_event(req.event.as_deref(), &req.filters, Some(req.metric), display.custom_events_display())?;
     match (req.dimension, req.property_key.as_deref()) {
@@ -329,63 +344,57 @@ async fn project_detailed_handler(
         Metric::AvgTimeOnSite => app.config.limits.report_min_avg_time_on_site_samples,
         _ => 0,
     };
-    let stats = run_report(&app, move |conn| {
-        reports::dimension_report(
+    let reports = run_report(&app, move |conn| {
+        let tables = reports::dimension_report(
             conn,
             &entities,
             &event,
-            &req.range,
+            &req.ranges,
             &req.dimension,
             req.property_key.as_deref(),
             &req.filters,
             &req.metric,
             max_results,
             min_samples,
-        )
-    })
-    .await?;
-
-    let mut data = Vec::new();
-    for (key, value) in stats {
-        match req.dimension {
-            Dimension::Referrer => {
-                let display_name = crate::utils::referrer::get_referer_name(&key);
-                let icon = if let Some(referrer) = &display_name {
-                    crate::utils::referrer::get_referer_icon(referrer)
-                } else {
-                    None
+        )?;
+        let mut reports = Vec::with_capacity(tables.len());
+        for stats in tables {
+            let mut data = Vec::with_capacity(stats.len());
+            for (key, value) in stats {
+                let (display_name, icon) = match req.dimension {
+                    Dimension::Referrer => {
+                        let display_name = crate::utils::referrer::get_referer_name(&key);
+                        let icon = display_name.as_deref().and_then(crate::utils::referrer::get_referer_icon);
+                        (display_name, icon)
+                    }
+                    Dimension::Browser => {
+                        let display_name = match key.as_str() {
+                            "Edge" => Some("Microsoft Edge".to_string()),
+                            _ => None,
+                        };
+                        (display_name, None)
+                    }
+                    Dimension::Country => (crate::utils::geo::get_country_name(&key), None),
+                    Dimension::City => {
+                        let (country, city) = key
+                            .split_at_checked(2)
+                            .map_or((None, None), |(a, b)| (Some(a.to_string()), Some(b.to_string())));
+                        (city.filter(|city| !city.is_empty()), country)
+                    }
+                    Dimension::ScreenWidth | Dimension::Orientation => {
+                        let display_name =
+                            key.chars().next().map(|c| c.to_uppercase().collect::<String>() + &key[c.len_utf8()..]);
+                        (display_name, None)
+                    }
+                    _ => (None, None),
                 };
                 data.push(DimensionTableRow { dimension_value: key, value, display_name, icon });
             }
-            Dimension::Browser => {
-                let display_name = match key.as_str() {
-                    "Edge" => Some("Microsoft Edge".to_string()),
-                    _ => None,
-                };
-                data.push(DimensionTableRow { dimension_value: key, value, display_name, icon: None });
-            }
-            Dimension::Country => {
-                let display_name = crate::utils::geo::get_country_name(&key);
-                data.push(DimensionTableRow { dimension_value: key, value, display_name, icon: None });
-            }
-            Dimension::City => {
-                let (country, city) = key
-                    .clone()
-                    .split_at_checked(2)
-                    .map_or((None, None), |(a, b)| (Some(a.to_string()), Some(b.to_string())));
-                let city = city.filter(|city| !city.is_empty());
-                data.push(DimensionTableRow { dimension_value: key, value, display_name: city, icon: country });
-            }
-            Dimension::ScreenWidth | Dimension::Orientation => {
-                let display_name =
-                    key.chars().next().map(|c| c.to_uppercase().collect::<String>() + &key[c.len_utf8()..]);
-                data.push(DimensionTableRow { dimension_value: key, value, display_name, icon: None });
-            }
-            _ => {
-                data.push(DimensionTableRow { dimension_value: key, value, display_name: None, icon: None });
-            }
-        }
-    }
 
-    Ok(Json(DimensionResponse { data }))
+            reports.push(data);
+        }
+        Ok(reports)
+    })
+    .await?;
+    Ok(Json(DimensionResponse { reports }))
 }

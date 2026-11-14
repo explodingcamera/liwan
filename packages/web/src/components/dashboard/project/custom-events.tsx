@@ -10,7 +10,7 @@ import { cls, formatMetricVal, fuzzyFilter } from "@/utils";
 import type { ProjectQuery } from ".";
 import { DimensionValueBar, DimensionValueButton } from "./dimensions";
 
-type EventRow = { name: string; completions: number; uniques: number };
+type EventRow = { name: string; completions?: number | null; uniques?: number | null };
 
 const uniquesTitle =
 	"Distinct visitor groups, not individual people. Groups rotate daily; events without visitor metadata count separately.";

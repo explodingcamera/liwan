@@ -4,15 +4,22 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Datelike, Days, Duration, LocalResult, NaiveDate, Offset, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 
-use super::shared::{build_filter_clause, metric_aggregate_sql};
+use super::shared::{build_filter_clause, metric_aggregate_sql, range_events_sql};
 use super::{DateRange, DimensionFilter, GraphInterval, Metric, ReportGraph, ReportGraphPoint};
 
 fn zero_report_graph(buckets: &[DateRange]) -> ReportGraph {
     buckets.iter().map(|bucket| ReportGraphPoint { bin_start: bucket.start, value: 0.0 }).collect()
 }
 
-fn build_time_bins_values_sql(bucket_count: usize) -> String {
-    (0..bucket_count).map(|idx| format!("({idx}, ?::timestamp, ?::timestamp)")).collect::<Vec<_>>().join(", ")
+fn build_time_bins_values_sql(buckets: &[Vec<DateRange>]) -> String {
+    buckets
+        .iter()
+        .enumerate()
+        .flat_map(|(range_idx, buckets)| {
+            (0..buckets.len()).map(move |bucket_idx| format!("({range_idx}, {bucket_idx}, ?::timestamp, ?::timestamp)"))
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn resolve_local_day_start(timezone: Tz, date: NaiveDate) -> Result<DateTime<Utc>> {
@@ -140,101 +147,94 @@ pub fn build_graph_buckets(
     Ok(buckets)
 }
 
-/// Build a graph report for a metric across precomputed time buckets
+/// Build graph reports for all ranges in one query using each range's precomputed buckets.
 pub fn overall_report(
     conn: &DuckDBConn,
     entities: &[String],
     event: &str,
-    range: &DateRange,
-    buckets: &[DateRange],
+    ranges: &[DateRange],
+    buckets: &[Vec<DateRange>],
     filters: &[DimensionFilter],
     metric: &Metric,
-) -> Result<ReportGraph> {
-    if buckets.is_empty() {
+) -> Result<Vec<ReportGraph>> {
+    anyhow::ensure!(ranges.len() == buckets.len(), "Each graph range must have its own buckets");
+    if ranges.is_empty() {
         return Ok(Vec::new());
     }
 
-    if entities.is_empty() {
-        return Ok(zero_report_graph(buckets));
+    if entities.is_empty() || buckets.iter().all(Vec::is_empty) {
+        return Ok(buckets.iter().map(|buckets| zero_report_graph(buckets)).collect());
     }
 
     let mut params = ParamVec::new();
+    let range_events = range_events_sql(ranges, &mut params);
 
     let (filters_sql, filters_params) = build_filter_clause(filters)?;
     // Apply the same filters, but not the minimum sample counts used by summary and dimension reports.
     // Suppressing sparse time buckets would create misleading gaps in the graph.
     let metric_sql = metric_aggregate_sql(*metric, "sd");
-    let time_bins_sql = build_time_bins_values_sql(buckets.len());
+    let time_bins_sql = build_time_bins_values_sql(buckets);
 
     let entity_vars = repeat_vars(entities.len());
 
-    for bucket in buckets {
+    for bucket in buckets.iter().flatten() {
         params.push(bucket.start);
         params.push(bucket.end);
     }
     params.push(event);
-    params.push(range.start);
-    params.push(range.end);
     params.extend(entities);
     params.extend_from_params(filters_params);
 
     let query = format!(
         "--sql
 		with
-			time_bins(bucket_idx, bin_start, bin_end) as (
+			range_events as ({range_events}),
+			time_bins(range_idx, bucket_idx, bin_start, bin_end) as (
 				values {time_bins_sql}
 			),
 			session_data as (
 				select
+					e.range_idx,
 					e.visitor_group_id,
 					e.created_at,
 					e.time_from_last_event,
 					e.time_to_next_event,
 					e.exited_at
-				from events e
+				from range_events e
 				where
 					e.event = ?::text and
-					e.created_at >= ?::timestamp and e.created_at < ?::timestamp and
 					e.entity_id in ({entity_vars})
 					{filters_sql}
 			),
 			event_bins as (
 				select
+					tb.range_idx,
 					tb.bucket_idx,
 					{metric_sql} as metric_value
 				from session_data sd
 				asof join time_bins tb
-					on sd.created_at >= tb.bin_start
+					on sd.range_idx = tb.range_idx and sd.created_at >= tb.bin_start
 				where sd.created_at < tb.bin_end
-				group by tb.bucket_idx
+				group by tb.range_idx, tb.bucket_idx
 			)
 		select
+			tb.range_idx,
 			tb.bin_start,
 			coalesce(eb.metric_value, 0)
 		from time_bins tb
-		left join event_bins eb on tb.bucket_idx = eb.bucket_idx
-		order by tb.bucket_idx;
+		left join event_bins eb on tb.range_idx = eb.range_idx and tb.bucket_idx = eb.bucket_idx
+		order by tb.range_idx, tb.bucket_idx;
 	"
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
 
-    match metric {
-        Metric::Views | Metric::UniqueVisitors => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
-                Ok(ReportGraphPoint { bin_start: row.get(0)?, value: row.get(1)? })
-            })?;
-            let report_graph = rows.collect::<Result<Vec<ReportGraphPoint>, duckdb::Error>>()?;
-            Ok(report_graph)
-        }
-        Metric::AvgTimeOnSite | Metric::BounceRate => {
-            let rows = stmt.query_map(duckdb::params_from_iter(params), |row| {
-                Ok(ReportGraphPoint { bin_start: row.get(0)?, value: row.get::<_, Option<f64>>(1)?.unwrap_or(0.0) })
-            })?;
-            let report_graph = rows.collect::<Result<Vec<ReportGraphPoint>, duckdb::Error>>()?;
-            Ok(report_graph)
-        }
+    let mut rows = stmt.query(duckdb::params_from_iter(params))?;
+    let mut reports = vec![Vec::new(); ranges.len()];
+    while let Some(row) = rows.next()? {
+        reports[row.get::<_, usize>(0)?].push(ReportGraphPoint { bin_start: row.get(1)?, value: row.get(2)? });
     }
+    Ok(reports)
 }
 
 #[cfg(test)]
@@ -375,8 +375,9 @@ mod tests {
             build_graph_buckets(&range, GraphInterval::Day, Some("UTC"), 2000).expect("failed to build buckets");
         let conn = app.events_conn().expect("failed to get events conn");
         let report =
-            overall_report(&conn, &["entity-1".to_string()], "pageview", &range, &buckets, &[], &Metric::Views)
-                .expect("failed to build report");
+            overall_report(&conn, &["entity-1".to_string()], "pageview", &[range], &[buckets], &[], &Metric::Views)
+                .expect("failed to build report")
+                .remove(0);
 
         let values = report.iter().map(|point| point.value).collect::<Vec<_>>();
         assert_eq!(values, vec![1.0, 1.0]);
@@ -412,8 +413,17 @@ mod tests {
             (Metric::BounceRate, vec![0.0, 1.0, 0.0]),
             (Metric::AvgTimeOnSite, vec![90.0, 30.0, 0.0]),
         ] {
-            let report =
-                overall_report(&conn, &["entity-1".into()], "pageview", &range, &buckets, &[], &metric).unwrap();
+            let report = overall_report(
+                &conn,
+                &["entity-1".into()],
+                "pageview",
+                std::slice::from_ref(&range),
+                std::slice::from_ref(&buckets),
+                &[],
+                &metric,
+            )
+            .unwrap()
+            .remove(0);
             assert_eq!(report.iter().map(|point| point.value).collect::<Vec<_>>(), expected);
         }
     }

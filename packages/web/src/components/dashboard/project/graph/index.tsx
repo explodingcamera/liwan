@@ -123,7 +123,7 @@ export type DataPoint = {
 	y: number;
 };
 
-export const toDataPoints = (data: GraphResponse["data"]): DataPoint[] => {
+export const toDataPoints = (data: GraphResponse["reports"][number]): DataPoint[] => {
 	return data.map((point) => ({
 		x: new Date(point.binStart),
 		y: point.value,

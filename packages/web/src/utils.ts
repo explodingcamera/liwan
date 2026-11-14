@@ -47,7 +47,8 @@ export const formatMetricValEvenly = (value: number, metric: Metric, biggest: nu
 	return value.toFixed(1).replace(/\.0$/, "") || "0";
 };
 
-export const formatMetricVal = (value: number, metric: Metric) => {
+export const formatMetricVal = (value: number | null | undefined, metric: Metric) => {
+	if (value == null) return "—";
 	if (metric === "bounce_rate") return `${(Math.floor(value * 1000) / 10).toFixed(1)}%`;
 	if (metric === "avg_time_on_site") return formatDuration(value);
 

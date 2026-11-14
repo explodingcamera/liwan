@@ -36,8 +36,8 @@ export const SelectMetrics = ({
 			{visible("views") && (
 				<SelectMetric
 					title={eventName === "pageview" ? "Total Views" : "Completions"}
-					value={data?.stats.totalViews}
-					prevValue={data?.statsPrev.totalViews}
+					value={data?.reports[0]?.totalViews}
+					prevValue={data?.reports[1]?.totalViews}
 					metric={"views"}
 					onSelect={() => setMetric("views")}
 					selected={metric === "views"}
@@ -46,8 +46,8 @@ export const SelectMetrics = ({
 			{visible("unique_visitors") && (
 				<SelectMetric
 					title={eventName === "pageview" ? "Unique Visitors" : "Uniques"}
-					value={data?.stats.uniqueVisitors}
-					prevValue={data?.statsPrev.uniqueVisitors}
+					value={data?.reports[0]?.uniqueVisitors}
+					prevValue={data?.reports[1]?.uniqueVisitors}
 					metric={"unique_visitors"}
 					onSelect={() => setMetric("unique_visitors")}
 					selected={metric === "unique_visitors"}
@@ -56,8 +56,8 @@ export const SelectMetrics = ({
 			{visible("avg_time_on_site") && (
 				<SelectMetric
 					title="Avg. Time on Site"
-					value={data?.stats.avgTimeOnSite}
-					prevValue={data?.statsPrev.avgTimeOnSite}
+					value={data?.reports[0]?.avgTimeOnSite}
+					prevValue={data?.reports[1]?.avgTimeOnSite}
 					metric={"avg_time_on_site"}
 					onSelect={() => setMetric("avg_time_on_site")}
 					selected={metric === "avg_time_on_site"}
@@ -66,8 +66,8 @@ export const SelectMetrics = ({
 			{visible("bounce_rate") && (
 				<SelectMetric
 					title="Bounce Rate"
-					value={data?.stats.bounceRate}
-					prevValue={data?.statsPrev.bounceRate}
+					value={data?.reports[0]?.bounceRate}
+					prevValue={data?.reports[1]?.bounceRate}
 					metric={"bounce_rate"}
 					onSelect={() => setMetric("bounce_rate")}
 					selected={metric === "bounce_rate"}

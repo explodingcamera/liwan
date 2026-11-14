@@ -24,9 +24,9 @@ type Location = {
 };
 
 const getCountries = (data: DimensionTableRow[]) => {
-	const countries = new Map<string, number>();
+	const countries = new Map<string, number | null>();
 	for (const row of data) {
-		if (row.dimensionValue) countries.set(row.dimensionValue, row.value);
+		if (row.dimensionValue) countries.set(row.dimensionValue, row.value ?? null);
 	}
 	return countries;
 };
@@ -46,7 +46,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 		whileElementsMounted: autoUpdate,
 	});
 
-	const biggest = useMemo(() => data?.reduce((a, b) => (a.value > b.value ? a : b), data[0]), [data]);
+	const biggest = useMemo(() => data?.reduce((max, row) => Math.max(max, row.value ?? 0), 0) ?? 0, [data]);
 	const countries = useMemo(() => getCountries(data ?? []), [data]);
 
 	const zoomBehavior = useRef<ZoomBehavior<SVGSVGElement, unknown>>(null);
@@ -114,7 +114,7 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 		() =>
 			currentLocation && {
 				name: currentLocation?.name ?? "",
-				value: formatMetricVal(countries.get(currentLocation.iso) ?? 0, metric),
+				value: formatMetricVal(countries.get(currentLocation.iso), metric),
 			},
 		[currentLocation, countries, metric],
 	);
@@ -155,14 +155,14 @@ const Landmass = ({
 	metric,
 }: {
 	feature: (typeof features)[number];
-	countries: Map<string, number>;
-	biggest?: DimensionTableRow;
+	countries: Map<string, number | null>;
+	biggest: number;
 	onSetLocation: (location: Location | null) => void;
 	onTooltipMove: (event: MouseEvent<SVGPathElement>) => void;
 	metric: Metric;
 }) => {
 	const percent = useMemo(
-		() => (countries.get(feature.iso) ?? 0) / (biggest?.value ?? 100),
+		() => (biggest > 0 ? (countries.get(feature.iso) ?? 0) / biggest : 0),
 		[countries, feature.iso, biggest],
 	);
 
@@ -171,7 +171,7 @@ const Landmass = ({
 			d={feature.path || ""}
 			className={styles.geo}
 			data-inverted={metric === "bounce_rate"}
-			data-ignored={metric === "bounce_rate" && (percent === 0 || percent === 100)}
+			data-ignored={countries.get(feature.iso) == null}
 			style={{ "--percent": percent } as CSSProperties}
 			onMouseEnter={(event) => {
 				onTooltipMove(event);

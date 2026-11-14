@@ -387,15 +387,15 @@ export const DimensionValueBar = ({
 	children,
 	selected = false,
 }: {
-	value: number;
+	value?: number | null;
 	biggest: number;
 	children?: React.ReactNode;
 	selected?: boolean;
 }) => (
 	<div
 		className={cls(styles.percentage, selected && styles.selected)}
-		data-empty={value <= 0}
-		style={{ "--percentage": `${biggest > 0 ? (value / biggest) * 100 : 0}%` } as React.CSSProperties}
+		data-empty={(value ?? 0) <= 0}
+		style={{ "--percentage": `${biggest > 0 ? ((value ?? 0) / biggest) * 100 : 0}%` } as React.CSSProperties}
 	>
 		{children}
 	</div>

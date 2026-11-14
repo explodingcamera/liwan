@@ -35,6 +35,9 @@ describe("utils", () => {
 	});
 
 	test("formatMetricVal", () => {
+		expect(formatMetricVal(null, "views")).toBe("—");
+		expect(formatMetricVal(null, "bounce_rate")).toBe("—");
+		expect(formatMetricVal(0, "bounce_rate")).toBe("0.0%");
 		expect(formatMetricVal(0.1, "views")).toBe("0.1");
 		expect(formatMetricVal(0, "views")).toBe("0");
 		expect(formatMetricVal(1, "views")).toBe("1");

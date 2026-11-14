@@ -1,7 +1,24 @@
 use crate::utils::duckdb::ParamVec;
 use anyhow::{Result, bail};
 
-use super::{Dimension, DimensionFilter, FilterType, Metric};
+use super::{DateRange, Dimension, DimensionFilter, FilterType, Metric};
+
+/// Scan each requested range separately so DuckDB can prune the history between ranges.
+pub(super) fn range_events_sql(ranges: &[DateRange], params: &mut ParamVec<'_>) -> String {
+    ranges
+        .iter()
+        .enumerate()
+        .map(|(index, range)| {
+            params.push(range.start);
+            params.push(range.end);
+            format!(
+                "select {index} as range_idx, * from events
+                 where created_at >= ?::timestamp and created_at < ?::timestamp"
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" union all ")
+}
 
 pub(super) const SESSION_DURATION_SQL: &str = "interval '30 minutes'";
 

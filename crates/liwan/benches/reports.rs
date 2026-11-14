@@ -32,6 +32,8 @@ fn benchmark_reports(c: &mut Criterion) {
     };
     let day_buckets = reports::build_graph_buckets(&range, GraphInterval::Day, Some("UTC"), 2000)
         .expect("failed to build day buckets for benchmark");
+    let ranges = [range];
+    let buckets = [day_buckets];
 
     let conn = app.events_conn().expect("failed to get events connection");
 
@@ -48,12 +50,77 @@ fn benchmark_reports(c: &mut Criterion) {
     }
 
     {
+        let mut group = c.benchmark_group("comparison_reports");
+        configure_group(&mut group);
+        let end = ranges[0].end;
+        let start = end.checked_sub_days(Days::new(2)).expect("failed to build comparison range");
+        let comparison_ranges = [
+            DateRange { start, end },
+            DateRange {
+                start: start.checked_sub_days(Days::new(365)).expect("failed to shift range start"),
+                end: end.checked_sub_days(Days::new(365)).expect("failed to shift range end"),
+            },
+        ];
+        let comparison_buckets = comparison_ranges
+            .iter()
+            .map(|range| {
+                reports::build_graph_buckets(range, GraphInterval::Day, Some("UTC"), 2000)
+                    .expect("failed to build comparison buckets")
+            })
+            .collect::<Vec<_>>();
+        group.bench_function("graph", |b| {
+            b.iter(|| {
+                reports::overall_report(
+                    &conn,
+                    &entities,
+                    "pageview",
+                    &comparison_ranges,
+                    &comparison_buckets,
+                    &[],
+                    &Metric::Views,
+                )
+                .expect("comparison graph failed")
+            })
+        });
+        group.bench_function("stats", |b| {
+            b.iter(|| {
+                reports::overall_stats(&conn, &entities, "pageview", &comparison_ranges, &[], &app.config.limits)
+                    .expect("comparison stats failed")
+            })
+        });
+        group.bench_function("dimension", |b| {
+            b.iter(|| {
+                reports::dimension_report(
+                    &conn,
+                    &entities,
+                    "pageview",
+                    &comparison_ranges,
+                    &Dimension::Url,
+                    None,
+                    &[],
+                    &Metric::Views,
+                    1000,
+                    0,
+                )
+                .expect("comparison dimension failed")
+            })
+        });
+        group.bench_function("custom_events", |b| {
+            b.iter(|| {
+                reports::custom_events_report(&conn, &entities, &comparison_ranges, &[], 100)
+                    .expect("comparison custom events failed")
+            })
+        });
+        group.finish();
+    }
+
+    {
         let mut group = c.benchmark_group("overall_report");
         configure_group(&mut group);
         for metric in [Metric::Views, Metric::UniqueVisitors, Metric::BounceRate, Metric::AvgTimeOnSite] {
             group.bench_with_input(BenchmarkId::new("metric", format!("{metric:?}")), &metric, |b, metric| {
                 b.iter(|| {
-                    reports::overall_report(&conn, &entities, "pageview", &range, &day_buckets, &[], metric)
+                    reports::overall_report(&conn, &entities, "pageview", &ranges, &buckets, &[], metric)
                         .expect("overall_report failed")
                 });
             });
@@ -66,7 +133,7 @@ fn benchmark_reports(c: &mut Criterion) {
         configure_group(&mut group);
         group.bench_function("all_metrics", |b| {
             b.iter(|| {
-                reports::overall_stats(&conn, &entities, "pageview", &range, &[], &app.config.limits)
+                reports::overall_stats(&conn, &entities, "pageview", &ranges, &[], &app.config.limits)
                     .expect("overall_stats failed")
             });
         });
@@ -78,7 +145,7 @@ fn benchmark_reports(c: &mut Criterion) {
         configure_group(&mut group);
         group.bench_function("counts", |b| {
             b.iter(|| {
-                reports::custom_events_report(&conn, &entities, &range, &[], 100).expect("custom_events_report failed")
+                reports::custom_events_report(&conn, &entities, &ranges, &[], 100).expect("custom_events_report failed")
             });
         });
         group.finish();
@@ -98,7 +165,7 @@ fn benchmark_reports(c: &mut Criterion) {
                             &conn,
                             &entities,
                             "pageview",
-                            &range,
+                            &ranges,
                             &dimension,
                             None,
                             &[],

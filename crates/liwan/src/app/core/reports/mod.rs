@@ -9,7 +9,7 @@ pub use dimension::dimension_report;
 pub use graph::{build_graph_buckets, overall_report};
 pub use stats::{earliest_timestamp, online_users, overall_stats};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -69,13 +69,6 @@ pub struct DateRange {
 }
 
 impl DateRange {
-    /// Return the immediately preceding range with the same duration
-    pub fn prev(&self) -> Result<Self> {
-        let duration = self.end - self.start;
-        let start = self.start.checked_sub_signed(duration).context("Previous report range is out of bounds")?;
-        Ok(Self { start, end: self.start })
-    }
-
     /// Return the range duration
     pub fn duration(&self) -> chrono::Duration {
         self.end - self.start
@@ -243,8 +236,8 @@ pub struct ReportGraphPoint {
 /// Graph report points ordered by bucket start
 pub type ReportGraph = Vec<ReportGraphPoint>;
 
-/// Dimension table values mapped to their metric value
-pub type ReportTable = BTreeMap<String, f64>;
+/// Dimension values mapped to their metric value, or `None` for missing data or insufficient samples.
+pub type ReportTable = BTreeMap<String, Option<f64>>;
 
 /// Overall metric summary for a report range
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, Default)]
