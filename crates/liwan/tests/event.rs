@@ -178,6 +178,14 @@ async fn event_allows_cross_origin_requests() -> Result<()> {
         .await;
     res.assert_status_success();
 
+    assert!(res.headers().contains_key("ratelimit"));
+    assert!(res.headers().contains_key("ratelimit-policy"));
+    let exposed = res.header("access-control-expose-headers");
+    let exposed = exposed.to_str()?;
+    for header in ["retry-after", "ratelimit", "ratelimit-policy"] {
+        assert!(exposed.split(',').any(|value| value.trim().eq_ignore_ascii_case(header)));
+    }
+
     Ok(())
 }
 

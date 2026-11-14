@@ -4,7 +4,7 @@ use std::net::{IpAddr, SocketAddr};
 
 use crate::config::{Config, FooterLink};
 use crate::utils::geoip_headers::parse_geoip_headers;
-use crate::utils::ip_headers::{ClientIpHeaderSource, TrustedProxy, parse_client_ip, should_trust_proxy_headers};
+use crate::utils::ip_headers::{parse_client_ip, should_trust_proxy_headers};
 use crate::web::Files;
 use crate::web::RouterState;
 use aide::axum::IntoApiResponse;
@@ -13,11 +13,11 @@ use axum::body::Body;
 use axum::extract::{ConnectInfo, FromRequestParts, Request};
 use axum::response::IntoResponse;
 use axum::{Json, extract};
+use bottlecap_tower::{IpLimiterLayer, KeyedLimiter, KeyedLimiterLayer, Quota};
 use http::{Response, StatusCode, header};
 use schemars::JsonSchema;
 use serde::Serialize;
 use serde_json::json;
-use tower_governor::{GovernorError, key_extractor::KeyExtractor};
 
 pub type ApiResult<T, E = ApiError> = Result<T, E>;
 
@@ -299,37 +299,21 @@ impl FromRequestParts<RouterState> for ClientIp {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ClientIpKeyExtractor {
-    headers: Vec<ClientIpHeaderSource>,
-    trusted_proxies: Vec<TrustedProxy>,
-}
-
-impl ClientIpKeyExtractor {
-    pub fn new(config: &Config) -> Self {
-        Self {
-            headers: config.trusted_headers.as_ref().to_vec(),
-            trusted_proxies: config.trusted_proxies.as_ref().to_vec(),
-        }
-    }
-}
-
-impl KeyExtractor for ClientIpKeyExtractor {
-    type Key = IpAddr;
-
-    fn extract<T>(&self, request: &http::Request<T>) -> Result<Self::Key, GovernorError> {
-        let peer_ip = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ConnectInfo(addr)| addr.ip());
-
-        if should_trust_proxy_headers(peer_ip, &self.trusted_proxies) {
-            for header in &self.headers {
-                if let Some(ip) = parse_client_ip(request.headers(), header, peer_ip, &self.trusted_proxies) {
-                    return Ok(ip);
-                }
+/// Rate-limit client IPs, grouping IPv6 clients by /64 and trusting headers only from configured proxies.
+pub fn client_ip_limiter(config: &Config, quota: Quota) -> IpLimiterLayer {
+    let headers = config.trusted_headers.as_ref().to_vec();
+    let trusted_proxies = config.trusted_proxies.as_ref().to_vec();
+    KeyedLimiterLayer::by_ip(KeyedLimiter::new(quota)).with_rate_limit_headers(true).with_ip_extractor(
+        move |request_headers, peer_ip| {
+            if !should_trust_proxy_headers(peer_ip, &trusted_proxies) {
+                return peer_ip;
             }
-        }
-
-        peer_ip.ok_or(GovernorError::UnableToExtractKey)
-    }
+            headers
+                .iter()
+                .find_map(|header| parse_client_ip(request_headers, header, peer_ip, &trusted_proxies))
+                .or(peer_ip)
+        },
+    )
 }
 
 /// A valid server-ingestion API key.
@@ -406,7 +390,8 @@ impl FromRequestParts<RouterState> for GeoLocationHeaders {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::ip_headers::TrustedProxy;
+    use crate::utils::ip_headers::{ClientIpHeaderSource, TrustedProxy};
+    use tower::ServiceExt;
 
     #[test]
     fn caches_generated_assets_and_revalidates_mutable_files() {
@@ -448,23 +433,42 @@ mod tests {
         request
     }
 
-    #[test]
-    fn rate_limit_key_uses_headers_only_for_trusted_proxies() {
+    #[tokio::test]
+    async fn rate_limit_key_uses_headers_only_for_trusted_proxies() {
         let mut config = Config::default();
         config.trusted_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
         config.trusted_proxies = vec![TrustedProxy::Ip("10.0.0.1".parse().unwrap())].into();
-        let extractor = ClientIpKeyExtractor::new(&config);
-
-        assert_eq!(extractor.extract(&request("10.0.0.1")).unwrap(), "203.0.113.10".parse::<IpAddr>().unwrap());
-        assert_eq!(extractor.extract(&request("10.0.0.2")).unwrap(), "10.0.0.2".parse::<IpAddr>().unwrap());
+        let app = axum::Router::new()
+            .route("/", axum::routing::get(|| async {}))
+            .layer(client_ip_limiter(&config, Quota::per_hour(1)));
+        for (ip, status) in [
+            ("10.0.0.1", StatusCode::OK),
+            ("203.0.113.10", StatusCode::TOO_MANY_REQUESTS),
+            ("10.0.0.2", StatusCode::OK),
+            ("10.0.0.2", StatusCode::TOO_MANY_REQUESTS),
+        ] {
+            let response = app.clone().oneshot(request(ip).map(|_| Body::empty())).await.unwrap();
+            assert_eq!(response.status(), status, "client {ip}");
+        }
     }
 
-    #[test]
-    fn rate_limit_key_ignores_headers_without_trusted_proxies() {
+    #[tokio::test]
+    async fn rate_limit_key_ignores_headers_without_trusted_proxies() {
         let mut config = Config::default();
         config.trusted_headers = vec![ClientIpHeaderSource::Header("x-forwarded-for".into())].into();
-        let extractor = ClientIpKeyExtractor::new(&config);
-
-        assert_eq!(extractor.extract(&request("10.0.0.1")).unwrap(), "10.0.0.1".parse::<IpAddr>().unwrap());
+        let app = axum::Router::new()
+            .route("/", axum::routing::get(|| async {}))
+            .layer(client_ip_limiter(&config, Quota::per_hour(1)));
+        for (ip, status) in [
+            ("10.0.0.1", StatusCode::OK),
+            ("10.0.0.2", StatusCode::OK),
+            ("10.0.0.1", StatusCode::TOO_MANY_REQUESTS),
+            ("2001:db8::1", StatusCode::OK),
+            ("2001:db8::2", StatusCode::TOO_MANY_REQUESTS),
+            ("2001:db8:0:1::1", StatusCode::OK),
+        ] {
+            let response = app.clone().oneshot(request(ip).map(|_| Body::empty())).await.unwrap();
+            assert_eq!(response.status(), status, "client {ip}");
+        }
     }
 }

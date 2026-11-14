@@ -72,6 +72,7 @@ axum = { version = "0.8", default-features = false, features = [
   "tokio",
 ] }
 axum-extra = { version = "0.12", default-features = false, features = ["cookie", "typed-header"] }
+bottlecap-tower = { version = "0.2.0", features = ["axum"] }
 headers = "0.4"
 http = "1.5"
 ipnet = "2.12"
@@ -81,7 +82,6 @@ reqwest = { version = "0.13", default-features = false, features = ["json", "rus
 rust-embed = { version = "8.14", features = ["mime-guess"] }
 schemars = { version = "1.2", features = ["chrono04", "derive"] }
 tower = { version = "0.5", default-features = false }
-tower_governor = { version = "0.8", default-features = false, features = ["axum"] }
 tower-http = { version = "0.7", default-features = false, features = [
   "compression-zstd",
   "cors",

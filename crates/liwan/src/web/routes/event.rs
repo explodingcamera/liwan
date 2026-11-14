@@ -9,7 +9,7 @@ use crate::utils::referrer::{Referrer, process_referer};
 use crate::utils::useragent;
 use crate::web::RouterState;
 use crate::web::webext::{
-    ApiResult, AxumErrExt, ClientIp, ClientIpKeyExtractor, GeoLocationHeaders, empty_response, http_bail,
+    ApiResult, AxumErrExt, ClientIp, GeoLocationHeaders, client_ip_limiter, empty_response, http_bail,
 };
 
 use aide::axum::routing::post;
@@ -18,40 +18,30 @@ use anyhow::{Context, Result};
 use axum::body::Bytes;
 use axum::extract::State;
 use axum_extra::TypedHeader;
+use bottlecap_tower::Quota;
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use schemars::JsonSchema;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use tower_governor::GovernorLayer;
-use tower_governor::governor::GovernorConfigBuilder;
 use tower_http::cors::{Any, CorsLayer};
 use url::Url;
 
 pub fn router(config: &Config) -> ApiRouter<RouterState> {
-    let limiter = GovernorConfigBuilder::default()
-        .per_second(2)
-        .burst_size(10)
-        .key_extractor(ClientIpKeyExtractor::new(config))
-        .finish()
-        .expect("valid governor config");
-    let governor_limiter = limiter.limiter().clone();
-
-    tokio::task::spawn(async move {
-        loop {
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
-            governor_limiter.retain_recent();
-        }
-    });
-
+    let limiter = client_ip_limiter(config, Quota::per(std::time::Duration::from_secs(2), 1).with_burst(10));
     let browser_cors = CorsLayer::new()
         .allow_methods([http::Method::POST])
         .allow_origin(Any)
         .allow_credentials(false)
+        .expose_headers([
+            http::header::RETRY_AFTER,
+            http::HeaderName::from_static("ratelimit"),
+            http::HeaderName::from_static("ratelimit-policy"),
+        ])
         .allow_headers([http::header::CONTENT_TYPE, http::header::ACCEPT]);
 
-    ApiRouter::new().route("/", post(event_handler)).layer(GovernorLayer::new(limiter)).layer(browser_cors)
+    ApiRouter::new().route("/", post(event_handler)).layer(limiter).layer(browser_cors)
 }
 
 const QUEUE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);

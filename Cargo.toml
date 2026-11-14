@@ -17,9 +17,6 @@ too_many_arguments = "allow"
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
-[patch.crates-io]
-governor = { git = "https://github.com/explodingcamera-contrib/governor" }
-
 [profile.dev]
 opt-level = 1
 

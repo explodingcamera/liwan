@@ -1,11 +1,11 @@
 use aide::axum::{ApiRouter, IntoApiResponse, routing::*};
 use axum::{Json, extract::State};
 use axum_extra::extract::CookieJar;
+use bottlecap_tower::Quota;
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::task::spawn_blocking;
-use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 use crate::{
     PASSWORD_MIN_LENGTH,
@@ -14,33 +14,19 @@ use crate::{
     web::{
         MaybeSessionId, RouterState,
         session::{Auth, clear_session, issue_session},
-        webext::{ApiResult, AxumErrExt, ClientIpKeyExtractor, empty_response, http_bail},
+        webext::{ApiResult, AxumErrExt, client_ip_limiter, empty_response, http_bail},
     },
 };
 
 pub fn router(config: &Config) -> ApiRouter<RouterState> {
-    let limiter = GovernorConfigBuilder::default()
-        .per_second(2)
-        .burst_size(5)
-        .key_extractor(ClientIpKeyExtractor::new(config))
-        .finish()
-        .expect("valid governor config");
-
-    let governor_limiter = limiter.limiter().clone();
-    tokio::task::spawn(async move {
-        let mut interval = tokio::time::interval(std::time::Duration::from_hours(1));
-        loop {
-            interval.tick().await;
-            governor_limiter.retain_recent();
-        }
-    });
+    let limiter = client_ip_limiter(config, Quota::per(std::time::Duration::from_secs(2), 1).with_burst(5));
 
     ApiRouter::new()
         .api_route("/auth/me", get(me))
         .api_route("/auth/me/password", put(update_password))
         .api_route("/auth/setup", post(setup))
         .api_route("/auth/logout", post(logout))
-        .merge(ApiRouter::new().api_route("/auth/login", post(login)).layer(GovernorLayer::new(limiter)))
+        .merge(ApiRouter::new().api_route("/auth/login", post(login)).layer(limiter))
 }
 
 #[derive(Deserialize, Serialize, JsonSchema)]

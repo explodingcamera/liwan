@@ -13,10 +13,10 @@ use axum_extra::extract::{
     CookieJar,
     cookie::{Cookie, SameSite},
 };
+use bottlecap_tower::Quota;
 use http::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 use crate::{
     app::{ExternalAuthProvider, ExternalAuthSettings, GroupTeamMapping},
@@ -24,7 +24,7 @@ use crate::{
     web::{
         RouterState,
         session::{Admin, issue_session},
-        webext::{ApiResult, AxumErrExt, ClientIpKeyExtractor, http_bail},
+        webext::{ApiResult, AxumErrExt, client_ip_limiter, http_bail},
     },
 };
 
@@ -42,39 +42,15 @@ fn state_cookie(config: &Config) -> Cookie<'static> {
 }
 
 pub fn router(config: &Config) -> ApiRouter<RouterState> {
-    let start_limiter = GovernorConfigBuilder::default()
-        .per_second(1)
-        .burst_size(5)
-        .key_extractor(ClientIpKeyExtractor::new(config))
-        .finish()
-        .expect("valid governor config");
-    let callback_limiter = GovernorConfigBuilder::default()
-        .per_second(2)
-        .burst_size(5)
-        .key_extractor(ClientIpKeyExtractor::new(config))
-        .finish()
-        .expect("valid governor config");
-    let start_governor = start_limiter.limiter().clone();
-    let callback_governor = callback_limiter.limiter().clone();
-    tokio::task::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_hours(1));
-        loop {
-            interval.tick().await;
-            start_governor.retain_recent();
-            callback_governor.retain_recent();
-        }
-    });
+    let start_limiter = client_ip_limiter(config, Quota::per_second(1).with_burst(5));
+    let callback_limiter = client_ip_limiter(config, Quota::per(Duration::from_secs(2), 1).with_burst(5));
 
     ApiRouter::new()
         .api_route("/auth/external", get(metadata))
         .api_route("/admin/auth", get(get_settings))
         .api_route("/admin/auth", put(update_settings))
-        .merge(ApiRouter::new().api_route("/auth/external/start", get(start)).layer(GovernorLayer::new(start_limiter)))
-        .merge(
-            ApiRouter::new()
-                .api_route("/auth/external/callback", get(callback))
-                .layer(GovernorLayer::new(callback_limiter)),
-        )
+        .merge(ApiRouter::new().api_route("/auth/external/start", get(start)).layer(start_limiter))
+        .merge(ApiRouter::new().api_route("/auth/external/callback", get(callback)).layer(callback_limiter))
 }
 
 #[derive(Serialize, JsonSchema)]
