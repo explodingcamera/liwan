@@ -2,9 +2,9 @@ import tooltipStyles from "../hover-tooltip.module.css";
 import styles from "./map.module.css";
 
 import type { CSSProperties, MouseEvent } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { select } from "d3-selection";
-import type { ZoomBehavior } from "d3-zoom";
+import type { D3ZoomEvent, ZoomBehavior } from "d3-zoom";
 import { zoom as d3Zoom, zoomIdentity } from "d3-zoom";
 import { autoUpdate, FloatingPortal, flip, offset, shift, useFloating } from "@floating-ui/react";
 import { RotateCcwIcon } from "lucide-react";
@@ -14,10 +14,13 @@ import { metricNames } from "@/constants";
 import { cls } from "@/utils";
 import geo from "../../../../../../../data/geo.json";
 import { formatMetricVal } from "../metric-format";
-import { createMapFeatures, type MapTopology } from "./paths";
+import { createMapFeatures, lensOffset, lensScale, type MapTopology, mapSize } from "./paths";
 
 const features = createMapFeatures(geo as MapTopology);
-const initialZoom = zoomIdentity.translate(400, 250).scale(1.25).translate(-400, -250);
+const initialZoom = zoomIdentity
+	.translate(mapSize.width / 2, mapSize.height / 2)
+	.scale(1.25)
+	.translate(-mapSize.width / 2, -mapSize.height / 2);
 
 type Location = {
 	name: string;
@@ -34,7 +37,36 @@ const getCountries = (data: DimensionTableRow[]) => {
 
 export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTableRow[] }) => {
 	const svgRef = useRef<SVGSVGElement | null>(null);
-	const containerRef = useRef<HTMLDivElement | null>(null);
+	const countriesRef = useRef<SVGGElement | null>(null);
+	const displacementRef = useRef<SVGFEDisplacementMapElement | null>(null);
+	const displacementScale = useRef(lensScale);
+	const panning = useRef(false);
+	const lensId = useId();
+	const [lensTexture, setLensTexture] = useState<string>();
+
+	useEffect(() => {
+		const canvas = document.createElement("canvas");
+		canvas.width = 64;
+		canvas.height = 40;
+		const context = canvas.getContext("2d");
+		if (!context) return;
+
+		const image = context.createImageData(canvas.width, canvas.height);
+		for (let y = 0; y < canvas.height; y++) {
+			for (let x = 0; x < canvas.width; x++) {
+				const offset = lensOffset(
+					((x + 0.5) * mapSize.width) / canvas.width,
+					((y + 0.5) * mapSize.height) / canvas.height,
+				);
+				const index = (y * canvas.width + x) * 4;
+				image.data[index] = (0.5 + offset.x) * 255;
+				image.data[index + 1] = (0.5 + offset.y) * 255;
+				image.data[index + 3] = 255;
+			}
+		}
+		context.putImageData(image, 0, 0);
+		setLensTexture(canvas.toDataURL());
+	}, []);
 
 	const [moved, setMoved] = useState(false);
 	const movedRef = useRef(false);
@@ -53,55 +85,92 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 	const zoomBehavior = useRef<ZoomBehavior<SVGSVGElement, unknown>>(null);
 	useEffect(() => {
 		const svgElement = svgRef.current;
-		if (!svgElement) return;
+		const countriesLayer = countriesRef.current;
+		if (!svgElement || !countriesLayer) return;
 
+		let frame = 0;
 		const behavior = d3Zoom<SVGSVGElement, unknown>()
 			.scaleExtent([0.8, 8])
-			.on("zoom", (event) => {
-				select(svgElement).select("g").attr("transform", event.transform);
+			.on("start", ({ sourceEvent }: D3ZoomEvent<SVGSVGElement, unknown>) => {
+				if (sourceEvent?.type !== "mousedown" && sourceEvent?.type !== "touchstart") return;
+				panning.current = true;
+				setCurrentLocation(null);
+			})
+			.on("zoom", ({ transform }: D3ZoomEvent<SVGSVGElement, unknown>) => {
+				cancelAnimationFrame(frame);
+				frame = requestAnimationFrame(() => {
+					countriesLayer.setAttribute("transform", transform.toString());
+					const scale = lensScale * Math.max(1, initialZoom.k / transform.k);
+					if (scale !== displacementScale.current) {
+						displacementScale.current = scale;
+						displacementRef.current?.setAttribute("scale", String(scale));
+					}
+				});
 				const hasMoved =
-					event.transform.k !== initialZoom.k ||
-					event.transform.x !== initialZoom.x ||
-					event.transform.y !== initialZoom.y;
+					transform.k !== initialZoom.k || transform.x !== initialZoom.x || transform.y !== initialZoom.y;
 				if (movedRef.current !== hasMoved) {
 					movedRef.current = hasMoved;
 					setMoved(hasMoved);
 				}
+			})
+			.on("end", () => {
+				panning.current = false;
 			});
 		zoomBehavior.current = behavior;
 		select(svgElement).call(behavior).call(behavior.transform, initialZoom);
 
 		return () => {
+			cancelAnimationFrame(frame);
 			select(svgElement).on(".zoom", null);
-			behavior.on("zoom", null);
+			behavior.on("start zoom end", null);
+			panning.current = false;
 			zoomBehavior.current = null;
 		};
 	}, []);
 
-	const updateTooltipPosition = useCallback(
-		(event: MouseEvent<SVGPathElement>) => {
-			refs.setPositionReference({
-				getBoundingClientRect: () => new DOMRect(event.clientX, event.clientY, 0, 0),
-			});
-			update();
-		},
-		[refs, update],
-	);
+	const moveTooltip = (event: MouseEvent<SVGSVGElement>) => {
+		if (panning.current) return;
+		const { clientX, clientY, currentTarget: svg } = event;
+		let point = new DOMPoint(clientX, clientY);
+		const matrix = lensTexture && svg.getScreenCTM();
+		if (matrix) {
+			// SVG filters leave hit targets unchanged. Sample the same source position as the lens.
+			const local = point.matrixTransform(matrix.inverse());
+			if (local.x < 0 || local.x > mapSize.width || local.y < 0 || local.y > mapSize.height) {
+				setCurrentLocation(null);
+				return;
+			}
+			const offset = lensOffset(local.x, local.y);
+			point = new DOMPoint(
+				local.x + displacementScale.current * offset.x,
+				local.y + displacementScale.current * offset.y,
+			).matrixTransform(matrix);
+		}
+		const path = document.elementFromPoint(point.x, point.y)?.closest<SVGPathElement>("[data-map-country]");
+		const location = path && svg.contains(path) ? features[Number(path.dataset.mapCountry)] : null;
+		setCurrentLocation(location);
+		if (!location) return;
+		refs.setPositionReference({ getBoundingClientRect: () => new DOMRect(clientX, clientY, 0, 0) });
+		update();
+	};
 
 	const landmasses = useMemo(
 		() =>
-			features.map((feature, index) => (
-				<Landmass
-					key={index}
-					feature={feature}
-					countries={countries}
-					biggest={biggest}
-					onSetLocation={setCurrentLocation}
-					onTooltipMove={updateTooltipPosition}
-					metric={metric}
-				/>
-			)),
-		[countries, biggest, metric, updateTooltipPosition],
+			features.map((feature, index) => {
+				const value = countries.get(feature.iso);
+				return (
+					<path
+						key={index}
+						d={feature.path}
+						className={styles.geo}
+						data-map-country={index}
+						data-inverted={metric === "bounce_rate"}
+						data-ignored={value == null}
+						style={{ "--percent": biggest > 0 ? (value ?? 0) / biggest : 0 } as CSSProperties}
+					/>
+				);
+			}),
+		[countries, biggest, metric],
 	);
 
 	const resetZoom = () => {
@@ -121,14 +190,37 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 	);
 
 	return (
-		<div ref={containerRef} className={styles.worldmap}>
+		<div className={styles.worldmap}>
 			<button type="button" className={cls(styles.reset, moved && styles.moved)} onClick={resetZoom}>
 				<RotateCcwIcon size={18} />
 			</button>
 
-			<svg ref={svgRef} style={{ display: "block" }} viewBox={"0 0 800 500"}>
+			<svg
+				ref={svgRef}
+				viewBox={`0 0 ${mapSize.width} ${mapSize.height}`}
+				preserveAspectRatio="xMidYMid slice"
+				onMouseMove={moveTooltip}
+				onMouseLeave={() => setCurrentLocation(null)}
+			>
 				<title>World map</title>
-				<g>{landmasses}</g>
+				<defs>
+					<filter id={lensId} x={0} y={0} {...mapSize} filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+						<feImage href={lensTexture} {...mapSize} preserveAspectRatio="none" result="lens" />
+						<feDisplacementMap
+							ref={displacementRef}
+							in="SourceGraphic"
+							in2="lens"
+							scale={lensScale}
+							xChannelSelector="R"
+							yChannelSelector="G"
+						/>
+					</filter>
+				</defs>
+				<g filter={lensTexture ? `url(#${lensId})` : undefined}>
+					<g ref={countriesRef} transform={initialZoom.toString()}>
+						{landmasses}
+					</g>
+				</g>
 			</svg>
 
 			{currentLocation && (
@@ -144,42 +236,5 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 				</FloatingPortal>
 			)}
 		</div>
-	);
-};
-
-const Landmass = ({
-	feature,
-	countries,
-	biggest,
-	onSetLocation,
-	onTooltipMove,
-	metric,
-}: {
-	feature: (typeof features)[number];
-	countries: Map<string, number | null>;
-	biggest: number;
-	onSetLocation: (location: Location | null) => void;
-	onTooltipMove: (event: MouseEvent<SVGPathElement>) => void;
-	metric: Metric;
-}) => {
-	const percent = useMemo(
-		() => (biggest > 0 ? (countries.get(feature.iso) ?? 0) / biggest : 0),
-		[countries, feature.iso, biggest],
-	);
-
-	return (
-		<path
-			d={feature.path || ""}
-			className={styles.geo}
-			data-inverted={metric === "bounce_rate"}
-			data-ignored={countries.get(feature.iso) == null}
-			style={{ "--percent": percent } as CSSProperties}
-			onMouseEnter={(event) => {
-				onTooltipMove(event);
-				onSetLocation({ name: feature.name, iso: feature.iso });
-			}}
-			onMouseMove={onTooltipMove}
-			onMouseLeave={() => onSetLocation(null)}
-		/>
 	);
 };

@@ -376,7 +376,6 @@ export const useProjectStats = ({
 		isError,
 		isLoading,
 		isFetching,
-		isPlaceholderData,
 	} = useQuery({
 		queryKey: ["project_stats", projectId, range.cacheKey(), comparisonRange?.cacheKey(), filters, eventName],
 		refetchInterval: range.endsToday() || comparisonRange?.endsToday() ? 60_000 : undefined,
@@ -406,7 +405,7 @@ export const useProjectStats = ({
 	return {
 		stats,
 		isLoading,
-		isUpdating: isFetching && isPlaceholderData,
+		isUpdating: isFetching && stats !== undefined,
 		isError,
 	};
 };

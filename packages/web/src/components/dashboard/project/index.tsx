@@ -3,8 +3,7 @@ import styles from "./index.module.css";
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
-import type { DateRange } from "@/api/ranges";
-import { LoadingSpinner } from "@/components/ui/loading";
+import { DateRange } from "@/api/ranges";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
 import { dimensions, eventMetricName, metrics } from "@/constants";
 import { useDimension, useProject, useProjectGraph, useProjectStats } from "@/hooks/api";
@@ -29,6 +28,38 @@ export type ProjectQuery = {
 	eventName: string;
 	comparisonRange?: ComparisonRange;
 };
+
+/** Reserve the dashboard layout before the project loads. */
+export const ProjectLoading = ({
+	range = new DateRange("last30Days"),
+	metric = "views",
+}: {
+	range?: DateRange;
+	metric?: Metric;
+}) => (
+	<div className={styles.project} role="status" aria-label="Loading project">
+		<div className={styles.projectReport} inert>
+			<div className={styles.projectHeader}>
+				<span className={styles.loadingTitle} />
+				<SelectRange range={range} onSelect={() => {}} disabled />
+			</div>
+			<SelectMetrics className={styles.projectStats} metric={metric} setMetric={() => {}} isLoading />
+			<div className={styles.loadingFilters}>
+				<SelectFilters value={[]} onChange={() => {}} />
+			</div>
+			<div className={styles.graphCard} />
+		</div>
+		<div className={styles.tables} aria-hidden="true">
+			{[0, 1].map((slot) => (
+				<article key={slot} className={cardStyles.card}>
+					<div className={cardStyles.dimensionHeader}>&nbsp;</div>
+					<div className={cardStyles.dimensionTable} />
+					<div className={cardStyles.showMore}>&nbsp;</div>
+				</article>
+			))}
+		</div>
+	</div>
+);
 
 export const getDimensionFilter = (dimension: Dimension, value: string, propertyKey?: string): DimensionFilter => {
 	if (dimension === "property") return { dimension, key: propertyKey, filterType: "equal", value };
@@ -127,6 +158,12 @@ export const Project = () => {
 		enabled: Boolean(activeMetric),
 		comparisonRange,
 	});
+	const projectName = project?.displayName;
+	const currentVisitors = stats?.currentVisitors ?? 0;
+	useEffect(() => {
+		if (!projectName) return;
+		document.title = currentVisitors > 1 ? `${projectName} (${currentVisitors})` : projectName;
+	}, [projectName, currentVisitors]);
 
 	const query = useMemo<ProjectQuery>(
 		() => ({
@@ -181,12 +218,7 @@ export const Project = () => {
 		return <div className={styles.notFound}>Project not found</div>;
 	}
 
-	if (!project)
-		return (
-			<div className={styles.loading} role="status" aria-label="Loading project">
-				<LoadingSpinner />
-			</div>
-		);
+	if (!project) return <ProjectLoading range={range} metric={metric} />;
 	const visibleDimensions = (items: Dimension[]) =>
 		items.filter(
 			(dimension) =>
@@ -210,7 +242,7 @@ export const Project = () => {
 		<div className={styles.project}>
 			<div className={styles.projectReport}>
 				<div className={styles.projectHeader}>
-					<ProjectHeader project={project} stats={stats} />
+					<ProjectHeader project={project} stats={stats} isUpdating={statsUpdating} />
 					<SelectRange
 						onSelect={setRange}
 						range={range}

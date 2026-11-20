@@ -50,6 +50,7 @@
   --chart-grid: light-dark(var(--border), var(--accent-fill));
   --chart-comparison-line: light-dark(#64748b, rgb(166 206 227 / 35%));
   --report-bar-color: light-dark(#0b1438, #a5d1ff);
+  --stale-stat-opacity: 0.82;
 
   /* form fields */
   --field: light-dark(#fff, #222a37);

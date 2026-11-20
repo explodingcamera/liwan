@@ -7,7 +7,16 @@ import { appPath } from "@/config";
 import type { ProjectResponse, StatsResponse } from "@/constants";
 import { formatMetricVal } from "./metric-format";
 
-export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; project: ProjectResponse }) => {
+export const ProjectHeader = ({
+	project,
+	stats,
+	isUpdating,
+}: {
+	stats?: StatsResponse;
+	project: ProjectResponse;
+	isUpdating: boolean;
+}) => {
+	const count = stats?.currentVisitors;
 	return (
 		<h1 className={styles.statsHeader}>
 			<a href={appPath(`/p/${project.id}`)} className={cardStyles.card}>
@@ -16,19 +25,15 @@ export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; proje
 				) : (
 					project.visibility !== "public" && <LockIcon size={16} />
 				)}
-				{project.displayName}
+				<span title={project.displayName}>{project.displayName}</span>
 			</a>
-			{stats && <LiveVisitorCount count={stats.currentVisitors} />}
+			{count !== undefined && (
+				<span className={styles.online} data-updating={isUpdating}>
+					<CircleIcon fill="var(--success)" color="var(--success)" size={10} />
+					<CircleIcon fill="var(--success)" color="var(--success)" size={10} className={styles.pulse} />
+					{formatMetricVal(count, "unique_visitors")} {count === 1 ? "Current Visitor" : "Current Visitors"}
+				</span>
+			)}
 		</h1>
-	);
-};
-
-export const LiveVisitorCount = ({ count }: { count: number }) => {
-	return (
-		<span className={styles.online}>
-			<CircleIcon fill="#22c55e" color="#22c55e" size={10} />
-			<CircleIcon fill="#22c55e" color="#22c55e" size={10} className={styles.pulse} />
-			{formatMetricVal(count, "unique_visitors")} {count === 1 ? "Current Visitor" : "Current Visitors"}
-		</span>
 	);
 };

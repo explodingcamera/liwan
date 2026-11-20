@@ -1,7 +1,7 @@
 ---
 import type { GetStaticPaths } from "astro";
 
-import { Project } from "@/components/dashboard/project";
+import { Project, ProjectLoading } from "@/components/dashboard/project";
 import Layout from "@/layouts/layout.astro";
 
 export const getStaticPaths = (() => {
@@ -10,7 +10,9 @@ export const getStaticPaths = (() => {
 ---
 
 <Layout title="Project Details">
-  <Project client:only="react" />
+  <Project client:only="react">
+    <ProjectLoading slot="fallback" />
+  </Project>
 </Layout>
 
 <style>

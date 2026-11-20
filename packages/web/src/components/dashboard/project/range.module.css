@@ -5,6 +5,13 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   min-width: 0;
+
+  &[inert] {
+    .selectRange,
+    .mobileRange {
+      color: transparent;
+    }
+  }
 }
 
 .rangeField {

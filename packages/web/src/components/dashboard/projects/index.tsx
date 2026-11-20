@@ -176,7 +176,7 @@ const Project = ({
 		<article className={styles.project}>
 			<div className={styles.projectHeader}>
 				<div className={styles.projectTitle}>
-					<ProjectHeader project={project} stats={stats} />
+					<ProjectHeader project={project} stats={stats} isUpdating={statsUpdating} />
 					<Accordion.Trigger className={styles.AccordionTrigger} aria-label={`Toggle ${project.displayName} details`}>
 						<ChevronDownIcon size={22} strokeWidth={2} color="var(--text-strong)" />
 					</Accordion.Trigger>

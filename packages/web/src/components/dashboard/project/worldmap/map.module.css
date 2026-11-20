@@ -11,6 +11,7 @@ button.reset {
   position: absolute;
   top: 0.7rem;
   left: 0.7rem;
+  z-index: 1;
   pointer-events: none;
   opacity: 0;
 
@@ -24,12 +25,27 @@ button.reset {
 }
 
 .worldmap {
+  position: relative;
   display: flex;
   flex: 1;
   overflow: hidden;
 
   > svg {
+    display: block;
     flex: 1;
+    min-inline-size: 0;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at 45% 38%,
+      transparent 42%,
+      color-mix(in srgb, var(--text-strong) 6%, transparent)
+    );
   }
 }
 
@@ -43,10 +59,6 @@ button.reset {
   outline: none;
 
   fill: hsl(200, calc(0% + 85% * var(--percent) * var(--percent)), calc(45% + 15% * var(--percent)));
-
-  &:hover {
-    opacity: 0.8;
-  }
 
   &[data-inverted="true"] {
     /* same fill, but closer to 100 means worse instead of better */

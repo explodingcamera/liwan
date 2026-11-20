@@ -1,6 +1,7 @@
 import cardStyles from "./card.module.css";
 import styles from "./metric.module.css";
 
+import { useEffect, useRef } from "react";
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 
 import type { Metric, StatsResponse } from "@/constants";
@@ -85,7 +86,7 @@ export const SelectMetrics = ({
 
 export const SelectMetric = ({
 	title,
-	value = 0,
+	value,
 	prevValue,
 	showAbsoluteChange = false,
 	metric,
@@ -100,6 +101,26 @@ export const SelectMetric = ({
 	onSelect: () => void;
 	selected: boolean;
 }) => {
+	const buttonRef = useRef<HTMLButtonElement>(null);
+
+	useEffect(() => {
+		const button = buttonRef.current;
+		if (!button) return;
+
+		const content = Array.from(button.children);
+		const observer = new ResizeObserver(() => {
+			const width = Math.max(...content.map((element) => element.getBoundingClientRect().width));
+			const { paddingLeft, paddingRight, borderLeftWidth, borderRightWidth } = getComputedStyle(button);
+			const inset = [paddingLeft, paddingRight, borderLeftWidth, borderRightWidth].reduce(
+				(total, size) => total + Number.parseFloat(size),
+				0,
+			);
+			button.style.setProperty("--metric-width", `${Math.ceil(width + inset)}px`);
+		});
+		for (const element of content) observer.observe(element);
+		return () => observer.disconnect();
+	}, []);
+
 	const unavailable = value == null;
 	const currentValue = value ?? 0;
 	const previousValue = prevValue ?? 0;
@@ -116,6 +137,7 @@ export const SelectMetric = ({
 
 	return (
 		<button
+			ref={buttonRef}
 			type="button"
 			className={cls(styles.metric, cardStyles.card)}
 			onClick={onSelect}
@@ -124,9 +146,7 @@ export const SelectMetric = ({
 		>
 			<h2>{title}</h2>
 			<h3>
-				<span className={styles.currentValue}>
-					{unavailable ? "Unavailable" : formatMetricVal(currentValue, metric)}
-				</span>
+				<span className={styles.currentValue}>{value === null ? "Unavailable" : formatMetricVal(value, metric)}</span>
 				{!unavailable && prevValue != null && formattedChange !== null && (
 					<span className={styles.change} data-improved={improved}>
 						{TrendIcon && <TrendIcon size={14} aria-hidden="true" />}

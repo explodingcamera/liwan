@@ -22,16 +22,19 @@ export const SelectRange = ({
 	projectId,
 	comparison,
 	onCompare,
+	disabled = false,
 }: {
 	onSelect: (range: DateRange) => void;
 	range: DateRange;
 	projectId?: string;
 	comparison?: Comparison;
 	onCompare?: (comparison: Comparison) => void;
+	disabled?: boolean;
 }) => {
 	const [customOpen, setCustomOpen] = useState(false);
 
 	useEffect(() => {
+		if (disabled) return;
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (
 				event.defaultPrevented ||
@@ -59,7 +62,7 @@ export const SelectRange = ({
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [onSelect, range]);
+	}, [disabled, onSelect, range]);
 
 	const allTime = useQuery({
 		queryKey: ["allTime", projectId],
@@ -92,7 +95,7 @@ export const SelectRange = ({
 	const isComparing = canCompare && comparison !== undefined && comparison.mode !== "off";
 
 	return (
-		<div className={styles.container}>
+		<div className={styles.container} inert={disabled}>
 			<button
 				type="button"
 				className={cls("button-ghost", styles.stepButton)}

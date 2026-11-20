@@ -21,6 +21,10 @@
     align-items: center;
     font-size: var(--font-size-sm);
     font-weight: 500;
+
+    &[data-updating="true"] {
+      opacity: var(--stale-stat-opacity);
+    }
   }
 }
 

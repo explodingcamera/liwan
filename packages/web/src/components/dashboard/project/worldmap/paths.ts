@@ -4,6 +4,19 @@ export type MapTopology = Topology<{
 	geo: GeometryCollection<{ name: string; iso: string }>;
 }> & { transform: Transform };
 
+/** The SVG coordinate space for the projected map. */
+export const mapSize = { width: 800, height: 500 };
+
+export const lensScale = 48;
+
+/** Sample the map slightly inward near the edges to magnify the rim. */
+export const lensOffset = (x: number, y: number) => {
+	const dx = (2 * x) / mapSize.width - 1;
+	const dy = (2 * y) / mapSize.height - 1;
+	const strength = -0.235 * (dx * dx + dy * dy);
+	return { x: dx * strength, y: dy * strength };
+};
+
 export const createMapFeatures = (geo: MapTopology) => {
 	const { scale, translate } = geo.transform;
 	const arcs = geo.arcs.map((arc) => {

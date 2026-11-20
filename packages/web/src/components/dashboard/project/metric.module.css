@@ -5,10 +5,10 @@
   gap: 0.7rem;
 
   &[data-loading="true"] button.metric :is(h2, h3) {
-    opacity: 0.82;
+    opacity: var(--stale-stat-opacity);
   }
 
-  &.empty button.metric h3 {
+  &.empty:not([data-loading="true"]) button.metric h3 {
     visibility: hidden;
   }
 
@@ -79,5 +79,26 @@ button.metric {
 @media (max-width: 820px) {
   button.metric h3 {
     flex-wrap: wrap;
+  }
+}
+
+@media (width > 820px) {
+  button.metric {
+    min-width: 8rem;
+    inline-size: var(--metric-width, auto);
+    overflow: hidden;
+    transition:
+      background-color 0.2s ease,
+      inline-size 0.18s ease-out;
+
+    > :is(h2, h3) {
+      inline-size: max-content;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.metric {
+    transition: none;
   }
 }

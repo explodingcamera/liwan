@@ -108,11 +108,7 @@ export const CustomEventsCard = ({
 	return (
 		<article className={cardStyles.card}>
 			<EventsHeader />
-			<div
-				className={cardStyles.dimensionTable}
-				style={{ "--count": 6 } as React.CSSProperties}
-				aria-busy={events.isLoading}
-			>
+			<div className={cardStyles.dimensionTable} aria-busy={events.isLoading}>
 				{events.isLoading && (
 					<div className={cardStyles.loadingOverlay} data-no-delay={!events.data}>
 						<LoadingSpinner immediate />

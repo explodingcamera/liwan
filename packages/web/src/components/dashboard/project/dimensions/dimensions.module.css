@@ -151,7 +151,7 @@
   /* whole pixels keep the gaps between bars identical */
   --row-height: round(2.1rem, 1px);
   --row-gap: round(0.2rem, 1px);
-  min-height: calc(var(--count) * (var(--row-height) + var(--row-gap)));
+  min-height: calc(var(--count, 6) * (var(--row-height) + var(--row-gap)));
   position: relative;
 
   .loadingOverlay {

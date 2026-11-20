@@ -157,7 +157,7 @@ export const DimensionTable = (props: DimensionProps) => {
 
 	return (
 		<>
-			<div className={styles.dimensionTable} style={{ "--count": 6 } as React.CSSProperties} aria-busy={isLoading}>
+			<div className={styles.dimensionTable} aria-busy={isLoading}>
 				{isLoading && (
 					<div className={styles.loadingOverlay} data-no-delay={!data}>
 						<LoadingSpinner immediate />
