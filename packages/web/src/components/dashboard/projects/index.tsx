@@ -51,7 +51,7 @@ export const Projects = () => {
 	});
 
 	const { metric, setMetric } = useMetric();
-	const { range, setRange, interval } = useRange();
+	const { range, setRange, interval, selectGraphRange, undoGraphRange } = useRange();
 	const [hiddenProjects, setHiddenProjects] = useState<string[]>([]);
 	const visibleMetrics = metrics.filter((metric) =>
 		data?.projects.some((project) => !project.hiddenMetrics.includes(metric)),
@@ -116,6 +116,8 @@ export const Projects = () => {
 								setMetric={setMetric}
 								range={range}
 								interval={interval}
+								onSelectRange={selectGraphRange}
+								onUndoRange={undoGraphRange}
 							/>
 						</Accordion.Item>
 					))}
@@ -131,12 +133,16 @@ const Project = ({
 	setMetric,
 	range,
 	interval,
+	onSelectRange,
+	onUndoRange,
 }: {
 	project: ProjectResponse;
 	metric: Metric;
 	setMetric: (value: Metric) => void;
 	range: DateRange;
 	interval: GraphInterval | "auto";
+	onSelectRange: (range: DateRange) => void;
+	onUndoRange: () => void;
 }) => {
 	const visibleMetrics = metrics.filter((metric) => !project.hiddenMetrics.includes(metric));
 	const reportMetric = visibleMetrics.includes(metric) ? metric : visibleMetrics[0];
@@ -147,6 +153,7 @@ const Project = ({
 		displayInterval,
 		isLoading: graphLoading,
 		isUpdating: graphUpdating,
+		isError: graphError,
 	} = useProjectGraph({
 		projectId: project.id,
 		metric: reportMetric ?? "views",
@@ -191,8 +198,11 @@ const Project = ({
 							metric={displayMetric}
 							isLoading={graphLoading}
 							isUpdating={graphUpdating}
+							hasError={graphError}
 							range={displayRange}
 							interval={displayInterval}
+							onSelectRange={onSelectRange}
+							onUndoRange={onUndoRange}
 						/>
 					</div>
 				</Accordion.Panel>

@@ -1,9 +1,39 @@
 import { describe, expect, test } from "bun:test";
 
 import { DateRange } from "@/api/ranges";
-import { getGraphRenderData, getSelectedGraphRange } from "./render-data";
+import { alignComparisonData, getGraphRenderData, getSelectedGraphRange } from "./render-data";
 
 const point = (hour: number) => ({ x: new Date(2026, 8, 27, hour), y: hour });
+
+test("pairs comparison buckets from the start of each period", () => {
+	const current = [point(10), point(11)];
+	const previous = [point(1), point(2), point(3)];
+	expect(alignComparisonData(current, previous)).toEqual([
+		{ ...previous[0], x: current[0].x, date: previous[0].x },
+		{ ...previous[1], x: current[1].x, date: previous[1].x },
+	]);
+	expect(alignComparisonData([], previous)).toEqual([]);
+	expect(alignComparisonData(current)).toEqual([]);
+});
+
+test("leaves gaps after a shorter comparison", () => {
+	const current = Array.from({ length: 31 }, (_, index) => ({ x: new Date(2025, 2, index + 1), y: index + 1 }));
+	const previous = Array.from({ length: 28 }, (_, index) => ({ x: new Date(2025, 1, index + 1), y: index + 1 }));
+	const aligned = alignComparisonData(current, previous);
+	expect(aligned.map((point) => point.x)).toEqual(current.map((point) => point.x));
+	expect(aligned[27]).toEqual({ x: current[27].x, y: 28, date: previous[27].x });
+	expect(aligned.slice(28).map((point) => point.y)).toEqual([null, null, null]);
+});
+
+test("shows the rest of a full comparison after the current series ends", () => {
+	const current = [point(10), point(11)];
+	const previous = [point(1), point(2), point(3)];
+	expect(alignComparisonData(current, previous, "hour").at(-1)).toEqual({
+		x: point(12).x,
+		y: 3,
+		date: previous[2].x,
+	});
+});
 
 describe("graph line styles", () => {
 	test("dots the current and future buckets", () => {

@@ -11,6 +11,8 @@ import {
 	endOfMonth,
 	endOfWeek,
 	endOfYear,
+	getISOWeek,
+	getISOWeekYear,
 	isAfter,
 	isEqual,
 	isSameDay,
@@ -31,21 +33,23 @@ import { formatDateRange } from "@/utils";
 
 type DateRangeValue = { start: Date; end: Date };
 const WEEK_STARTS_ON = { weekStartsOn: 1 as const };
+const isFullWeek = (start: Date, end: Date) =>
+	isEqual(startOfWeek(start, WEEK_STARTS_ON), start) && isEqual(endOfWeek(start, WEEK_STARTS_ON), end);
 
 export class DateRange {
-	#value: RangeName | { start: Date; end: Date };
-	variant?: string;
+	#value: RangeName | DateRangeValue;
+	variant?: RangeName | "allTime";
 
-	constructor(value: RangeName | { start: Date; end: Date }) {
+	constructor(value: RangeName | DateRangeValue) {
 		this.#value = value;
 		if (typeof value === "string") this.variant = value;
 	}
 
 	get value(): DateRangeValue {
 		if (typeof this.#value === "string") {
-			return ranges[this.#value as RangeName]().range;
+			return ranges[this.#value]().range;
 		}
-		return this.#value as DateRangeValue;
+		return this.#value;
 	}
 
 	isCustom(): boolean {
@@ -55,7 +59,13 @@ export class DateRange {
 	format(): string {
 		if (this.variant === "allTime") return "All Time";
 		if (typeof this.#value === "string") return wellKnownRanges[this.#value];
-		return formatDateRange(this.#value.start, this.#value.end);
+		const { start, end } = this.#value;
+		if (isFullWeek(start, end)) {
+			const week = `Week ${getISOWeek(start)}`;
+			const year = getISOWeekYear(start);
+			return year === getISOWeekYear(new Date()) ? week : `${week}, ${year}`;
+		}
+		return formatDateRange(start, end);
 	}
 
 	cacheKey(): string {
@@ -65,19 +75,22 @@ export class DateRange {
 
 	serialize(): string {
 		if (typeof this.#value === "string") return this.#value;
-		return `${Number(this.#value.start)}:${Number(this.#value.end)}:${this.variant}`;
+		return `${Number(this.#value.start)}:${Number(this.#value.end)}:${this.variant ?? ""}`;
 	}
 
 	static deserialize(range: string): DateRange {
 		if (!range.includes(":")) {
-			return new DateRange(range as RangeName);
+			if (!isRangeName(range)) throw new Error("Invalid date range preset");
+			return new DateRange(range);
 		}
 		const [start, end, variant] = range.split(":");
-		const dr = new DateRange({
-			start: new Date(Number(start)),
-			end: new Date(Number(end)),
-		});
-		if (variant) {
+		const from = new Date(Number(start));
+		const through = new Date(Number(end));
+		if (!start || !end || Number.isNaN(+from) || Number.isNaN(+through) || from > through) {
+			throw new Error("Invalid date range");
+		}
+		const dr = new DateRange({ start: from, end: through });
+		if (variant === "allTime" || (variant && isRangeName(variant))) {
 			dr.variant = variant;
 		}
 		return dr;
@@ -174,24 +187,26 @@ export class DateRange {
 
 	#shift(direction: -1 | 1): DateRange {
 		const { start, end } = this.value;
+		if (this.#value === "weekToDate" || isFullWeek(start, end)) {
+			const shifted = addWeeks(start, direction);
+			if (direction === 1 && isSameWeek(shifted, new Date(), WEEK_STARTS_ON)) return new DateRange("weekToDate");
+			return new DateRange({ start: shifted, end: endOfWeek(shifted, WEEK_STARTS_ON) });
+		}
 		if (
-			isEqual(startOfWeek(start, WEEK_STARTS_ON), start) &&
-			isEqual(endOfWeek(end, WEEK_STARTS_ON), end) &&
-			isSameWeek(start, end, WEEK_STARTS_ON)
+			this.#value === "monthToDate" ||
+			(isEqual(startOfMonth(start), start) && isEqual(endOfMonth(end), end) && isSameMonth(start, end))
 		) {
-			return new DateRange({ start: addWeeks(start, direction), end: addWeeks(end, direction) });
+			const shifted = addMonths(start, direction);
+			if (direction === 1 && isSameMonth(shifted, new Date())) return new DateRange("monthToDate");
+			return new DateRange({ start: shifted, end: endOfMonth(shifted) });
 		}
-		if (isEqual(startOfMonth(start), start) && isEqual(endOfMonth(end), end) && isSameMonth(start, end)) {
-			return new DateRange({
-				start: startOfMonth(addMonths(start, direction)),
-				end: endOfMonth(addMonths(end, direction)),
-			});
-		}
-		if (isEqual(startOfYear(start), start) && isEqual(endOfYear(end), end) && isSameYear(start, end)) {
-			return new DateRange({
-				start: startOfYear(addYears(start, direction)),
-				end: endOfYear(addYears(end, direction)),
-			});
+		if (
+			this.#value === "yearToDate" ||
+			(isEqual(startOfYear(start), start) && isEqual(endOfYear(end), end) && isSameYear(start, end))
+		) {
+			const shifted = addYears(start, direction);
+			if (direction === 1 && isSameYear(shifted, new Date())) return new DateRange("yearToDate");
+			return new DateRange({ start: shifted, end: endOfYear(shifted) });
 		}
 		if (this.#isRollingYearRange()) {
 			return new DateRange({ start: addYears(start, direction), end: addYears(end, direction) });
@@ -216,14 +231,17 @@ export class DateRange {
 export const wellKnownRanges = {
 	today: "Today",
 	yesterday: "Yesterday",
-	last7Days: "Last 7 Days",
-	last30Days: "Last 30 Days",
-	last12Months: "Last 12 Months",
 	weekToDate: "Week to Date",
 	monthToDate: "Month to Date",
 	yearToDate: "Year to Date",
+	last7Days: "Last 7 Days",
+	last30Days: "Last 30 Days",
+	last12Months: "Last 12 Months",
 };
 export type RangeName = keyof typeof wellKnownRanges;
+
+/** Check whether a string names a date range preset. */
+export const isRangeName = (value: string): value is RangeName => Object.hasOwn(wellKnownRanges, value);
 
 const lastXDays = (days: number) => {
 	const end = endOfDay(new Date());

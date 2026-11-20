@@ -1,7 +1,7 @@
 import cardStyles from "./dimensions/dimensions.module.css";
 import styles from "./index.module.css";
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import type { DateRange } from "@/api/ranges";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -10,6 +10,7 @@ import { dimensions, eventMetricName, metrics } from "@/constants";
 import { useDimension, useProject, useProjectGraph, useProjectStats } from "@/hooks/api";
 import { useMetric, useRange } from "@/hooks/persist";
 import { cls } from "@/utils";
+import { type Comparison, type ComparisonRange, getComparisonRange } from "./comparison";
 import { CustomEventsCard } from "./custom-events";
 import { DimensionDropdownCard, DimensionTabs, DimensionTabsCard, PageDimensionTabsCard } from "./dimensions";
 import { SelectFilters } from "./filter";
@@ -26,6 +27,7 @@ export type ProjectQuery = {
 	range: DateRange;
 	filters: DimensionFilter[];
 	eventName: string;
+	comparisonRange?: ComparisonRange;
 };
 
 export const getDimensionFilter = (dimension: Dimension, value: string, propertyKey?: string): DimensionFilter => {
@@ -67,37 +69,9 @@ export const Project = () => {
 	const [eventName, setEventName] = useState("pageview");
 
 	const { metric, setMetric } = useMetric();
-	const { range, setRange, interval: graphInterval, setInterval: setGraphInterval } = useRange();
-	const previousGraphRange = useRef<{ before: DateRange; after: DateRange; interval: typeof graphInterval } | null>(
-		null,
-	);
-	const selectRange = useCallback(
-		(selected: DateRange) => {
-			previousGraphRange.current = null;
-			setRange(selected);
-		},
-		[setRange],
-	);
-	const selectGraphRange = useCallback(
-		(selected: DateRange) => {
-			const origin =
-				previousGraphRange.current?.after.serialize() === range.serialize() ? previousGraphRange.current : null;
-			previousGraphRange.current = {
-				before: origin?.before ?? range,
-				after: selected,
-				interval: origin?.interval ?? graphInterval,
-			};
-			setRange(selected);
-			setGraphInterval("auto");
-		},
-		[range, graphInterval, setRange, setGraphInterval],
-	);
-	const undoGraphRange = useCallback(() => {
-		if (previousGraphRange.current?.after.serialize() !== range.serialize()) return;
-		setRange(previousGraphRange.current.before);
-		setGraphInterval(previousGraphRange.current.interval);
-		previousGraphRange.current = null;
-	}, [range, setRange, setGraphInterval]);
+	const { range, setRange, interval, setInterval, selectGraphRange, undoGraphRange } = useRange();
+	const [comparison, setComparison] = useState<Comparison>({ mode: "off" });
+	const comparisonRange = getComparisonRange(range, comparison);
 
 	const { project, notFound } = useProject(projectId);
 	const visibleMetrics: Metric[] = useMemo(
@@ -122,11 +96,15 @@ export const Project = () => {
 	);
 	const {
 		graph,
+		availableIntervals,
+		comparisonGraph,
+		displayComparisonRange,
 		displayMetric,
 		displayRange,
 		displayInterval,
 		isUpdating: graphUpdating,
 		isLoading: graphLoading,
+		isError: graphError,
 	} = useProjectGraph({
 		projectId,
 		metric: reportMetric,
@@ -134,7 +112,8 @@ export const Project = () => {
 		filters: visibleFilters,
 		eventName,
 		enabled: Boolean(activeMetric),
-		interval: graphInterval,
+		interval,
+		comparisonRange,
 	});
 	const {
 		stats,
@@ -146,6 +125,7 @@ export const Project = () => {
 		filters: visibleFilters,
 		eventName,
 		enabled: Boolean(activeMetric),
+		comparisonRange,
 	});
 
 	const query = useMemo<ProjectQuery>(
@@ -156,8 +136,9 @@ export const Project = () => {
 			range,
 			filters: visibleFilters,
 			eventName,
+			comparisonRange,
 		}),
-		[project, reportMetric, range, visibleFilters, eventName],
+		[project, reportMetric, range, visibleFilters, eventName, comparisonRange],
 	);
 
 	useEffect(() => {
@@ -230,7 +211,13 @@ export const Project = () => {
 			<div className={styles.projectReport}>
 				<div className={styles.projectHeader}>
 					<ProjectHeader project={project} stats={stats} />
-					<SelectRange onSelect={selectRange} range={range} projectId={project.id} />
+					<SelectRange
+						onSelect={setRange}
+						range={range}
+						projectId={project.id}
+						comparison={comparison}
+						onCompare={setComparison}
+					/>
 				</div>
 				<SelectMetrics
 					className={styles.projectStats}
@@ -240,6 +227,7 @@ export const Project = () => {
 					setMetric={setMetric}
 					isLoading={statsLoading || statsUpdating}
 					eventName={eventName}
+					showAbsoluteChange={comparisonRange !== undefined}
 				/>
 				<SelectFilters
 					eventName={eventName}
@@ -256,17 +244,20 @@ export const Project = () => {
 					{activeMetric ? (
 						<LineGraph
 							data={graph}
+							comparisonData={comparisonGraph}
+							comparisonRange={displayComparisonRange}
 							title={eventMetricName(displayMetric, eventName)}
 							metric={displayMetric}
 							range={displayRange}
 							interval={displayInterval}
-							selectedInterval={graphInterval}
-							onSelectInterval={setGraphInterval}
-							onSelectRange={graphLoading || graphUpdating ? undefined : selectGraphRange}
+							selectedInterval={interval}
+							onSelectInterval={setInterval}
+							onSelectRange={selectGraphRange}
 							onUndoRange={undoGraphRange}
-							availableIntervals={range.getGraphIntervals()}
+							availableIntervals={availableIntervals}
 							isLoading={graphLoading}
 							isUpdating={graphUpdating}
+							hasError={graphError}
 						/>
 					) : (
 						<div className={styles.emptyReport}>No metrics are visible for this project.</div>

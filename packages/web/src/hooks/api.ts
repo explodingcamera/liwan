@@ -4,14 +4,14 @@ import { api } from "@/api/client";
 import { queryClient, useQuery } from "@/api/query";
 import type { DateRange } from "@/api/ranges";
 import { createToast } from "@/components/ui/toast";
-import type {
-	Dimension,
-	DimensionFilter,
-	DimensionTableRow,
-	GraphInterval,
-	Metric,
-	ProjectResponse,
-} from "@/constants";
+import type { Dimension, DimensionFilter, GraphInterval, Metric, ProjectResponse } from "@/constants";
+import {
+	type ComparisonRange,
+	type ComparisonRow,
+	getReportRanges,
+	getStatsReportRanges,
+	mergeComparisonRows,
+} from "../components/dashboard/project/comparison";
 import { toDataPoints } from "../components/dashboard/project/graph";
 
 const numericCollator = new Intl.Collator(undefined, { numeric: true });
@@ -71,29 +71,57 @@ export const useCustomEvents = ({
 	range,
 	filters,
 	enabled = true,
+	comparisonRange,
 }: {
 	projectId?: string;
 	range: DateRange;
 	filters: DimensionFilter[];
 	enabled?: boolean;
+	comparisonRange?: ComparisonRange;
 }) => {
-	const { data, isFetching, error } = useQuery({
-		queryKey: ["custom_events", projectId, range.cacheKey(), filters],
+	const { data, isFetching, isLoading, isPlaceholderData, error } = useQuery({
+		queryKey: ["custom_events", projectId, range.cacheKey(), comparisonRange?.cacheKey(), filters],
 		enabled: projectId !== undefined && enabled,
-		refetchInterval: range.endsToday() ? 60_000 : undefined,
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/custom-events"]
+		refetchInterval: range.endsToday() || comparisonRange?.endsToday() ? 60_000 : undefined,
+		placeholderData: (prev, previousQuery) => {
+			if (!prev || previousQuery?.queryKey[1] !== projectId) return undefined;
+			if (!comparisonRange && previousQuery?.queryKey[3] !== undefined) {
+				return {
+					...prev,
+					rows: prev.rows.map((row) => ({ ...row, comparisonCompletions: undefined, comparisonUniques: undefined })),
+				};
+			}
+			return prev;
+		},
+		queryFn: async () => {
+			const result = await api["/api/dashboard/project/{project_id}/custom-events"]
 				.post({
 					params: { project_id: projectId ?? "" },
-					json: { ranges: [range.toAPI()], filters },
+					json: { ranges: getReportRanges(range, comparisonRange), filters },
 				})
-				.json()
-				.then((result) => {
-					if (typeof result === "string") throw new Error(result);
-					return result.reports[0];
-				}),
+				.json();
+			if (typeof result === "string") throw new Error(result);
+			const [current, previous] = result.reports;
+			const previousRows = new Map(previous?.rows.map((row) => [row.name, row]));
+			return {
+				...current,
+				truncated: current.truncated || previous?.truncated || false,
+				rows: current.rows
+					.map((row) => ({
+						...row,
+						comparisonCompletions: previousRows.get(row.name)?.completions,
+						comparisonUniques: previousRows.get(row.name)?.uniques,
+					}))
+					.sort(
+						(a, b) =>
+							Number(a.completions == null) - Number(b.completions == null) ||
+							(b.completions ?? 0) - (a.completions ?? 0) ||
+							numericCollator.compare(a.name, b.name),
+					),
+			};
+		},
 	});
-	return { data, isLoading: isFetching, error };
+	return { data, isLoading: isLoading || (isFetching && isPlaceholderData), error };
 };
 
 export const useEntities = () => {
@@ -147,25 +175,53 @@ export const useDimension = ({
 	filters,
 	eventName = "pageview",
 	propertyKey,
+	comparisonRange,
 }: {
 	project: ProjectResponse;
 	dimension: Dimension;
 	propertyKey?: string;
+	comparisonRange?: ComparisonRange;
 	metric: Metric;
 	filters: DimensionFilter[];
 	range: DateRange;
 	eventName?: string;
 }): {
-	data: DimensionTableRow[] | undefined;
+	data: ComparisonRow[] | undefined;
 	biggest: number;
 	isLoading: boolean;
 	error: unknown;
 } => {
-	const { data, isFetching, error } = useQuery({
-		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
-		queryKey: ["dimension", project.id, dimension, propertyKey, metric, range.cacheKey(), filters, eventName],
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/dimension"]
+	const { data, isFetching, isLoading, isPlaceholderData, error } = useQuery({
+		placeholderData: (prev, previousQuery) => {
+			const key = previousQuery?.queryKey;
+			if (
+				!prev ||
+				key?.[1] !== project.id ||
+				key[2] !== dimension ||
+				key[3] !== propertyKey ||
+				key[4] !== metric ||
+				key.at(-1) !== eventName
+			) {
+				return undefined;
+			}
+			return !comparisonRange && key[6] !== undefined
+				? prev.map((row) => ({ ...row, comparisonValue: undefined }))
+				: prev;
+		},
+		queryKey: [
+			"dimension",
+			project.id,
+			dimension,
+			propertyKey,
+			metric,
+			range.cacheKey(),
+			comparisonRange?.cacheKey(),
+			filters,
+			eventName,
+		],
+		refetchInterval: range.endsToday() || comparisonRange?.endsToday() ? 60_000 : undefined,
+		queryFn: async () => {
+			const result = await api["/api/dashboard/project/{project_id}/dimension"]
 				.post({
 					params: { project_id: project.id },
 					json: {
@@ -174,29 +230,26 @@ export const useDimension = ({
 						filters,
 						metric,
 						event: eventName,
-						ranges: [range.toAPI()],
+						ranges: getReportRanges(range, comparisonRange),
 					},
 				})
-				.json()
-				.then((req) => {
-					if (typeof req === "string") {
-						console.error("Error fetching graph data:", req);
-						return Promise.reject(new Error(req));
-					}
-					return req.reports[0];
-				}),
+				.json();
+			if (typeof result === "string") throw new Error(result);
+			const [current, previous] = result.reports;
+			return mergeComparisonRows(current, previous);
+		},
 	});
 
 	return useMemo(() => {
-		const biggest = data?.reduce((acc, d) => Math.max(acc, d.value ?? 0), 0) ?? 0;
+		const biggest = data?.reduce((acc, d) => Math.max(acc, d.value ?? 0, d.comparisonValue ?? 0), 0) ?? 0;
 		const sortedData = data?.toSorted(
 			(a, b) =>
 				Number(a.value == null) - Number(b.value == null) ||
 				(metric === "bounce_rate" ? (a.value ?? 0) - (b.value ?? 0) : (b.value ?? 0) - (a.value ?? 0)) ||
 				numericCollator.compare(a.dimensionValue, b.dimensionValue),
 		);
-		return { data: sortedData, biggest, isLoading: isFetching, error };
-	}, [data, isFetching, error, metric]);
+		return { data: sortedData, biggest, isLoading: isLoading || (isFetching && isPlaceholderData), error };
+	}, [data, isFetching, isLoading, isPlaceholderData, error, metric]);
 };
 export const useProjectGraph = ({
 	projectId,
@@ -206,6 +259,7 @@ export const useProjectGraph = ({
 	eventName = "pageview",
 	enabled = true,
 	interval: selectedInterval = "auto",
+	comparisonRange,
 }: {
 	projectId?: string;
 	metric: Metric;
@@ -214,19 +268,35 @@ export const useProjectGraph = ({
 	eventName?: string;
 	enabled?: boolean;
 	interval?: GraphInterval | "auto";
+	comparisonRange?: ComparisonRange;
 }) => {
 	let refetchInterval: number | undefined;
 	let staleTime = 1000 * 60 * 10;
-	if (range.endsToday()) {
+	if (range.endsToday() || comparisonRange?.endsToday()) {
 		refetchInterval = 1000 * 60;
 		staleTime = 0;
 	}
+	const intervalRange = comparisonRange?.fullPeriod ? comparisonRange : range;
+	const availableIntervals = intervalRange.getGraphIntervals();
+	const autoInterval = range.getGraphInterval();
 	const interval =
-		selectedInterval === "auto" || !range.getGraphIntervals().includes(selectedInterval)
-			? range.getGraphInterval()
-			: selectedInterval;
+		selectedInterval !== "auto" && availableIntervals.includes(selectedInterval)
+			? selectedInterval
+			: availableIntervals.includes(autoInterval)
+				? autoInterval
+				: intervalRange.getGraphInterval();
 	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-	const queryKey = ["project_graph", projectId, range.cacheKey(), metric, filters, interval, timezone, eventName];
+	const queryKey = [
+		"project_graph",
+		projectId,
+		range.cacheKey(),
+		comparisonRange?.cacheKey(),
+		metric,
+		filters,
+		interval,
+		timezone,
+		eventName,
+	];
 
 	const {
 		data: graphResult,
@@ -239,27 +309,44 @@ export const useProjectGraph = ({
 		staleTime,
 		enabled: projectId !== undefined && enabled,
 		queryKey,
-		queryFn: () =>
-			api["/api/dashboard/project/{project_id}/graph"]
+		queryFn: async () => {
+			const result = await api["/api/dashboard/project/{project_id}/graph"]
 				.post({
-					json: { ranges: [range.toAPI()], metric, interval, timezone, filters, event: eventName },
 					params: { project_id: projectId ?? "" },
+					json: {
+						ranges: getReportRanges(range, comparisonRange),
+						metric,
+						interval,
+						timezone,
+						filters,
+						event: eventName,
+					},
 				})
-				.json()
-				.then((req) => {
-					if (typeof req === "string") {
-						console.error("Error fetching graph data:", req);
-						return Promise.reject(new Error(req));
-					}
-					return { data: toDataPoints(req.reports[0]), metric, range, interval };
-				}),
-		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
+				.json();
+			if (typeof result === "string") throw new Error(result);
+			const [current, previous] = result.reports;
+			return {
+				data: toDataPoints(current),
+				comparisonData: previous && toDataPoints(previous),
+				comparisonRange,
+				metric,
+				range,
+				interval,
+			};
+		},
+		placeholderData: (prev, previousQuery) =>
+			previousQuery?.queryKey.at(-1) === eventName && previousQuery.queryKey[3] === comparisonRange?.cacheKey()
+				? prev
+				: undefined,
 	});
 
 	const isUpdating = isFetching && isPlaceholderData;
 
 	return {
+		availableIntervals,
 		graph: graphResult?.data,
+		comparisonGraph: graphResult?.comparisonData,
+		displayComparisonRange: graphResult?.comparisonRange,
 		displayMetric: graphResult?.metric ?? metric,
 		displayRange: graphResult?.range ?? range,
 		displayInterval: graphResult?.interval ?? interval,
@@ -275,12 +362,14 @@ export const useProjectStats = ({
 	filters = [],
 	eventName = "pageview",
 	enabled = true,
+	comparisonRange,
 }: {
 	projectId?: string;
 	range: DateRange;
 	filters?: DimensionFilter[];
 	eventName?: string;
 	enabled?: boolean;
+	comparisonRange?: ComparisonRange;
 }) => {
 	const {
 		data: stats,
@@ -289,29 +378,29 @@ export const useProjectStats = ({
 		isFetching,
 		isPlaceholderData,
 	} = useQuery({
-		queryKey: ["project_stats", projectId, range.cacheKey(), filters, eventName],
+		queryKey: ["project_stats", projectId, range.cacheKey(), comparisonRange?.cacheKey(), filters, eventName],
+		refetchInterval: range.endsToday() || comparisonRange?.endsToday() ? 60_000 : undefined,
 
 		enabled: projectId !== undefined && enabled,
-		queryFn: () => {
-			const current = range.toAPI();
-			const start = Date.parse(current.start);
-			const duration = Date.parse(current.end) - start;
-			const previous = { start: new Date(start - duration).toISOString(), end: current.start };
-			return api["/api/dashboard/project/{project_id}/stats"]
+		queryFn: async () => {
+			const result = await api["/api/dashboard/project/{project_id}/stats"]
 				.post({
-					json: { ranges: [current, previous], filters, event: eventName },
 					params: { project_id: projectId ?? "" },
+					json: { ranges: getStatsReportRanges(range, comparisonRange), filters, event: eventName },
 				})
-				.json()
-				.then((req) => {
-					if (typeof req === "string") {
-						console.error("Error fetching graph data:", req);
-						return Promise.reject(new Error(req));
-					}
-					return req;
-				});
+				.json();
+			if (typeof result === "string") throw new Error(result);
+			return result;
 		},
-		placeholderData: (prev, previousQuery) => (previousQuery?.queryKey.at(-1) === eventName ? prev : undefined),
+		placeholderData: (prev, previousQuery) => {
+			if (!prev || previousQuery?.queryKey[1] !== projectId || previousQuery?.queryKey.at(-1) !== eventName)
+				return undefined;
+			const wasComparing = previousQuery.queryKey[3] !== undefined;
+			if (range.variant === "allTime" || wasComparing !== Boolean(comparisonRange)) {
+				return { ...prev, reports: prev.reports.slice(0, 1) };
+			}
+			return prev;
+		},
 	});
 
 	return {

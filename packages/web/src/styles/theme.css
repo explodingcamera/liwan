@@ -4,6 +4,7 @@
   /* typography */
   --font-family-text: var(--font-google-sans), system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   --font-family-heading: var(--font-family-text);
+  --font-size-xs: 0.6rem;
   --font-size-sm: 0.8rem;
   --font-size-md: 0.9rem;
   --font-size-lg: 1.2rem;
@@ -44,7 +45,11 @@
   --danger: light-dark(#a83232, #df7772);
   --success: light-dark(#15803d, #4ade80);
   --warning: light-dark(#a16207, #fbbf24);
-  --chart-line: light-dark(#2563eb, #a6cee3);
+  --chart-line: light-dark(#315381, #a6cee3);
+  --chart-fill: light-dark(rgb(78 127 193 / 4%), rgb(166 206 227 / 10%));
+  --chart-grid: light-dark(var(--border), var(--accent-fill));
+  --chart-comparison-line: light-dark(#64748b, rgb(166 206 227 / 35%));
+  --report-bar-color: light-dark(#0b1438, #a5d1ff);
 
   /* form fields */
   --field: light-dark(#fff, #222a37);

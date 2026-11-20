@@ -57,7 +57,7 @@ chrono = { version = "0.4", default-features = false, features = ["now", "serde"
 chrono-tz = "0.10"
 config = { version = "0.15", default-features = false, features = ["toml"] }
 humantime = "2.4"
-nix = { version = "0.31", features = ["user"] }
+nix = { version = "0.32", features = ["user"] }
 rand = { version = "0.10", default-features = false, features = ["std", "thread_rng"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -100,7 +100,7 @@ r2d2 = { version = "0.8", default-features = false }
 refinery = { version = "0.10", default-features = false }
 refinery-core = { version = "0.10", default-features = false }
 rsntp = { version = "4.1.2", default-features = false, features = ["async"] }
-rusqlite = { version = "0.42", features = ["bundled", "chrono", "modern_sqlite"] }
+rusqlite = { version = "0.43", features = ["bundled", "chrono", "modern_sqlite"] }
 
 [dev-dependencies]
 axum-test = { version = "21" }

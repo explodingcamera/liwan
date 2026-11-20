@@ -8,6 +8,7 @@ import { CalendarDaysIcon } from "lucide-react";
 import type { DateRange } from "@/api/ranges.ts";
 import { LoadingSpinner } from "@/components/ui/loading";
 import type { GraphInterval, GraphResponse, Metric } from "@/constants.ts";
+import type { ComparisonRange } from "../comparison";
 
 const LineGraphInner = lazy(() => import("./linegraph.tsx").then(({ LineGraph }) => ({ default: LineGraph })));
 const intervalLabels = {
@@ -31,6 +32,9 @@ export const LineGraph = ({
 	availableIntervals,
 	onSelectRange,
 	onUndoRange,
+	comparisonData,
+	comparisonRange,
+	hasError,
 }: {
 	data?: DataPoint[];
 	isLoading?: boolean;
@@ -42,14 +46,23 @@ export const LineGraph = ({
 	selectedInterval?: GraphInterval | "auto";
 	onSelectInterval?: (interval: GraphInterval | "auto") => void;
 	availableIntervals?: GraphInterval[];
-	onSelectRange?: (range: DateRange) => void;
-	onUndoRange?: () => void;
+	onSelectRange: (range: DateRange) => void;
+	onUndoRange: () => void;
+	comparisonData?: DataPoint[];
+	comparisonRange?: ComparisonRange;
+	hasError?: boolean;
 }) => {
 	const loading = isLoading || isUpdating;
-	const activeInterval = availableIntervals?.includes(selectedInterval as GraphInterval) ? selectedInterval : "auto";
+	const activeInterval =
+		selectedInterval !== "auto" && availableIntervals?.includes(selectedInterval) ? selectedInterval : "auto";
 
 	return (
 		<div className={styles.graphContainer}>
+			{hasError && (
+				<div className={styles.error} role="alert">
+					Could not load the chart. Try another date range or resolution.
+				</div>
+			)}
 			{onSelectInterval && availableIntervals && (
 				<Menu.Root>
 					<Menu.Trigger
@@ -110,8 +123,12 @@ export const LineGraph = ({
 					metric={metric}
 					range={range}
 					interval={interval}
+					hasResolutionControl={Boolean(onSelectInterval && availableIntervals)}
+					canSelectRange={!loading && !hasError}
 					onSelectRange={onSelectRange}
 					onUndoRange={onUndoRange}
+					comparisonData={comparisonData}
+					comparisonRange={comparisonRange}
 				/>
 			</Suspense>
 		</div>

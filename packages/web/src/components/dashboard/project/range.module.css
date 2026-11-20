@@ -2,8 +2,59 @@
   display: flex;
   align-items: center;
   gap: 0.2rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.rangeField {
+  --date-control-height: max(2.15rem, calc(var(--font-size-md) * 1.25 + 0.96rem + 2px));
+  display: contents;
+  align-items: stretch;
+  min-width: 0;
+  max-width: 100%;
+
+  &[data-comparing="true"] {
+    display: flex;
+    box-sizing: border-box;
+    height: var(--date-control-height);
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius);
+    background: var(--field);
+    overflow: hidden;
+
+    .desktopRange {
+      display: flex;
+    }
+
+    .selectRange {
+      height: auto;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      padding-inline: 0.5rem;
+
+      &:hover {
+        background: var(--surface-hover);
+      }
+    }
+  }
+
+  &:has(:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+.desktopRange {
+  min-width: 0;
 }
 .mobileRange {
+  display: none;
+}
+
+.mobileComparison {
   display: none;
 }
 .stepButton {
@@ -17,31 +68,132 @@
   opacity: 1;
 }
 .selectRange {
-  min-width: 11rem;
+  box-sizing: border-box;
+  height: var(--date-control-height);
+  min-width: 9rem;
   max-width: 16rem;
   justify-content: space-between;
   background: var(--field);
   color: var(--text);
   border-color: var(--field-border);
   border-radius: var(--radius);
+
+  svg {
+    flex: none;
+    opacity: 0.5;
+  }
+
+  > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 .selectRange:hover {
   background: var(--surface-hover);
   color: var(--text);
 }
 .rangeDialog {
-  width: min(30rem, 100%);
+  width: min(26rem, 100%);
+}
+
+.comparisonDialog {
+  width: min(22rem, 100%);
+}
+
+.rangePopup [role^="menuitem"] {
+  padding: 0.3rem 0.5rem;
+  font-size: var(--font-size-sm);
+}
+
+.rangePopup {
+  width: var(--anchor-width);
+  min-width: var(--anchor-width);
+}
+
+.comparison {
+  display: flex;
+  align-items: stretch;
+  gap: 0.1rem;
+  min-width: 0;
+  border-left: 1px solid var(--field-border);
+}
+
+.comparisonLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.vs {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  opacity: 0.65;
+}
+
+.compareRange {
+  min-width: 10rem;
+  color: var(--text-muted);
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover,
+  &[data-popup-open] {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
 }
 
 @media (max-width: 700px) {
-  .desktopRange {
+  .desktopRange,
+  .rangeField[data-comparing="true"] .desktopRange,
+  .compareRange {
     display: none;
   }
 
   .mobileRange {
     display: block;
-    width: 11rem;
+    width: 9rem;
     margin: 0;
+    min-width: 0;
     border-radius: var(--radius);
+  }
+
+  .rangeField[data-comparing="true"] .mobileRange {
+    width: 7rem;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    font-size: var(--font-size-sm);
+    padding-right: 1.6rem;
+  }
+
+  .rangeField[data-comparing="true"] {
+    height: var(--field-height);
+
+    select {
+      height: auto;
+      min-height: 0;
+    }
+  }
+
+  .mobileComparison {
+    display: block;
+    width: 11rem;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    font-size: var(--font-size-sm);
+    padding-right: 1.6rem;
+    text-overflow: ellipsis;
   }
 }

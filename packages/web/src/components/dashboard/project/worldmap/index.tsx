@@ -11,8 +11,9 @@ import { RotateCcwIcon } from "lucide-react";
 
 import type { DimensionTableRow, Metric } from "@/constants";
 import { metricNames } from "@/constants";
-import { cls, formatMetricVal } from "@/utils";
+import { cls } from "@/utils";
 import geo from "../../../../../../../data/geo.json";
+import { formatMetricVal } from "../metric-format";
 import { createMapFeatures, type MapTopology } from "./paths";
 
 const features = createMapFeatures(geo as MapTopology);

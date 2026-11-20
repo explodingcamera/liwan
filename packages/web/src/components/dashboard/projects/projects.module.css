@@ -19,6 +19,7 @@
 .project {
   position: relative;
   padding: 0;
+  overflow: hidden;
   border-radius: var(--radius);
   background: var(--surface);
 

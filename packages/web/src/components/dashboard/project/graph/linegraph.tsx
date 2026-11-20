@@ -1,90 +1,36 @@
 import tooltipStyles from "../hover-tooltip.module.css";
 import styles from "./linegraph.module.css";
 
-import { useEffect, useRef, useState } from "react";
-import { extent } from "d3-array";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { bisector, max } from "d3-array";
 import { easeCubic, easeLinear } from "d3-ease";
 import { scaleLinear, scaleTime } from "d3-scale";
 import { select } from "d3-selection";
 import { area, line } from "d3-shape";
 import "d3-transition";
 
-import { differenceInHours, isSameYear } from "date-fns";
-
 import type { DateRange } from "@/api/ranges";
 import type { GraphInterval, Metric } from "@/constants";
-import { formatMetricVal, formatMetricValEvenly } from "@/utils";
+import type { ComparisonRange } from "../comparison";
+import { formatMetricVal } from "../metric-format";
 import type { DataPoint } from ".";
 import { axisBottom, axisLeft } from "./axis";
-import { getGraphRenderData, getGraphSelectionIndices, getSelectedGraphRange } from "./render-data";
+import { formatDate, getAxisDateRange, getTooltipDateRange } from "./format";
+import {
+	alignComparisonData,
+	type ComparisonPoint,
+	getGraphRenderData,
+	getGraphSelectionIndices,
+	getSelectedGraphRange,
+} from "./render-data";
 
-type DateDisplayRange = "day" | "hour" | "day+hour" | "day+hour+year" | "day+year";
-
-const keepMeridiemTogether = (value: string) => value.replace(/(\d)\s([AP]M)\b/g, "$1\u00A0$2");
-const formatShortYear = (date: Date) => `'${String(date.getFullYear()).slice(-2)}`;
-const formatDate = (date: Date, range: DateDisplayRange = "day") => {
-	switch (range) {
-		case "day+year":
-			return `${Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date)} ${formatShortYear(date)}`;
-		case "day":
-			return Intl.DateTimeFormat("en-US", {
-				month: "short",
-				day: "numeric",
-			}).format(date);
-		case "day+hour":
-			return keepMeridiemTogether(
-				Intl.DateTimeFormat("en-US", {
-					month: "short",
-					day: "numeric",
-					hour: "numeric",
-				}).format(date),
-			);
-		case "day+hour+year":
-			return keepMeridiemTogether(
-				`${Intl.DateTimeFormat("en-US", {
-					month: "short",
-					day: "numeric",
-					hour: "numeric",
-				}).format(date)} ${formatShortYear(date)}`,
-			);
-		case "hour":
-			return keepMeridiemTogether(
-				Intl.DateTimeFormat("en-US", {
-					hour: "numeric",
-					minute: "numeric",
-				}).format(date),
-			);
-	}
-};
-
-const getAxisDateRange = (start: Date, end: Date): "hour" | "day" | "day+year" => {
-	if (differenceInHours(end, start) <= 24) return "hour";
-	if (!isSameYear(start, end)) return "day+year";
-	return "day";
-};
-
-const getTooltipDateRange = (
-	start: Date,
-	end: Date,
-	range: DateRange,
-	interval: GraphInterval,
-): "hour" | "day+hour" | "day+hour+year" | "day" | "day+year" => {
-	if (interval !== "hour") return getAxisDateRange(start, end) === "day+year" ? "day+year" : "day";
-	if (range.value.start.toDateString() === range.value.end.toDateString()) return "hour";
-	return isSameYear(start, end) ? "day+hour" : "day+hour+year";
-};
-
-const pickAxisTicks = (data: DataPoint[], count: number): Date[] => {
+const pickAxisTicks = (data: { x: Date }[], count: number): Date[] => {
 	if (data.length <= count) return data.map((point) => point.x);
 
-	const ticks = new Set<number>();
-	for (let i = 0; i < count; i++) {
-		const index = Math.round((i * (data.length - 1)) / Math.max(count - 1, 1));
-		ticks.add(index);
-	}
-
-	return [...ticks].sort((a, b) => a - b).map((index) => data[index].x);
+	return Array.from({ length: count }, (_, i) => data[Math.round((i * (data.length - 1)) / (count - 1))].x);
 };
+
+const nearestBucket = bisector((point: { x: Date }) => point.x.getTime()).center;
 
 export const LineGraph = ({
 	data,
@@ -92,16 +38,24 @@ export const LineGraph = ({
 	metric,
 	range,
 	interval,
+	hasResolutionControl,
+	canSelectRange,
 	onSelectRange,
 	onUndoRange,
+	comparisonData,
+	comparisonRange,
 }: {
 	data: DataPoint[];
 	title: string;
 	metric: Metric;
 	range: DateRange;
 	interval: GraphInterval;
-	onSelectRange?: (range: DateRange) => void;
-	onUndoRange?: () => void;
+	hasResolutionControl: boolean;
+	canSelectRange: boolean;
+	onSelectRange: (range: DateRange) => void;
+	onUndoRange: () => void;
+	comparisonData?: DataPoint[];
+	comparisonRange?: ComparisonRange;
 }) => {
 	const svgRef = useRef<SVGSVGElement | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
@@ -135,25 +89,25 @@ export const LineGraph = ({
 	}, []);
 
 	const firstRender = useRef(true);
+	const extendBy = comparisonRange?.fullPeriod ? interval : undefined;
+	const comparison = useMemo(
+		() => alignComparisonData(data, comparisonData, extendBy),
+		[data, comparisonData, extendBy],
+	);
+	const axisData = comparison.length > data.length ? comparison : data;
 
 	useEffect(() => {
 		if (!svgRef.current || !dimensions) return;
 		const svg = select(svgRef.current);
-		const { domainMaxX, dottedLineData, solidLineData } = getGraphRenderData(data, range, interval);
+		const { dottedLineData, solidLineData } = getGraphRenderData(data, range, interval);
 
-		const [minX] = extent(data, (d) => d.x).map((d) => d || new Date());
-		const maxX = domainMaxX;
+		const minX = axisData[0]?.x ?? range.value.start;
+		const maxX = axisData.at(-1)?.x ?? minX;
 		const axisRange = getAxisDateRange(minX, maxX);
-		const [_minY, maxY] = extent(data, (d) => d.y).map((d) => d || 0);
+		const maxY = Math.max(max(data, (point) => point.y) ?? 0, max(comparison, (point) => point.y) ?? 0);
+		const xCount = dimensions.width < 400 ? 4 : dimensions.width < 500 ? 6 : 8;
 
-		let xCount = Math.min(data.length, 8);
-		if (dimensions.width && dimensions.width < 400) {
-			xCount = Math.min(data.length, 4);
-		} else if (dimensions.width && dimensions.width < 500) {
-			xCount = Math.min(data.length, 6);
-		}
-
-		const paddingTop = 30;
+		const paddingTop = hasResolutionControl ? 48 : 30;
 		const paddingBottom = 40;
 
 		const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
@@ -163,19 +117,31 @@ export const LineGraph = ({
 				? scaleLinear([0, 1], [dimensions.height - paddingBottom - paddingTop, 0])
 				: scaleLinear([0, Math.max(maxY * 1.25 || 0, 20)], [dimensions.height - paddingBottom - paddingTop, 0]);
 
-		const svgArea = area<DataPoint>()
+		const svgArea = area<DataPoint | ComparisonPoint>()
+			.defined((d) => d.y !== null)
 			.x((d) => xAxis(d.x))
-			.y0(yAxis(0))
-			.y1((d) => yAxis(d.y));
+			// Extend the fill behind the date labels without changing the plotted scale.
+			.y0(dimensions.height - paddingTop)
+			.y1((d) => yAxis(d.y ?? 0));
 
-		const svgLine = line<DataPoint>()
+		const svgLine = line<DataPoint | ComparisonPoint>()
+			.defined((d) => d.y !== null)
 			.x((d) => xAxis(d.x))
-			.y((d) => yAxis(d.y));
+			.y((d) => yAxis(d.y ?? 0));
+
+		const currentEnd = data.at(-1)?.x;
+		const remainingPeriod =
+			currentEnd && currentEnd < maxX
+				? [
+						{ x: currentEnd, y: 0 },
+						{ x: maxX, y: 0 },
+					]
+				: [];
 
 		svg
 			.selectChild("#background")
 			.attr("transform", `translate(0, ${paddingTop})`)
-			.attr("d", svgArea(data) || "");
+			.attr("d", (svgArea(data) ?? "") + (svgArea(remainingPeriod) ?? ""));
 
 		svg
 			.selectChild("#line")
@@ -187,7 +153,20 @@ export const LineGraph = ({
 			.attr("transform", `translate(0, ${paddingTop})`)
 			.attr("d", svgLine(dottedLineData) || "");
 
+		svg
+			.selectChild("#remaining-period")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgLine(remainingPeriod) ?? "");
+
 		const yGridElement = svg.selectChild<SVGGElement>("#y-grid");
+		svg
+			.selectChild("#comparison-line")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgLine(comparison) || "");
+		svg
+			.selectChild("#comparison-background")
+			.attr("transform", `translate(0, ${paddingTop})`)
+			.attr("d", svgArea(comparison) || "");
 		const yAxisElement = svg.selectChild<SVGGElement>("#y-axis");
 		const xAxisElement = svg.selectChild<SVGGElement>("#x-axis");
 
@@ -205,10 +184,10 @@ export const LineGraph = ({
 		const leftLabelAxis = axisLeft(yAxis)
 			.disableDomain()
 			.disableTicks()
-			.tickFormat((d) => formatMetricValEvenly(d as number, metric, maxY))
+			.tickFormat((d) => formatMetricVal(d as number, metric, maxY))
 			.tickValues(tickValuesY);
 
-		let tickValuesX = pickAxisTicks(data, xCount);
+		let tickValuesX = pickAxisTicks(axisData, xCount);
 		if (tickValuesX.length > 0 && xAxis(tickValuesX[0]) < 20) tickValuesX = tickValuesX.slice(1);
 		if (tickValuesX.length > 0 && xAxis(tickValuesX[tickValuesX.length - 1]) > dimensions.width - 20) {
 			tickValuesX = tickValuesX.slice(0, -1);
@@ -238,7 +217,7 @@ export const LineGraph = ({
 
 			ax.selectAll(".tick line")
 				.attr("x2", dimensions.width)
-				.attr("stroke", "var(--accent-fill)")
+				.attr("stroke", "var(--chart-grid)")
 				.attr("stroke-width", 0.5)
 				.attr("stroke-dasharray", "2, 2");
 
@@ -279,7 +258,7 @@ export const LineGraph = ({
 		});
 
 		return () => void xAxisElement.interrupt();
-	}, [data, dimensions, metric, range, interval]);
+	}, [data, comparison, axisData, dimensions, metric, range, interval, hasResolutionControl]);
 
 	useEffect(() => {
 		const svgElement = svgRef.current;
@@ -292,32 +271,30 @@ export const LineGraph = ({
 		const needle = cursor.selectChild("#needle");
 		const tooltipElement = tooltip.node() as SVGForeignObjectElement | null;
 		const tooltipHeight = Number(tooltipElement?.getAttribute("height")) || 100;
-		const { domainMaxX } = getGraphRenderData(data, range, interval);
-		const [minX] = extent(data, (d) => d.x).map((d) => d || new Date());
-		const xAxis = scaleTime().domain([minX, domainMaxX]).range([0, dimensions.width]);
-		const dateRange = getTooltipDateRange(minX, domainMaxX, range, interval);
+		const minX = axisData[0].x;
+		const maxX = axisData[axisData.length - 1].x;
+		const xAxis = scaleTime().domain([minX, maxX]).range([0, dimensions.width]);
+		const dateRange = getTooltipDateRange(minX, maxX, range, interval, comparisonRange);
 		let animationFrame: number | undefined;
 		let previousSide: "left" | "right" | undefined;
 		let previousOffset: number | undefined;
 		let previousSnappedX: number | undefined;
 		let dragStart: number | undefined;
-		let dragEnd: number | undefined;
 		let dragPointerId: number | undefined;
 		const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 		const pointerX = (event: PointerEvent) =>
 			Math.max(0, Math.min(event.clientX - svgElement.getBoundingClientRect().left, dimensions.width));
 		const pointerDown = (event: PointerEvent) => {
-			if (!onSelectRange || data.length < 2 || event.pointerType !== "mouse" || event.button !== 0) return;
+			if (!canSelectRange || data.length < 2 || event.pointerType !== "mouse" || event.button !== 0) return;
 			event.preventDefault();
 			window.cancelAnimationFrame(animationFrame ?? 0);
 			dragStart = pointerX(event);
-			dragEnd = dragStart;
 			dragPointerId = event.pointerId;
 			svgElement.setPointerCapture(event.pointerId);
 		};
 		const pointerMove = (event: PointerEvent) => {
 			if (dragStart === undefined) return;
-			dragEnd = pointerX(event);
+			const dragEnd = pointerX(event);
 			if (Math.abs(dragEnd - dragStart) < 6) {
 				selection.attr("visibility", "hidden");
 				return;
@@ -348,7 +325,6 @@ export const LineGraph = ({
 		const cancelDrag = () => {
 			const pointerId = dragPointerId;
 			dragStart = undefined;
-			dragEnd = undefined;
 			dragPointerId = undefined;
 			selection.attr("visibility", "hidden");
 			if (pointerId !== undefined && svgElement.hasPointerCapture(pointerId))
@@ -361,11 +337,10 @@ export const LineGraph = ({
 			cancelDrag();
 			if (Math.abs(end - start) < 6) return;
 			const selected = getSelectedGraphRange(data, range, interval, xAxis.invert(start), xAxis.invert(end));
-			if (selected) onSelectRange?.(selected);
+			if (selected) onSelectRange(selected);
 		};
-		const doubleClick = (event: MouseEvent) => {
-			event.preventDefault();
-			onUndoRange?.();
+		const doubleClick = () => {
+			if (canSelectRange) onUndoRange();
 		};
 		const keyDown = (event: KeyboardEvent) => {
 			if (event.key !== "Escape" || dragStart === undefined) return;
@@ -383,16 +358,13 @@ export const LineGraph = ({
 				const svgWidth = svgRect.width;
 				const svgHeight = svgRect.height;
 				const tooltipWidth = Math.min(
-					metric === "unique_visitors" || metric === "avg_time_on_site" ? 232 : 190,
+					comparisonData ? 260 : metric === "unique_visitors" || metric === "avg_time_on_site" ? 232 : 190,
 					Math.max(0, svgWidth - tooltipPadding * 2),
 				);
 				tooltipElement?.setAttribute("width", String(tooltipWidth));
 				const x = event.clientX - svgRect.left - 1;
-				const point = data.reduce((closestPoint, currentPoint) => {
-					const closestDistance = Math.abs(xAxis(closestPoint.x) - x);
-					const currentDistance = Math.abs(xAxis(currentPoint.x) - x);
-					return currentDistance < closestDistance ? currentPoint : closestPoint;
-				});
+				const index = nearestBucket(axisData, xAxis.invert(x).getTime());
+				const point = axisData[index];
 
 				const snappedX = xAxis(point.x);
 				const side = snappedX < svgWidth / 2 ? "right" : "left";
@@ -433,7 +405,10 @@ export const LineGraph = ({
 				}
 				previousSnappedX = snappedX;
 				tooltip.select(".date").text(formatDate(new Date(point.x), dateRange));
-				tooltip.select(".value").text(formatMetricVal(point.y, metric));
+				tooltip.select(".value").text(formatMetricVal(data[index]?.y, metric));
+				const previous = comparison[index];
+				tooltip.select(".comparison-date").text(previous?.date ? formatDate(previous.date, dateRange) : "Comparison");
+				tooltip.select(".comparison-value").text(formatMetricVal(previous?.y, metric));
 			});
 		};
 
@@ -473,7 +448,20 @@ export const LineGraph = ({
 			cursor.attr("opacity", 0);
 			tooltip.attr("opacity", 1);
 		};
-	}, [data, dimensions, metric, range, interval, onSelectRange, onUndoRange]);
+	}, [
+		data,
+		comparison,
+		axisData,
+		comparisonData,
+		comparisonRange,
+		dimensions,
+		metric,
+		range,
+		interval,
+		onSelectRange,
+		onUndoRange,
+		canSelectRange,
+	]);
 
 	return (
 		<div ref={containerRef} className={styles.graph}>
@@ -481,18 +469,15 @@ export const LineGraph = ({
 				ref={svgRef}
 				style={{ display: "block", width: "100%", height: "100%" }}
 				role="img"
-				aria-label={`${title} time series`}
+				aria-label={`${title} time series${comparisonData ? " with comparison period" : ""}`}
 			>
-				<defs>
-					<linearGradient id="graphGradient" x1="0" x2="0" y1="0" y2="1">
-						<stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.25" />
-						<stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0" />
-					</linearGradient>
-				</defs>
 				<g id="y-grid" />
-				<path id="background" fill="url(#graphGradient)" stroke="none" />
-				<path id="line" fill="none" stroke="var(--chart-line)" />
-				<path id="line-dotted" fill="none" stroke="var(--chart-line)" strokeDasharray="5, 5" />
+				<path id="comparison-background" fill="var(--chart-fill)" fillOpacity="0.3" stroke="none" />
+				<path id="comparison-line" fill="none" stroke="var(--chart-comparison-line)" strokeLinecap="round" />
+				<path id="background" fill="var(--chart-fill)" stroke="none" />
+				<path id="line" fill="none" stroke="var(--chart-line)" strokeWidth="1.75" />
+				<path id="line-dotted" fill="none" stroke="var(--chart-line)" strokeWidth="1.75" strokeDasharray="5, 5" />
+				<path id="remaining-period" fill="none" stroke="var(--chart-line)" strokeOpacity="0.5" strokeDasharray="5, 5" />
 				<g id="selection" className={styles.selection} visibility="hidden">
 					<rect y="0" />
 					<line id="selection-start" y1="0" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
@@ -500,12 +485,21 @@ export const LineGraph = ({
 				</g>
 				<g id="cursor" opacity="0">
 					<path id="needle" fill="none" stroke="var(--accent-fill)" strokeDasharray="5, 5" strokeWidth="2" />
-					<foreignObject id="tooltip" width="232" height="100">
+					<foreignObject id="tooltip" width="260" height={comparisonData ? "155" : "100"}>
 						<div className={`${tooltipStyles.tooltip} ${tooltipStyles.graphTooltip}`}>
 							<h2 className="date">{title}</h2>
 							<h3>
 								<span>{title}</span> <span className="value" />
 							</h3>
+							{comparisonData && (
+								<div className={styles.comparisonTooltip}>
+									<h2 className="comparison-date">Comparison</h2>
+									<h3>
+										<span>{title}</span>
+										<span className="comparison-value" />
+									</h3>
+								</div>
+							)}
 						</div>
 					</foreignObject>
 				</g>

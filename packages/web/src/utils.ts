@@ -15,8 +15,6 @@ import {
 	startOfYear,
 } from "date-fns";
 
-import type { Metric } from "./constants";
-
 type ClassName = string | undefined | null | false;
 
 export const capitalizeAll = (str: string) => str.replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
@@ -30,58 +28,6 @@ export const cls = (class1: ClassName | ClassName[], ...classes: (ClassName | Cl
 // get the username cookie or undefined if not set
 export const getUsername = () =>
 	typeof document !== "undefined" ? document.cookie.match(/liwan-username=(.*?)(;|$)/)?.[1] : undefined;
-
-export const formatMetricValEvenly = (value: number, metric: Metric, biggest: number) => {
-	if (metric === "bounce_rate") return `${(Math.floor(value * 1000) / 10).toFixed(1)}%`;
-	if (metric === "avg_time_on_site") return formatDuration(value);
-	if (value === 0) return "0";
-
-	if (biggest > 999999) {
-		return `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
-	}
-
-	if (biggest > 999) {
-		return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-	}
-
-	return value.toFixed(1).replace(/\.0$/, "") || "0";
-};
-
-export const formatMetricVal = (value: number | null | undefined, metric: Metric) => {
-	if (value == null) return "—";
-	if (metric === "bounce_rate") return `${(Math.floor(value * 1000) / 10).toFixed(1)}%`;
-	if (metric === "avg_time_on_site") return formatDuration(value);
-
-	if (value > 999999) {
-		return `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
-	}
-
-	if (value > 999) {
-		return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-	}
-
-	return value.toFixed(1).replace(/\.0$/, "") || "0";
-};
-
-export const formatPercent = (value: number) => {
-	if (value === -1) return "∞";
-	if (value >= 10000 || value <= -10000) return `${(value / 100).toFixed(0)}x`;
-	if (value >= 1000 || value <= -1000) return `${value.toFixed(0).replace(/\.0$/, "") || "0"}%`;
-	return `${value.toFixed(1).replace(/\.0$/, "") || "0"}%`;
-};
-
-export const formatDuration = (value: number) => {
-	const totalSeconds = Math.floor(value);
-	const hours = Math.floor(totalSeconds / 3600);
-	const minutes = Math.floor((totalSeconds % 3600) / 60);
-	const remainingSeconds = totalSeconds % 60;
-
-	if (hours > 0) {
-		return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
-	}
-
-	return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
-};
 
 export const tryParseUrl = (url: string) => {
 	try {

@@ -12,7 +12,7 @@ import { Breadcrumb, type DimensionProps, DimensionRow } from ".";
 
 export const DetailsModal = (props: DimensionProps) => {
 	const { dimension, propertyKey, query, onBack } = props;
-	const { data, biggest, isLoading } = useDimension({
+	const { data, biggest, isLoading, error } = useDimension({
 		dimension,
 		propertyKey,
 		...query,
@@ -61,19 +61,21 @@ export const DetailsModal = (props: DimensionProps) => {
 					onChange={(e) => setFilter(e.target.value)}
 					className={styles.search}
 				/>
-				{results?.map((d) => (
-					<DimensionRow key={d.dimensionValue} {...props} row={d} biggest={biggest} />
-				))}
-				{isLoading && (
-					<div className={styles.loadingOverlay} data-no-delay={!data}>
-						<LoadingSpinner immediate />
-					</div>
-				)}
-				{!isLoading && data?.length === 0 && (
-					<div className={styles.dimensionEmpty}>
-						<div>No data available</div>
-					</div>
-				)}
+				<div className={styles.detailRows} aria-busy={isLoading}>
+					{results?.map((d) => (
+						<DimensionRow key={d.dimensionValue} {...props} row={d} biggest={biggest} />
+					))}
+					{isLoading && (
+						<div className={styles.loadingOverlay} data-no-delay={!data}>
+							<LoadingSpinner immediate />
+						</div>
+					)}
+					{!isLoading && (error || data?.length === 0) && (
+						<div className={styles.dimensionEmpty}>
+							<div>{error ? "Could not load this breakdown." : "No data available"}</div>
+						</div>
+					)}
+				</div>
 			</div>
 		</Dialog>
 	);

@@ -1,5 +1,20 @@
 import { describe, expect, it } from "bun:test";
-import { differenceInCalendarDays, endOfDay, endOfMonth, startOfDay, startOfMonth, subDays, subMonths } from "date-fns";
+import {
+	differenceInCalendarDays,
+	endOfDay,
+	endOfMonth,
+	endOfWeek,
+	endOfYear,
+	getISOWeekYear,
+	startOfDay,
+	startOfMonth,
+	startOfWeek,
+	startOfYear,
+	subDays,
+	subMonths,
+	subWeeks,
+	subYears,
+} from "date-fns";
 
 import { DateRange, ranges } from "./ranges";
 
@@ -25,6 +40,8 @@ describe("DateRange", () => {
 		const serialized = range.serialize();
 		const deserialized = DateRange.deserialize(serialized);
 		expect(deserialized.value).toEqual({ start, end });
+		expect(deserialized.isCustom()).toBe(true);
+		expect(DateRange.deserialize(`${serialized}undefined`).isCustom()).toBe(true);
 	});
 
 	it("should persist named ranges dynamically but cache by resolved dates", () => {
@@ -37,6 +54,17 @@ describe("DateRange", () => {
 	it("should format well-known ranges", () => {
 		const range = new DateRange("today");
 		expect(range.format()).toBeDefined(); // Ensure a format exists
+	});
+
+	it("labels full Monday-to-Sunday ranges by ISO week", () => {
+		const yearStart = new Date(getISOWeekYear(new Date()), 0, 4);
+		const weekStart = startOfWeek(yearStart, { weekStartsOn: 1 });
+		const weekEnd = endOfWeek(yearStart, { weekStartsOn: 1 });
+		expect(new DateRange({ start: weekStart, end: weekEnd }).format()).toBe("Week 1");
+
+		const start = new Date(2019, 11, 30);
+		expect(new DateRange({ start, end: endOfDay(new Date(2020, 0, 5)) }).format()).toBe("Week 1, 2020");
+		expect(new DateRange({ start, end: endOfDay(new Date(2020, 0, 4)) }).format()).not.toMatch(/^Week /);
 	});
 
 	it("should calculate if the range ends today", () => {
@@ -188,5 +216,26 @@ describe("DateRange", () => {
 			start: startOfMonth(new Date(2023, 2, 1)),
 			end: endOfMonth(new Date(2023, 2, 1)),
 		});
+	});
+
+	it("navigates to full past periods and back to the current period to date", () => {
+		const now = new Date();
+		const weekOptions = { weekStartsOn: 1 } as const;
+		const lastWeek = subWeeks(now, 1);
+		const lastMonth = subMonths(now, 1);
+		const lastYear = subYears(now, 1);
+		const periods = [
+			["weekToDate", startOfWeek(lastWeek, weekOptions), endOfWeek(lastWeek, weekOptions)],
+			["monthToDate", startOfMonth(lastMonth), endOfMonth(lastMonth)],
+			["yearToDate", startOfYear(lastYear), endOfYear(lastYear)],
+		] as const;
+
+		for (const [variant, start, end] of periods) {
+			const current = new DateRange(variant);
+			const previous = current.previous();
+			expect(previous.value).toEqual({ start, end });
+			expect(previous.previous().next().value).toEqual({ start, end });
+			expect(previous.next().serialize()).toBe(variant);
+		}
 	});
 });

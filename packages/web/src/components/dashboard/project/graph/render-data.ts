@@ -1,13 +1,38 @@
+import { add } from "date-fns";
+
 import { DateRange } from "@/api/ranges";
 import type { GraphInterval } from "@/constants";
 import type { DataPoint } from ".";
+
+export type ComparisonPoint = { x: Date; y: number | null; date: Date | null };
+
+/** Pair buckets from the start of each period, retaining the current axis and comparison dates. */
+export const alignComparisonData = (
+	data: DataPoint[],
+	comparison?: DataPoint[],
+	extendBy?: GraphInterval,
+): ComparisonPoint[] => {
+	if (!comparison) return [];
+	const aligned = data.map((point, index) => ({
+		x: point.x,
+		y: comparison[index]?.y ?? null,
+		date: comparison[index]?.x ?? null,
+	}));
+	let end = data.at(-1)?.x;
+	if (extendBy && end) {
+		for (const point of comparison.slice(data.length)) {
+			end = add(end, { [`${extendBy}s`]: 1 });
+			aligned.push({ x: end, y: point.y, date: point.x });
+		}
+	}
+	return aligned;
+};
 
 export const getGraphRenderData = (data: DataPoint[], range: DateRange, interval: GraphInterval, now = new Date()) => {
 	const firstIncomplete =
 		range.value.end > now ? data.findIndex((point) => range.getGraphBucketEnd(point.x, interval) > now) : -1;
 
 	return {
-		domainMaxX: data[data.length - 1]?.x ?? now,
 		solidLineData: firstIncomplete === -1 ? data : data.slice(0, firstIncomplete),
 		dottedLineData: firstIncomplete === -1 ? [] : data.slice(Math.max(0, firstIncomplete - 1)),
 	};

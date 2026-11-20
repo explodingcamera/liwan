@@ -3,15 +3,9 @@
   z-index: 1;
   display: flex;
   gap: 0.7rem;
-  transition: opacity 0.2s ease;
 
-  &.awaiting {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  &[data-loading="true"] button.metric h3 {
-    opacity: 0.6;
+  &[data-loading="true"] button.metric :is(h2, h3) {
+    opacity: 0.82;
   }
 
   &.empty button.metric h3 {
@@ -35,7 +29,7 @@ button.metric {
     margin: 0;
     font-size: var(--font-size-lg);
     font-weight: 500;
-    display: inline-flex;
+    display: flex;
     gap: 0.5rem;
     align-items: center;
     color: var(--text-muted);
@@ -50,8 +44,22 @@ button.metric {
   }
 
   span.change {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    line-height: 1.1;
     font-size: var(--font-size-sm);
     font-weight: 500;
+    color: var(--text-muted);
+
+    &[data-improved="true"] {
+      color: var(--success);
+    }
+
+    &[data-improved="false"] {
+      color: var(--danger);
+    }
   }
 
   &[data-active="true"] {
@@ -64,14 +72,12 @@ button.metric {
   }
 }
 
+.currentValue {
+  flex: none;
+}
+
 @media (max-width: 820px) {
   button.metric h3 {
     flex-wrap: wrap;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .metrics {
-    transition: none;
   }
 }

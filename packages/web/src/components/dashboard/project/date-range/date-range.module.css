@@ -1,12 +1,14 @@
 .container {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
-.container label {
+.container.container > label {
   min-width: 0;
-  font-size: var(--font-size-md);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
@@ -14,16 +16,27 @@
   margin-top: 0.4rem;
 }
 
+.singleDate {
+  grid-template-columns: 1fr;
+}
+
+.hint {
+  margin: -0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .actions {
   grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
-  gap: 0.6rem;
-  margin-top: 0.25rem;
+  gap: 0.5rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
 }
 
 .actions button {
-  min-width: 6rem;
+  min-width: 5rem;
 }
 
 @media (max-width: 440px) {

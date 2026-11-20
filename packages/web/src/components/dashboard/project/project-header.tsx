@@ -5,7 +5,7 @@ import { CircleIcon, LockIcon, LockOpenIcon } from "lucide-react";
 
 import { appPath } from "@/config";
 import type { ProjectResponse, StatsResponse } from "@/constants";
-import { formatMetricVal } from "@/utils";
+import { formatMetricVal } from "./metric-format";
 
 export const ProjectHeader = ({ project, stats }: { stats?: StatsResponse; project: ProjectResponse }) => {
 	return (

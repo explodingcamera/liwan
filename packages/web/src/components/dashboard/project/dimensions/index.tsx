@@ -5,12 +5,15 @@ import { Tabs } from "@base-ui/react/tabs";
 import { ChevronRightIcon, LinkIcon, MonitorIcon, PinIcon, SquareArrowOutUpRightIcon, TagIcon } from "lucide-react";
 
 import { LoadingSpinner } from "@/components/ui/loading";
-import type { Dimension, DimensionTableRow } from "@/constants";
+import type { Dimension, DimensionTableRow, Metric } from "@/constants";
 import { dimensionNames, eventMetricName } from "@/constants";
 import { useDimension } from "@/hooks/api";
-import { cls, countryCodeToFlag, formatHost, formatMetricVal, formatPath, getHref, tryParseUrl } from "@/utils";
+import { cls, countryCodeToFlag, formatHost, formatPath, getHref, tryParseUrl } from "@/utils";
 import { getDimensionFilter, type ProjectQuery } from "..";
+import type { ComparisonRow } from "../comparison";
 import { BrowserIcon, MobileDeviceIcon, OrientationIcon, OSIcon, ReferrerIcon } from "../icons";
+import { formatMetricVal, isMetricImprovement } from "../metric-format";
+import { DimensionMetricValue } from "./metric-value";
 import { DetailsModal } from "./modal";
 
 export type DimensionProps = {
@@ -145,7 +148,7 @@ export const DimensionTabs = ({
 };
 
 export const DimensionTable = (props: DimensionProps) => {
-	const { data, biggest, isLoading } = useDimension({
+	const { data, biggest, isLoading, error } = useDimension({
 		dimension: props.dimension,
 		propertyKey: props.propertyKey,
 		...props.query,
@@ -154,7 +157,7 @@ export const DimensionTable = (props: DimensionProps) => {
 
 	return (
 		<>
-			<div className={styles.dimensionTable} style={{ "--count": 6 } as React.CSSProperties}>
+			<div className={styles.dimensionTable} style={{ "--count": 6 } as React.CSSProperties} aria-busy={isLoading}>
 				{isLoading && (
 					<div className={styles.loadingOverlay} data-no-delay={!data}>
 						<LoadingSpinner immediate />
@@ -163,9 +166,9 @@ export const DimensionTable = (props: DimensionProps) => {
 				{dataTruncated?.map((d) => (
 					<DimensionRow key={d.dimensionValue} {...props} row={d} biggest={biggest} />
 				))}
-				{!isLoading && dataTruncated?.length === 0 && (
+				{!isLoading && (error || dataTruncated?.length === 0) && (
 					<div className={styles.dimensionEmpty}>
-						<div>No data available</div>
+						<div>{error ? "Could not load this breakdown." : "No data available"}</div>
 					</div>
 				)}
 			</div>
@@ -357,11 +360,20 @@ export const DimensionRow = ({
 	query,
 	onSelect,
 	onOpen,
-}: DimensionProps & { row: DimensionTableRow; biggest: number }) => (
-	<div className={styles.dimensionRow}>
+}: DimensionProps & { row: ComparisonRow; biggest: number }) => (
+	<div
+		className={styles.dimensionRow}
+		title={
+			row.comparisonValue === undefined
+				? undefined
+				: `Comparison: ${formatMetricVal(row.comparisonValue, query.metric)}`
+		}
+	>
 		<DimensionValueBar
 			value={row.value}
+			comparisonValue={row.comparisonValue}
 			biggest={biggest}
+			metric={query.metric}
 			selected={isSelected(query, dimension, row.dimensionValue, propertyKey)}
 		>
 			{dimensionLabels[dimension](row, () => onSelect(row))}
@@ -377,29 +389,46 @@ export const DimensionRow = ({
 				</button>
 			)}
 		</DimensionValueBar>
-		<div>{formatMetricVal(row.value, query.metric)}</div>
+		<DimensionMetricValue value={row.value} comparisonValue={row.comparisonValue} metric={query.metric} />
 	</div>
 );
 
 export const DimensionValueBar = ({
 	value,
 	biggest,
+	metric,
 	children,
 	selected = false,
+	comparisonValue,
 }: {
 	value?: number | null;
 	biggest: number;
+	metric: Metric;
 	children?: React.ReactNode;
 	selected?: boolean;
-}) => (
-	<div
-		className={cls(styles.percentage, selected && styles.selected)}
-		data-empty={(value ?? 0) <= 0}
-		style={{ "--percentage": `${biggest > 0 ? ((value ?? 0) / biggest) * 100 : 0}%` } as React.CSSProperties}
-	>
-		{children}
-	</div>
-);
+	comparisonValue?: number | null;
+}) => {
+	const hasChange = value != null && comparisonValue != null && value !== comparisonValue;
+	const end = hasChange ? Math.max(value, comparisonValue) : (value ?? 0);
+	const overlap = hasChange && end > 0 ? Math.min(value, comparisonValue) / end : 1;
+	const changeIsGood = hasChange && isMetricImprovement(value - comparisonValue, metric);
+
+	return (
+		<div
+			className={cls(styles.percentage, selected && styles.selected)}
+			data-empty={end <= 0}
+			data-change={hasChange ? (changeIsGood ? "better" : "worse") : undefined}
+			style={
+				{
+					"--percentage": `${biggest > 0 ? (end / biggest) * 100 : 0}%`,
+					"--overlap": `${overlap * 100}%`,
+				} as React.CSSProperties
+			}
+		>
+			{children}
+		</div>
+	);
+};
 
 export const isSelected = (query: ProjectQuery, dimension: Dimension, value: string, propertyKey?: string) => {
 	// in the property key list, a key is active while any filter uses it
