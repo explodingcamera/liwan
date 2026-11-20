@@ -29,6 +29,32 @@ async fn main() -> Result<()> {
     let app = Liwan::try_new(config)?;
     app.run_background_tasks();
 
+    let interval = app.config.duckdb.checkpoint_interval;
+    let (stop_checkpoints, mut checkpoint_shutdown) = tokio::sync::oneshot::channel::<()>();
+    let checkpoints = (!interval.is_zero()).then(|| {
+        let app = app.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    biased;
+                    _ = &mut checkpoint_shutdown => break,
+                    _ = tokio::time::sleep(interval) => {}
+                }
+                let app = app.clone();
+                match tokio::task::spawn_blocking(move || -> Result<()> {
+                    app.events_conn()?.execute_batch("CHECKPOINT")?;
+                    Ok(())
+                })
+                .await
+                {
+                    Ok(Ok(())) => tracing::debug!("Completed periodic DuckDB checkpoint"),
+                    Ok(Err(err)) => tracing::warn!(%err, "Periodic DuckDB checkpoint failed"),
+                    Err(err) => tracing::error!(%err, "Periodic DuckDB checkpoint task failed"),
+                }
+            }
+        })
+    });
+
     let server = web::start_webserver(app.clone(), queues);
     let event_processor = app.events.process_events(events_rx);
     let exit_processor = app.events.process_exits(exits_rx);
@@ -42,8 +68,12 @@ async fn main() -> Result<()> {
     };
 
     // The stopped server has dropped its senders. Drain every event it accepted before checkpointing.
+    drop(stop_checkpoints);
     event_processor.await?;
     exit_processor.await?;
+    if let Some(checkpoints) = checkpoints {
+        checkpoints.await?;
+    }
     app.shutdown()
 }
 

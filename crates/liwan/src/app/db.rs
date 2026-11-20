@@ -1,4 +1,5 @@
 use crate::config::DuckdbConfig;
+use crate::utils::duckdb::{LATEST_STORAGE_FORMAT, requires_newer_duckdb, storage_format};
 use crate::utils::refinery_duckdb::DuckDBConnection;
 use crate::utils::refinery_sqlite::RqlConnection;
 
@@ -32,12 +33,18 @@ pub(super) fn init_duckdb(
         match DuckdbConnectionManager::file_with_flags(path, flags) {
             Ok(conn) => break conn,
             Err(e) => {
+                let message = e.to_string();
+                if requires_newer_duckdb(&message) {
+                    return Err(e).with_context(|| {
+                        format!("{} uses a newer DuckDB storage format than this Liwan build supports", path.display())
+                    });
+                }
                 if tries <= 0 {
                     tracing::warn!("");
                     return Err(e).context("Failed to load DuckDB Database after 10 attempts");
                 }
 
-                if e.to_string().contains("Could not set lock on file") {
+                if message.contains("Could not set lock on file") {
                     tracing::warn!("DuckDB database is locked. Retrying... ({} tries left)", tries);
                     tries -= 1;
                     std::thread::sleep(std::time::Duration::from_secs(1));
@@ -54,12 +61,22 @@ pub(super) fn init_duckdb(
         conn.execute("PRAGMA enable_checkpoint_on_shutdown", [])?;
         conn.pragma_update(None, "autoload_known_extensions", &"true")?;
         conn.pragma_update(None, "allow_community_extensions", &"false")?;
-    }
 
-    {
-        let conn = pool.get()?;
+        match storage_format(&conn, None) {
+            Ok(current) if current != LATEST_STORAGE_FORMAT => tracing::info!(
+                path = %path.display(),
+                current_format = %current,
+                latest_format = LATEST_STORAGE_FORMAT,
+                "A newer DuckDB storage format is available. Stop Liwan and run `liwan upgrade-duckdb` to upgrade the file."
+            ),
+            Err(err) => tracing::debug!(%err, "Could not read DuckDB storage format"),
+            _ => {}
+        }
+
+        conn.execute_batch("CHECKPOINT").context("Failed to checkpoint DuckDB before migrations")?;
         migrations_runner.set_migration_table_name("migrations");
-        for migration in migrations_runner.run_iter(&mut DuckDBConnection(conn)) {
+        let mut conn = DuckDBConnection(conn);
+        for migration in migrations_runner.run_iter(&mut conn) {
             match migration {
                 Ok(migration) => {
                     tracing::info!("Applied migration: {}", migration);
@@ -69,6 +86,7 @@ pub(super) fn init_duckdb(
                 }
             }
         }
+        conn.0.execute_batch("CHECKPOINT").context("Failed to checkpoint DuckDB after migrations")?;
     }
 
     Ok(pool)
@@ -117,4 +135,22 @@ pub fn init_sqlite_mem(mut migrations_runner: Runner) -> Result<r2d2::Pool<Sqlit
     migrations_runner.run(&mut RqlConnection(pool.get()?))?;
 
     Ok(pool)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::embedded::events::migrations;
+
+    #[test]
+    fn checkpoints_event_migrations() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("events.duckdb");
+        let wal = path.with_extension("duckdb.wal");
+        let pool = init_duckdb(&path, DuckdbConfig::default(), migrations::runner()).unwrap();
+        let conn = pool.get().unwrap();
+
+        conn.execute_batch("SELECT properties FROM events").unwrap();
+        assert!(std::fs::metadata(wal).map_or_else(|err| err.kind() == std::io::ErrorKind::NotFound, |m| m.len() == 0));
+    }
 }

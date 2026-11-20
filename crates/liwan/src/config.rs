@@ -114,6 +114,9 @@ impl Default for GeoIpConfig {
 pub struct DuckdbConfig {
     pub memory_limit: Option<String>,
     pub threads: Option<NonZeroU16>,
+    /// Time between periodic checkpoints. Zero disables periodic checkpoints.
+    #[serde(with = "crate::utils::serde::human_duration")]
+    pub checkpoint_interval: Duration,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -376,6 +379,19 @@ mod test {
         assert_eq!(config.duckdb.threads, Some(NonZeroU16::new(4).unwrap()));
         assert_eq!(config.limits.report_max_concurrency, 6);
         assert_eq!(config.limits.report_timeout_seconds, 45);
+    }
+
+    #[test]
+    fn duckdb_checkpoint_interval() {
+        let (_temp_dir, path) = temp_config("duckdb.toml", "[duckdb]\ncheckpoint_interval = \"5m\"");
+        let config = Config::load(Some(path.clone()), std::iter::empty::<(&str, &str)>()).unwrap();
+        assert_eq!(config.duckdb.checkpoint_interval, Duration::from_secs(300));
+
+        let config = Config::load(Some(path.clone()), [("LIWAN_DUCKDB_CHECKPOINT_INTERVAL", "30s")]).unwrap();
+        assert_eq!(config.duckdb.checkpoint_interval, Duration::from_secs(30));
+
+        let config = Config::load(Some(path), [("LIWAN_DUCKDB_CHECKPOINT_INTERVAL", "0s")]).unwrap();
+        assert!(config.duckdb.checkpoint_interval.is_zero());
     }
 
     #[test]

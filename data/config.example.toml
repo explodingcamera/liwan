@@ -53,6 +53,8 @@ listen = 9042  # The port to listen on (http)
 ## See https://liwan.dev/guides/duckdb for guidance
 # threads=2
 # memory_limit=2G
+## Time between periodic DuckDB checkpoints. Disabled by default. Use "0s" to disable.
+# checkpoint_interval="5m"
 
 [limits]  # Resource limits
 ## Maximum time a report may run before timing out.

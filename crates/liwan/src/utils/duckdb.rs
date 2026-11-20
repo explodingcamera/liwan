@@ -1,5 +1,24 @@
 use duckdb::ToSql;
 
+/// Storage format Liwan targets, verified against the bundled DuckDB's `latest` in tests.
+pub(crate) const LATEST_STORAGE_FORMAT: &str = "v2.0.0";
+
+/// Identify newer-format errors, which DuckDB reports through generic error codes.
+pub(crate) fn requires_newer_duckdb(message: &str) -> bool {
+    message.contains("file was written with a storage version greater than the latest version supported")
+        || message.contains("The database file was created with a newer version of DuckDB.")
+}
+
+/// Read the on-disk storage format without DuckDB's compatibility suffix.
+pub(crate) fn storage_format(conn: &duckdb::Connection, database: Option<&str>) -> duckdb::Result<String> {
+    conn.query_row(
+        "SELECT rtrim(tags['storage_version'], '+') FROM duckdb_databases()
+         WHERE database_name = coalesce(?, current_database())",
+        [database],
+        |row| row.get(0),
+    )
+}
+
 #[derive(Default)]
 pub struct ParamVec<'a>(Vec<Box<dyn ToSql + 'a>>);
 
