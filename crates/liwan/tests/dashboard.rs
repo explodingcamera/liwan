@@ -2,8 +2,62 @@ use http::StatusCode;
 mod common;
 use anyhow::Result;
 use jiff::{SignedDuration, Timestamp};
-use liwan::app::models::ProjectVisibility;
+use liwan::app::models::{DisplayOverride, ProjectVisibility};
 use serde_json::json;
+
+#[tokio::test]
+async fn live_visitors_use_their_latest_pageview() -> Result<()> {
+    let mut config = liwan::config::Config::default();
+    config.limits.report_max_dimension_results = 1;
+    let app = liwan::app::Liwan::new_memory(config)?;
+    let (queues, _receivers) = common::events();
+    let client = common::TestClient::new(app.clone(), queues);
+    app.seed_database(0)?;
+    let conn = app.events_conn()?;
+    for (entity, visitor, event, minutes, path) in [
+        ("entity-1", "a", "pageview", 4, "/first"),
+        ("entity-1", "a", "pageview", 2, "/latest"),
+        ("entity-1", "a", "signup", 1, "/event"),
+        ("entity-1", "custom-only", "signup", 1, "/event"),
+        ("entity-1", "b", "pageview", 1, "/latest"),
+        ("entity-1", "c", "pageview", 3, "/other"),
+        ("entity-1", "old", "pageview", 6, "/old"),
+        ("entity-1", "future", "pageview", -1, "/future"),
+        ("other-entity", "external", "pageview", 1, "/external"),
+    ] {
+        let date = Timestamp::now() - SignedDuration::from_mins(minutes);
+        conn.execute(
+            "insert into events (entity_id, visitor_group_id, event, created_at, fqdn, path) values (?, ?, ?, ?, 'example.com', ?)",
+            duckdb::params![entity, visitor, event, date.to_string(), path],
+        )?;
+    }
+    let path = "/api/dashboard/project/public-project/current-visitors";
+    let response = client.get(path).await;
+    response.assert_status_success();
+    response.assert_header("cache-control", "private, no-store");
+    response.assert_json(&json!({ "count": 3 }));
+
+    let pages_path = format!("{path}?pages=true");
+    let response = client.get(&pages_path).await;
+    response.assert_status_success();
+    response.assert_json(&json!({
+        "count": 3,
+        "pages": [
+            { "page": "example.com/latest", "visitors": 2 },
+            { "page": "example.com/other", "visitors": 1 }
+        ]
+    }));
+
+    let mut settings = app.project_settings.get("public-project")?;
+    settings.dimension_display_overrides.insert("url".into(), DisplayOverride::Hide);
+    app.project_settings.update(&settings)?;
+    let response = client.get(&pages_path).await;
+    response.assert_status_success();
+    response.assert_json(&json!({ "count": 3 }));
+
+    client.get("/api/dashboard/project/private-project/current-visitors").await.assert_status(StatusCode::NOT_FOUND);
+    Ok(())
+}
 
 #[tokio::test]
 async fn graph_preserves_partial_buckets() -> Result<()> {

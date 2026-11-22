@@ -1,3 +1,7 @@
 .icon {
   color: light-dark(var(--light), var(--dark));
 }
+.countryFlag {
+  flex: none;
+  border-radius: 3px;
+}

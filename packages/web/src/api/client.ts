@@ -3,11 +3,20 @@ import type { OASClient } from "fets";
 import { appPath } from "@/config";
 import type { DashboardSpec } from "@/constants";
 
-type RequestParams = { params?: Record<string, string>; json?: unknown };
+type RequestParams = {
+	params?: Record<string, string>;
+	query?: Record<string, string | number | boolean>;
+	json?: unknown;
+};
 
-const request = async (path: string, method: string, { params, json }: RequestParams = {}) => {
+const request = async (path: string, method: string, { params, query, json }: RequestParams = {}) => {
 	for (const [key, value] of Object.entries(params ?? {})) {
 		if (value) path = path.replace(`{${key}}`, encodeURIComponent(value));
+	}
+	if (query) {
+		const search = new URLSearchParams();
+		for (const [key, value] of Object.entries(query)) search.set(key, String(value));
+		if (search.size > 0) path += `?${search}`;
 	}
 
 	const res = await fetch(appPath(path), {
@@ -24,7 +33,7 @@ const request = async (path: string, method: string, { params, json }: RequestPa
 	return res;
 };
 
-// Minimal client based on fets' `createClient`, supporting only `params` and `json`.
+// Minimal client based on fets' `createClient`, supporting `params`, `query`, and `json`.
 // fets is only used for types, its runtime pulls in qs and other dependencies we don't need.
 export const api = new Proxy({} as OASClient<DashboardSpec>, {
 	get: (_, path: string) =>

@@ -95,8 +95,9 @@
     --bar-opacity: 18%;
   }
 
-  &.selected {
-    --bar-opacity: 26%;
+  &.selected::after {
+    outline: 1px solid var(--report-bar-color);
+    outline-offset: -1px;
   }
 
   &[data-change="better"] {
@@ -207,18 +208,72 @@
 }
 
 .showMoreHidden {
-  opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
+}
+
+.cardFooter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 1.75rem;
+  margin-top: auto;
+  margin-bottom: -0.35rem;
+
+  > .showMore {
+    grid-column: 2;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.pagination {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  display: flex;
+  gap: 0.15rem;
+  /* Align the last chevron with the right edge of the metric values. */
+  margin-inline-end: calc((16px - 1.75rem) / 2);
+
+  > button {
+    all: unset;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      color: var(--text-strong);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--focus);
+      border-radius: var(--radius-control);
+    }
+  }
 }
 
 .metricColumn {
   flex: none;
-  width: 6rem;
+  width: 4ch;
   text-align: right;
+}
 
-  & + & {
-    width: 4rem;
-  }
+.dimensionHeader > .metricColumn {
+  display: flex;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.metricHeading {
+  font-variant-caps: all-small-caps;
 }
 
 .dimensionRow {
@@ -263,24 +318,32 @@
   }
 }
 
-.hostname {
+.hostname,
+.screenWidthRange {
   opacity: 0.7;
+}
+
+.hostname {
   font-size: 0.6rem;
 }
 
-.dimensionItemSelect {
+.screenWidthRange {
+  font-size: 0.7rem;
+}
+
+.dimensionItemSelect,
+.dimensionItemLabel {
   all: unset;
   position: relative;
   color: var(--text-strong);
   padding: 0.5rem 0;
-  max-width: calc(100% - 3rem);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-  span {
-    white-space: nowrap;
-  }
-
+.dimensionItemSelect {
   &:hover {
     text-decoration: underline;
     text-decoration-color: var(--text-strong);
@@ -313,6 +376,12 @@
   position: relative;
   display: flex;
   flex-direction: column;
+
+  .dimensionEmpty {
+    margin: 0;
+    padding-block: 1rem;
+    text-align: center;
+  }
 
   &[aria-busy="true"] {
     min-height: 4rem;

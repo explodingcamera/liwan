@@ -25,6 +25,8 @@ Since this is not a library, this changelog focuses on the changes that are rele
 ### Features
 
 - Compare any dashboard date range with the previous period, last week, last year, or a custom start date. See the comparison in graphs, summary metrics, and breakdowns.
+- Added per-page live visitor counts breakdowns
+- Added pagination to Dashboard report cards
 - Improved the dashboard layout and world map, including map zooming and panning.
 - Updated to DuckDB 2.0.1. Upgrading the event database's storage format is optional. To upgrade it, stop Liwan and run `liwan upgrade-duckdb`. The command keeps the original file as a `.old` backup. Older Liwan versions may not be able to open the upgraded file.
 - Added optional periodic DuckDB checkpoints via `duckdb.checkpoint_interval` (`LIWAN_DUCKDB_CHECKPOINT_INTERVAL`). Periodic checkpoints are off by default.

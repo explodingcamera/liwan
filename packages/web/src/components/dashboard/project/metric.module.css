@@ -28,6 +28,7 @@ button.metric {
   h3 {
     margin: 0;
     font-size: var(--font-size-lg);
+    min-block-size: 1lh;
     font-weight: 500;
     display: flex;
     gap: 0.5rem;
@@ -74,6 +75,10 @@ button.metric {
 
 .currentValue {
   flex: none;
+
+  &[data-unavailable] {
+    font-size: var(--font-size-md);
+  }
 }
 
 @media (max-width: 820px) {
@@ -85,7 +90,8 @@ button.metric {
 @media (width > 820px) {
   button.metric {
     min-width: 8rem;
-    inline-size: var(--metric-width, auto);
+    /* Fit first render to its content, then animate measured changes. */
+    inline-size: var(--metric-width, max-content);
     overflow: hidden;
     transition:
       background-color 0.2s ease,

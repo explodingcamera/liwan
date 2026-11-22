@@ -6,9 +6,12 @@ use crate::web::RouterState;
 use crate::web::session::MaybeAuth;
 use crate::web::webext::{ApiResult, AxumErrExt, http_bail};
 
-use aide::axum::{ApiRouter, routing::*};
+use aide::{
+    UseApi,
+    axum::{ApiRouter, IntoApiResponse, routing::*},
+};
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use http::StatusCode;
 use jiff::Timestamp;
 use schemars::JsonSchema;
@@ -84,6 +87,7 @@ pub fn router() -> ApiRouter<RouterState> {
         .api_route("/project/{project_id}/earliest", get(project_earliest_handler))
         .api_route("/project/{project_id}/graph", post(project_graph_handler))
         .api_route("/project/{project_id}/stats", post(project_stats_handler))
+        .api_route("/project/{project_id}/current-visitors", get(project_current_visitors_handler))
         .api_route("/project/{project_id}/dimension", post(project_detailed_handler))
         .api_route("/project/{project_id}/custom-events", post(project_custom_events_handler))
 }
@@ -161,12 +165,23 @@ struct GraphRequest {
     event: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Serialize, JsonSchema)]
 struct StatsResponse {
-    current_visitors: u64,
     /// Reports in the same order as the requested ranges.
     reports: Vec<ReportStats>,
+}
+
+#[derive(Serialize, JsonSchema)]
+struct CurrentVisitors {
+    count: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pages: Option<Vec<reports::CurrentVisitorPage>>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+struct CurrentVisitorsQuery {
+    /// Include the page breakdown as well as the count.
+    pages: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone)]
@@ -286,12 +301,11 @@ async fn project_stats_handler(
     let (entities, display) = report_project(&app, project_id, user).await?;
     validate_ranges(&app, &req.ranges, &req.filters)?;
     let event = report_event(req.event.as_deref(), &req.filters, None, display.custom_events_display())?;
-
     let collection = app.settings.resolved_for_entities(&entities);
     let limits = app.config.limits.clone();
+
     let response = run_report(&app, move |conn| {
-        let (mut reports, current_visitors) =
-            reports::overall_stats(conn, &entities, &event, &req.ranges, &req.filters, &limits)?;
+        let mut reports = reports::overall_stats(conn, &entities, &event, &req.ranges, &req.filters, &limits)?;
         for stats in &mut reports {
             if display.is_metric_hidden(&collection, Metric::BounceRate) {
                 stats.bounce_rate = None;
@@ -300,10 +314,31 @@ async fn project_stats_handler(
                 stats.avg_time_on_site = None;
             }
         }
-        Ok(StatsResponse { current_visitors, reports })
+        Ok(StatsResponse { reports })
     })
     .await?;
     Ok(Json(response))
+}
+
+async fn project_current_visitors_handler(
+    app: State<RouterState>,
+    Path(project_id): Path<String>,
+    MaybeAuth(user): MaybeAuth,
+    Query(query): Query<CurrentVisitorsQuery>,
+) -> ApiResult<UseApi<impl IntoApiResponse, Json<CurrentVisitors>>> {
+    let (entities, display) = report_project(&app, project_id, user).await?;
+    let include_pages =
+        query.pages.unwrap_or(false) && !display.is_dimension_hidden(&[], Default::default(), Dimension::Url);
+    let response = run_report(&app, move |conn| {
+        if !include_pages {
+            return Ok(CurrentVisitors { count: reports::online_users(conn, &entities)?, pages: None });
+        }
+        let pages = reports::online_users_by_page(conn, &entities)?;
+        let count = pages.iter().map(|page| page.visitors).sum();
+        Ok(CurrentVisitors { count, pages: Some(pages) })
+    })
+    .await?;
+    Ok(([(http::header::CACHE_CONTROL, "private, no-store")], Json(response)).into())
 }
 
 async fn project_detailed_handler(

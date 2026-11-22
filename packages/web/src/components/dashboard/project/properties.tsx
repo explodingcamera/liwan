@@ -39,7 +39,7 @@ export const PropertiesCard = ({
 				) : (
 					<div>{dimensionNames.property}</div>
 				)}
-				<div>{eventMetricName(query.metric, query.eventName)}</div>
+				<div className={styles.metricHeading}>{eventMetricName(query.metric, query.eventName)}</div>
 			</div>
 			<DimensionTable
 				dimension="property"

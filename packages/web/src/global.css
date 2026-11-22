@@ -11,6 +11,7 @@
     font-size: clamp(100%, calc(0.875rem + 0.35vw), 125%);
     font-variant-numeric: tabular-nums;
     line-height: 1.35;
+    scrollbar-gutter: stable both-edges;
   }
 
   body {

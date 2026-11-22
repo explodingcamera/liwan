@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0543"
+reason = "Chrono is marked unmaintained by this advisory. It does not report a specific vulnerability."

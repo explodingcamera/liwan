@@ -3,6 +3,22 @@
   pointer-events: none;
 }
 
+.tooltipHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.tooltipContainer .mapTooltip {
+  max-width: min(16rem, calc(100vw - 1rem));
+}
+
 button.reset {
   all: unset;
   cursor: pointer;
@@ -34,18 +50,6 @@ button.reset {
     display: block;
     flex: 1;
     min-inline-size: 0;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(
-      ellipse at 45% 38%,
-      transparent 42%,
-      color-mix(in srgb, var(--text-strong) 6%, transparent)
-    );
   }
 }
 

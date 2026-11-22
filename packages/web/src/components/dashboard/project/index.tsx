@@ -6,7 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { DateRange } from "@/api/ranges";
 import type { Dimension, DimensionFilter, DimensionTableRow, Metric, ProjectResponse } from "@/constants";
 import { dimensions, eventMetricName, metrics } from "@/constants";
-import { useDimension, useProject, useProjectGraph, useProjectStats } from "@/hooks/api";
+import { useCurrentVisitors, useDimension, useProject, useProjectGraph, useProjectStats } from "@/hooks/api";
 import { useMetric, useRange } from "@/hooks/persist";
 import { cls } from "@/utils";
 import { type Comparison, type ComparisonRange, getComparisonRange } from "./comparison";
@@ -30,20 +30,14 @@ export type ProjectQuery = {
 };
 
 /** Reserve the dashboard layout before the project loads. */
-export const ProjectLoading = ({
-	range = new DateRange("last30Days"),
-	metric = "views",
-}: {
-	range?: DateRange;
-	metric?: Metric;
-}) => (
+export const ProjectLoading = ({ range = new DateRange("last30Days") }: { range?: DateRange }) => (
 	<div className={styles.project} role="status" aria-label="Loading project">
 		<div className={styles.projectReport} inert>
 			<div className={styles.projectHeader}>
 				<span className={styles.loadingTitle} />
 				<SelectRange range={range} onSelect={() => {}} disabled />
 			</div>
-			<SelectMetrics className={styles.projectStats} metric={metric} setMetric={() => {}} isLoading />
+			<SelectMetrics className={styles.projectStats} setMetric={() => {}} isLoading />
 			<div className={styles.loadingFilters}>
 				<SelectFilters value={[]} onChange={() => {}} />
 			</div>
@@ -52,13 +46,32 @@ export const ProjectLoading = ({
 		<div className={styles.tables} aria-hidden="true">
 			{[0, 1].map((slot) => (
 				<article key={slot} className={cardStyles.card}>
-					<div className={cardStyles.dimensionHeader}>&nbsp;</div>
-					<div className={cardStyles.dimensionTable} />
-					<div className={cardStyles.showMore}>&nbsp;</div>
+					<ReportTableLoading />
+				</article>
+			))}
+			<article className={cls(cardStyles.card, styles.geoCard)}>
+				<div className={styles.geoMap} />
+				<div className={styles.geoTable}>
+					<div>
+						<ReportTableLoading />
+					</div>
+				</div>
+			</article>
+			{[2, 3, 4, 5].map((slot) => (
+				<article key={slot} className={cardStyles.card}>
+					<ReportTableLoading />
 				</article>
 			))}
 		</div>
 	</div>
+);
+
+const ReportTableLoading = () => (
+	<>
+		<div className={cardStyles.dimensionHeader}>&nbsp;</div>
+		<div className={cardStyles.dimensionTable} />
+		<div className={cardStyles.cardFooter} />
+	</>
 );
 
 export const getDimensionFilter = (dimension: Dimension, value: string, propertyKey?: string): DimensionFilter => {
@@ -105,6 +118,7 @@ export const Project = () => {
 	const comparisonRange = getComparisonRange(range, comparison);
 
 	const { project, notFound } = useProject(projectId);
+	const [fadeTitle] = useState(() => project === undefined);
 	const visibleMetrics: Metric[] = useMemo(
 		() =>
 			metrics.filter(
@@ -158,8 +172,9 @@ export const Project = () => {
 		enabled: Boolean(activeMetric),
 		comparisonRange,
 	});
+	const { data: live } = useCurrentVisitors(projectId);
 	const projectName = project?.displayName;
-	const currentVisitors = stats?.currentVisitors ?? 0;
+	const currentVisitors = live?.count ?? 0;
 	useEffect(() => {
 		if (!projectName) return;
 		document.title = currentVisitors > 1 ? `${projectName} (${currentVisitors})` : projectName;
@@ -218,7 +233,7 @@ export const Project = () => {
 		return <div className={styles.notFound}>Project not found</div>;
 	}
 
-	if (!project) return <ProjectLoading range={range} metric={metric} />;
+	if (!project) return <ProjectLoading range={range} />;
 	const visibleDimensions = (items: Dimension[]) =>
 		items.filter(
 			(dimension) =>
@@ -242,7 +257,13 @@ export const Project = () => {
 		<div className={styles.project}>
 			<div className={styles.projectReport}>
 				<div className={styles.projectHeader}>
-					<ProjectHeader project={project} stats={stats} isUpdating={statsUpdating} />
+					<ProjectHeader
+						project={project}
+						liveCount={live?.count}
+						fadeTitle={fadeTitle}
+						filters={visibleFilters}
+						onSelectPage={(row) => onSelectDimRow(row, "url")}
+					/>
 					<SelectRange
 						onSelect={setRange}
 						range={range}

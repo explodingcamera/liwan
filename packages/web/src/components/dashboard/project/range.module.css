@@ -165,42 +165,28 @@
     display: none;
   }
 
-  .mobileRange {
+  .mobileRange,
+  .mobileComparison {
     display: block;
-    width: 9rem;
+    width: auto;
     margin: 0;
     min-width: 0;
+    max-width: 100%;
     border-radius: var(--radius);
   }
 
-  .rangeField[data-comparing="true"] .mobileRange {
-    width: 7rem;
-    border: 0;
-    border-radius: 0;
-    background-color: transparent;
-    font-size: var(--font-size-sm);
-    padding-right: 1.6rem;
-  }
-
   .rangeField[data-comparing="true"] {
-    height: var(--field-height);
-
-    select {
-      height: auto;
-      min-height: 0;
-    }
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    height: auto;
+    border: 0;
+    background: transparent;
+    overflow: visible;
   }
 
-  .mobileComparison {
-    display: block;
-    width: 11rem;
-    min-width: 0;
-    margin: 0;
+  .comparison {
+    max-width: 100%;
     border: 0;
-    border-radius: 0;
-    background-color: transparent;
-    font-size: var(--font-size-sm);
-    padding-right: 1.6rem;
-    text-overflow: ellipsis;
   }
 }

@@ -20,7 +20,7 @@ export const SelectMetrics = ({
 	showAbsoluteChange,
 }: {
 	data?: StatsResponse;
-	metric: Metric;
+	metric?: Metric;
 	metrics?: readonly Metric[];
 	setMetric: (value: Metric) => void;
 	className?: string;
@@ -115,7 +115,7 @@ export const SelectMetric = ({
 				(total, size) => total + Number.parseFloat(size),
 				0,
 			);
-			button.style.setProperty("--metric-width", `${Math.ceil(width + inset)}px`);
+			button.style.setProperty("--metric-width", `${width + inset}px`);
 		});
 		for (const element of content) observer.observe(element);
 		return () => observer.disconnect();
@@ -146,7 +146,9 @@ export const SelectMetric = ({
 		>
 			<h2>{title}</h2>
 			<h3>
-				<span className={styles.currentValue}>{value === null ? "Unavailable" : formatMetricVal(value, metric)}</span>
+				<span className={styles.currentValue} data-unavailable={value === null || undefined}>
+					{value === null ? "Unavailable" : formatMetricVal(value, metric)}
+				</span>
 				{!unavailable && prevValue != null && formattedChange !== null && (
 					<span className={styles.change} data-improved={improved}>
 						{TrendIcon && <TrendIcon size={14} aria-hidden="true" />}

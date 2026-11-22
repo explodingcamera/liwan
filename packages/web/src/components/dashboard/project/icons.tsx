@@ -63,6 +63,21 @@ const genericIcons = {
 	search: SearchIcon,
 };
 
+const countryFlags = import.meta.glob<string>("../../../../node_modules/country-flag-icons/3x2/[A-Z][A-Z].svg", {
+	eager: true,
+	import: "default",
+	query: "?url&no-inline",
+});
+
+export const CountryFlag = ({ code }: { code?: string | null }) => {
+	const src = countryFlags[`../../../../node_modules/country-flag-icons/3x2/${code?.toUpperCase()}.svg`];
+	return src ? (
+		<img className={styles.countryFlag} src={src} width={18} height={12} alt="" loading="lazy" />
+	) : (
+		<EarthIcon size={18} aria-hidden="true" />
+	);
+};
+
 // microsoft icons are not included in simple-icons
 const browserIcons = {
 	chrome: [SiGooglechrome, "#ffffff", "#000000"],

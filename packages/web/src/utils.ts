@@ -51,23 +51,8 @@ export const formatPath = (url: string | URL) => {
 	return url.pathname;
 };
 
-export const getHref = (url: string | URL) => {
-	if (typeof url === "string") {
-		if (!url.startsWith("http")) return `https://${url}`;
-		return url;
-	}
-
-	return url.href;
-};
-
-export const countryCodeToFlag = (countryCode: string) => {
-	const code = countryCode.length === 2 ? countryCode : "XX";
-	const codePoints = code
-		.toUpperCase()
-		.split("")
-		.map((char) => 127397 + char.charCodeAt(0));
-	return String.fromCodePoint(...codePoints);
-};
+export const getHref = (url: string | URL) =>
+	typeof url !== "string" && (url.protocol === "https:" || url.protocol === "http:") ? url.href : undefined;
 
 // Case-insensitive fuzzy search. Each space-separated word must appear in order in one of the keys.
 // Substring matches rank first (earlier is better), then the tightest in-order match. Ties keep their order.

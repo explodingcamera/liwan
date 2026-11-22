@@ -24,13 +24,12 @@
     font-size: var(--font-size-xl);
     line-height: 1.25;
     margin: 0;
-    align-items: center;
     block-size: calc(1lh + 0.3rem);
     min-inline-size: 0;
     max-inline-size: 100%;
 
     > a {
-      padding-bottom: 0;
+      padding-block: 0.15rem;
       padding-left: 0.2rem;
       min-inline-size: 0;
 
@@ -144,6 +143,8 @@
     }
 
     .geoMap {
+      aspect-ratio: 8 / 5;
+
       &::after {
         top: unset;
         width: 100%;

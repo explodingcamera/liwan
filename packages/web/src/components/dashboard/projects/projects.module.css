@@ -38,7 +38,7 @@
     .projectTitle {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       position: relative;
       z-index: 0;
       margin-bottom: 0.4rem;

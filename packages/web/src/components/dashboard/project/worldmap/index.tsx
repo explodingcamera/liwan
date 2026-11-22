@@ -13,6 +13,7 @@ import type { DimensionTableRow, Metric } from "@/constants";
 import { metricNames } from "@/constants";
 import { cls } from "@/utils";
 import geo from "../../../../../../../data/geo.json";
+import { CountryFlag } from "../icons";
 import { formatMetricVal } from "../metric-format";
 import { createMapFeatures, lensOffset, lensScale, type MapTopology, mapSize } from "./paths";
 
@@ -226,8 +227,11 @@ export const Worldmap = ({ metric, data }: { metric: Metric; data?: DimensionTab
 			{currentLocation && (
 				<FloatingPortal>
 					<div ref={refs.setFloating} className={styles.tooltipContainer} style={floatingStyles}>
-						<div className={tooltipStyles.tooltip}>
-							<h2>{currentTooltip?.name}</h2>
+						<div className={cls(tooltipStyles.tooltip, styles.mapTooltip)}>
+							<h2 className={styles.tooltipHeading}>
+								<CountryFlag code={currentLocation.iso} />
+								<span>{currentTooltip?.name}</span>
+							</h2>
 							<h3>
 								<span>{metricNames[metric]}</span> <span>{currentTooltip?.value}</span>
 							</h3>

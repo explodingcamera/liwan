@@ -10,6 +10,7 @@ import { cls, fuzzyFilter } from "@/utils";
 import type { ProjectQuery } from ".";
 import { DimensionValueBar, DimensionValueButton } from "./dimensions";
 import { DimensionMetricValue } from "./dimensions/metric-value";
+import { ReportPagination, useReportPagination } from "./dimensions/pagination";
 import { formatMetricVal } from "./metric-format";
 
 type EventRow = {
@@ -26,8 +27,8 @@ const uniquesTitle =
 const EventsHeader = ({ children }: { children?: React.ReactNode }) => (
 	<div className={cardStyles.dimensionHeader}>
 		<div>Events</div>
-		<div className={cardStyles.metricColumn}>Completions</div>
-		<div className={cardStyles.metricColumn} title={uniquesTitle}>
+		<div className={cls(cardStyles.metricColumn, cardStyles.metricHeading)}>Completions</div>
+		<div className={cls(cardStyles.metricColumn, cardStyles.metricHeading)} title={uniquesTitle}>
 			Uniques
 		</div>
 		{children}
@@ -57,6 +58,7 @@ export const CustomEventsCard = ({
 		(row) => query.eventName === "pageview" || row.name === query.eventName,
 	);
 	const searchResults = deferredSearch ? fuzzyFilter(deferredSearch, rows, ["name"]) : rows;
+	const { pageRows, hasPages, previous, next } = useReportPagination(rows, query);
 
 	if (query.project.customEventsHidden) return null;
 
@@ -119,47 +121,50 @@ export const CustomEventsCard = ({
 						<div>{empty}</div>
 					</div>
 				) : (
-					rows.slice(0, 6).map(renderRow)
+					pageRows?.map(renderRow)
 				)}
 			</div>
-			<Dialog
-				title="Events"
-				description="Custom event completions and unique visitor groups."
-				hideTitle
-				hideDescription
-				autoOverflow
-				className={cardStyles.detailsModal}
-				trigger={
-					<button type="button" className={cls(cardStyles.showMore, empty && cardStyles.showMoreHidden)}>
-						<ZoomInIcon size={16} />
-						Show details
-					</button>
-				}
-			>
-				<div className={cardStyles.dimensionTable} style={{ "--count": searchResults.length } as React.CSSProperties}>
-					<EventsHeader>
-						<Dialog.Close className={cardStyles.detailsClose} aria-label="Close dialog">
-							<XIcon size={20} />
-						</Dialog.Close>
-					</EventsHeader>
-					<input
-						type="search"
-						placeholder="Search"
-						value={search}
-						onChange={(event) => setSearch(event.target.value)}
-						className={cardStyles.search}
-					/>
-					<div className={cardStyles.detailRows} aria-busy={events.isLoading}>
-						{searchResults.map(renderRow)}
-						{events.isLoading && (
-							<div className={cardStyles.loadingOverlay} data-no-delay={!events.data}>
-								<LoadingSpinner immediate />
-							</div>
-						)}
-						{events.data?.truncated && <div className={cardStyles.dimensionEmpty}>Showing the top events only.</div>}
+			<div className={cardStyles.cardFooter}>
+				<Dialog
+					title="Events"
+					description="Custom event completions and unique visitor groups."
+					hideTitle
+					hideDescription
+					autoOverflow
+					className={cardStyles.detailsModal}
+					trigger={
+						<button type="button" className={cls(cardStyles.showMore, empty && cardStyles.showMoreHidden)}>
+							<ZoomInIcon size={16} />
+							Show details
+						</button>
+					}
+				>
+					<div className={cardStyles.dimensionTable} style={{ "--count": searchResults.length } as React.CSSProperties}>
+						<EventsHeader>
+							<Dialog.Close className={cardStyles.detailsClose} aria-label="Close dialog">
+								<XIcon size={20} />
+							</Dialog.Close>
+						</EventsHeader>
+						<input
+							type="search"
+							placeholder="Search"
+							value={search}
+							onChange={(event) => setSearch(event.target.value)}
+							className={cardStyles.search}
+						/>
+						<div className={cardStyles.detailRows} aria-busy={events.isLoading}>
+							{searchResults.map(renderRow)}
+							{events.isLoading && (
+								<div className={cardStyles.loadingOverlay} data-no-delay={!events.data}>
+									<LoadingSpinner immediate />
+								</div>
+							)}
+							{events.data?.truncated && <div className={cardStyles.dimensionEmpty}>Showing the top events only.</div>}
+						</div>
 					</div>
-				</div>
-			</Dialog>
+				</Dialog>
+				{hasPages && !empty && <ReportPagination previous={previous} next={next} />}
+			</div>
 		</article>
 	);
 };

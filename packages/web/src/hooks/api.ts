@@ -356,6 +356,25 @@ export const useProjectGraph = ({
 	};
 };
 
+export const useCurrentVisitors = (
+	projectId?: string,
+	{ pages = false, enabled = true, refetchInterval = 15_000 } = {},
+) => {
+	return useQuery({
+		queryKey: ["current_visitors", projectId, pages],
+		enabled: projectId !== undefined && enabled,
+		refetchInterval,
+		staleTime: 15_000,
+		queryFn: async () => {
+			const live = await api["/api/dashboard/project/{project_id}/current-visitors"]
+				.get({ params: { project_id: projectId ?? "" }, query: pages ? { pages } : undefined })
+				.json();
+			if (typeof live === "string") throw new Error(live);
+			return live;
+		},
+	});
+};
+
 export const useProjectStats = ({
 	projectId,
 	range,
@@ -376,6 +395,7 @@ export const useProjectStats = ({
 		isError,
 		isLoading,
 		isFetching,
+		isPlaceholderData,
 	} = useQuery({
 		queryKey: ["project_stats", projectId, range.cacheKey(), comparisonRange?.cacheKey(), filters, eventName],
 		refetchInterval: range.endsToday() || comparisonRange?.endsToday() ? 60_000 : undefined,
@@ -405,7 +425,7 @@ export const useProjectStats = ({
 	return {
 		stats,
 		isLoading,
-		isUpdating: isFetching && stats !== undefined,
+		isUpdating: isFetching && isPlaceholderData,
 		isError,
 	};
 };

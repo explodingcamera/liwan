@@ -1,8 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
-import { capitalizeAll, cls, countryCodeToFlag, formatDateRange, fuzzyFilter } from "./utils";
+import { capitalizeAll, cls, formatDateRange, fuzzyFilter, getHref, tryParseUrl } from "./utils";
 
 describe("utils", () => {
+	test("page links only use HTTP or HTTPS", () => {
+		expect(getHref(tryParseUrl("example.com/docs"))).toBe("https://example.com/docs");
+		expect(getHref(tryParseUrl("http://example.com/docs"))).toBe("http://example.com/docs");
+		expect(getHref(tryParseUrl("data:text/plain,example"))).toBeUndefined();
+		expect(getHref(tryParseUrl("not a URL"))).toBeUndefined();
+	});
+
 	test("capitalizeAll", () => {
 		expect(capitalizeAll("hello world")).toBe("Hello World");
 		expect(capitalizeAll("hello-world")).toBe("Hello-world");
@@ -15,15 +22,6 @@ describe("utils", () => {
 		expect(cls("a", "b", "c", null)).toBe("a b c");
 		expect(cls(["a", "b", undefined, null, "c"])).toBe("a b c");
 		expect(cls(undefined, [null], ["a", "b", undefined, null, "c"])).toBe("a b c");
-	});
-
-	test("countryCodeToFlag", () => {
-		expect(countryCodeToFlag("us")).toBe("🇺🇸");
-		expect(countryCodeToFlag("gb")).toBe("🇬🇧");
-		expect(countryCodeToFlag("de")).toBe("🇩🇪");
-		expect(countryCodeToFlag("fr")).toBe("🇫🇷");
-		expect(countryCodeToFlag("es")).toBe("🇪🇸");
-		expect(countryCodeToFlag("")).toBe("🇽🇽");
 	});
 
 	test("formatDateRange", () => {
