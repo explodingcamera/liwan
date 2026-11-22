@@ -1,5 +1,5 @@
+use crate::utils::timestamp::SqlTimestamp;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
 use refinery::{Migration, error::WrapMigrationError};
 use refinery_core::{
     Migrate,
@@ -34,9 +34,11 @@ impl<T: DerefMut<Target = duckdb::Connection>> Query<Vec<Migration>> for DuckDBC
             .query_map([], |row| {
                 let version = row.get(0)?;
                 let name: String = row.get(1)?;
-                let applied_on: DateTime<Utc> = row.get(2)?;
+                let applied_on: SqlTimestamp = row.get(2)?;
                 let checksum: u64 = row.get(3)?;
-                let applied_on: SystemTime = applied_on.into();
+                let applied_on = SystemTime::try_from(applied_on.0).map_err(|err| {
+                    duckdb::Error::FromSqlConversionFailure(2, duckdb::types::Type::Timestamp, Box::new(err))
+                })?;
 
                 Ok(Migration::applied(version, name, applied_on.into(), checksum))
             })?

@@ -1,6 +1,6 @@
 use std::{borrow::Cow, collections::HashSet, fmt::Display, num::NonZeroU32, str::FromStr};
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -10,7 +10,7 @@ pub struct Event {
     pub entity_id: String,
     pub visitor_group_id: String,
     pub event: String,
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
     pub fqdn: Option<String>,
     pub path: Option<String>,
     pub referrer: Option<String>,
@@ -59,7 +59,7 @@ pub struct EventExit {
     pub entity_id: String,
     pub visitor_group_id: String,
     pub event: String,
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
     pub fqdn: Option<String>,
     pub path: Option<String>,
 }
@@ -127,9 +127,9 @@ pub struct ApiKey {
     pub entities: AccessScope,
     pub projects: AccessScope,
     pub permissions: Vec<AccessPermission>,
-    pub created_at: DateTime<Utc>,
-    pub last_used_at: Option<DateTime<Utc>>,
-    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: Timestamp,
+    pub last_used_at: Option<Timestamp>,
+    pub expires_at: Option<Timestamp>,
 }
 
 /// A scope covering every resource or a selected set of IDs.
@@ -242,7 +242,7 @@ pub enum ApiKeyExpiration {
 }
 
 impl ApiKeyExpiration {
-    pub fn expires_at(self) -> Option<DateTime<Utc>> {
+    pub fn expires_at(self) -> Option<Timestamp> {
         let days = match self {
             Self::Never => return None,
             Self::SevenDays => 7,
@@ -250,7 +250,7 @@ impl ApiKeyExpiration {
             Self::SixtyDays => 60,
             Self::NinetyDays => 90,
         };
-        Some(Utc::now() + chrono::Duration::days(days))
+        Some(Timestamp::now() + jiff::SignedDuration::from_hours(24 * days))
     }
 }
 
@@ -682,14 +682,13 @@ impl TryFrom<String> for UserRole {
     }
 }
 
-#[macro_export]
 macro_rules! event_params {
     ($event:expr) => {
         duckdb::params![
             $event.entity_id,
             $event.visitor_group_id,
             $event.event,
-            $event.created_at,
+            $crate::utils::timestamp::SqlTimestamp($event.created_at),
             $event.fqdn,
             $event.path,
             $event.referrer,
@@ -707,10 +706,10 @@ macro_rules! event_params {
             None::<std::time::Duration>,
             $event.screen_width,
             $event.orientation,
-            None::<chrono::DateTime<chrono::Utc>>,
+            None::<$crate::utils::timestamp::SqlTimestamp>,
             $event.properties(),
         ]
     };
 }
 
-pub use event_params;
+pub(crate) use event_params;

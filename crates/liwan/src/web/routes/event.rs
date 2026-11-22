@@ -17,10 +17,9 @@ use aide::axum::{ApiRouter, IntoApiResponse};
 use anyhow::{Context, Result};
 use axum::body::Bytes;
 use axum::extract::State;
-use axum_extra::TypedHeader;
 use bottlecap_tower::Quota;
-use chrono::{DateTime, Utc};
-use http::StatusCode;
+use http::{HeaderMap, StatusCode, header::USER_AGENT};
+use jiff::Timestamp;
 use schemars::JsonSchema;
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -72,7 +71,7 @@ pub(super) struct ProcessEventRequest {
     pub(super) screen_width: Option<String>,
     pub(super) orientation: Option<String>,
     pub(super) properties: EventProperties,
-    pub(super) created_at: DateTime<Utc>,
+    pub(super) created_at: Timestamp,
     pub(super) user_agent: Option<String>,
     pub(super) ip: Option<IpAddr>,
     pub(super) exit: bool,
@@ -107,9 +106,14 @@ async fn event_handler(
     state: State<RouterState>,
     ClientIp(ip): ClientIp,
     geo_headers: GeoLocationHeaders,
-    TypedHeader(user_agent): TypedHeader<headers::UserAgent>,
+    headers: HeaderMap,
     event: Bytes,
 ) -> ApiResult<impl IntoApiResponse> {
+    let user_agent = headers
+        .get(USER_AGENT)
+        .and_then(|value| value.to_str().ok())
+        .context("missing or invalid User-Agent header")
+        .http_err("missing or invalid User-Agent header", StatusCode::BAD_REQUEST)?;
     // we accept any content type, so we need to manually parse the body as JSON
     let event: EventRequest =
         serde_json::from_slice(&event).context("invalid json").http_err("invalid json", StatusCode::BAD_REQUEST)?;
@@ -129,8 +133,8 @@ async fn event_handler(
         screen_width: event.screen_width,
         orientation: event.orientation,
         properties,
-        created_at: Utc::now(),
-        user_agent: Some(user_agent.as_str().to_string()),
+        created_at: Timestamp::now(),
+        user_agent: Some(user_agent.to_string()),
         ip,
         exit: event.exit,
     };
@@ -246,23 +250,16 @@ pub(super) fn process_event(
 
     let (country, city) = match settings.track_geo {
         GeoDetail::None => (None, None),
-        GeoDetail::Country => (geo_headers.country, None),
-        GeoDetail::City => (geo_headers.country, geo_headers.city),
-    };
-
-    #[cfg(feature = "geoip")]
-    let (country, city) = match settings.track_geo {
-        GeoDetail::None => (None, None),
         GeoDetail::Country => {
             let maxmind_country =
                 event.ip.and_then(|ip| app.geoip.lookup(&ip).ok()).and_then(|lookup| lookup.country_code);
-            (maxmind_country.or(country), None)
+            (maxmind_country.or(geo_headers.country), None)
         }
         GeoDetail::City => {
             let lookup = event.ip.and_then(|ip| app.geoip.lookup(&ip).ok());
             (
-                lookup.as_ref().and_then(|value| value.country_code.clone()).or(country),
-                lookup.and_then(|value| value.city).or(city),
+                lookup.as_ref().and_then(|value| value.country_code.clone()).or(geo_headers.country),
+                lookup.and_then(|value| value.city).or(geo_headers.city),
             )
         }
     };

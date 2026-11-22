@@ -250,9 +250,12 @@ struct ApiKeyResponse {
     entities: AccessScope,
     projects: AccessScope,
     permissions: Vec<AccessPermission>,
-    created_at: chrono::DateTime<chrono::Utc>,
-    last_used_at: Option<chrono::DateTime<chrono::Utc>>,
-    expires_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[schemars(with = "crate::utils::timestamp::TimestampSchema")]
+    created_at: jiff::Timestamp,
+    #[schemars(with = "Option<crate::utils::timestamp::TimestampSchema>")]
+    last_used_at: Option<jiff::Timestamp>,
+    #[schemars(with = "Option<crate::utils::timestamp::TimestampSchema>")]
+    expires_at: Option<jiff::Timestamp>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]

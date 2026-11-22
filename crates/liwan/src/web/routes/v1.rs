@@ -7,8 +7,8 @@ use axum::{
     Json,
     extract::{DefaultBodyLimit, State},
 };
-use chrono::{DateTime, Utc};
 use http::StatusCode;
+use jiff::Timestamp;
 use schemars::JsonSchema;
 use url::Url;
 
@@ -127,15 +127,15 @@ async fn batch_event_handler(
 fn prepare_batch_event(entity_id: &str, event: BatchEventRequest) -> Result<ProcessEventRequest> {
     let ip = event.ip.as_deref().map(IpAddr::from_str).transpose().context("invalid IP address")?;
     let url = Url::from_str(&event.url).context("invalid URL")?;
+    let now = Timestamp::now();
     let created_at = event
         .created_at
         .as_deref()
-        .map(DateTime::parse_from_rfc3339)
+        .map(str::parse::<Timestamp>)
         .transpose()
         .context("invalid timestamp")?
-        .map(|value| value.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now);
-    if created_at > Utc::now() + chrono::Duration::seconds(MAX_FUTURE_SECONDS) {
+        .unwrap_or(now);
+    if created_at > now + jiff::SignedDuration::from_secs(MAX_FUTURE_SECONDS) {
         anyhow::bail!("timestamp is too far in the future");
     }
     let properties = event_properties(event.properties)?;

@@ -10,7 +10,7 @@ pub use graph::{build_graph_buckets, overall_report};
 pub use stats::{earliest_timestamp, online_users, overall_stats};
 
 use anyhow::{Result, bail};
-use chrono::{DateTime, Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -24,7 +24,7 @@ pub fn validate_request(range: &DateRange, filters: &[DimensionFilter], limits: 
     if range.start >= range.end {
         bail!("Report range must end after it starts");
     }
-    if range.duration() > Duration::days(limits.report_max_range_days) {
+    if range.duration() > SignedDuration::from_secs(limits.report_max_range_days.saturating_mul(86_400)) {
         bail!("Report range cannot exceed {} days", limits.report_max_range_days);
     }
     if filters.len() > limits.report_max_filters {
@@ -63,15 +63,17 @@ pub fn validate_property_key(key: &str) -> Result<()> {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct DateRange {
     /// Start of the report range
-    pub start: DateTime<Utc>,
+    #[schemars(with = "crate::utils::timestamp::TimestampSchema")]
+    pub start: Timestamp,
     /// End of the report range
-    pub end: DateTime<Utc>,
+    #[schemars(with = "crate::utils::timestamp::TimestampSchema")]
+    pub end: Timestamp,
 }
 
 impl DateRange {
     /// Return the range duration
-    pub fn duration(&self) -> chrono::Duration {
-        self.end - self.start
+    pub fn duration(&self) -> SignedDuration {
+        self.end.duration_since(self.start)
     }
 }
 
@@ -228,7 +230,8 @@ impl Dimension {
 #[serde(rename_all = "camelCase")]
 pub struct ReportGraphPoint {
     /// Start timestamp of the graph bucket
-    pub bin_start: DateTime<Utc>,
+    #[schemars(with = "crate::utils::timestamp::TimestampSchema")]
+    pub bin_start: Timestamp,
     /// Metric value for the graph bucket
     pub value: f64,
 }
@@ -278,8 +281,8 @@ mod tests {
     use super::*;
 
     fn range(days: i64) -> DateRange {
-        let start = DateTime::from_timestamp(0, 0).unwrap();
-        DateRange { start, end: start + Duration::days(days) }
+        let start = Timestamp::UNIX_EPOCH;
+        DateRange { start, end: start + SignedDuration::from_hours(24 * days) }
     }
 
     fn filter(value: Option<String>) -> DimensionFilter {

@@ -832,7 +832,9 @@ mod tests {
             groups_overage: false,
         };
         let username = app.external_auth.create_user(&identity, &app.external_auth.settings().unwrap()).unwrap();
-        app.sessions.create("session", &username, chrono::Utc::now() + chrono::Duration::hours(1)).unwrap();
+        app.sessions
+            .create("session", &username, jiff::Timestamp::now() + jiff::SignedDuration::from_hours(1))
+            .unwrap();
 
         app.users.delete(&username).unwrap();
         assert_eq!(app.external_auth.find_user(&identity.provider_key, &identity.subject).unwrap(), None);

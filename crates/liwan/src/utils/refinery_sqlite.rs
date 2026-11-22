@@ -1,6 +1,6 @@
 use std::{ops::DerefMut, time::SystemTime};
 
-use chrono::{DateTime, Utc};
+use crate::utils::timestamp::SqlTimestamp;
 use refinery::Migration;
 use refinery_core::traits::sync::{Migrate, Query, Transaction};
 use rusqlite::{Connection, Error as RqlError};
@@ -18,8 +18,9 @@ fn query_applied_migrations(transaction: &rusqlite::Transaction, query: &str) ->
     let mut applied = Vec::new();
     while let Some(row) = rows.next()? {
         let version = row.get(0)?;
-        let applied_on: DateTime<Utc> = row.get(2)?;
-        let applied_on: SystemTime = applied_on.into();
+        let applied_on: SqlTimestamp = row.get(2)?;
+        let applied_on = SystemTime::try_from(applied_on.0)
+            .map_err(|err| RqlError::FromSqlConversionFailure(2, rusqlite::types::Type::Text, Box::new(err)))?;
         let checksum: String = row.get(3)?;
 
         applied.push(Migration::applied(

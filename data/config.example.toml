@@ -54,6 +54,7 @@ listen = 9042  # The port to listen on (http)
 # threads=2
 # memory_limit=2G
 ## Time between periodic DuckDB checkpoints. Disabled by default. Use "0s" to disable.
+## Use fixed durations such as "5m" or "1h".
 # checkpoint_interval="5m"
 
 [limits]  # Resource limits

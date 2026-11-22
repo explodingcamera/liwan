@@ -1,4 +1,5 @@
 use crate::utils::duckdb::ParamVec;
+use crate::utils::timestamp::SqlTimestamp;
 use anyhow::{Result, bail};
 
 use super::{DateRange, Dimension, DimensionFilter, FilterType, Metric};
@@ -9,8 +10,8 @@ pub(super) fn range_events_sql(ranges: &[DateRange], params: &mut ParamVec<'_>) 
         .iter()
         .enumerate()
         .map(|(index, range)| {
-            params.push(range.start);
-            params.push(range.end);
+            params.push(SqlTimestamp(range.start));
+            params.push(SqlTimestamp(range.end));
             format!(
                 "select {index} as range_idx, * from events
                  where created_at >= ?::timestamp and created_at < ?::timestamp"

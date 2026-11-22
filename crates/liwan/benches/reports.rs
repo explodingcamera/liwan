@@ -1,5 +1,5 @@
-use chrono::{Days, Utc};
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+use jiff::{SignedDuration, Timestamp};
 use liwan::app::Liwan;
 use liwan::app::reports::{self, DateRange, Dimension, GraphInterval, Metric};
 use liwan::config::Config;
@@ -27,8 +27,8 @@ fn benchmark_reports(c: &mut Criterion) {
     assert!(!entities.is_empty(), "project has no entities; seed the database first");
 
     let range = DateRange {
-        start: Utc::now().checked_sub_days(Days::new(365)).expect("failed to build range start"),
-        end: Utc::now(),
+        start: Timestamp::now().checked_sub(SignedDuration::from_hours(8760)).expect("failed to build range start"),
+        end: Timestamp::now(),
     };
     let day_buckets = reports::build_graph_buckets(&range, GraphInterval::Day, Some("UTC"), 2000)
         .expect("failed to build day buckets for benchmark");
@@ -53,12 +53,12 @@ fn benchmark_reports(c: &mut Criterion) {
         let mut group = c.benchmark_group("comparison_reports");
         configure_group(&mut group);
         let end = ranges[0].end;
-        let start = end.checked_sub_days(Days::new(2)).expect("failed to build comparison range");
+        let start = end.checked_sub(SignedDuration::from_hours(48)).expect("failed to build comparison range");
         let comparison_ranges = [
             DateRange { start, end },
             DateRange {
-                start: start.checked_sub_days(Days::new(365)).expect("failed to shift range start"),
-                end: end.checked_sub_days(Days::new(365)).expect("failed to shift range end"),
+                start: start.checked_sub(SignedDuration::from_hours(8760)).expect("failed to shift range start"),
+                end: end.checked_sub(SignedDuration::from_hours(8760)).expect("failed to shift range end"),
             },
         ];
         let comparison_buckets = comparison_ranges

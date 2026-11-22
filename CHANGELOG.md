@@ -16,6 +16,32 @@ The format is roughly based on the output of `git-cliff` and this project adhere
 Since this is not a library, this changelog focuses on the changes that are relevant to the end-users. For a detailed list of changes, see the commit history, which adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). New releases are created automatically when a new tag is pushed (Commit message: chore(release): vX.X.X).
 -->
 
+## [Unreleased]
+
+### ⚠️ Breaking Changes
+
+- `session_duration` (`LIWAN_SESSION_DURATION`) no longer accepts months or years. Use a fixed duration such as `30d` instead.
+
+### Features
+
+- Compare any dashboard date range with the previous period, last week, last year, or a custom start date. See the comparison in graphs, summary metrics, and breakdowns.
+- Improved the dashboard layout and world map, including map zooming and panning.
+- Updated to DuckDB 2.0.1. Upgrading the event database's storage format is optional. To upgrade it, stop Liwan and run `liwan upgrade-duckdb`. The command keeps the original file as a `.old` backup. Older Liwan versions may not be able to open the upgraded file.
+- Added optional periodic DuckDB checkpoints via `duckdb.checkpoint_interval` (`LIWAN_DUCKDB_CHECKPOINT_INTERVAL`). Periodic checkpoints are off by default.
+
+### Bug Fixes
+
+- Improved session and visit duration calculations, including when pageviews share a timestamp.
+- Fixed custom property presence filters for events with no properties.
+- Improved handling of daylight saving transitions in dashboard graphs and daily visitor grouping.
+- Kept GeoIP lookups available during MaxMind database updates and allowed failed updates to retry.
+
+## [v1.8.2] - 2026-10-29
+
+### Bug Fixes
+
+- Fixed automatic MaxMind database updates failing when metadata contains numeric timestamps.
+
 ## [v1.8.1] - 2026-10-23
 
 ### Security

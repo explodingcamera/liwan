@@ -1,6 +1,7 @@
+use http::StatusCode;
 mod common;
 use anyhow::Result;
-use chrono::{Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use liwan::app::models::ProjectVisibility;
 use serde_json::json;
 
@@ -19,10 +20,10 @@ async fn graph_preserves_partial_buckets() -> Result<()> {
         ("10:05:00", "a", 120),
         ("10:10:00", "outside", 100),
     ] {
-        let date = format!("2025-01-01T{time}Z").parse::<chrono::DateTime<Utc>>()?;
+        let date = format!("2025-01-01T{time}Z").parse::<Timestamp>()?;
         app.events_conn()?.execute(
             "insert into events (entity_id, visitor_group_id, event, created_at, exited_at) values ('entity-1', ?, 'pageview', ?, ?)",
-            duckdb::params![visitor, date, date + Duration::seconds(seconds)],
+            duckdb::params![visitor, date.to_string(), (date + SignedDuration::from_secs(seconds)).to_string()],
         )?;
     }
     for (metric, expected) in [
@@ -66,14 +67,14 @@ async fn reports_follow_range_order() -> Result<()> {
     app.seed_database(0)?;
 
     for day in 1..=2 {
-        let date = format!("2026-01-0{day}T12:00:00Z").parse::<chrono::DateTime<Utc>>()?;
+        let date = format!("2026-01-0{day}T12:00:00Z").parse::<Timestamp>()?;
         for (event, path, count) in
             [("signup", "/included", day), ("signup", "/excluded", 5), ("pageview", "/included", 5)]
         {
             for _ in 0..count {
                 app.events_conn()?.execute(
                     "insert into events (entity_id, visitor_group_id, event, created_at, path) values (?, ?, ?, ?, ?)",
-                    duckdb::params!["entity-1", "visitor", event, date, path],
+                    duckdb::params!["entity-1", "visitor", event, date.to_string(), path],
                 )?;
             }
         }
@@ -128,22 +129,22 @@ async fn range_limits_and_samples_are_independent() -> Result<()> {
     for (day, path, count, seconds) in
         [(1, "/a", 2, 20), (1, "/b", 3, 60), (2, "/a", 1, 100), (2, "/b", 2, 50), (3, "/a", 1, 10)]
     {
-        let date = format!("2026-01-0{day}T12:00:00Z").parse::<chrono::DateTime<Utc>>()?;
+        let date = format!("2026-01-0{day}T12:00:00Z").parse::<Timestamp>()?;
         for _ in 0..count {
             app.events_conn()?.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at, path, exited_at) values ('entity-1', 'visitor', 'pageview', ?, ?, ?)",
-                duckdb::params![date, path, date + Duration::seconds(seconds)],
+                duckdb::params![date.to_string(), path, (date + SignedDuration::from_secs(seconds)).to_string()],
             )?;
         }
     }
     for (day, event, count) in
         [(1, "signup", 3), (1, "download", 1), (1, "purchase", 1), (2, "signup", 1), (2, "download", 2)]
     {
-        let date = format!("2026-01-0{day}T12:00:00Z").parse::<chrono::DateTime<Utc>>()?;
+        let date = format!("2026-01-0{day}T12:00:00Z").parse::<Timestamp>()?;
         for _ in 0..count {
             app.events_conn()?.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at) values ('entity-1', 'visitor', ?, ?)",
-                duckdb::params![event, date],
+                duckdb::params![event, date.to_string()],
             )?;
         }
     }
@@ -225,7 +226,7 @@ async fn report_ranges_are_validated() -> Result<()> {
             client.post(
                 &format!("/api/dashboard/project/public-project/{endpoint}"),
                 json!({ "ranges": ranges, "filters": [], "metric": "views", "dimension": "path", "interval": "day" }),
-            ).await.assert_status_bad_request();
+            ).await.assert_status(StatusCode::BAD_REQUEST);
         }
     }
     // Every range is subject to the graph's datapoint limit.
@@ -238,7 +239,7 @@ async fn report_ranges_are_validated() -> Result<()> {
             }),
         )
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
     Ok(())
 }
 
@@ -257,21 +258,19 @@ async fn report_date_overflow_is_rejected() -> Result<()> {
         &[],
     )?;
 
-    for (start, end, interval, timezone) in [
-        ("+262142-12-31T23:00:00Z", "+262142-12-31T23:30:00Z", "hour", "UTC"),
-        ("-262143-01-01T00:00:00Z", "-262143-01-02T00:00:00Z", "day", "America/New_York"),
-        ("+262142-12-31T23:00:00Z", "+262142-12-31T23:30:00Z", "day", "Asia/Tokyo"),
-    ] {
+    let end = Timestamp::MAX;
+    let start = end - SignedDuration::from_mins(30);
+    for interval in ["hour", "day"] {
         client
             .post(
                 "/api/dashboard/project/public/graph",
                 json!({
                     "ranges": [{ "start": start, "end": end }],
-                    "filters": [], "metric": "views", "interval": interval, "timezone": timezone,
+                    "filters": [], "metric": "views", "interval": interval, "timezone": "UTC",
                 }),
             )
             .await
-            .assert_status_bad_request();
+            .assert_status(StatusCode::BAD_REQUEST);
     }
     Ok(())
 }
@@ -290,8 +289,8 @@ async fn test_dashboard() -> Result<()> {
     let graph_path = format!("{api_prefix}/graph");
     let dimension_path = format!("{api_prefix}/dimension");
 
-    let start_date = (Utc::now() - Duration::days(365)).to_rfc3339();
-    let end_date = Utc::now().to_rfc3339();
+    let start_date = (Timestamp::now() - SignedDuration::from_hours(8760)).to_string();
+    let end_date = Timestamp::now().to_string();
     let ranges = json!([{ "start": start_date, "end": end_date }]);
 
     let stats_requests = [

@@ -11,6 +11,7 @@ pub(crate) mod refinery_sqlite;
 pub(crate) mod seed;
 pub mod serde;
 pub(crate) mod signals;
+pub(crate) mod timestamp;
 pub(crate) mod useragent;
 pub(crate) mod validate;
 pub(crate) mod writable;

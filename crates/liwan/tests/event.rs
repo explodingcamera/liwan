@@ -1,3 +1,4 @@
+use http::StatusCode;
 mod common;
 use anyhow::Result;
 use liwan::app::models::{AccessPermission, AccessScope, DisplayOverride, Entity, Project, ProjectVisibility};
@@ -20,7 +21,7 @@ async fn test_event() -> Result<()> {
 
     // Require User-Agent
     let res = client.post("/api/event", event.clone()).await;
-    res.assert_status_bad_request();
+    res.assert_status(StatusCode::BAD_REQUEST);
 
     client
         .post_with_headers(
@@ -29,7 +30,7 @@ async fn test_event() -> Result<()> {
             vec![("user-agent".to_string(), "test".to_string())],
         )
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
 
     // Create event
     let res = client.post_with_headers("/api/event", event, vec![("user-agent".to_string(), "test".to_string())]).await;
@@ -42,8 +43,8 @@ async fn test_event() -> Result<()> {
 
     app.events.append(std::iter::once(event))?;
 
-    let start = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
-    let end = chrono::Utc::now().to_rfc3339();
+    let start = (jiff::Timestamp::now() - jiff::SignedDuration::from_hours(1)).to_string();
+    let end = jiff::Timestamp::now().to_string();
 
     let res = client
         .post(
@@ -73,12 +74,12 @@ async fn custom_event_reports_respect_display_setting() -> Result<()> {
     let client = common::TestClient::new(app.clone(), queues);
     app.seed_database(0)?;
 
-    let now = chrono::Utc::now();
+    let now = jiff::Timestamp::now();
     app.events_conn()?.execute(
         "insert into events (entity_id, visitor_group_id, event, created_at, path) values (?, ?, ?, ?, ?)",
-        duckdb::params!["entity-1", "visitor-1", "pageview", now, "/home"],
+        duckdb::params!["entity-1", "visitor-1", "pageview", now.to_string(), "/home"],
     )?;
-    let range = json!({ "start": (now - chrono::Duration::hours(1)), "end": now + chrono::Duration::hours(1) });
+    let range = json!({ "start": (now - jiff::SignedDuration::from_hours(1)), "end": now + jiff::SignedDuration::from_hours(1) });
     let report = || json!({ "ranges": [range], "filters": [] });
     let endpoint = "/api/dashboard/project/public-project/custom-events";
 
@@ -136,23 +137,20 @@ async fn custom_event_reports_respect_display_setting() -> Result<()> {
             json!({ "ranges": [range], "filters": [], "event": "signup", "metric": "views", "dimension": "url_entry" }),
         )
         .await;
-    response.assert_status(http::StatusCode::BAD_REQUEST);
+    response.assert_status(StatusCode::BAD_REQUEST);
     let response = client
         .post(
             "/api/dashboard/project/public-project/graph",
             json!({ "ranges": [range], "filters": [], "event": "signup", "metric": "bounce_rate", "interval": "hour" }),
         )
         .await;
-    response.assert_status(http::StatusCode::BAD_REQUEST);
+    response.assert_status(StatusCode::BAD_REQUEST);
 
     let mut settings = app.project_settings.get("public-project")?;
     settings.metric_display_overrides.insert("custom_events".into(), DisplayOverride::Hide);
     app.project_settings.update(&settings)?;
-    client.post(endpoint, report()).await.assert_status(http::StatusCode::BAD_REQUEST);
-    client
-        .post("/api/dashboard/project/public-project/stats", selected)
-        .await
-        .assert_status(http::StatusCode::BAD_REQUEST);
+    client.post(endpoint, report()).await.assert_status(StatusCode::BAD_REQUEST);
+    client.post("/api/dashboard/project/public-project/stats", selected).await.assert_status(StatusCode::BAD_REQUEST);
 
     Ok(())
 }
@@ -286,12 +284,12 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
             headers(),
         )
         .await;
-    response.assert_status(http::StatusCode::ACCEPTED);
+    response.assert_status(StatusCode::ACCEPTED);
     let body: serde_json::Value = response.json();
     assert_eq!(body, json!({ "accepted": 1, "filtered": 1 }));
     let event = receivers.events.recv().await.expect("event should be queued");
     assert_eq!(event.entity_id, "server");
-    assert_eq!(event.created_at.to_rfc3339(), created_at);
+    assert_eq!(event.created_at, created_at.parse::<jiff::Timestamp>()?);
     assert_eq!(event.properties.get("plan").map(String::as_str), Some("pro"));
     assert_eq!(event.properties.get("seats").map(String::as_str), Some("5"));
 
@@ -305,7 +303,7 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
             headers(),
         )
         .await;
-    invalid.assert_status_bad_request();
+    invalid.assert_status(StatusCode::BAD_REQUEST);
     assert!(receivers.events.try_recv().is_err());
 
     client
@@ -315,7 +313,7 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
             headers(),
         )
         .await
-        .assert_status_forbidden();
+        .assert_status(StatusCode::FORBIDDEN);
 
     app.projects.create(
         &Project {
@@ -334,10 +332,10 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
         &[AccessPermission::EventsBatch],
     )?;
     let batch = || json!({ "entityId": "server", "events": [{ "name": "pageview", "url": "https://example.com" }] });
-    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status(http::StatusCode::ACCEPTED);
+    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status(StatusCode::ACCEPTED);
     receivers.events.recv().await.expect("project-scoped event should be queued");
     app.projects.update_entities("group", &[])?;
-    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status_forbidden();
+    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status(StatusCode::FORBIDDEN);
     app.projects.update_entities("group", &["server".into()])?;
     app.api_keys.update(
         &key.id,
@@ -346,7 +344,7 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
         &AccessScope::Selected(vec!["group".into()]),
         &[],
     )?;
-    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status_forbidden();
+    client.post_with_headers("/api/v1/events", batch(), headers()).await.assert_status(StatusCode::FORBIDDEN);
 
     app.api_keys.delete(&key.id)?;
     client
@@ -356,7 +354,7 @@ async fn authenticated_batch_is_validated_and_queued_atomically() -> Result<()> 
             headers(),
         )
         .await
-        .assert_status_unauthorized();
+        .assert_status(StatusCode::UNAUTHORIZED);
     Ok(())
 }
 
@@ -386,7 +384,7 @@ async fn full_queue_rejects_the_complete_batch() -> Result<()> {
         )
         .await;
 
-    response.assert_status(http::StatusCode::SERVICE_UNAVAILABLE);
+    response.assert_status(StatusCode::SERVICE_UNAVAILABLE);
     assert!(receiver.try_recv().is_err());
     Ok(())
 }
@@ -418,8 +416,9 @@ async fn event_properties_are_reported() -> Result<()> {
         .expect("event channel should not be closed");
     app.events.append(std::iter::once(event))?;
 
-    let now = chrono::Utc::now();
-    let range = json!({ "start": now - chrono::Duration::hours(1), "end": now + chrono::Duration::hours(1) });
+    let now = jiff::Timestamp::now();
+    let range =
+        json!({ "start": now - jiff::SignedDuration::from_hours(1), "end": now + jiff::SignedDuration::from_hours(1) });
     let dimension = |property_key: Option<&str>| json!({ "ranges": [range], "filters": [], "metric": "views", "dimension": "property", "propertyKey": property_key });
     let response = client.post("/api/dashboard/project/public-project/dimension", dimension(None)).await;
     response.assert_status_success();
@@ -444,7 +443,7 @@ async fn event_properties_are_reported() -> Result<()> {
     client
         .post("/api/dashboard/project/public-project/stats", json!({ "ranges": [range], "filters": missing_key }))
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
     Ok(())
 }
 
@@ -461,7 +460,7 @@ async fn tracker_script_is_cached_and_revalidated() -> Result<()> {
     let etag = res.header("etag").to_str()?.to_string();
 
     let res = client.get_with_headers("/script.js", vec![("if-none-match".to_string(), etag)]).await;
-    res.assert_status(http::StatusCode::NOT_MODIFIED);
+    res.assert_status(StatusCode::NOT_MODIFIED);
 
     Ok(())
 }

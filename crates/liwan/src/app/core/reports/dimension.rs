@@ -144,7 +144,8 @@ mod tests {
     use crate::app::Liwan;
     use crate::app::models::FilterType;
     use crate::config::Config;
-    use chrono::{Duration, TimeZone, Utc};
+    use crate::utils::timestamp::SqlTimestamp;
+    use jiff::{SignedDuration, Timestamp};
 
     #[test]
     fn dimension_report_limits_results() {
@@ -158,8 +159,8 @@ mod tests {
             max_results + 1
         ))
         .expect("failed to insert events");
-        let start = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-        let range = DateRange { start, end: start + Duration::days(1) };
+        let start = "2024-01-01T00:00:00Z".parse::<Timestamp>().unwrap();
+        let range = DateRange { start, end: start + SignedDuration::from_hours(24) };
         let ranges = [range];
 
         let report = dimension_report(
@@ -184,27 +185,28 @@ mod tests {
     fn bounce_rate_reports_entry_session_counts() {
         let app = Liwan::new_memory(Config::default()).expect("failed to create app");
         let conn = app.events_conn().expect("failed to get events conn");
-        let start = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).single().expect("valid date");
+        let start = "2024-01-01T00:00:00Z".parse::<Timestamp>().expect("valid date");
         for (visitor, path, offset) in
             [("one", "/popular", 0), ("one", "/popular", 1), ("two", "/popular", 2), ("three", "/small", 3)]
         {
             conn.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at, path) values ('a', ?, 'pageview', ?, ?)",
-                duckdb::params![visitor, start + Duration::hours(offset), path],
+                duckdb::params![visitor, SqlTimestamp(start + SignedDuration::from_hours(offset)), path],
             )
             .expect("failed to insert pageview");
         }
         conn.execute(
             "insert into events (entity_id, visitor_group_id, event, created_at, path, time_to_next_event) values ('a', 'four', 'pageview', ?, '/good', interval '5 minutes')",
-            duckdb::params![start + Duration::hours(4)],
+            duckdb::params![SqlTimestamp(start + SignedDuration::from_hours(4))],
         )
         .expect("failed to insert entry pageview");
         conn.execute(
             "insert into events (entity_id, visitor_group_id, event, created_at, path, time_from_last_event) values ('a', 'four', 'pageview', ?, '/good', interval '5 minutes')",
-            duckdb::params![start + Duration::hours(4) + Duration::minutes(5)],
+            duckdb::params![SqlTimestamp(start + SignedDuration::from_hours(4) + SignedDuration::from_mins(5))],
         )
         .expect("failed to insert second pageview");
-        let range = DateRange { start: start - Duration::hours(1), end: start + Duration::days(1) };
+        let range =
+            DateRange { start: start - SignedDuration::from_hours(1), end: start + SignedDuration::from_hours(24) };
         let ranges = [range];
         let report = dimension_report(
             &conn,
@@ -264,21 +266,22 @@ mod tests {
     fn avg_time_reports_only_measured_pageviews() {
         let app = Liwan::new_memory(Config::default()).expect("failed to create app");
         let conn = app.events_conn().expect("failed to get events conn");
-        let start = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).single().expect("valid date");
+        let start = "2024-01-01T00:00:00Z".parse::<Timestamp>().expect("valid date");
         for (visitor, offset, duration) in [("one", 0, Some(60)), ("two", 1, Some(120)), ("three", 2, None)] {
-            let created_at = start + Duration::hours(offset);
+            let created_at = start + SignedDuration::from_hours(offset);
             conn.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at, path, exited_at) values ('a', ?, 'pageview', ?, '/', ?)",
-                duckdb::params![visitor, created_at, duration.map(|seconds| created_at + Duration::seconds(seconds))],
+                duckdb::params![visitor, SqlTimestamp(created_at), duration.map(|seconds| SqlTimestamp(created_at + SignedDuration::from_secs(seconds)))],
             )
             .expect("failed to insert pageview");
         }
         conn.execute(
             "insert into events (entity_id, visitor_group_id, event, created_at, path, exited_at) values ('a', 'four', 'pageview', ?, '/small', ?)",
-            duckdb::params![start + Duration::hours(3), start + Duration::hours(3) + Duration::seconds(600)],
+            duckdb::params![SqlTimestamp(start + SignedDuration::from_hours(3)), SqlTimestamp(start + SignedDuration::from_hours(3) + SignedDuration::from_secs(600))],
         )
         .expect("failed to insert pageview");
-        let range = DateRange { start: start - Duration::hours(1), end: start + Duration::days(1) };
+        let range =
+            DateRange { start: start - SignedDuration::from_hours(1), end: start + SignedDuration::from_hours(24) };
         let ranges = [range];
         let report = dimension_report(
             &conn,
@@ -320,7 +323,7 @@ mod tests {
     fn dimension_report_lists_property_keys_and_values() {
         let app = Liwan::new_memory(Config::default()).unwrap();
         let conn = app.events_conn().unwrap();
-        let now = Utc::now();
+        let now = Timestamp::now();
         for (visitor, event, properties, path) in [
             ("one", "pageview", Some("{'plan'='pro', 'ref'='x'}"), "/"),
             ("two", "pageview", Some("{'plan'='pro'}"), "/pricing"),
@@ -330,11 +333,11 @@ mod tests {
         ] {
             conn.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at, path, properties) values ('a', ?, ?, ?, ?, ?::map(varchar, varchar))",
-                duckdb::params![visitor, event, now, path, properties],
+                duckdb::params![visitor, event, SqlTimestamp(now), path, properties],
             )
             .unwrap();
         }
-        let range = DateRange { start: now - Duration::hours(1), end: now + Duration::hours(1) };
+        let range = DateRange { start: now - SignedDuration::from_hours(1), end: now + SignedDuration::from_hours(1) };
         let ranges = [range];
         let report = |event: &str, key: Option<&str>, filters: &[DimensionFilter]| {
             dimension_report(

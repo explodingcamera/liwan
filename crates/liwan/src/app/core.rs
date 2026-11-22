@@ -24,8 +24,6 @@ pub use settings::{LiwanProjectSettings, LiwanSettings};
 pub use teams::LiwanTeams;
 pub use users::LiwanUsers;
 
-#[cfg(feature = "geoip")]
 mod geoip;
 
-#[cfg(feature = "geoip")]
 pub use geoip::{LiwanGeoIP, keep_updated};

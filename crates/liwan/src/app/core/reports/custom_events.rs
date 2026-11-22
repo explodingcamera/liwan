@@ -91,13 +91,13 @@ mod tests {
     use crate::app::models::FilterType;
     use crate::app::reports::Dimension;
     use crate::config::Config;
-    use chrono::{Duration, Utc};
+    use jiff::{SignedDuration, Timestamp};
 
     #[test]
     fn counts_only_matching_custom_events() {
         let app = Liwan::new_memory(Config::default()).unwrap();
         let conn = app.events_conn().unwrap();
-        let now = Utc::now();
+        let now = Timestamp::now();
         for (entity, visitor, event, time) in [
             ("a", "one", "pageview", now),
             ("a", "one", "signup", now),
@@ -105,15 +105,15 @@ mod tests {
             ("a", "two", "signup", now),
             ("a", "two", "download", now),
             ("b", "three", "signup", now),
-            ("a", "old", "outside", now - Duration::days(2)),
+            ("a", "old", "outside", now - SignedDuration::from_hours(48)),
         ] {
             conn.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at, path) values (?, ?, ?, ?, ?)",
-                duckdb::params![entity, visitor, event, time, "/pricing"],
+                duckdb::params![entity, visitor, event, crate::utils::timestamp::SqlTimestamp(time), "/pricing"],
             )
             .unwrap();
         }
-        let range = DateRange { start: now - Duration::hours(1), end: now + Duration::hours(1) };
+        let range = DateRange { start: now - SignedDuration::from_hours(1), end: now + SignedDuration::from_hours(1) };
         let ranges = [range];
         let report = custom_events_report(&conn, &["a".into()], &ranges, &[], 1).unwrap().remove(0);
         assert!(report.truncated);
@@ -131,7 +131,7 @@ mod tests {
         assert!(report.truncated);
         assert!(report.rows.is_empty());
 
-        let empty = DateRange { start: now - Duration::hours(3), end: now - Duration::hours(2) };
+        let empty = DateRange { start: now - SignedDuration::from_hours(3), end: now - SignedDuration::from_hours(2) };
         assert!(custom_events_report(&conn, &["a".into()], &[empty], &[], 10).unwrap()[0].rows.is_empty());
 
         let filter = DimensionFilter {

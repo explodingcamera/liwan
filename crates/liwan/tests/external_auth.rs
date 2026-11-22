@@ -1,3 +1,4 @@
+use http::StatusCode;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -54,7 +55,7 @@ async fn public_metadata_is_disabled_during_onboarding() -> Result<()> {
     }));
 
     let response = client.get("/api/dashboard/auth/external/start").await;
-    response.assert_status_not_found();
+    response.assert_status(StatusCode::NOT_FOUND);
     Ok(())
 }
 
@@ -63,11 +64,11 @@ async fn settings_require_an_admin() -> Result<()> {
     let app = common::app();
     let (tx, _rx) = common::events();
     let client = common::TestClient::new(app, tx);
-    client.get("/api/dashboard/admin/auth").await.assert_status_unauthorized();
+    client.get("/api/dashboard/admin/auth").await.assert_status(StatusCode::UNAUTHORIZED);
 
     let (_app, client, cookies) = authenticated_client(UserRole::User).await?;
     let response = client.get_with_headers("/api/dashboard/admin/auth", vec![("cookie".to_string(), cookies)]).await;
-    response.assert_status_forbidden();
+    response.assert_status(StatusCode::FORBIDDEN);
     Ok(())
 }
 
@@ -133,7 +134,7 @@ async fn invalid_enabled_settings_are_not_persisted() -> Result<()> {
             vec![("cookie".to_string(), cookies)],
         )
         .await;
-    response.assert_status_bad_request();
+    response.assert_status(StatusCode::BAD_REQUEST);
     assert!(!app.external_auth.settings()?.enabled);
     Ok(())
 }
@@ -175,12 +176,12 @@ async fn team_assignment_settings_are_validated() -> Result<()> {
             headers(),
         )
         .await;
-    response.assert_status_bad_request();
+    response.assert_status(StatusCode::BAD_REQUEST);
 
     let response = client
         .put_with_headers("/api/dashboard/admin/auth", settings(json!({ "defaultTeamId": "missing" })), headers())
         .await;
-    response.assert_status_bad_request();
+    response.assert_status(StatusCode::BAD_REQUEST);
     assert_eq!(app.external_auth.settings()?.default_team_id.as_deref(), Some(team_id.as_str()));
     Ok(())
 }
@@ -220,7 +221,7 @@ async fn oidc_start_uses_discovery_pkce_and_state_cookie() -> Result<()> {
     assert_eq!(response.json::<Value>()["enabled"], true);
 
     let response = client.get("/api/dashboard/auth/external/start?returnTo=%2Fsettings").await;
-    response.assert_status_see_other();
+    response.assert_status(StatusCode::SEE_OTHER);
     let location = response.header("location").to_str()?.to_string();
     let authorization_url = url::Url::parse(&location)?;
     let query: std::collections::HashMap<_, _> = authorization_url.query_pairs().into_owned().collect();
@@ -249,12 +250,12 @@ async fn oidc_start_uses_discovery_pkce_and_state_cookie() -> Result<()> {
             vec![("cookie".to_string(), format!("{}={}", state_cookie.name(), state_cookie.value()))],
         )
         .await;
-    callback.assert_status_see_other();
+    callback.assert_status(StatusCode::SEE_OTHER);
     callback.assert_header("location", "/login?externalAuthError=1");
     assert!(common::cookies(&callback).into_iter().all(|cookie| cookie.name() != "liwan-external-auth-state"));
 
     let response = client.get("/api/dashboard/auth/external/start?returnTo=https%3A%2F%2Fevil.example").await;
-    response.assert_status_bad_request();
+    response.assert_status(StatusCode::BAD_REQUEST);
     server.abort();
     Ok(())
 }

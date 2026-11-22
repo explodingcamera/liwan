@@ -4,7 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
-use chrono::Utc;
+use jiff::Timestamp;
 
 use crate::web::RouterState;
 use crate::{
@@ -20,7 +20,7 @@ pub static SESSION_COOKIE_NAME: &str = "liwan-session";
 
 fn public_cookie(app: &Liwan) -> Cookie<'static> {
     let mut public_cookie = Cookie::new(PUBLIC_COOKIE_NAME, "");
-    public_cookie.set_max_age(Some(app.config.session_duration.try_into().unwrap()));
+    public_cookie.set_max_age(Some(app.config.session_duration().try_into().unwrap()));
     public_cookie.set_http_only(false);
     let path = app.config.base_path();
     public_cookie.set_path(if path.is_empty() { "/".to_string() } else { path.to_string() });
@@ -31,7 +31,7 @@ fn public_cookie(app: &Liwan) -> Cookie<'static> {
 
 fn session_cookie(app: &Liwan) -> Cookie<'static> {
     let mut session_cookie = Cookie::new(SESSION_COOKIE_NAME, "");
-    session_cookie.set_max_age(Some(app.config.session_duration.try_into().unwrap()));
+    session_cookie.set_max_age(Some(app.config.session_duration().try_into().unwrap()));
     session_cookie.set_http_only(true);
     session_cookie.set_path(app.config.path("/api/dashboard"));
     session_cookie.set_same_site(SameSite::Strict);
@@ -53,7 +53,7 @@ pub(crate) async fn issue_session(app: &Liwan, cookies: CookieJar, username: &st
     let sessions = app.sessions.clone();
     let id = session_id.clone();
     let name = username.to_string();
-    let expires_at = Utc::now() + app.config.session_duration;
+    let expires_at = Timestamp::now() + app.config.session_duration();
     tokio::task::spawn_blocking(move || sessions.create(&id, &name, expires_at)).await??;
 
     let mut public_cookie = public_cookie(app);

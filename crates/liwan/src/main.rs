@@ -18,8 +18,8 @@ async fn main() -> Result<()> {
     setup_logger(args.log_level)?;
 
     let config = Config::load(args.config, std::env::vars())?;
-    let (events_tx, events_rx) = tokio::sync::mpsc::channel::<Event>(1024 * 10);
-    let (exits_tx, exits_rx) = tokio::sync::mpsc::channel::<EventExit>(1024 * 10);
+    let (events_tx, events_rx) = tokio::sync::mpsc::channel::<Event>(10240);
+    let (exits_tx, exits_rx) = tokio::sync::mpsc::channel::<EventExit>(10240);
     let queues = web::EventQueues { events: events_tx, exits: exits_tx };
 
     if let Some(cmd) = args.cmd {
@@ -29,7 +29,9 @@ async fn main() -> Result<()> {
     let app = Liwan::try_new(config)?;
     app.run_background_tasks();
 
-    let interval = app.config.duckdb.checkpoint_interval;
+    let interval = std::time::Duration::try_from(
+        app.config.duckdb.checkpoint_interval.to_duration(jiff::SpanRelativeTo::days_are_24_hours())?,
+    )?;
     let (stop_checkpoints, mut checkpoint_shutdown) = tokio::sync::oneshot::channel::<()>();
     let checkpoints = (!interval.is_zero()).then(|| {
         let app = app.clone();

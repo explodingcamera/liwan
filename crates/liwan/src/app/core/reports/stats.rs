@@ -1,15 +1,16 @@
 use crate::app::DuckDBConn;
 use crate::config::LimitsConfig;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
+use crate::utils::timestamp::SqlTimestamp;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
 use duckdb::params_from_iter;
+use jiff::Timestamp;
 
 use super::shared::{build_filter_clause, metric_aggregate_sql, metric_sample_count_sql, range_events_sql};
 use super::{DateRange, DimensionFilter, Metric, ReportStats};
 
 /// Return the earliest event timestamp for the selected entities
-pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Option<DateTime<Utc>>> {
+pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Option<Timestamp>> {
     if entities.is_empty() {
         return Ok(None);
     }
@@ -24,8 +25,8 @@ pub fn earliest_timestamp(conn: &DuckDBConn, entities: &[String]) -> Result<Opti
     );
 
     let mut stmt = conn.prepare_cached(&query)?;
-    let earliest_timestamp = stmt.query_row(params_from_iter(entities), |row| row.get(0))?;
-    Ok(earliest_timestamp)
+    let earliest_timestamp = stmt.query_row(params_from_iter(entities), |row| row.get::<_, Option<SqlTimestamp>>(0))?;
+    Ok(earliest_timestamp.map(|timestamp| timestamp.0))
 }
 
 /// Count visitor groups with pageviews in the last five minutes.
@@ -41,7 +42,7 @@ pub fn online_users(conn: &DuckDBConn, entities: &[String]) -> Result<u64> {
 			from events e
 			where
 				e.event = 'pageview' and e.entity_id in ({vars}) and
-				e.created_at >= (now()::timestamp - interval '5 minutes');
+				e.created_at >= (make_timestamp(epoch_us(now())) - interval '5 minutes');
 	"
     );
 
@@ -120,7 +121,7 @@ pub fn overall_stats(
 				select count(distinct visitor_group_id) as current_visitors
 				from events
 				where event = 'pageview' and entity_id in ({entity_vars})
-					and created_at >= (now()::timestamp - interval '5 minutes')
+					and created_at >= (make_timestamp(epoch_us(now())) - interval '5 minutes')
 			)
 		select
 			coalesce(s.total_views, 0), coalesce(s.unique_visitors, 0),
@@ -169,7 +170,6 @@ mod tests {
     use super::*;
     use crate::app::Liwan;
     use crate::config::Config;
-    use chrono::Duration;
 
     #[test]
     fn online_users_counts_only_pageviews() {
@@ -178,14 +178,17 @@ mod tests {
         for (visitor, event) in [("visitor-1", "pageview"), ("visitor-2", "signup")] {
             conn.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at) values (?, ?, ?, ?)",
-                duckdb::params!["entity-1", visitor, event, Utc::now()],
+                duckdb::params!["entity-1", visitor, event, SqlTimestamp(Timestamp::now())],
             )
             .unwrap();
         }
 
         assert_eq!(online_users(&conn, &["entity-1".into()]).unwrap(), 1);
-        let now = Utc::now();
-        let ranges = [DateRange { start: now - Duration::days(2), end: now - Duration::days(1) }];
+        let now = Timestamp::now();
+        let ranges = [DateRange {
+            start: now - jiff::SignedDuration::from_hours(48),
+            end: now - jiff::SignedDuration::from_hours(24),
+        }];
         let (stats, current_visitors) =
             overall_stats(&conn, &["entity-1".into()], "signup", &ranges, &[], &LimitsConfig::default()).unwrap();
         assert_eq!(stats[0].total_views, 0);
@@ -195,16 +198,19 @@ mod tests {
     #[test]
     fn overall_stats_uses_terminal_event_exit_duration() {
         let app = Liwan::new_memory(Config::default()).expect("failed to create app");
-        let created_at = Utc::now() - Duration::minutes(5);
-        let exited_at = created_at + Duration::seconds(90);
+        let created_at = Timestamp::now() - jiff::SignedDuration::from_mins(5);
+        let exited_at = created_at + jiff::SignedDuration::from_secs(90);
         let conn = app.events_conn().expect("failed to get event connection");
         conn.execute(
             "insert into events (entity_id, visitor_group_id, event, created_at, fqdn, path, exited_at) values (?, ?, ?, ?, ?, ?, ?)",
-            duckdb::params!["entity-1", "visitor-1", "pageview", created_at, "example.com", "/", exited_at],
+            duckdb::params!["entity-1", "visitor-1", "pageview", SqlTimestamp(created_at), "example.com", "/", SqlTimestamp(exited_at)],
         )
         .expect("failed to insert event");
 
-        let range = DateRange { start: created_at - Duration::minutes(1), end: exited_at + Duration::minutes(1) };
+        let range = DateRange {
+            start: created_at - jiff::SignedDuration::from_mins(1),
+            end: exited_at + jiff::SignedDuration::from_mins(1),
+        };
         let ranges = [range];
         let limits = LimitsConfig {
             report_min_bounce_rate_sessions: 0,

@@ -1,6 +1,7 @@
 use crate::app::{SqlitePool, models};
+use crate::utils::timestamp::SqlTimestamp;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use rusqlite::OptionalExtension;
 use std::collections::HashSet;
 
@@ -15,14 +16,14 @@ impl LiwanSessions {
     }
 
     /// Create a new session
-    pub fn create(&self, session_id: &str, username: &str, expires_at: DateTime<Utc>) -> Result<()> {
+    pub fn create(&self, session_id: &str, username: &str, expires_at: Timestamp) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn
             .prepare_cached("insert into sessions (id, username, expires_at) values (:id, :username, :expires_at)")?;
         stmt.execute(rusqlite::named_params! {
             ":id": session_id,
             ":username": username,
-            ":expires_at": expires_at,
+            ":expires_at": SqlTimestamp(expires_at),
         })?;
         Ok(())
     }
@@ -35,7 +36,7 @@ impl LiwanSessions {
         let user = conn
             .query_row(
                 "select u.username, u.role from sessions s join users u on lower(u.username) = lower(s.username) where s.id = ? and s.expires_at > ?",
-                rusqlite::params![session_id, Utc::now()],
+                rusqlite::params![session_id, SqlTimestamp(Timestamp::now())],
                 |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
             )
             .optional()?;
@@ -107,7 +108,7 @@ impl LiwanSessions {
     pub fn delete(&self, session_id: &str) -> Result<()> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached("update sessions set expires_at = :expires_at where id = :id")?;
-        stmt.execute(rusqlite::named_params! { ":expires_at": Utc::now(), ":id": session_id })?;
+        stmt.execute(rusqlite::named_params! { ":expires_at": SqlTimestamp(Timestamp::now()), ":id": session_id })?;
         Ok(())
     }
 }

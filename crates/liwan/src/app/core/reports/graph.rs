@@ -1,8 +1,8 @@
 use crate::app::DuckDBConn;
 use crate::utils::duckdb::{ParamVec, repeat_vars};
+use crate::utils::timestamp::SqlTimestamp;
 use anyhow::{Context, Result};
-use chrono::{DateTime, Datelike, Days, Duration, LocalResult, NaiveDate, Offset, TimeZone, Timelike, Utc};
-use chrono_tz::Tz;
+use jiff::{RoundMode, SignedDuration, ToSpan, Unit, ZonedDateTimeRound, tz::TimeZone};
 
 use super::shared::{build_filter_clause, metric_aggregate_sql, range_events_sql};
 use super::{DateRange, DimensionFilter, GraphInterval, Metric, ReportGraph, ReportGraphPoint};
@@ -22,47 +22,6 @@ fn build_time_bins_values_sql(buckets: &[Vec<DateRange>]) -> String {
         .join(", ")
 }
 
-fn resolve_local_day_start(timezone: Tz, date: NaiveDate) -> Result<DateTime<Utc>> {
-    let local_midnight = date.and_hms_opt(0, 0, 0).context("Failed to build local midnight")?;
-
-    let resolved = match timezone.from_local_datetime(&local_midnight) {
-        LocalResult::Single(dt) => dt,
-        LocalResult::Ambiguous(earlier, later) => earlier.min(later),
-        LocalResult::None => {
-            let mut candidate = local_midnight;
-            let mut resolved = None;
-
-            for _ in 0..180 {
-                candidate =
-                    candidate.checked_add_signed(Duration::minutes(1)).context("Local date is out of bounds")?;
-                match timezone.from_local_datetime(&candidate) {
-                    LocalResult::Single(dt) => {
-                        resolved = Some(dt);
-                        break;
-                    }
-                    LocalResult::Ambiguous(earlier, later) => {
-                        resolved = Some(earlier.min(later));
-                        break;
-                    }
-                    LocalResult::None => continue,
-                }
-            }
-
-            resolved.with_context(|| format!("Failed to resolve local day start for {date} in {timezone}"))?
-        }
-    };
-
-    Ok(resolved.with_timezone(&Utc))
-}
-
-fn local_date(timezone: Tz, datetime: DateTime<Utc>) -> Result<NaiveDate> {
-    datetime
-        .naive_utc()
-        .checked_add_offset(datetime.with_timezone(&timezone).offset().fix())
-        .map(|datetime| datetime.date())
-        .context("Local date is out of bounds")
-}
-
 /// Split a date range into graph buckets aligned to the selected timezone
 pub fn build_graph_buckets(
     range: &DateRange,
@@ -75,72 +34,45 @@ pub fn build_graph_buckets(
     }
 
     let timezone_name = timezone.unwrap_or("UTC");
-    let timezone: Tz = timezone_name.parse().with_context(|| format!("Invalid timezone: {timezone_name}"))?;
-
-    let aligned_start = match interval {
-        GraphInterval::Hour => {
-            let start_local = range.start.with_timezone(&timezone);
-            range
-                .start
-                .checked_sub_signed(
-                    Duration::minutes(i64::from(start_local.minute()))
-                        + Duration::seconds(i64::from(start_local.second()))
-                        + Duration::nanoseconds(i64::from(start_local.nanosecond())),
-                )
-                .context("Graph start is out of bounds")?
-        }
-        GraphInterval::Day => resolve_local_day_start(timezone, local_date(timezone, range.start)?)?,
-        GraphInterval::Week => {
-            let date = local_date(timezone, range.start)?;
-            let monday = date
-                .checked_sub_days(Days::new(u64::from(date.weekday().num_days_from_monday())))
-                .context("Failed to align bucket week")?;
-            resolve_local_day_start(timezone, monday)?
-        }
-        GraphInterval::Month => {
-            let date = local_date(timezone, range.start)?;
-            resolve_local_day_start(timezone, date.with_day(1).context("Invalid month start")?)?
-        }
+    let timezone = TimeZone::get(timezone_name).with_context(|| format!("Invalid timezone: {timezone_name}"))?;
+    let date = timezone.to_datetime(range.start).date();
+    let mut bucket_date = match interval {
+        GraphInterval::Hour | GraphInterval::Day => date,
+        GraphInterval::Week => date.checked_sub(date.weekday().to_monday_zero_offset().days())?,
+        GraphInterval::Month => date.first_of_month(),
+    };
+    let mut bucket_start = match interval {
+        GraphInterval::Hour => range
+            .start
+            .to_zoned_datetime(timezone.clone())
+            .round(ZonedDateTimeRound::new().smallest(Unit::Hour).mode(RoundMode::Floor))?
+            .timestamp(),
+        _ => bucket_date.to_zoned_datetime(timezone.clone())?.timestamp(),
     };
 
+    let calendar_step = match interval {
+        GraphInterval::Hour => None,
+        GraphInterval::Day => Some(1.day()),
+        GraphInterval::Week => Some(1.week()),
+        GraphInterval::Month => Some(1.month()),
+    };
     let mut buckets = Vec::new();
-    let mut bucket_start = aligned_start;
 
     while bucket_start < range.end {
         if buckets.len() >= max_datapoints {
             anyhow::bail!("Too many data points");
         }
-        let next_bucket_start = match interval {
-            GraphInterval::Hour => {
-                bucket_start.checked_add_signed(Duration::hours(1)).context("Graph end is out of bounds")?
-            }
-            GraphInterval::Day => {
-                let next_date = local_date(timezone, bucket_start)?
-                    .checked_add_days(Days::new(1))
-                    .context("Failed to advance bucket date")?;
-                resolve_local_day_start(timezone, next_date)?
-            }
-            GraphInterval::Week => {
-                let next_date = local_date(timezone, bucket_start)?
-                    .checked_add_days(Days::new(7))
-                    .context("Failed to advance bucket date")?;
-                resolve_local_day_start(timezone, next_date)?
-            }
-            GraphInterval::Month => {
-                let date = local_date(timezone, bucket_start)?;
-                let next_month = date
-                    .with_day(1)
-                    .context("Invalid month start")?
-                    .checked_add_months(chrono::Months::new(1))
-                    .context("Failed to advance bucket month")?;
-                resolve_local_day_start(timezone, next_month)?
-            }
+        let next_bucket_start = if let Some(step) = calendar_step {
+            bucket_date = bucket_date.checked_add(step)?;
+            bucket_date.to_zoned_datetime(timezone.clone())?.timestamp()
+        } else {
+            bucket_start.checked_add(SignedDuration::from_hours(1)).context("Graph end is out of bounds")?
         };
 
-        buckets.push(DateRange {
-            start: bucket_start,
-            end: if next_bucket_start < range.end { next_bucket_start } else { range.end },
-        });
+        // A timezone transition can skip a whole calendar date.
+        if next_bucket_start > bucket_start {
+            buckets.push(DateRange { start: bucket_start, end: next_bucket_start.min(range.end) });
+        }
         bucket_start = next_bucket_start;
     }
 
@@ -178,8 +110,8 @@ pub fn overall_report(
     let entity_vars = repeat_vars(entities.len());
 
     for bucket in buckets.iter().flatten() {
-        params.push(bucket.start);
-        params.push(bucket.end);
+        params.push(SqlTimestamp(bucket.start));
+        params.push(SqlTimestamp(bucket.end));
     }
     params.push(event);
     params.extend(entities);
@@ -232,7 +164,8 @@ pub fn overall_report(
     let mut rows = stmt.query(duckdb::params_from_iter(params))?;
     let mut reports = vec![Vec::new(); ranges.len()];
     while let Some(row) = rows.next()? {
-        reports[row.get::<_, usize>(0)?].push(ReportGraphPoint { bin_start: row.get(1)?, value: row.get(2)? });
+        reports[row.get::<_, usize>(0)?]
+            .push(ReportGraphPoint { bin_start: row.get::<_, SqlTimestamp>(1)?.0, value: row.get(2)? });
     }
     Ok(reports)
 }
@@ -242,16 +175,17 @@ mod tests {
     use super::*;
     use crate::app::{Liwan, models::Event};
     use crate::config::Config;
+    use jiff::Timestamp;
 
-    fn local_datetime(timezone: Tz, year: i32, month: u32, day: u32, hour: u32, minute: u32) -> DateTime<Utc> {
-        timezone
-            .with_ymd_and_hms(year, month, day, hour, minute, 0)
-            .single()
-            .expect("failed to construct local datetime")
-            .with_timezone(&Utc)
+    fn local_datetime(timezone: &str, year: i16, month: i8, day: i8, hour: i8, minute: i8) -> Timestamp {
+        jiff::civil::date(year, month, day)
+            .at(hour, minute, 0, 0)
+            .to_zoned_datetime(TimeZone::get(timezone).unwrap())
+            .unwrap()
+            .timestamp()
     }
 
-    fn test_event(created_at: DateTime<Utc>) -> Event {
+    fn test_event(created_at: Timestamp) -> Event {
         Event {
             entity_id: "entity-1".to_string(),
             visitor_group_id: format!("visitor-{created_at}"),
@@ -281,15 +215,21 @@ mod tests {
     fn build_graph_buckets_aligns_hours_to_local_boundaries() {
         let timezone = "Asia/Kolkata";
         let range = DateRange {
-            start: local_datetime(Tz::Asia__Kolkata, 2024, 1, 1, 23, 23),
-            end: local_datetime(Tz::Asia__Kolkata, 2024, 1, 2, 1, 23),
+            start: local_datetime("Asia/Kolkata", 2024, 1, 1, 23, 23),
+            end: local_datetime("Asia/Kolkata", 2024, 1, 2, 1, 23),
         };
 
         let buckets =
             build_graph_buckets(&range, GraphInterval::Hour, Some(timezone), 2000).expect("failed to build buckets");
         let local_starts = buckets
             .iter()
-            .map(|bucket| bucket.start.with_timezone(&Tz::Asia__Kolkata).format("%Y-%m-%d %H:%M").to_string())
+            .map(|bucket| {
+                bucket
+                    .start
+                    .to_zoned_datetime(TimeZone::get("Asia/Kolkata").unwrap())
+                    .strftime("%Y-%m-%d %H:%M")
+                    .to_string()
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(local_starts, vec!["2024-01-01 23:00", "2024-01-02 00:00", "2024-01-02 01:00"]);
@@ -297,18 +237,39 @@ mod tests {
     }
 
     #[test]
+    fn hourly_buckets_preserve_both_repeated_hours() {
+        let range =
+            DateRange { start: "2024-11-03T05:30:00Z".parse().unwrap(), end: "2024-11-03T06:30:00Z".parse().unwrap() };
+        let buckets = build_graph_buckets(&range, GraphInterval::Hour, Some("America/New_York"), 2).unwrap();
+        assert_eq!(buckets.len(), 2);
+        assert_eq!(buckets[0].start, "2024-11-03T05:00:00Z".parse().unwrap());
+        assert_eq!(buckets[1].start, "2024-11-03T06:00:00Z".parse().unwrap());
+        let second_hour = DateRange { start: buckets[1].start + SignedDuration::from_mins(15), end: range.end };
+        assert_eq!(
+            build_graph_buckets(&second_hour, GraphInterval::Hour, Some("America/New_York"), 1).unwrap(),
+            [buckets[1].clone()],
+        );
+    }
+
+    #[test]
     fn build_graph_buckets_aligns_days_to_local_midnight() {
         let timezone = "America/New_York";
         let range = DateRange {
-            start: local_datetime(Tz::America__New_York, 2024, 1, 1, 0, 0),
-            end: local_datetime(Tz::America__New_York, 2024, 1, 3, 12, 0),
+            start: local_datetime("America/New_York", 2024, 1, 1, 0, 0),
+            end: local_datetime("America/New_York", 2024, 1, 3, 12, 0),
         };
 
         let buckets =
             build_graph_buckets(&range, GraphInterval::Day, Some(timezone), 2000).expect("failed to build buckets");
         let local_starts = buckets
             .iter()
-            .map(|bucket| bucket.start.with_timezone(&Tz::America__New_York).format("%Y-%m-%d %H:%M").to_string())
+            .map(|bucket| {
+                bucket
+                    .start
+                    .to_zoned_datetime(TimeZone::get("America/New_York").unwrap())
+                    .strftime("%Y-%m-%d %H:%M")
+                    .to_string()
+            })
             .collect::<Vec<_>>();
 
         assert_eq!(local_starts, vec!["2024-01-01 00:00", "2024-01-02 00:00", "2024-01-03 00:00"]);
@@ -317,19 +278,33 @@ mod tests {
                 .last()
                 .expect("missing last bucket")
                 .end
-                .with_timezone(&Tz::America__New_York)
-                .format("%Y-%m-%d %H:%M")
+                .to_zoned_datetime(TimeZone::get("America/New_York").unwrap())
+                .strftime("%Y-%m-%d %H:%M")
                 .to_string(),
             "2024-01-03 12:00"
         );
     }
 
     #[test]
+    fn daily_buckets_follow_daylight_saving() {
+        let timezone = "America/New_York";
+        for (month, day, hours) in [(3, 10, 23), (11, 3, 25)] {
+            let range = DateRange {
+                start: local_datetime(timezone, 2024, month, day, 0, 0),
+                end: local_datetime(timezone, 2024, month, day + 1, 0, 0),
+            };
+            let buckets = build_graph_buckets(&range, GraphInterval::Day, Some(timezone), 2).unwrap();
+            assert_eq!(buckets, [range]);
+            assert_eq!(buckets[0].duration().as_hours(), hours);
+        }
+    }
+
+    #[test]
     fn build_graph_buckets_aligns_weeks_and_months() {
         let timezone = "America/New_York";
         let range = DateRange {
-            start: local_datetime(Tz::America__New_York, 2024, 2, 28, 12, 0),
-            end: local_datetime(Tz::America__New_York, 2024, 4, 2, 12, 0),
+            start: local_datetime("America/New_York", 2024, 2, 28, 12, 0),
+            end: local_datetime("America/New_York", 2024, 4, 2, 12, 0),
         };
 
         let weeks = build_graph_buckets(&range, GraphInterval::Week, Some(timezone), 2000).unwrap();
@@ -337,7 +312,13 @@ mod tests {
         let local_starts = |buckets: &[DateRange]| {
             buckets
                 .iter()
-                .map(|bucket| bucket.start.with_timezone(&Tz::America__New_York).format("%Y-%m-%d %H:%M").to_string())
+                .map(|bucket| {
+                    bucket
+                        .start
+                        .to_zoned_datetime(TimeZone::get("America/New_York").unwrap())
+                        .strftime("%Y-%m-%d %H:%M")
+                        .to_string()
+                })
                 .collect::<Vec<_>>()
         };
 
@@ -362,9 +343,9 @@ mod tests {
         let app = Liwan::new_memory(Config::default()).expect("failed to create app");
         app.seed_database(0).expect("failed to seed app");
 
-        let start = local_datetime(Tz::UTC, 2024, 1, 1, 0, 0);
-        let middle = local_datetime(Tz::UTC, 2024, 1, 2, 12, 0);
-        let end = local_datetime(Tz::UTC, 2024, 1, 3, 0, 0);
+        let start = local_datetime("UTC", 2024, 1, 1, 0, 0);
+        let middle = local_datetime("UTC", 2024, 1, 2, 12, 0);
+        let end = local_datetime("UTC", 2024, 1, 3, 0, 0);
 
         app.events
             .append(vec![test_event(start), test_event(middle), test_event(end)].into_iter())
@@ -387,7 +368,7 @@ mod tests {
     fn overall_report_handles_irregular_buckets() {
         let app = Liwan::new_memory(Config::default()).unwrap();
         let conn = app.events_conn().unwrap();
-        let start = local_datetime(Tz::UTC, 2024, 1, 1, 0, 0);
+        let start = local_datetime("UTC", 2024, 1, 1, 0, 0);
         for (visitor, hours, previous, next, exit) in [
             ("outside", -1, None, None, None),
             ("one", 0, None, Some(60), None),
@@ -399,13 +380,17 @@ mod tests {
             conn.execute(
                 "insert into events (entity_id, visitor_group_id, event, created_at, time_from_last_event, time_to_next_event, exited_at)
                  values ('entity-1', ?, 'pageview', ?, ? * interval '1 second', ? * interval '1 second', ?)",
-                duckdb::params![visitor, start + Duration::hours(hours), previous, next, exit.map(|seconds| start + Duration::hours(hours) + Duration::seconds(seconds))],
+                duckdb::params![visitor, SqlTimestamp(start + SignedDuration::from_hours(hours)), previous, next, exit.map(|seconds| SqlTimestamp(start + SignedDuration::from_hours(hours) + SignedDuration::from_secs(seconds)))],
             ).unwrap();
         }
-        let range = DateRange { start: start - Duration::hours(2), end: start + Duration::hours(10) };
+        let range =
+            DateRange { start: start - SignedDuration::from_hours(2), end: start + SignedDuration::from_hours(10) };
         let buckets: Vec<_> = [(0, 2), (5, 6), (7, 8)]
             .into_iter()
-            .map(|(from, to)| DateRange { start: start + Duration::hours(from), end: start + Duration::hours(to) })
+            .map(|(from, to)| DateRange {
+                start: start + SignedDuration::from_hours(from),
+                end: start + SignedDuration::from_hours(to),
+            })
             .collect();
         for (metric, expected) in [
             (Metric::Views, vec![2.0, 1.0, 0.0]),
@@ -430,9 +415,9 @@ mod tests {
 
     #[test]
     fn build_graph_buckets_rejects_excessive_ranges() {
-        let start = local_datetime(Tz::UTC, 2024, 1, 1, 0, 0);
+        let start = local_datetime("UTC", 2024, 1, 1, 0, 0);
         let max_datapoints = 2000;
-        let range = DateRange { start, end: start + Duration::hours(max_datapoints as i64 + 1) };
+        let range = DateRange { start, end: start + SignedDuration::from_hours(max_datapoints as i64 + 1) };
 
         assert!(build_graph_buckets(&range, GraphInterval::Hour, Some("UTC"), max_datapoints).is_err());
     }

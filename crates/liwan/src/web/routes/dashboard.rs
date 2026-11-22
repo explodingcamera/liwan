@@ -9,8 +9,8 @@ use crate::web::webext::{ApiResult, AxumErrExt, http_bail};
 use aide::axum::{ApiRouter, routing::*};
 use axum::Json;
 use axum::extract::{Path, State};
-use chrono::{DateTime, Utc};
 use http::StatusCode;
+use jiff::Timestamp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -224,7 +224,8 @@ struct DimensionTableRow {
 
 #[derive(Serialize, JsonSchema)]
 struct EarliestResponse {
-    earliest: Option<DateTime<Utc>>,
+    #[schemars(with = "Option<crate::utils::timestamp::TimestampSchema>")]
+    earliest: Option<Timestamp>,
 }
 
 async fn project_earliest_handler(

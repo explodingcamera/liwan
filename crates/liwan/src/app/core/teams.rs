@@ -211,7 +211,7 @@ mod tests {
         assert!(app.teams.create(" ").is_err());
         let editors_id = app.teams.create("Editors").unwrap();
         let session = "test-session";
-        app.sessions.create(session, "alice", chrono::Utc::now() + chrono::Duration::hours(1)).unwrap();
+        app.sessions.create(session, "alice", jiff::Timestamp::now() + jiff::SignedDuration::from_hours(1)).unwrap();
         assert!(!can_view_project(&project, app.sessions.get(session).unwrap().as_ref()));
         app.teams
             .update(

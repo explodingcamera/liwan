@@ -1,5 +1,6 @@
 use anyhow::Result;
-use chrono::{Duration, Utc};
+use http::StatusCode;
+use jiff::{SignedDuration, Timestamp};
 use liwan::app::models::{
     AccessPermission, DataRetention, Entity, EntityCollectionSettings, Event, GeoDetail, Project, ProjectVisibility,
     UserRole,
@@ -47,7 +48,7 @@ async fn entities_list_respects_team_access() -> Result<()> {
         .await
         .assert_status_success();
 
-    client.get("/api/dashboard/entities").await.assert_status(http::StatusCode::UNAUTHORIZED);
+    client.get("/api/dashboard/entities").await.assert_status(StatusCode::UNAUTHORIZED);
     let admin_headers = vec![("cookie".into(), common::cookie_header(&admin))];
     let admin_list: Value = client.get_with_headers("/api/dashboard/entities", admin_headers).await.json();
     assert_eq!(admin_list["entities"].as_array().unwrap().len(), 2);
@@ -82,11 +83,11 @@ async fn teams_grant_project_read_access() -> Result<()> {
     let admin_headers = || vec![("cookie".into(), common::cookie_header(&admin))];
     let viewer_headers = || vec![("cookie".into(), common::cookie_header(&viewer))];
 
-    client.get_with_headers("/api/dashboard/teams", viewer_headers()).await.assert_status_forbidden();
+    client.get_with_headers("/api/dashboard/teams", viewer_headers()).await.assert_status(StatusCode::FORBIDDEN);
     client
         .get_with_headers("/api/dashboard/project/private", viewer_headers())
         .await
-        .assert_status(http::StatusCode::NOT_FOUND);
+        .assert_status(StatusCode::NOT_FOUND);
     let created: Value = client
         .post_with_headers("/api/dashboard/teams", json!({"displayName": "Engineering"}), admin_headers())
         .await
@@ -109,7 +110,7 @@ async fn teams_grant_project_read_access() -> Result<()> {
     client
         .put_with_headers("/api/dashboard/user/viewer", json!({"role": "admin", "teams": ["missing"]}), admin_headers())
         .await
-        .assert_status(http::StatusCode::BAD_REQUEST);
+        .assert_status(StatusCode::BAD_REQUEST);
     assert_eq!(app.users.get("viewer")?.role, UserRole::User);
     client
         .put_with_headers("/api/dashboard/user/viewer", json!({"role": "user", "teams": []}), admin_headers())
@@ -118,7 +119,7 @@ async fn teams_grant_project_read_access() -> Result<()> {
     client
         .get_with_headers("/api/dashboard/project/private", viewer_headers())
         .await
-        .assert_status(http::StatusCode::NOT_FOUND);
+        .assert_status(StatusCode::NOT_FOUND);
     client
         .put_with_headers("/api/dashboard/user/viewer", json!({"role": "user", "teams": [team_id]}), admin_headers())
         .await
@@ -133,7 +134,7 @@ async fn teams_grant_project_read_access() -> Result<()> {
     client
         .get_with_headers("/api/dashboard/project/private", viewer_headers())
         .await
-        .assert_status(http::StatusCode::NOT_FOUND);
+        .assert_status(StatusCode::NOT_FOUND);
     Ok(())
 }
 
@@ -152,7 +153,7 @@ async fn internal_projects_require_a_session() -> Result<()> {
         },
         &[],
     )?;
-    client.get("/api/dashboard/project/staff").await.assert_status(http::StatusCode::NOT_FOUND);
+    client.get("/api/dashboard/project/staff").await.assert_status(StatusCode::NOT_FOUND);
     let listed: Value = client.get("/api/dashboard/projects").await.json();
     assert_eq!(listed["projects"], json!([]));
     let cookies = common::login(&client, "viewer", "testtest").await;
@@ -182,7 +183,7 @@ async fn admin_manages_api_keys() -> Result<()> {
             headers(),
         )
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
 
     let created = client
         .post_with_headers(
@@ -191,7 +192,7 @@ async fn admin_manages_api_keys() -> Result<()> {
             headers(),
         )
         .await;
-    created.assert_status(http::StatusCode::CREATED);
+    created.assert_status(StatusCode::CREATED);
     let created: Value = created.json();
     let plaintext = created["plaintext"].as_str().expect("plaintext key");
     assert!(plaintext.starts_with("liw_"));
@@ -213,7 +214,7 @@ async fn admin_manages_api_keys() -> Result<()> {
             vec![("cookie".to_string(), common::cookie_header(&viewer_cookies))],
         )
         .await
-        .assert_status_forbidden();
+        .assert_status(StatusCode::FORBIDDEN);
     assert!(app.api_keys.authenticate(plaintext)?.is_some());
 
     client
@@ -259,7 +260,7 @@ async fn admin_cannot_delete_self_using_different_casing() -> Result<()> {
     let cookies = common::login(&client, "admin", "testtest").await;
     let headers = vec![("cookie".to_string(), common::cookie_header(&cookies))];
 
-    client.delete_with_headers("/api/dashboard/user/Admin", headers.clone()).await.assert_status_forbidden();
+    client.delete_with_headers("/api/dashboard/user/Admin", headers.clone()).await.assert_status(StatusCode::FORBIDDEN);
     client.get_with_headers("/api/dashboard/auth/me", headers).await.assert_status_success();
     common::login(&client, "admin", "testtest").await;
 
@@ -288,7 +289,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
             headers(),
         )
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
     assert!(app.projects.get("failed-project").is_err());
 
     app.projects.create(
@@ -311,7 +312,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
             headers(),
         )
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
     assert!(!app.entities.exists("failed-entity")?);
 
     app.entities.create(&Entity { id: "new-entity".into(), display_name: "New entity".into() }, &[])?;
@@ -331,7 +332,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
             headers(),
         )
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
     assert_eq!(app.projects.entity_ids("updated-project")?, vec!["existing-entity"]);
 
     app.projects.create(
@@ -354,7 +355,7 @@ async fn relationship_updates_are_atomic() -> Result<()> {
             headers(),
         )
         .await
-        .assert_status_bad_request();
+        .assert_status(StatusCode::BAD_REQUEST);
     let projects = app.entities.projects("updated-entity")?;
     assert_eq!(projects.len(), 1);
     assert_eq!(projects[0].id, "existing-project");
@@ -385,8 +386,8 @@ async fn pruning_supports_dry_run_and_is_idempotent() -> Result<()> {
         ingest_drop_rules: Vec::new(),
     })?;
 
-    let now = Utc::now();
-    let event = |entity_id: &str, visitor_group_id: &str, created_at: chrono::DateTime<Utc>, sensitive: bool| Event {
+    let now = Timestamp::now();
+    let event = |entity_id: &str, visitor_group_id: &str, created_at: Timestamp, sensitive: bool| Event {
         entity_id: entity_id.into(),
         visitor_group_id: visitor_group_id.into(),
         event: "pageview".into(),
@@ -411,11 +412,11 @@ async fn pruning_supports_dry_run_and_is_idempotent() -> Result<()> {
     };
     app.events.append(
         vec![
-            event("pruned-entity", "old", now - Duration::days(60), false),
-            event("pruned-entity", "recent", now - Duration::minutes(2), true),
-            event("pruned-entity", "recent", now - Duration::minutes(1), true),
-            event("preserved-entity", "preserved", now - Duration::minutes(2), true),
-            event("preserved-entity", "preserved", now - Duration::minutes(1), true),
+            event("pruned-entity", "old", now - SignedDuration::from_hours(1440), false),
+            event("pruned-entity", "recent", now - SignedDuration::from_mins(2), true),
+            event("pruned-entity", "recent", now - SignedDuration::from_mins(1), true),
+            event("preserved-entity", "preserved", now - SignedDuration::from_mins(2), true),
+            event("preserved-entity", "preserved", now - SignedDuration::from_mins(1), true),
         ]
         .into_iter(),
     )?;

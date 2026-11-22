@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
+use crate::utils::timestamp::SqlTimestamp;
 use anyhow::{Result, bail};
-use chrono::Utc;
+use jiff::Timestamp;
 use rand::distr::{Alphanumeric, SampleString};
 use rusqlite::{Connection, OptionalExtension, Transaction};
 
@@ -45,13 +46,13 @@ impl LiwanApiKeys {
         let id = Alphanumeric.sample_string(&mut rand::rng(), 16);
         let secret_hash = blake3::hash(secret.as_bytes()).to_hex().to_string();
         let permissions_json = serde_json::to_string(permissions)?;
-        let created_at = Utc::now();
+        let created_at = Timestamp::now();
         let expires_at = expiration.expires_at();
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         tx.execute(
             "insert into api_keys (id, secret_hash, display_name, permissions_json, created_at, expires_at) values (?, ?, ?, ?, ?, ?)",
-            rusqlite::params![id, secret_hash, display_name, permissions_json, created_at, expires_at],
+            rusqlite::params![id, secret_hash, display_name, permissions_json, SqlTimestamp(created_at), expires_at.map(SqlTimestamp)],
         )?;
         set_access(&tx, &id, entities, projects, permissions)?;
         tx.commit()?;
@@ -119,7 +120,7 @@ impl LiwanApiKeys {
         let tx = conn.transaction()?;
         tx.execute(
             "update api_keys set secret_hash = ?, expires_at = ?, last_used_at = null where id = ?",
-            rusqlite::params![hash, expires_at, key_id],
+            rusqlite::params![hash, expires_at.map(SqlTimestamp), key_id],
         )?;
         let Some(key) = query_keys(&tx, "where id = ?", [key_id])?.pop() else { return Ok(None) };
         tx.commit()?;
@@ -129,10 +130,14 @@ impl LiwanApiKeys {
     /// Moves a key's creation and expiration dates into the past for seed data.
     #[cfg(any(debug_assertions, test))]
     pub(crate) fn expire_for_seed(&self, key_id: &str) -> Result<()> {
-        let now = Utc::now();
+        let now = Timestamp::now();
         self.pool.get()?.execute(
             "update api_keys set created_at = ?, expires_at = ? where id = ?",
-            rusqlite::params![now - chrono::Duration::days(8), now - chrono::Duration::days(1), key_id],
+            rusqlite::params![
+                SqlTimestamp(now - jiff::SignedDuration::from_hours(192)),
+                SqlTimestamp(now - jiff::SignedDuration::from_hours(24)),
+                key_id
+            ],
         )?;
         Ok(())
     }
@@ -155,7 +160,7 @@ impl LiwanApiKeys {
                      permissions_json, all_entities, all_projects,
                      (select json_group_array(project_id) from api_key_projects where key_id = api_keys.id)
                  from api_keys where secret_hash = ? and (expires_at is null or expires_at > ?)",
-                rusqlite::params![id.as_str(), Utc::now()],
+                rusqlite::params![id.as_str(), SqlTimestamp(Timestamp::now())],
                 |row| {
                     Ok((
                         row.get::<_, String>(0)?,
@@ -185,7 +190,10 @@ impl LiwanApiKeys {
                 permitted_entities.insert(row?);
             }
         }
-        conn.execute("update api_keys set last_used_at = ? where id = ?", rusqlite::params![Utc::now(), id])?;
+        conn.execute(
+            "update api_keys set last_used_at = ? where id = ?",
+            rusqlite::params![SqlTimestamp(Timestamp::now()), id],
+        )?;
         Ok(Some(ApiKeyAccess {
             id,
             access: Access {
@@ -214,9 +222,9 @@ fn query_keys(conn: &Connection, filter: &str, params: impl rusqlite::Params) ->
         keys.push(ApiKey {
             id: row.get(0)?,
             display_name: row.get(1)?,
-            created_at: row.get(2)?,
-            expires_at: row.get(3)?,
-            last_used_at: row.get(4)?,
+            created_at: row.get::<_, SqlTimestamp>(2)?.0,
+            expires_at: row.get::<_, Option<SqlTimestamp>>(3)?.map(|timestamp| timestamp.0),
+            last_used_at: row.get::<_, Option<SqlTimestamp>>(4)?.map(|timestamp| timestamp.0),
             permissions: serde_json::from_str(&row.get::<_, String>(5)?)?,
             entities: AccessScope::from_db(row.get(6)?, &row.get::<_, String>(7)?)?,
             projects: AccessScope::from_db(row.get(8)?, &row.get::<_, String>(9)?)?,

@@ -3,9 +3,9 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
-use chrono::{DateTime, Local, NaiveTime, TimeZone, Utc};
 use duckdb::{Connection, Result as DuckResult, params};
 use futures_util::{FutureExt, StreamExt};
+use jiff::{SignedDuration, Timestamp, tz::TimeZone};
 use rand::distr::{SampleString, StandardUniform};
 use tokio::sync::mpsc::Receiver;
 use tokio_util::time::DelayQueue;
@@ -13,6 +13,7 @@ use tokio_util::time::DelayQueue;
 use crate::app::models::{CustomData, Event, EventExit, GeoDetail, ResolvedCollectionSettings, event_params};
 use crate::app::{DuckDBPool, SqlitePool};
 use crate::utils::duckdb::{ParamVec, repeat_vars};
+use crate::utils::timestamp::SqlTimestamp;
 
 const EVENT_EXIT_DELAY: std::time::Duration = std::time::Duration::from_secs(30);
 
@@ -20,7 +21,7 @@ const EVENT_EXIT_DELAY: std::time::Duration = std::time::Duration::from_secs(30)
 pub struct LiwanEvents {
     duckdb: DuckDBPool,
     sqlite: SqlitePool,
-    daily_salt: Arc<ArcSwap<(String, DateTime<Utc>)>>,
+    daily_salt: Arc<ArcSwap<(String, Timestamp)>>,
     visitor_group_rotation_hour: u8,
     /// Per-entity cache for [`LiwanEvents::custom_data`], updated as events are appended
     custom_data: Arc<Mutex<HashMap<String, CustomData>>>,
@@ -37,10 +38,10 @@ pub struct PruneStats {
 
 impl LiwanEvents {
     pub fn try_new(duckdb: DuckDBPool, sqlite: SqlitePool, visitor_group_rotation_hour: u8) -> Result<Self> {
-        let daily_salt: (String, DateTime<Utc>) = {
+        let daily_salt: (String, Timestamp) = {
             tracing::debug!("Loading visitor group salt");
             sqlite.get()?.query_row("select salt, updated_at from salts where id = 1", [], |row| {
-                Ok((row.get(0)?, row.get(1)?))
+                Ok((row.get(0)?, row.get::<_, SqlTimestamp>(1)?.0))
             })?
         };
         Ok(Self {
@@ -56,14 +57,14 @@ impl LiwanEvents {
     pub fn get_salt(&self) -> Result<String> {
         let (salt, updated_at) = &**self.daily_salt.load();
 
-        if should_rotate_salt(*updated_at, self.visitor_group_rotation_hour) {
+        let now = Timestamp::now();
+        if should_rotate_salt(*updated_at, now, self.visitor_group_rotation_hour, TimeZone::system()) {
             tracing::debug!("Visitor group salt expired, generating a new one");
             let new_salt = StandardUniform.sample_string(&mut rand::rng(), 16);
-            let now = Utc::now();
             let conn = self.sqlite.get()?;
             conn.execute(
                 "update salts set salt = :salt, updated_at = :updated_at where id = 1",
-                rusqlite::named_params! { ":salt": &new_salt, ":updated_at": now },
+                rusqlite::named_params! { ":salt": &new_salt, ":updated_at": SqlTimestamp(now) },
             )?;
             self.daily_salt.store((new_salt.clone(), now).into());
             Ok(new_salt)
@@ -225,7 +226,10 @@ impl LiwanEvents {
         };
 
         if let crate::app::models::DataRetention::Days(data_retention_days) = settings.data_retention {
-            let cutoff = Utc::now() - chrono::Duration::days(i64::from(data_retention_days.get()));
+            let cutoff = SqlTimestamp(
+                Timestamp::now()
+                    .saturating_sub(SignedDuration::from_hours(24 * i64::from(data_retention_days.get())))?,
+            );
             stats.deleted_events = count_rows(
                 &conn,
                 "select count(*) from events where entity_id = $entity_id and created_at < $cutoff::timestamp",
@@ -294,19 +298,19 @@ impl LiwanEvents {
     }
 }
 
-fn should_rotate_salt(updated_at: DateTime<Utc>, rotation_hour: u8) -> bool {
-    let now = Local::now();
-    let rotation_time = NaiveTime::from_hms_opt(u32::from(rotation_hour.min(23)), 0, 0).expect("valid rotation hour");
-    let local_rotation = now.date_naive().and_time(rotation_time);
-    let latest_rotation = match Local.from_local_datetime(&local_rotation) {
-        chrono::LocalResult::Single(rotation) => rotation,
-        chrono::LocalResult::Ambiguous(earlier, later) => earlier.min(later),
-        chrono::LocalResult::None => now,
+fn should_rotate_salt(updated_at: Timestamp, now: Timestamp, rotation_hour: u8, timezone: TimeZone) -> bool {
+    let today = timezone.to_datetime(now).date().at(rotation_hour.min(23) as i8, 0, 0, 0);
+    let today_rotation = today.to_zoned_datetime(timezone.clone()).expect("local rotation is in range").timestamp();
+    let latest_rotation = if now < today_rotation {
+        today
+            .yesterday()
+            .and_then(|date| date.to_zoned_datetime(timezone))
+            .expect("local rotation is in range")
+            .timestamp()
+    } else {
+        today_rotation
     };
-    let latest_rotation =
-        if now < latest_rotation { latest_rotation - chrono::Duration::days(1) } else { latest_rotation };
-
-    updated_at < latest_rotation.with_timezone(&Utc)
+    updated_at < latest_rotation
 }
 
 fn count_rows(conn: &Connection, sql: &str, params: impl duckdb::Params) -> DuckResult<u64> {
@@ -348,13 +352,13 @@ fn update_event_exit(conn: &Connection, exit: &EventExit) -> DuckResult<bool> {
             "event": &exit.event,
             "fqdn": &exit.fqdn,
             "path": &exit.path,
-            "exited_at": exit.created_at,
+            "exited_at": SqlTimestamp(exit.created_at),
         },
     )?;
     Ok(updated > 0)
 }
 
-fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[String]) -> DuckResult<()> {
+fn update_event_times(conn: &Connection, from_time: Timestamp, entities: &[String]) -> DuckResult<()> {
     if entities.is_empty() {
         return Ok(());
     }
@@ -368,7 +372,7 @@ fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[S
                 where event = 'pageview' and entity_id in ({entity_vars}) and (created_at >= ?::timestamp or visitor_group_id in (
                     select visitor_group_id
                     from events
-                    where event = 'pageview' and entity_id in ({entity_vars}) and created_at >= now()::timestamp - interval '24 hours' and created_at < ?::timestamp and time_to_next_event is null
+                    where event = 'pageview' and entity_id in ({entity_vars}) and created_at >= make_timestamp(epoch_us(now())) - interval '24 hours' and created_at < ?::timestamp and time_to_next_event is null
                 ))
             ),
             cte as (
@@ -388,9 +392,9 @@ fn update_event_times(conn: &Connection, from_time: DateTime<Utc>, entities: &[S
 
     let mut params = ParamVec::new();
     params.extend(entities);
-    params.push(from_time);
+    params.push(SqlTimestamp(from_time));
     params.extend(entities);
-    params.push(from_time);
+    params.push(SqlTimestamp(from_time));
     conn.execute(&sql, duckdb::params_from_iter(params))?;
     Ok(())
 }
@@ -402,13 +406,24 @@ mod tests {
     use crate::config::Config;
 
     #[test]
+    fn salt_rotation_uses_yesterdays_local_hour_after_offset_change() {
+        let timezone = TimeZone::get("America/New_York").unwrap();
+        let updated_at = "2024-03-09T09:30:00Z".parse().unwrap();
+        let before_rotation = "2024-03-10T07:30:00Z".parse().unwrap();
+        let at_rotation = "2024-03-10T08:00:00Z".parse().unwrap();
+
+        assert!(!should_rotate_salt(updated_at, before_rotation, 4, timezone.clone()));
+        assert!(should_rotate_salt(updated_at, at_rotation, 4, timezone));
+    }
+
+    #[test]
     fn failed_append_does_not_update_cache() {
         let app = Liwan::new_memory(Config::default()).unwrap();
         let conn = app.events_conn().unwrap();
         conn.execute_batch("create unique index unique_visitor on events(visitor_group_id)").unwrap();
         let entities = ["entity-1".into()];
         assert!(!app.events.custom_data(&entities).unwrap().events);
-        let mut first = event(Utc::now());
+        let mut first = event(Timestamp::now());
         first.event = "signup".into();
         let second = first.clone();
 
@@ -456,7 +471,7 @@ mod tests {
         );
     }
 
-    fn event(created_at: DateTime<Utc>) -> Event {
+    fn event(created_at: Timestamp) -> Event {
         Event {
             entity_id: "entity-1".to_string(),
             visitor_group_id: "visitor-1".to_string(),
@@ -485,9 +500,9 @@ mod tests {
     #[test]
     fn exit_updates_only_the_latest_event_without_a_next_event() {
         let app = Liwan::new_memory(Config::default()).expect("failed to create app");
-        let first = Utc::now() - chrono::Duration::minutes(2);
-        let second = first + chrono::Duration::minutes(1);
-        let mut custom = event(second + chrono::Duration::seconds(5));
+        let first = Timestamp::now() - SignedDuration::from_mins(2);
+        let second = first + SignedDuration::from_mins(1);
+        let mut custom = event(second + SignedDuration::from_secs(5));
         custom.event = "signup".into();
         app.events.append(vec![event(first), event(second), custom].into_iter()).expect("failed to append events");
 
@@ -498,7 +513,7 @@ mod tests {
                 entity_id: "entity-1".to_string(),
                 visitor_group_id: "visitor-1".to_string(),
                 event: "pageview".to_string(),
-                created_at: second + chrono::Duration::seconds(15),
+                created_at: second + SignedDuration::from_secs(15),
                 fqdn: Some("example.com".to_string()),
                 path: Some("/docs".to_string()),
             },
@@ -509,45 +524,43 @@ mod tests {
         let rows = conn
             .prepare("select exited_at from events order by created_at")
             .expect("failed to prepare query")
-            .query_map([], |row| row.get::<_, Option<DateTime<Utc>>>(0))
+            .query_map([], |row| row.get::<_, Option<SqlTimestamp>>(0))
             .expect("failed to query exits")
             .collect::<std::result::Result<Vec<_>, _>>()
             .expect("failed to collect exits");
         assert_eq!(
-            rows[1].map(|value| value.timestamp_millis()),
-            Some((second + chrono::Duration::seconds(15)).timestamp_millis())
+            rows[1].map(|value| value.0.as_millisecond()),
+            Some((second + SignedDuration::from_secs(15)).as_millisecond())
         );
-        assert_eq!(rows[0], None);
-        assert_eq!(rows[2], None);
+        assert!(rows[0].is_none());
+        assert!(rows[2].is_none());
     }
 
     #[test]
     fn custom_events_do_not_change_pageview_intervals() {
         let app = Liwan::new_memory(Config::default()).unwrap();
-        let first = Utc::now() - chrono::Duration::minutes(3);
-        let middle = first + chrono::Duration::minutes(1);
-        let last = middle + chrono::Duration::minutes(1);
+        let first = Timestamp::now() - SignedDuration::from_mins(3);
+        let middle = first + SignedDuration::from_mins(1);
+        let last = middle + SignedDuration::from_mins(1);
         let mut custom = event(middle);
         custom.event = "signup".into();
         app.events.append(vec![event(first), custom, event(last)].into_iter()).unwrap();
 
         let conn = app.events_conn().unwrap();
         let rows = conn
-            .prepare("select event, time_from_last_event, time_to_next_event from events order by created_at")
+            .prepare(
+                "select event, epoch(time_from_last_event), epoch(time_to_next_event) from events order by created_at",
+            )
             .unwrap()
             .query_map([], |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, Option<chrono::Duration>>(1)?,
-                    row.get::<_, Option<chrono::Duration>>(2)?,
-                ))
+                Ok((row.get::<_, String>(0)?, row.get::<_, Option<f64>>(1)?, row.get::<_, Option<f64>>(2)?))
             })
             .unwrap()
             .collect::<std::result::Result<Vec<_>, _>>()
             .unwrap();
-        assert_eq!(rows[0].2, Some(chrono::Duration::seconds(120)));
+        assert_eq!(rows[0].2, Some(120.0));
         assert_eq!(rows[1], ("signup".into(), None, None));
-        assert_eq!(rows[2].1, Some(chrono::Duration::seconds(120)));
+        assert_eq!(rows[2].1, Some(120.0));
     }
 
     #[test]
@@ -567,9 +580,9 @@ mod tests {
         .into_iter()
         .map(|(key, value)| (key.to_string(), value.to_string()))
         .collect();
-        let mut with_properties = event(Utc::now());
+        let mut with_properties = event(Timestamp::now());
         with_properties.properties = properties.clone();
-        app.events.append(vec![with_properties, event(Utc::now())].into_iter()).unwrap();
+        app.events.append(vec![with_properties, event(Timestamp::now())].into_iter()).unwrap();
 
         let conn = app.events_conn().unwrap();
         let stored = conn

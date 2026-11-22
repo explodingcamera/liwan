@@ -1,5 +1,5 @@
 use crate::app::models::Event;
-use chrono::{DateTime, Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use rand::RngExt;
 
 const PATHS: &[&str] = &["/", "/about", "/contact", "/pricing", "/blog", "/login", "/signup"];
@@ -65,7 +65,7 @@ const PROPERTIES: &[(&str, &str, &[&str])] = &[
 ];
 
 pub fn random_events(
-    time_range: (DateTime<Utc>, DateTime<Utc>),
+    time_range: (Timestamp, Timestamp),
     entity_id: &str,
     fqdn: &str,
     count: usize,
@@ -82,11 +82,11 @@ pub fn random_events(
     visitors_count = visitors_count.min(100_000);
     let visitor_ids: Vec<String> = (0..visitors_count).map(|_| rng.random::<u64>().to_string()).collect();
 
-    let total_seconds = (time_range.1 - time_range.0).num_seconds().max(1) as f64;
+    let total_seconds = time_range.1.duration_since(time_range.0).as_secs().max(1) as f64;
     // (mean_interval is computed below for streaming inter-arrival sampling)
 
     let jitter = (rng.random_range(0.0..1.0) * 0.02 * total_seconds) as i64;
-    let mut current_time = time_range.0 + Duration::seconds(jitter);
+    let mut current_time = time_range.0 + SignedDuration::from_secs(jitter);
 
     let mut current_visitor_idx: Option<usize> = None;
 
@@ -96,7 +96,7 @@ pub fn random_events(
         }
 
         let remaining_events = (count - generated) as f64;
-        let rem_seconds = (time_range.1 - current_time).num_seconds().max(0) as f64;
+        let rem_seconds = time_range.1.duration_since(current_time).as_secs().max(0) as f64;
         if rem_seconds <= 0.0 {
             return None;
         }
@@ -131,7 +131,7 @@ pub fn random_events(
         }
 
         let adv_ms = (inter_s * 1000.0).round() as i64;
-        current_time += Duration::milliseconds(adv_ms.max(1));
+        current_time += SignedDuration::from_millis(adv_ms.max(1));
 
         if current_time > time_range.1 {
             return None;
@@ -206,8 +206,8 @@ mod tests {
 
     #[test]
     fn seed_counts_and_order() {
-        let start = Utc::now();
-        let end = start + Duration::hours(6);
+        let start = Timestamp::now();
+        let end = start + SignedDuration::from_hours(6);
         let want = 2_000usize;
 
         let events: Vec<_> = random_events((start, end), "entity", "example.com", want).collect();
@@ -246,10 +246,10 @@ mod tests {
         }
 
         if events.len() >= 2 {
-            let mut last_ms = events[0].created_at.timestamp_millis();
+            let mut last_ms = events[0].created_at.as_millisecond();
             let mut intervals = std::collections::HashSet::new();
             for ev in &events[1..] {
-                let now_ms = ev.created_at.timestamp_millis();
+                let now_ms = ev.created_at.as_millisecond();
                 intervals.insert((now_ms - last_ms).abs());
                 last_ms = now_ms;
             }
