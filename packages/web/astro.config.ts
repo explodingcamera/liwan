@@ -45,10 +45,10 @@ export default defineConfig({
 	fonts: [
 		{
 			provider: fontProviders.fontsource(),
-			name: "Google Sans",
-			cssVariable: "--font-google-sans",
+			name: "Google Sans Flex",
+			cssVariable: "--font-google-sans-flex",
 			display: "block",
-			weights: ["400 500 700"],
+			weights: ["400 700"],
 			styles: ["normal"],
 			subsets: ["latin", "latin-ext"],
 		},
@@ -64,7 +64,7 @@ export default defineConfig({
 		plugins: [
 			license({
 				thirdParty: {
-					allow: "(MIT OR Apache-2.0 OR ISC OR BSD-3-Clause OR 0BSD OR CC0-1.0 OR Unlicense)",
+					allow: "(MIT OR Apache-2.0 OR ISC OR BSD-3-Clause OR 0BSD OR CC0-1.0 OR Unlicense OR (CC-BY-4.0 AND MIT))",
 					output: {
 						file: path.join(dirname, "../../", "data", "licenses-npm.json"),
 						template: (dependencies) => JSON.stringify(dependencies),

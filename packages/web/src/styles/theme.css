@@ -2,7 +2,7 @@
   color-scheme: light dark;
 
   /* typography */
-  --font-family-text: var(--font-google-sans), system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-family-text: var(--font-google-sans-flex), system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   --font-family-heading: var(--font-family-text);
   --font-size-xs: 0.6rem;
   --font-size-sm: 0.8rem;

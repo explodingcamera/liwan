@@ -32,7 +32,8 @@ button.card {
 
   &[data-active="true"] {
     background: var(--metric-button-active-background, light-dark(transparent, var(--surface-active)));
-    border-color: var(--metric-button-border, var(--border-surface));
+    border-color: var(--metric-button-active-border, var(--metric-button-border, var(--border-surface)));
+    box-shadow: var(--metric-button-active-shadow, none);
   }
 
   &:hover:not([data-active="true"]) {
