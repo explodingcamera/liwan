@@ -43,7 +43,9 @@ where
     T: Send + 'static,
     F: FnOnce(&DuckDBConn) -> anyhow::Result<T> + Send + 'static,
 {
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(app.config.limits.report_timeout_seconds);
+    let deadline = tokio::time::Instant::now()
+        .checked_add(Duration::from_secs(app.config.limits.report_timeout_seconds))
+        .http_err("Configured report timeout is too large", StatusCode::INTERNAL_SERVER_ERROR)?;
     let permit = tokio::time::timeout_at(deadline, app.report_permits.clone().acquire_owned())
         .await
         .http_err("Timed out waiting to run report", StatusCode::SERVICE_UNAVAILABLE)?

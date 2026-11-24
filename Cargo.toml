@@ -25,7 +25,6 @@ opt-level = 3
 debug = false
 strip = true
 lto = "fat"
-panic = "abort"
 codegen-units = 1
 
 [profile.profiling]

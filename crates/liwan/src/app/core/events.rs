@@ -58,7 +58,7 @@ impl LiwanEvents {
         let (salt, updated_at) = &**self.daily_salt.load();
 
         let now = Timestamp::now();
-        if should_rotate_salt(*updated_at, now, self.visitor_group_rotation_hour, TimeZone::system()) {
+        if should_rotate_salt(*updated_at, now, self.visitor_group_rotation_hour, TimeZone::system())? {
             tracing::debug!("Visitor group salt expired, generating a new one");
             let new_salt = StandardUniform.sample_string(&mut rand::rng(), 16);
             let conn = self.sqlite.get()?;
@@ -298,19 +298,20 @@ impl LiwanEvents {
     }
 }
 
-fn should_rotate_salt(updated_at: Timestamp, now: Timestamp, rotation_hour: u8, timezone: TimeZone) -> bool {
+fn should_rotate_salt(updated_at: Timestamp, now: Timestamp, rotation_hour: u8, timezone: TimeZone) -> Result<bool> {
     let today = timezone.to_datetime(now).date().at(rotation_hour.min(23) as i8, 0, 0, 0);
-    let today_rotation = today.to_zoned_datetime(timezone.clone()).expect("local rotation is in range").timestamp();
+    let today_rotation =
+        today.to_zoned_datetime(timezone.clone()).context("Today's salt rotation is out of range")?.timestamp();
     let latest_rotation = if now < today_rotation {
         today
             .yesterday()
             .and_then(|date| date.to_zoned_datetime(timezone))
-            .expect("local rotation is in range")
+            .context("Yesterday's salt rotation is out of range")?
             .timestamp()
     } else {
         today_rotation
     };
-    updated_at < latest_rotation
+    Ok(updated_at < latest_rotation)
 }
 
 fn count_rows(conn: &Connection, sql: &str, params: impl duckdb::Params) -> DuckResult<u64> {
@@ -412,8 +413,13 @@ mod tests {
         let before_rotation = "2024-03-10T07:30:00Z".parse().unwrap();
         let at_rotation = "2024-03-10T08:00:00Z".parse().unwrap();
 
-        assert!(!should_rotate_salt(updated_at, before_rotation, 4, timezone.clone()));
-        assert!(should_rotate_salt(updated_at, at_rotation, 4, timezone));
+        assert!(!should_rotate_salt(updated_at, before_rotation, 4, timezone.clone()).unwrap());
+        assert!(should_rotate_salt(updated_at, at_rotation, 4, timezone).unwrap());
+    }
+
+    #[test]
+    fn salt_rotation_returns_an_error_outside_timestamp_range() {
+        assert!(should_rotate_salt(Timestamp::MIN, Timestamp::MIN, 4, TimeZone::UTC).is_err());
     }
 
     #[test]

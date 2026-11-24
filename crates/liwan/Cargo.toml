@@ -35,7 +35,7 @@ md-5 = { version = "0.11.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 subtle = { version = "2.6", default-features = false }
-tar-codec = "0.0.16"
+tar-codec = "0.0.17"
 zstd = { version = "0.14", default-features = false }
 
 # general
@@ -52,7 +52,7 @@ argon2 = { version = "0.6.0", features = [] }
 async-compression = { version = "0.4", default-features = false, features = ["gzip", "tokio"] }
 blake3 = { version = "1.8" }
 config = { version = "0.15", default-features = false, features = ["toml"] }
-jiff = { version = "1.0.2", default-features = false, features = ["serde", "std", "tz-system", "tzdb-bundle-always"] }
+jiff = { version = "1.0.3", default-features = false, features = ["serde", "std", "tz-system", "tzdb-bundle-always"] }
 nix = { version = "0.32", features = ["user"] }
 rand = { version = "0.10", default-features = false, features = ["std", "thread_rng"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
