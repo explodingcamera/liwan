@@ -56,6 +56,14 @@ listen = 9042  # The port to listen on (http)
 ## Time between periodic DuckDB checkpoints. Disabled by default. Use "0s" to disable.
 ## Use fixed durations such as "5m" or "1h".
 # checkpoint_interval="5m"
+## Write-ahead log size that triggers an automatic checkpoint, independent of the interval.
+## If unset, DuckDB uses its default (16 MiB).
+# checkpoint_threshold="64MiB"
+## Use a dedicated, writable directory for DuckDB query spill files.
+## If unset, DuckDB uses a directory next to the event database.
+# temp_directory="/path/to/liwan-duckdb-tmp"
+## Maximum disk space DuckDB can use for query spill. If unset, DuckDB uses its default limit.
+# max_temp_directory_size="10GiB"
 
 [limits]  # Resource limits
 ## Maximum time a report may run before timing out.

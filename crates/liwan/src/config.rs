@@ -113,8 +113,12 @@ impl Default for GeoIpConfig {
 pub struct DuckdbConfig {
     pub memory_limit: Option<String>,
     pub threads: Option<NonZeroU16>,
+    pub temp_directory: Option<String>,
+    pub max_temp_directory_size: Option<String>,
     /// Time between periodic checkpoints. Zero disables periodic checkpoints.
     pub checkpoint_interval: Span,
+    /// Write-ahead log size at which DuckDB automatically checkpoints.
+    pub checkpoint_threshold: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -411,6 +415,33 @@ mod test {
         let config = Config::load(Some(path), [("LIWAN_DUCKDB_CHECKPOINT_INTERVAL", "0s")]).unwrap();
         assert!(config.duckdb.checkpoint_interval.is_zero());
         assert!(Config::load(None, [("LIWAN_DUCKDB_CHECKPOINT_INTERVAL", "-30s")]).is_err());
+    }
+
+    #[test]
+    fn duckdb_checkpoint_threshold() {
+        let (_temp_dir, path) = temp_config("duckdb.toml", "[duckdb]\ncheckpoint_threshold = \"64MiB\"");
+        let config = Config::load(Some(path.clone()), std::iter::empty::<(&str, &str)>()).unwrap();
+        assert_eq!(config.duckdb.checkpoint_threshold.as_deref(), Some("64MiB"));
+
+        let config = Config::load(Some(path), [("LIWAN_DUCKDB_CHECKPOINT_THRESHOLD", "128MiB")]).unwrap();
+        assert_eq!(config.duckdb.checkpoint_threshold.as_deref(), Some("128MiB"));
+    }
+
+    #[test]
+    fn duckdb_temp_storage() {
+        let (_temp_dir, path) =
+            temp_config("duckdb.toml", "[duckdb]\ntemp_directory = \"./spill\"\nmax_temp_directory_size = \"10GiB\"");
+        let config = Config::load(Some(path.clone()), std::iter::empty::<(&str, &str)>()).unwrap();
+        assert_eq!(config.duckdb.temp_directory.as_deref(), Some("./spill"));
+        assert_eq!(config.duckdb.max_temp_directory_size.as_deref(), Some("10GiB"));
+
+        let config = Config::load(
+            Some(path),
+            [("LIWAN_DUCKDB_TEMP_DIRECTORY", "./other-spill"), ("LIWAN_DUCKDB_MAX_TEMP_DIRECTORY_SIZE", "20GiB")],
+        )
+        .unwrap();
+        assert_eq!(config.duckdb.temp_directory.as_deref(), Some("./other-spill"));
+        assert_eq!(config.duckdb.max_temp_directory_size.as_deref(), Some("20GiB"));
     }
 
     #[test]

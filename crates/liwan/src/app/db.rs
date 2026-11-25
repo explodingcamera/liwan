@@ -30,6 +30,16 @@ pub(super) fn init_duckdb(
             flags = flags.threads(threads.get().into())?;
         }
 
+        for (name, value) in [
+            ("temp_directory", &duckdb_config.temp_directory),
+            ("max_temp_directory_size", &duckdb_config.max_temp_directory_size),
+            ("checkpoint_threshold", &duckdb_config.checkpoint_threshold),
+        ] {
+            if let Some(value) = value {
+                flags = flags.with(name, value).with_context(|| format!("Invalid duckdb.{name}"))?;
+            }
+        }
+
         match DuckdbConnectionManager::file_with_flags(path, flags) {
             Ok(conn) => break conn,
             Err(e) => {
@@ -152,5 +162,43 @@ mod tests {
 
         conn.execute_batch("SELECT properties FROM events").unwrap();
         assert!(std::fs::metadata(wal).map_or_else(|err| err.kind() == std::io::ErrorKind::NotFound, |m| m.len() == 0));
+    }
+
+    #[test]
+    fn applies_checkpoint_threshold() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("events.duckdb");
+        let config = DuckdbConfig { checkpoint_threshold: Some("64MiB".to_string()), ..Default::default() };
+        let pool = init_duckdb(&path, config, migrations::runner()).unwrap();
+        let threshold: String = pool
+            .get()
+            .unwrap()
+            .query_row("SELECT current_setting('checkpoint_threshold')", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(threshold, "64.0 MiB");
+    }
+
+    #[test]
+    fn applies_temp_storage_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("events.duckdb");
+        let spill_dir = dir.path().join("spill").to_str().unwrap().to_string();
+        let config = DuckdbConfig {
+            temp_directory: Some(spill_dir.clone()),
+            max_temp_directory_size: Some("2GiB".to_string()),
+            ..Default::default()
+        };
+        let pool = init_duckdb(&path, config, migrations::runner()).unwrap();
+        let (actual_dir, actual_size): (String, String) = pool
+            .get()
+            .unwrap()
+            .query_row(
+                "SELECT current_setting('temp_directory'), current_setting('max_temp_directory_size')",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(actual_dir, spill_dir);
+        assert_eq!(actual_size, "2.0 GiB");
     }
 }

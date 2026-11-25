@@ -31,7 +31,7 @@ Since this is not a library, this changelog focuses on the changes that are rele
 - Switched the web interface to Google Sans Flex.
 - Switched to Font Awesome brand icons and added logos for Microsoft Edge and Windows.
 - Updated to DuckDB 2.0.1. Upgrading the event database's storage format is optional. To upgrade it, stop Liwan and run `liwan upgrade-duckdb`. The command keeps the original file as a `.old` backup. Older Liwan versions may not be able to open the upgraded file.
-- Added optional periodic DuckDB checkpoints via `duckdb.checkpoint_interval` (`LIWAN_DUCKDB_CHECKPOINT_INTERVAL`). Periodic checkpoints are off by default.
+- Added DuckDB settings for periodic checkpoints (`checkpoint_interval`, off by default), automatic checkpoints based on write-ahead log size (`checkpoint_threshold`), and query spill storage (`temp_directory` and `max_temp_directory_size`).
 
 ### Bug Fixes
 
